@@ -39,10 +39,18 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
+    <!-- Composition root (App.xaml.cs) — substitui o wiring manual de serviços que existia em
+         MainWindow.xaml.cs, agora que o número de serviços/repositórios cresceu bastante
+         (ver comentário original em Configuration/AppConfig.cs, que já previa esta migração). -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Arquivos de tradução (Requisito 1) — nunca strings hardcoded no código/XAML. -->
+    <None Update="Resources\Localization\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
