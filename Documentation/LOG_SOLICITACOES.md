@@ -105,3 +105,55 @@ manual, e confirmação de que os dois softwares tinham sido instalados manualme
 - `Documentation/LOG_SOLICITACOES.md` — este arquivo, com o histórico de pedidos.
 - Commit na branch `Sistema` com todas as alterações da sessão anterior (instalador) mais
   esta documentação.
+
+---
+
+## 2026-08-07 — Interface multiusuário (barra superior, barra lateral, login, auditoria)
+
+**Pedido (resumo — texto completo tem 13 seções detalhadas, preservado no histórico da
+conversa):** melhorar a interface e a estrutura do app com barra superior (idioma PT/EN,
+tema claro/escuro/sistema, usuário conectado, perfil, ajuda, sair), barra lateral recolhível
+com navegação (Painel principal, Monitoramento, Objetos detectados, Ações realizadas,
+Histórico de modos, Usuários, Chamados de ajuda, Configurações), painel principal com
+indicadores, três tabelas de auditoria (`objetos_detectados`, `acoes_realizadas`,
+`alteracoes_modo`) com regras específicas (auditoria não editável pelo usuário comum,
+confirmação antes de trocar modo), sistema de usuários/permissões com login, hash seguro de
+senha e 3 perfis (Administrador/Operador/Visualizador), personalização de layout por
+usuário, formulário de ajuda com tabela `chamados_ajuda`, requisitos de acessibilidade e
+segurança (hash, validação, consultas parametrizadas, tratamento centralizado de erros).
+Pedido explícito para analisar o projeto e apresentar um plano em etapas **antes** de alterar
+código, e perguntar antes de decisões que alterassem significativamente o projeto.
+
+**Perguntas feitas antes de implementar (`AskUserQuestion`) e respostas:**
+1. *Banco de dados* — recomendei SQLite + EF Core; o usuário decidiu **CSV por agora**,
+   sinalizado para futura conversão a SQL.
+2. *Coordenada Z em `objetos_detectados`* (sensor atual é 2D) — usuário confirmou **campo
+   nullable, gravado como `NULL`** por enquanto.
+3. *Modos do sistema* (`SystemMode` técnico existente x Manual/Automático/Manutenção/
+   Emergência pedido) — usuário confirmou **estender o `SystemMode` existente** em vez de
+   criar um conceito paralelo.
+
+**Entregue nesta parte** (fundação + Painel principal + navegação completa; as 4 telas de
+dados restantes ficam para a próxima entrega, conforme plano apresentado e aceito):
+
+- Camada de dados CSV (`Data/`, `Repositories/`) para as 6 tabelas, com interfaces prontas
+  para trocar por um banco relacional sem alterar o resto do app.
+- Autenticação (login, hash PBKDF2, sessão, alteração de senha) e permissões por perfil.
+- Internacionalização (pt-BR/en-US) via arquivos JSON — nenhuma string de UI nova hardcoded.
+- Tema claro/escuro/sistema, trocado em runtime.
+- Composition root com injeção de dependência (`App.xaml.cs`), substituindo o wiring manual
+  antigo de `MainWindow.xaml.cs`.
+- Shell (barra superior + barra lateral recolhível + navegação), `LoginWindow`, `ProfileWindow`
+  (com alteração de senha), `HelpDeskFormWindow`, `PainelPrincipalView` (dashboard).
+- Migração de `MainWindow` para `MonitoramentoView` (mesma funcionalidade, hospedada pela Shell).
+- `SystemMode` estendido (Manutenção/Emergência) com confirmação e auditoria em toda troca de modo.
+- `FireControlService` e `MainViewModel` passaram a gravar auditoria (`acoes_realizadas`,
+  `objetos_detectados`, `alteracoes_modo`) nos pontos únicos onde essas ações já passavam.
+- Documentação: `Documentation/MODELO_DADOS.md` (schema + relacionamentos + plano de migração
+  SQL) e `Documentation/ETAPA1_FUNDACAO.md` (arquitetura antes/depois, arquivos alterados,
+  como validar cada funcionalidade, o que falta para fechar a Etapa 1).
+- Build limpo (0 erros, 0 avisos) e validação de ponta a ponta (login real, Shell renderizada,
+  CSVs de auditoria gerados) usando captura direta de janela (`PrintWindow`) e verificação
+  criptográfica isolada do hash de senha — sem automação de teclado, depois que uma tentativa
+  de `SendKeys` acabou digitando em uma janela errada (WhatsApp Web) por roubo de foco; o
+  incidente foi reportado ao usuário assim que percebido.
