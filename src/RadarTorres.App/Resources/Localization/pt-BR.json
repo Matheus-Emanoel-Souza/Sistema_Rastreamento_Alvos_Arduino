@@ -71,6 +71,8 @@
   "Profile.Save": "Salvar nova senha",
 
   "Common.EmConstrucao": "Em construção — esta tela chega em uma próxima etapa.",
+  "Common.MostrarSenha": "Mostrar senha",
+  "Common.OcultarSenha": "Ocultar senha",
   "Common.Cancelar": "Cancelar",
   "Common.Salvar": "Salvar",
   "Common.Fechar": "Fechar",

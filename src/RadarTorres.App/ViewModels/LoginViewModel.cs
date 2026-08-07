@@ -24,10 +24,16 @@ public sealed class LoginViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Preenchida pelo code-behind a partir do <c>PasswordBox</c> (que não suporta binding
-    /// direto de <c>Password</c> por questão de segurança do próprio WPF).
+    /// Ligada via binding normal (TwoWay) ao controle <c>PasswordRevealBox</c>
+    /// (Views/Shared/), que contorna a restrição do <c>PasswordBox</c> nativo do WPF de não
+    /// suportar Binding direto de <c>Password</c>.
     /// </summary>
-    public string Senha { get; set; } = string.Empty;
+    private string _senha = string.Empty;
+    public string Senha
+    {
+        get => _senha;
+        set => SetProperty(ref _senha, value);
+    }
 
     private string? _errorMessage;
     public string? ErrorMessage

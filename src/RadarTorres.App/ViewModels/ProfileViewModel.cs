@@ -22,9 +22,26 @@ public sealed class ProfileViewModel : ViewModelBase
 
     public Usuario? Usuario => _authService.CurrentUser;
 
-    public string SenhaAtual { get; set; } = string.Empty;
-    public string NovaSenha { get; set; } = string.Empty;
-    public string ConfirmarNovaSenha { get; set; } = string.Empty;
+    private string _senhaAtual = string.Empty;
+    public string SenhaAtual
+    {
+        get => _senhaAtual;
+        set => SetProperty(ref _senhaAtual, value);
+    }
+
+    private string _novaSenha = string.Empty;
+    public string NovaSenha
+    {
+        get => _novaSenha;
+        set => SetProperty(ref _novaSenha, value);
+    }
+
+    private string _confirmarNovaSenha = string.Empty;
+    public string ConfirmarNovaSenha
+    {
+        get => _confirmarNovaSenha;
+        set => SetProperty(ref _confirmarNovaSenha, value);
+    }
 
     private string? _mensagem;
     public string? Mensagem
@@ -58,7 +75,9 @@ public sealed class ProfileViewModel : ViewModelBase
 
         if (resultado.Success)
         {
-            SenhaAtual = NovaSenha = ConfirmarNovaSenha = string.Empty;
+            SenhaAtual = string.Empty;
+            NovaSenha = string.Empty;
+            ConfirmarNovaSenha = string.Empty;
         }
     }
 }
