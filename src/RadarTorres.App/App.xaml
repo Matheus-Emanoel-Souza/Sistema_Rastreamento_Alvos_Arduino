@@ -1,0 +1,25 @@
+<Application x:Class="RadarTorres.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="Views/MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Paleta de cores usada em toda a aplicação -->
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#0B0F14"/>
+            <SolidColorBrush x:Key="PanelBrush" Color="#121821"/>
+            <SolidColorBrush x:Key="PanelBorderBrush" Color="#26313D"/>
+            <SolidColorBrush x:Key="RadarBackgroundBrush" Color="#050A0E"/>
+            <SolidColorBrush x:Key="RadarGridBrush" Color="#1E4D2B"/>
+            <SolidColorBrush x:Key="RadarSweepBrush" Color="#2ECC71"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E6EDF3"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#8B98A5"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#2ECC71"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#F1C40F"/>
+            <SolidColorBrush x:Key="DangerBrush" Color="#E74C3C"/>
+            <SolidColorBrush x:Key="TargetBrush" Color="#3498DB"/>
+            <SolidColorBrush x:Key="TargetSelectedBrush" Color="#F1C40F"/>
+            <SolidColorBrush x:Key="TowerBrush" Color="#9B59B6"/>
+            <SolidColorBrush x:Key="TowerSelectedBrush" Color="#2ECC71"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

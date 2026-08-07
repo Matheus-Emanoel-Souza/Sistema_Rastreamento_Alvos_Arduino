@@ -1,0 +1,13 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+.vs/
+
+## Rider / VS Code
+.idea/
+*.suo
+
+## OS
+Thumbs.db
+.DS_Store
