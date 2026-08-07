@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:RadarTorres.App.Localization"
         xmlns:conv="clr-namespace:RadarTorres.App.Converters"
+        xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
         Title="RadarTorres" Height="480" Width="420"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
@@ -15,15 +16,6 @@
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="8,7"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
-        <Style TargetType="PasswordBox">
-            <Setter Property="Padding" Value="8,7"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
             <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
@@ -61,7 +53,7 @@
                 <TextBox x:Name="LoginTextBox" Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <TextBlock Text="{loc:Loc Login.Password}" Style="{StaticResource FieldLabel}"/>
-                <PasswordBox x:Name="PasswordBoxControl" PasswordChanged="PasswordBoxControl_PasswordChanged"/>
+                <shared:PasswordRevealBox Password="{Binding Senha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
 
                 <TextBlock Text="{Binding ErrorMessage}"
                            Foreground="{DynamicResource DangerBrush}" FontSize="12"

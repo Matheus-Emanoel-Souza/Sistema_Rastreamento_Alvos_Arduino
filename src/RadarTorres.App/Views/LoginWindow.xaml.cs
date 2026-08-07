@@ -4,9 +4,10 @@ using RadarTorres.App.ViewModels;
 namespace RadarTorres.App.Views;
 
 /// <summary>
-/// Code-behind da tela de login. Só contém ligações de interface (PasswordBox não suporta
-/// binding direto de senha por segurança do WPF, e fechar a janela em caso de sucesso) —
-/// nenhuma regra de autenticação mora aqui, isso é <see cref="LoginViewModel"/> + <c>IAuthService</c>.
+/// Code-behind da tela de login. Só contém ligações de interface (fechar a janela quando o
+/// login é bem-sucedido) — nenhuma regra de autenticação mora aqui, isso é
+/// <see cref="LoginViewModel"/> + <c>IAuthService</c>. O campo de senha usa
+/// <c>Views/Shared/PasswordRevealBox</c>, que já expõe Binding normal.
 /// </summary>
 public partial class LoginWindow : Window
 {
@@ -21,10 +22,5 @@ public partial class LoginWindow : Window
         _viewModel.LoginSucceeded += (_, _) => Close();
 
         Loaded += (_, _) => LoginTextBox.Focus();
-    }
-
-    private void PasswordBoxControl_PasswordChanged(object sender, RoutedEventArgs e)
-    {
-        _viewModel.Senha = PasswordBoxControl.Password;
     }
 }

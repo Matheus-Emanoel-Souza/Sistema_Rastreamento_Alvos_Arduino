@@ -71,6 +71,8 @@
   "Profile.Save": "Save new password",
 
   "Common.EmConstrucao": "Under construction — this screen is coming in a future stage.",
+  "Common.MostrarSenha": "Show password",
+  "Common.OcultarSenha": "Hide password",
   "Common.Cancelar": "Cancel",
   "Common.Salvar": "Save",
   "Common.Fechar": "Close",
