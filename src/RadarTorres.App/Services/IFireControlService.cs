@@ -19,5 +19,9 @@ public interface IFireControlService
     /// <c>FIRE;TOWER=x;TARGET=y</c> pela serial (ou apenas registra em modo de simulação) e
     /// atualiza o estado visual da torre para "Firing" temporariamente.
     /// </summary>
-    Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters);
+    /// <param name="origem">
+    /// Se a ação foi disparada manualmente por um usuário ou automaticamente pelo sistema —
+    /// gravado no histórico de auditoria (<c>acoes_realizadas</c>, Requisito 5).
+    /// </param>
+    Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters, OrigemAcao origem);
 }
