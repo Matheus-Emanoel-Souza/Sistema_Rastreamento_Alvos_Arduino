@@ -1,0 +1,23 @@
+<UserControl x:Class="RadarTorres.App.Views.RadarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="600"
+             Background="{DynamicResource RadarBackgroundBrush}">
+    <!--
+        Componente visual do radar. Duas camadas de Canvas sobrepostas:
+        - StaticLayer: círculos concêntricos, linhas de quadrante, marcação de Norte/0° e rótulos
+          de distância — redesenhada apenas quando o tamanho do controle muda.
+        - DynamicLayer: torres, alvos e linhas de associação alvo->torre — atualizada a cada tick
+          do timer de renderização (RadarSettings.RefreshRateMs), reaproveitando os elementos
+          visuais já existentes em vez de recriar tudo a cada atualização.
+    -->
+    <Grid x:Name="RootGrid">
+        <Canvas x:Name="RadarCanvas" ClipToBounds="True">
+            <Canvas x:Name="StaticLayer"/>
+            <Canvas x:Name="DynamicLayer"/>
+        </Canvas>
+    </Grid>
+</UserControl>

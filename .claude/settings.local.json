@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet --version)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet build *)",
+      "Bash(nohup dotnet bin/Debug/net9.0-windows/RadarTorres.App.dll)",
+      "Bash(tasklist)",
+      "Bash(taskkill //F //IM RadarTorres.App.exe)",
+      "Bash(taskkill //F //PID 3104)",
+      "Bash(taskkill //F //IM dotnet.exe)",
+      "Bash(mkdir -p \"C:/Users/mathe/AppData/Local/Temp/claude/C--Temp-TCC/0b011263-1885-4769-b49b-5dfc47bbe8ad/scratchpad/SanityCheck\")",
+      "Bash(dotnet new *)",
+      "Bash(dotnet run *)",
+      "Bash(dotnet sln *)"
+    ]
+  }
+}
