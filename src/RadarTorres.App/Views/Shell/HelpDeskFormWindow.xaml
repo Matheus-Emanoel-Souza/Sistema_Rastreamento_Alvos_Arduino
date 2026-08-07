@@ -1,0 +1,73 @@
+<Window x:Class="RadarTorres.App.Views.Shell.HelpDeskFormWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:RadarTorres.App.Localization"
+        Title="{loc:Loc HelpDesk.Title}" Height="560" Width="440"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="0,9"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+        <StackPanel>
+            <TextBlock Text="{loc:Loc HelpDesk.Titulo}" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding Titulo, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <TextBlock Text="{loc:Loc HelpDesk.Descricao}" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding Descricao, UpdateSourceTrigger=PropertyChanged}" Height="90" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
+
+            <TextBlock Text="{loc:Loc HelpDesk.Categoria}" Style="{StaticResource FieldLabel}"/>
+            <ComboBox ItemsSource="{Binding Categorias}" SelectedItem="{Binding CategoriaSelecionada}"/>
+
+            <TextBlock Text="{loc:Loc HelpDesk.Modulo}" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding ModuloRelacionado, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <TextBlock Text="{loc:Loc HelpDesk.MensagemErro}" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding MensagemErro, UpdateSourceTrigger=PropertyChanged}" Height="60" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
+
+            <TextBlock Text="{Binding Mensagem}" TextWrapping="Wrap" Margin="0,4,0,10">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Enviado}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <Button Content="{loc:Loc HelpDesk.Enviar}" Command="{Binding EnviarCommand}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Window>
