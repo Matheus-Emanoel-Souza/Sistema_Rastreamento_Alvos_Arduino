@@ -3,6 +3,20 @@ Sistema de rastreamento e monitoramento de alvos desenvolvido como parte de um T
 
 Documentação técnica completa em [`README_LOCAL.md`](README_LOCAL.md) e [`Documentation/`](Documentation/).
 
+## Login e multiusuário
+
+Desde a Etapa 1 (fundação multiusuário), o app pede login ao abrir. No primeiro uso:
+
+```
+Usuário: admin
+Senha:   admin123
+```
+
+Troque a senha padrão em **Perfil > Alterar senha** assim que possível. Detalhes completos
+(arquitetura, tabelas, como validar cada funcionalidade) em
+[`Documentation/ETAPA1_FUNDACAO.md`](Documentation/ETAPA1_FUNDACAO.md) e
+[`Documentation/MODELO_DADOS.md`](Documentation/MODELO_DADOS.md).
+
 ## Instalação (Windows)
 
 O RadarTorres é distribuído como um instalador Windows único, `Setup.exe`, gerado com o
