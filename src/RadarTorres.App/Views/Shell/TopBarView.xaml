@@ -1,0 +1,52 @@
+<UserControl x:Class="RadarTorres.App.Views.Shell.TopBarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization"
+             xmlns:models="clr-namespace:RadarTorres.App.Models">
+
+    <UserControl.Resources>
+        <Style x:Key="TopBarButton" TargetType="Button">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+            BorderThickness="0,0,0,1" Padding="12,6">
+        <DockPanel LastChildFill="False">
+            <Menu DockPanel.Dock="Left" Background="Transparent" VerticalAlignment="Center">
+                <MenuItem Header="{loc:Loc TopBar.Options}">
+                    <MenuItem Header="{loc:Loc TopBar.Language}">
+                        <MenuItem Header="{loc:Loc TopBar.Language.Portuguese}" Command="{Binding SetLanguageCommand}" CommandParameter="pt-BR"/>
+                        <MenuItem Header="{loc:Loc TopBar.Language.English}" Command="{Binding SetLanguageCommand}" CommandParameter="en-US"/>
+                    </MenuItem>
+                    <MenuItem Header="{loc:Loc TopBar.Theme}">
+                        <MenuItem Header="{loc:Loc TopBar.Theme.Light}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Claro}"/>
+                        <MenuItem Header="{loc:Loc TopBar.Theme.Dark}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Escuro}"/>
+                        <MenuItem Header="{loc:Loc TopBar.Theme.System}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Sistema}"/>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="{loc:Loc Common.RestaurarPadrao}" Command="{Binding RestaurarPadraoCommand}"/>
+                </MenuItem>
+            </Menu>
+
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Loc TopBar.LoggedInAs}" Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12"/>
+                <TextBlock Text="{Binding NomeUsuario}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="8,2" Margin="0,0,16,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding PerfilUsuario}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                </Border>
+
+                <Button x:Name="ProfileButton" Content="{loc:Loc TopBar.Profile}" Click="ProfileButton_Click" Style="{StaticResource TopBarButton}"/>
+                <Button x:Name="HelpButton" Content="{loc:Loc TopBar.Help}" Click="HelpButton_Click" Style="{StaticResource TopBarButton}"/>
+                <Button Content="{loc:Loc TopBar.Logout}" Command="{Binding LogoutCommand}" Style="{StaticResource TopBarButton}"/>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</UserControl>
