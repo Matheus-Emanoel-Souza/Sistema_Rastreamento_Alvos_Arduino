@@ -8,9 +8,30 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>RadarTorres.App</RootNamespace>
     <AssemblyName>RadarTorres.App</AssemblyName>
-    <ApplicationIcon></ApplicationIcon>
+    <ApplicationIcon>Assets\RadarTorres.ico</ApplicationIcon>
     <LangVersion>latest</LangVersion>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Habilita restauração/publicação self-contained para win-x64 (ver build\publish.ps1
+         e installer\RadarTorres.iss). Não força self-contained no "dotnet build" normal;
+         isso só é ativado explicitamente via "dotnet publish -r win-x64 -p:SelfContained=true". -->
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <!-- A interface é 100% pt-BR; sem isso o publish self-contained inclui satélites de
+         recursos do WPF para ~30 idiomas (ru, tr, zh, ...), inflando o instalador à toa. -->
+    <SatelliteResourceLanguages>pt-BR</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- Metadados do pacote/executável — usados pelo instalador (Inno Setup) e exibidos
+       nas propriedades do .exe e em Programas e Recursos do Windows. -->
+  <PropertyGroup>
+    <Product>RadarTorres</Product>
+    <AssemblyTitle>RadarTorres - Sistema de Rastreamento e Seleção de Torres</AssemblyTitle>
+    <Description>Sistema de detecção, rastreamento e seleção de torres via Arduino (TCC).</Description>
+    <Company>TCC - Engenharia da Computação</Company>
+    <Copyright>Copyright © 2026</Copyright>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <NeutralLanguage>pt-BR</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>
