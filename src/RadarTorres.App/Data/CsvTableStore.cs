@@ -13,7 +13,7 @@ namespace RadarTorres.App.Data;
 /// <remarks>
 /// <para>
 /// <b>TODO(SQL)</b>: esta é uma solução deliberadamente simples, escolhida para a etapa atual
-/// do projeto (ver <c>Documentation/MODELO_DADOS.md</c>). Quando o projeto migrar para um
+/// do projeto (ver <c>Docs/MODELO_DADOS.md</c>). Quando o projeto migrar para um
 /// banco relacional (SQLite/SQL Server), esta classe é substituída por um `DbContext`/ADO.NET
 /// por trás da mesma interface de repositório — nenhum ViewModel ou Service precisa mudar.
 /// </para>

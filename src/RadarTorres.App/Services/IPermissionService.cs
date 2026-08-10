@@ -12,7 +12,10 @@ public enum MenuItem
     HistoricoModos,
     Usuarios,
     ChamadosAjuda,
-    Configuracoes
+    Configuracoes,
+
+    /// <summary>Aba "Configurações do Arduino" — ambiente/compilação/monitor serial (ver ArduinoSettingsView).</summary>
+    ConfiguracoesArduino
 }
 
 /// <summary>

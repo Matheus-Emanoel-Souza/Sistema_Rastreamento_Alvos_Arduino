@@ -12,7 +12,7 @@ namespace RadarTorres.App.Helpers;
 /// <item><b>Cartesiano de tela (canvas)</b>: pixels, origem no canto superior esquerdo, Y crescendo para baixo.
 /// Usado apenas pelo <see cref="Views.RadarControl"/> para desenhar.</item>
 /// </list>
-/// Ver <c>Documentation/ALGORITMO_SELECAO_TORRE.md</c> para a dedução matemática completa.
+/// Ver <c>Docs/ALGORITMO_SELECAO_TORRE.md</c> para a dedução matemática completa.
 /// </summary>
 public static class CoordinateConverter
 {

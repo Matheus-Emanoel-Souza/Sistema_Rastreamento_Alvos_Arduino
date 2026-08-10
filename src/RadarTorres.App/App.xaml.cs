@@ -80,6 +80,16 @@ public partial class App : Application
         services.AddSingleton<IFireControlService, FireControlService>();
         services.AddSingleton<ISimulationService, SimulationService>();
 
+        // --- Aba "Configurações do Arduino" (ambiente/compilação/monitor serial). O compilador
+        //     e o localizador do CLI não guardam estado entre chamadas (Transient); as
+        //     preferências persistidas usam o mesmo arquivo em disco independentemente da
+        //     instância, então Singleton só evita I/O redundante. ISerialCommunicationService
+        //     continua Singleton (registrado acima) e é reaproveitado por esta aba — não há
+        //     uma segunda implementação de comunicação serial.
+        services.AddSingleton<IArduinoCliLocatorService, ArduinoCliLocatorService>();
+        services.AddTransient<IArduinoCompilerService, ArduinoCompilerService>();
+        services.AddSingleton<IArduinoSettingsRepository, ArduinoSettingsRepository>();
+
         // --- Dados (CSV hoje — ver TODO(SQL) em AppDataPaths)
         services.AddSingleton<IUsuarioRepository, CsvUsuarioRepository>();
         services.AddSingleton<IObjetoDetectadoRepository, CsvObjetoDetectadoRepository>();
@@ -117,6 +127,11 @@ public partial class App : Application
 
         services.AddTransient<ProfileViewModel>();
         services.AddTransient<ProfileWindow>();
+
+        // Singleton igual a MainViewModel/MonitoramentoView: mantém a conexão serial e o
+        // estado da compilação entre navegações pela barra lateral.
+        services.AddSingleton<ArduinoSettingsViewModel>();
+        services.AddSingleton<ArduinoSettingsView>();
     }
 
     /// <summary>
