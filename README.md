@@ -105,6 +105,22 @@ aplicativo precisa para rodar. O que o instalador faz:
   `appsettings.json`** já configurado pelo usuário (porta COM, torres, distâncias etc.) — só
   grava o arquivo padrão na primeira instalação.
 
+#### Launcher avulso (opcional)
+
+Para quem já tem o RadarTorres instalado e quer um atalho único e estável para abri-lo — sem
+depender do Menu Iniciar ou de ter marcado o ícone de Área de Trabalho na instalação — existe
+um executável separado, `RadarTorres-Launcher.exe` (projeto
+[`src/RadarTorres.Launcher`](src/RadarTorres.Launcher)): localiza o app instalado (pasta padrão
+ou, se customizada, via registro do Windows) e o abre. Pode ser copiado para a Área de
+Trabalho, fixado na barra de tarefas etc. Não precisa do .NET instalado (self-contained,
+arquivo único). Gerar:
+
+```powershell
+dotnet publish src\RadarTorres.Launcher -c Release -r win-x64
+```
+
+O `.exe` fica em `src\RadarTorres.Launcher\bin\Release\net9.0-windows\win-x64\publish\`.
+
 ### Opção 2 — A partir do código-fonte (desenvolvimento)
 
 ```bash
