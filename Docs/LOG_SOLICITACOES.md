@@ -236,3 +236,20 @@ as referências a `Documentation/` no código/documentação/README para `Docs/`
 - Não implementado nesta entrega, por instrução explícita do pedido: gravação/upload de
   firmware (`arduino-cli upload`) — ficou apenas registrado como próximo passo natural, a ser
   implementado somente mediante nova consulta ao usuário.
+
+Sessão encerrada com commit autoral do usuário (sem co-autoria do assistente na mensagem,
+por pedido explícito).
+
+---
+
+## 2026-08-10 — Dica de execução sem privilégio de administrador
+
+**Pedido:** o usuário relatou não conseguir rodar o `Setup.exe` por não ser administrador do
+computador; depois de o assistente explicar as duas alternativas (rodar via `dotnet run` ou
+publicar um `.exe` self-contained avulso em uma pasta do usuário), pediu para registrar essa
+orientação na documentação como uma seção de "Dicas".
+
+**Entregue:** nova seção "💡 Dicas — rodar sem ser administrador do computador" em
+`README.md`, logo após a opção "A partir do código-fonte", com os dois comandos
+(`dotnet run --project src/RadarTorres.App` e `dotnet publish ... --self-contained true -o
+<pasta do usuário>`).

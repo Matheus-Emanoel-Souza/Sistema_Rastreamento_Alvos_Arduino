@@ -133,6 +133,29 @@ dotnet run
 
 Ou abra `RadarTorres.sln` (na raiz do projeto) no Visual Studio 2022+ e pressione F5.
 
+### 💡 Dicas — rodar sem ser administrador do computador
+
+O `Setup.exe` pede elevação de administrador porque instala em `C:\Program Files`. Se você
+não tem esse privilégio na máquina, dá para rodar o RadarTorres sem ele, de duas formas:
+
+**1. Rodar direto do código-fonte** (mais simples, se já tiver o .NET SDK instalado):
+
+```powershell
+dotnet run --project src/RadarTorres.App
+```
+
+Não grava nada fora da sua pasta de usuário (`%AppData%\RadarTorres` para os dados).
+
+**2. Gerar um `.exe` avulso, sem instalar nada** — publica tudo (incluindo o runtime do .NET)
+em uma pasta comum, tipo Desktop ou Documentos, e funciona como um programa portátil:
+
+```powershell
+dotnet publish src/RadarTorres.App -c Release -r win-x64 --self-contained true -o "$env:USERPROFILE\Desktop\RadarTorres"
+```
+
+Depois é só abrir `RadarTorres.App.exe` dentro dessa pasta — sem instalador e sem precisar de
+privilégio de administrador.
+
 ---
 
 ## 🚀 Como usar
