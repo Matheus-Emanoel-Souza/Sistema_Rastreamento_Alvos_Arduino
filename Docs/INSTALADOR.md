@@ -65,8 +65,8 @@ necessário reintroduzir alguma forma de checagem/instalação do .NET Desktop R
 | `src/RadarTorres.App/Assets/RadarTorres.ico` | Ícone do app (radar verde sobre fundo escuro, gerado via PowerShell + `System.Drawing`, combinando com a paleta já usada na UI) |
 | `installer/RadarTorres.iss` | Script do Inno Setup 6 |
 | `build/publish.ps1` | Pipeline de build: `dotnet publish` self-contained → compila o instalador → gera `dist/Setup.exe` |
-| `Documentation/INSTALADOR.md` | Este documento |
-| `Documentation/LOG_SOLICITACOES.md` | Log das solicitações feitas ao assistente ao longo do projeto |
+| `Docs/INSTALADOR.md` | Este documento |
+| `Docs/LOG_SOLICITACOES.md` | Log das solicitações feitas ao assistente ao longo do projeto |
 
 ### O que o `installer/RadarTorres.iss` faz
 
@@ -146,5 +146,5 @@ geração do instalador) foi executado normalmente.
 - [`README.md`](../README.md) — seção "Instalação (Windows)": comandos de build, geração de
   nova versão e solução de problemas.
 - [`ARQUITETURA.md`](ARQUITETURA.md) — arquitetura do aplicativo em si (não do instalador).
-- [`Documentation/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) — histórico das solicitações
+- [`Docs/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) — histórico das solicitações
   feitas ao assistente para este e outros trabalhos no projeto.

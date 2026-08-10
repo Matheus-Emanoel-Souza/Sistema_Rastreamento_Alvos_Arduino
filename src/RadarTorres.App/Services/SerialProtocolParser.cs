@@ -13,7 +13,7 @@ namespace RadarTorres.App.Services;
 /// JSON ou binário) alterando apenas este arquivo.
 ///
 /// Formato geral de uma mensagem: <c>TIPO;CHAVE1=VALOR1;CHAVE2=VALOR2;...</c>
-/// Ver <c>Documentation/COMUNICACAO_ARDUINO.md</c> para a especificação completa.
+/// Ver <c>Docs/COMUNICACAO_ARDUINO.md</c> para a especificação completa.
 /// </summary>
 public static class SerialProtocolParser
 {

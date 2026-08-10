@@ -41,13 +41,13 @@ Fornecer uma plataforma de software completa para:
 
 1. Receber, de forma assíncrona e não bloqueante, leituras de sensores enviadas por um
    Arduino via serial (protocolo texto simples, documentado em
-   [`Documentation/COMUNICACAO_ARDUINO.md`](Documentation/COMUNICACAO_ARDUINO.md)).
+   [`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md)).
 2. Converter as leituras (ângulo + distância) em posição cartesiana e exibi-las em tempo
    real em um radar circular, dividido em quatro quadrantes.
 3. Selecionar automaticamente, entre um conjunto configurável de torres demonstrativas
    posicionadas ao redor da base, qual delas está mais próxima/melhor posicionada para
    cada alvo (algoritmo documentado em
-   [`Documentation/ALGORITMO_SELECAO_TORRE.md`](Documentation/ALGORITMO_SELECAO_TORRE.md)).
+   [`Docs/ALGORITMO_SELECAO_TORRE.md`](Docs/ALGORITMO_SELECAO_TORRE.md)).
 4. Permitir um modo de acionamento **demonstrativo** (indicador/laser de baixa potência ou
    simulação puramente em software), sempre respeitando uma distância mínima de segurança.
 5. Funcionar de ponta a ponta mesmo sem nenhum Arduino conectado, através de um modo de
@@ -74,6 +74,7 @@ Fornecer uma plataforma de software completa para:
 | .NET SDK | 9.0.316+ | https://dotnet.microsoft.com/download/dotnet/9.0 |
 | Inno Setup *(só para gerar o instalador)* | 6.7.3+ | https://jrsoftware.org/isdl.php |
 | Visual Studio 2022+ *(opcional)* | com workload ".NET desktop development" | https://visualstudio.microsoft.com/ |
+| Arduino CLI *(opcional — só para compilar sketches pela aba **Configurações do Arduino**)* | qualquer versão recente | https://arduino.github.io/arduino-cli/latest/installation/ |
 
 ---
 
@@ -147,8 +148,8 @@ Senha:   admin123
 
 Troque a senha padrão em **Perfil > Alterar senha** assim que possível. Detalhes completos
 (arquitetura, tabelas, como validar cada funcionalidade) em
-[`Documentation/ETAPA1_FUNDACAO.md`](Documentation/ETAPA1_FUNDACAO.md) e
-[`Documentation/MODELO_DADOS.md`](Documentation/MODELO_DADOS.md).
+[`Docs/ETAPA1_FUNDACAO.md`](Docs/ETAPA1_FUNDACAO.md) e
+[`Docs/MODELO_DADOS.md`](Docs/MODELO_DADOS.md).
 
 ### Conectar ao Arduino
 
@@ -164,7 +165,7 @@ Troque a senha padrão em **Perfil > Alterar senha** assim que possível. Detalh
 
 Se a conexão cair (cabo desconectado, porta ocupada, etc.), o software detecta a falha
 automaticamente e registra o evento no console, sem travar ou fechar a aplicação — detalhes em
-[`Documentation/COMUNICACAO_ARDUINO.md`](Documentation/COMUNICACAO_ARDUINO.md).
+[`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md).
 
 ### Modo de simulação
 
@@ -179,6 +180,28 @@ Não é necessário nenhum Arduino para testar o sistema por completo:
    acionamento demonstrativo automático" para observar o algoritmo de seleção e (no modo 4)
    o acionamento demonstrativo agindo sobre os alvos simulados.
 4. Desmarque a caixa para parar a geração de novos alvos a qualquer momento.
+
+### Configurações do Arduino (compilar sketches e monitor serial pela interface)
+
+Além da tela de Monitoramento, a barra lateral tem uma aba **Configurações do Arduino** para
+configurar o [Arduino CLI](https://arduino.github.io/arduino-cli/), compilar um sketch `.ino`
+e acompanhar a saída em tempo real, sem sair do aplicativo:
+
+1. **Ambiente Arduino:** informe o caminho de `arduino-cli.exe` (botão **Procurar…**) ou clique
+   em **Detectar automaticamente** (procura o caminho salvo, a pasta do próprio app, o `PATH`
+   do Windows e locais comuns de instalação, nessa ordem — nunca baixa nada
+   automaticamente). Escolha a placa/FQBN, a porta COM e o Baud Rate.
+2. **Compilação:** clique em **Selecionar código .ino…** (por padrão, se disponível, já vem
+   pré-selecionado `Arduino/ArduinoSimulation.ino`) e depois em **Compilar**. A saída do
+   `arduino-cli compile` aparece em tempo real no console, com status final de sucesso, erro ou
+   cancelamento (botão **Cancelar compilação** disponível durante o processo).
+3. **Monitor serial:** reaproveita a mesma conexão serial da tela de Monitoramento — se a porta
+   já estiver em uso com parâmetros diferentes, o app pergunta antes de desconectar e
+   reconectar, nunca derruba uma sessão ativa silenciosamente.
+
+Esta aba implementa apenas **compilação**; gravação/upload de firmware para a placa não está
+incluída. Detalhes completos em
+[`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md), seção 8.
 
 ### Configurar as torres
 
@@ -245,7 +268,7 @@ usuário final não precisa ter nenhuma versão do .NET instalada antes de rodar
 Isso prioriza confiabilidade em demonstração (funciona em qualquer Windows 10/11 x64 "limpo",
 sem depender de internet) e simplicidade (o instalador só copia arquivos), ao custo de um
 pacote maior (~42 MB comprimido). Racional completo em
-[`Documentation/INSTALADOR.md`](Documentation/INSTALADOR.md).
+[`Docs/INSTALADOR.md`](Docs/INSTALADOR.md).
 
 ### Solução de problemas
 
@@ -279,8 +302,8 @@ Views (WPF/XAML)  <-->  ViewModels (MainViewModel)  <-->  Services (regras de ne
   recriar a interface.
 
 Detalhes completos de cada classe estão em
-[`Documentation/DOCUMENTACAO_TECNICA.md`](Documentation/DOCUMENTACAO_TECNICA.md) e o racional
-arquitetural em [`Documentation/ARQUITETURA.md`](Documentation/ARQUITETURA.md).
+[`Docs/DOCUMENTACAO_TECNICA.md`](Docs/DOCUMENTACAO_TECNICA.md) e o racional
+arquitetural em [`Docs/ARQUITETURA.md`](Docs/ARQUITETURA.md).
 
 ### Como funciona o radar (resumo)
 
@@ -302,7 +325,7 @@ existentes em vez de recriar a árvore visual — mantendo a interface fluida.
    mínima de segurança.
 
 Matemática completa em
-[`Documentation/ALGORITMO_SELECAO_TORRE.md`](Documentation/ALGORITMO_SELECAO_TORRE.md).
+[`Docs/ALGORITMO_SELECAO_TORRE.md`](Docs/ALGORITMO_SELECAO_TORRE.md).
 
 ---
 
@@ -320,7 +343,7 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── installer/
 │   └── RadarTorres.iss                (script do Inno Setup 6)
 ├── dist/                              (gerado pelo build — Setup.exe; não versionado)
-├── Documentation/
+├── Docs/
 │   ├── ARQUITETURA.md
 │   ├── COMUNICACAO_ARDUINO.md
 │   ├── ALGORITMO_SELECAO_TORRE.md
@@ -329,22 +352,25 @@ Sistema_Rastreamento_Alvos_Arduino/
 │   ├── INSTALADOR.md
 │   ├── MODELO_DADOS.md
 │   └── LOG_SOLICITACOES.md
+├── tests/
+│   └── RadarTorres.Tests/             (xUnit — Arduino CLI, compilação, persistência, portas)
 └── src/
-    └── RadarTorres.App/
-        ├── RadarTorres.App.csproj
-        ├── appsettings.json            (configuração: portas, torres, distâncias...)
-        ├── App.xaml / App.xaml.cs
-        ├── Assets/                     (ícone do app)
-        ├── Configuration/              (AppSettings, AppConfig)
-        ├── Converters/                 (conversores de binding usados no XAML)
-        ├── Data/ · Repositories/       (persistência em CSV)
-        ├── Helpers/                    (CoordinateConverter, DistanceCalculator, QuadrantHelper, RelayCommand)
-        ├── Localization/ · Resources/  (pt-BR / en-US)
-        ├── Models/                     (Target, Tower, SensorReading, SystemState, LogEntry, ...)
-        ├── Services/                   (Serial*, Target/TowerSelection, FireControl, Simulation, Auth, Logging)
-        ├── Themes/                     (Light.xaml, Dark.xaml)
-        ├── ViewModels/                 (MainViewModel, ViewModelBase, ...)
-        └── Views/                      (MainWindow, RadarControl, Shell/...)
+    ├── RadarTorres.App/
+    │   ├── RadarTorres.App.csproj
+    │   ├── appsettings.json            (configuração: portas, torres, distâncias...)
+    │   ├── App.xaml / App.xaml.cs
+    │   ├── Assets/                     (ícone do app)
+    │   ├── Configuration/              (AppSettings, AppConfig, ArduinoCliSettings)
+    │   ├── Converters/                 (conversores de binding usados no XAML)
+    │   ├── Data/ · Repositories/       (persistência em CSV)
+    │   ├── Helpers/                    (CoordinateConverter, DistanceCalculator, QuadrantHelper, RelayCommand)
+    │   ├── Localization/ · Resources/  (pt-BR / en-US)
+    │   ├── Models/                     (Target, Tower, SensorReading, SystemState, LogEntry, Arduino*, ...)
+    │   ├── Services/                   (Serial*, Target/TowerSelection, FireControl, Simulation, Auth, Logging, Arduino*)
+    │   ├── Themes/                     (Light.xaml, Dark.xaml)
+    │   ├── ViewModels/                 (MainViewModel, ArduinoSettingsViewModel, ViewModelBase, ...)
+    │   └── Views/                      (MainWindow, RadarControl, ArduinoSettingsView, Shell/...)
+    └── RadarTorres.Launcher/          (launcher avulso — ver seção "Instalação")
 ```
 
 ---
@@ -362,6 +388,19 @@ Sistema_Rastreamento_Alvos_Arduino/
 | Empacotamento/instalador | [Inno Setup 6](https://jrsoftware.org/isinfo.php) |
 | Firmware de teste | Arduino (C/C++, Arduino IDE) |
 
+### ✅ Testes automatizados
+
+```powershell
+dotnet restore
+dotnet build RadarTorres.sln
+dotnet test RadarTorres.sln
+```
+
+O projeto `tests/RadarTorres.Tests` (xUnit) cobre hoje a aba **Configurações do Arduino**:
+localização do Arduino CLI, montagem segura dos argumentos de compilação, interpretação do
+código de saída, cancelamento, persistência das preferências e limite de linhas dos consoles,
+além da disputa pelo uso da porta serial compartilhada com a tela de Monitoramento.
+
 **Por que WPF em vez de WinForms?** WPF foi escolhido por oferecer data-binding real, gráficos
 vetoriais 2D de alta qualidade (essenciais para o radar circular), separação MVVM natural e
 melhor desempenho de redesenho em tempo real — todos requisitos centrais deste projeto.
@@ -372,14 +411,14 @@ melhor desempenho de redesenho em tempo real — todos requisitos centrais deste
 
 | Documento | Conteúdo |
 |---|---|
-| [`Documentation/ARQUITETURA.md`](Documentation/ARQUITETURA.md) | Decisões arquiteturais e diagramas |
-| [`Documentation/DOCUMENTACAO_TECNICA.md`](Documentation/DOCUMENTACAO_TECNICA.md) | Referência de cada classe/serviço |
-| [`Documentation/COMUNICACAO_ARDUINO.md`](Documentation/COMUNICACAO_ARDUINO.md) | Protocolo serial completo |
-| [`Documentation/ALGORITMO_SELECAO_TORRE.md`](Documentation/ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
-| [`Documentation/INSTALADOR.md`](Documentation/INSTALADOR.md) | Processo de criação do instalador: decisões, arquivos, testes realizados |
-| [`Documentation/ETAPA1_FUNDACAO.md`](Documentation/ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação |
-| [`Documentation/MODELO_DADOS.md`](Documentation/MODELO_DADOS.md) | Modelo de dados |
-| [`Documentation/LOG_SOLICITACOES.md`](Documentation/LOG_SOLICITACOES.md) | Histórico das solicitações feitas ao assistente ao longo do projeto |
+| [`Docs/ARQUITETURA.md`](Docs/ARQUITETURA.md) | Decisões arquiteturais e diagramas |
+| [`Docs/DOCUMENTACAO_TECNICA.md`](Docs/DOCUMENTACAO_TECNICA.md) | Referência de cada classe/serviço |
+| [`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md) | Protocolo serial completo |
+| [`Docs/ALGORITMO_SELECAO_TORRE.md`](Docs/ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
+| [`Docs/INSTALADOR.md`](Docs/INSTALADOR.md) | Processo de criação do instalador: decisões, arquivos, testes realizados |
+| [`Docs/ETAPA1_FUNDACAO.md`](Docs/ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação |
+| [`Docs/MODELO_DADOS.md`](Docs/MODELO_DADOS.md) | Modelo de dados |
+| [`Docs/LOG_SOLICITACOES.md`](Docs/LOG_SOLICITACOES.md) | Histórico das solicitações feitas ao assistente ao longo do projeto |
 
 ---
 
@@ -404,4 +443,4 @@ informação entre eles, apenas escopos complementares. Este `README.md` é o re
 fusão dos dois em um único documento na raiz do projeto, conforme convenção do GitHub (que
 só renderiza `README.md` automaticamente). O `README_LOCAL.md` foi removido; nenhum conteúdo
 de valor foi perdido — tudo foi incorporado às seções acima ou já vivia em
-`Documentation/`.</sub>
+`Docs/`.</sub>

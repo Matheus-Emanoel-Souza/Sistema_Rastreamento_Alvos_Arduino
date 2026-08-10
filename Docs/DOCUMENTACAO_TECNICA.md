@@ -43,6 +43,29 @@ camadas, evitando "strings mágicas" espalhadas pelo código.
 **Função:** uma linha imutável do console de eventos, com timestamp e nível de severidade.
 **Quem usa:** `LoggingService` (cria), `MainWindow.xaml` (exibe via `ListBox`).
 
+### `ArduinoBoardOption` / `ArduinoBoardCatalog` (`Models/ArduinoBoardOption.cs`)
+**Função:** `ArduinoBoardOption` é um `record` (FQBN + nome amigável) selecionável no combo de
+placas da aba Configurações do Arduino; `ArduinoBoardCatalog.DefaultBoards` é uma lista
+curada de placas comuns (Uno, Nano, Mega, Leonardo, ESP32, NodeMCU), sempre disponível mesmo
+sem o Arduino CLI instalado. **Quem usa:** `ArduinoSettingsViewModel`.
+
+### `ArduinoCliInfo` / `ArduinoCliSource` (`Models/ArduinoCliInfo.cs`)
+**Função:** resultado da detecção do executável `arduino-cli.exe` (encontrado ou não, caminho,
+versão, origem — configuração salva, pasta do app, PATH, ou local comum de instalação).
+**Quem usa:** `IArduinoCliLocatorService` (produz), `ArduinoSettingsViewModel` (consome).
+
+### `ArduinoCliOutputLine` / `ArduinoCliOutputStream` (`Models/ArduinoCliOutputLine.cs`)
+**Função:** uma linha do console de compilação (timestamp + origem: mensagem interna do
+RadarTorres, stdout ou stderr do `arduino-cli`). **Quem usa:** `ArduinoCompilerService` (gera
+via `IProgress<T>`), `ArduinoSettingsViewModel` (acumula em `CompileOutputLines`, com limite de
+linhas).
+
+### `ArduinoCompileResult` / `ArduinoCompileStatus` (`Models/ArduinoCompileResult.cs`)
+**Função:** resultado de uma compilação (`Success`/`Failed`/`Cancelled`, código de saída,
+duração). **Por que existe:** separa a interpretação de sucesso/falha (só código de saída +
+cancelamento explícito) do texto bruto do console. **Quem usa:** `ArduinoCompilerService`
+(produz), `ArduinoSettingsViewModel` (exibe o status final).
+
 ---
 
 ## Configuration
@@ -54,6 +77,15 @@ todo o código; qualquer classe que precise de um valor configurável (baud rate
 mínima, torres, timeouts) lê de `AppConfig.Current`. **Quem usa:** praticamente todos os
 serviços (`SerialCommunicationService`, `TargetTrackingService`, `TowerSelectionService`,
 `SimulationService`, `MainViewModel`).
+
+### `ArduinoCliSettings` (`Configuration/ArduinoCliSettings.cs`)
+**Função:** modelo das preferências da aba Configurações do Arduino (caminho do CLI, último
+sketch, FQBN, porta/baud, preferências do console). **Por que existe separado de
+`AppSettings`:** `AppSettings` é lido uma única vez de `appsettings.json`, na pasta de
+instalação (somente leitura em runtime); `ArduinoCliSettings` é gravável pelo usuário comum e
+persistido em `%LocalAppData%\RadarTorres\arduino-settings.json` via
+`IArduinoSettingsRepository`/`ArduinoSettingsRepository`. **Quem usa:**
+`ArduinoSettingsViewModel`.
 
 ---
 
@@ -139,6 +171,30 @@ hardware. **Métodos principais:** `Start(count?)`, `Stop()`, `AddRandomTarget()
 sem acoplar quem gera o log a nenhum componente visual específico. **Métodos:** `Info`,
 `Success`, `Warning`, `Error`, `Clear`. **Quem usa:** todos os serviços e o `MainViewModel`.
 
+### `ArduinoCliLocatorService` (`IArduinoCliLocatorService`)
+**Função:** localiza `arduino-cli.exe` no computador (caminho salvo → pasta do aplicativo →
+`PATH` → locais comuns de instalação), obtém a versão (`arduino-cli version`) e lista placas
+instaladas (`arduino-cli board listall`). **Por que existe:** o Arduino CLI é uma ferramenta
+externa, não faz parte do runtime do RadarTorres — esta classe isola toda a lógica de
+detecção (só leitura de disco/PATH e execução do CLI já instalado, nunca download) do resto da
+aba. **Métodos principais:** `Locate(savedPath)`, `GetVersionAsync(cliPath, ct)`,
+`ListInstalledBoardsAsync(cliPath, ct)`. **Quem usa:** `ArduinoSettingsViewModel`.
+
+### `ArduinoCompilerService` (`IArduinoCompilerService`)
+**Função:** compila um sketch via `arduino-cli compile --fqbn <fqbn> <pasta-do-sketch>` como
+processo filho assíncrono e cancelável, repassando `stdout`/`stderr` em tempo real. **Por que
+existe:** centraliza a montagem segura de argumentos (`ProcessStartInfo.ArgumentList`, nunca
+concatenação de string) e a interpretação de sucesso/falha (código de saída, nunca o texto de
+`stderr` isolado) em um único lugar testável sem depender do Arduino CLI instalado (ver
+`BuildCompileProcessStartInfo`/`ExecuteAsync`/`DetermineStatus`, `internal` para uso em
+`RadarTorres.Tests`). **Método principal:** `CompileAsync(ArduinoCompileRequest,
+IProgress<ArduinoCliOutputLine>, CancellationToken)`. **Quem usa:** `ArduinoSettingsViewModel`.
+
+### `ArduinoSettingsRepository` (`IArduinoSettingsRepository`)
+**Função:** carrega/grava `ArduinoCliSettings` em JSON, em
+`%LocalAppData%\RadarTorres\arduino-settings.json` por padrão (o construtor aceita um caminho
+alternativo, usado nos testes). **Quem usa:** `ArduinoSettingsViewModel`.
+
 ---
 
 ## ViewModels
@@ -149,6 +205,17 @@ sem acoplar quem gera o log a nenhum componente visual específico. **Métodos:*
 "vazar" para dentro dela; ela só decide *quando* chamar cada serviço. **Fluxo de dados:**
 descrito em detalhe no diagrama de sequência de `ARQUITETURA.md`. **Quem usa:**
 `MainWindow.xaml` (via `DataContext`).
+
+### `ArduinoSettingsViewModel`
+**Função:** orquestra as três seções da aba Configurações do Arduino (ambiente/detecção do
+CLI, compilação, monitor serial). **Por que existe:** mesma fronteira MVVM de `MainViewModel`
+— nenhuma chamada a `Process`/arquivo/porta serial acontece na View. **Reuso importante:**
+recebe a **mesma instância Singleton** de `ISerialCommunicationService` usada por
+`MainViewModel`, então não existe uma segunda conexão serial concorrente (ver
+`Docs/ARQUITETURA.md`, seção 5.1, e `Docs/COMUNICACAO_ARDUINO.md`, seção 8.4).
+**Métodos/comandos principais:** `AutoDetectCommand`, `RefreshBoardsAndPortsCommand`,
+`CompileCommand`/`CancelCompileCommand`, `ConnectCommand`/`DisconnectCommand`. **Quem usa:**
+`ArduinoSettingsView.xaml` (via `DataContext`).
 
 ---
 
@@ -167,6 +234,13 @@ composição de serviços está aqui e não em um container de DI:** o projeto �
 pequeno/médio; um container completo (`Microsoft.Extensions.DependencyInjection`) é o próximo
 passo natural caso o projeto cresça (ver seção de próximos passos no README).
 
+> **Nota:** desde a introdução da Shell multiusuário (barra lateral + navegação), o conteúdo
+> descrito acima em `MainWindow` vive em `Views/MonitoramentoView.xaml`, hospedada pela
+> `Views/Shell/ShellWindow.xaml`; a composição de serviços descrita passou para `App.xaml.cs`
+> (ver `Docs/ETAPA1_FUNDACAO.md`). A `ArduinoSettingsView.xaml` segue exatamente o mesmo
+> padrão — code-behind mínimo (diálogos de arquivo, rolagem automática do console), tudo o
+> mais em `ArduinoSettingsViewModel`.
+
 ---
 
 ## Converters (`Converters/*.cs`)
@@ -174,7 +248,9 @@ passo natural caso o projeto cresça (ver seção de próximos passos no README)
 Pequenos `IValueConverter` usados apenas para tradução de exibição no XAML — nenhum contém
 lógica de negócio: `EnumToBooleanConverter` (RadioButtons de modo), `ConnectionStateToBrushConverter`,
 `QuadrantToLabelConverter`, `SystemModeToLabelConverter`, `LogLevelToBrushConverter`,
-`NullToVisibilityConverter`.
+`NullToVisibilityConverter`, `ArduinoCompileStatusToBrushConverter` (status final da
+compilação), `ArduinoOutputStreamToBrushConverter` (linhas do console de compilação por
+origem), `BoolToFoundBrushConverter` (indicador "CLI encontrado/não encontrado").
 
 ---
 
@@ -186,9 +262,15 @@ lógica de negócio: `EnumToBooleanConverter` (RadioButtons de modo), `Connectio
   torre, apenas distância e quadrante preferencial.
 * Não há reconexão automática após queda de conexão (o campo `ReconnectAttempts` já existe na
   configuração, mas a lógica de retry ainda não foi implementada — ver abaixo).
-* Testes automatizados (unitários) ainda não foram incluídos nesta entrega inicial, embora a
-  arquitetura (serviços com interface, sem dependência de UI) tenha sido desenhada
-  especificamente para viabilizá-los facilmente.
+* Testes automatizados: o projeto `tests/RadarTorres.Tests` (xUnit) cobre a aba Configurações
+  do Arduino (localização do CLI, montagem segura de argumentos, interpretação de código de
+  saída, cancelamento, persistência, limite de linhas dos consoles e disputa pela porta
+  serial) — ver `Docs/LOG_SOLICITACOES.md`. O restante da aplicação (algoritmo de seleção de
+  torre, parser serial, etc.) ainda não tem testes automatizados, embora a arquitetura
+  (serviços com interface, sem dependência de UI) tenha sido desenhada especificamente para
+  viabilizá-los facilmente.
+* A aba Configurações do Arduino implementa apenas **compilação** do sketch — gravação/upload
+  do firmware para a placa (`arduino-cli upload`) não foi implementada nesta entrega.
 * O acionamento demonstrativo é, por definição do escopo, apenas indicativo (log + comando
   serial opcional) — não há nenhuma integração com atuadores de alta potência.
 

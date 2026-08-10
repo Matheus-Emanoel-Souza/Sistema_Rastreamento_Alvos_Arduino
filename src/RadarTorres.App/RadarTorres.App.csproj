@@ -46,6 +46,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Permite que RadarTorres.Tests exercite membros internal usados exclusivamente para
+         teste (ex.: montagem de argumentos e interpretação de código de saída do Arduino CLI
+         em ArduinoCompilerService), sem torná-los API pública do projeto. -->
+    <InternalsVisibleTo Include="RadarTorres.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

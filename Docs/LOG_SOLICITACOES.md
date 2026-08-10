@@ -72,7 +72,7 @@ manual, e confirmação de que os dois softwares tinham sido instalados manualme
 - Ícone (`src/RadarTorres.App/Assets/RadarTorres.ico`) gerado via PowerShell/`System.Drawing`.
 - Metadados de nome/versão/ícone adicionados ao `.csproj`.
 - Publicação **self-contained** (win-x64) escolhida e justificada — dispensa checagem/
-  instalação de .NET no computador do usuário final (ver `Documentation/INSTALADOR.md`,
+  instalação de .NET no computador do usuário final (ver `Docs/INSTALADOR.md`,
   seção 3).
 - Tratamento global de erros de inicialização em `App.xaml.cs` (mensagens claras em vez de
   crash), sem alterar funcionalidades existentes.
@@ -83,10 +83,10 @@ manual, e confirmação de que os dois softwares tinham sido instalados manualme
 - Script de build (`build/publish.ps1`): automatiza build → publish self-contained →
   geração do instalador em `dist/Setup.exe`.
 - Build, publish e instalador gerados e testados de ponta a ponta (ver
-  `Documentation/INSTALADOR.md`, seção 7, para a lista completa de testes e o único ponto
+  `Docs/INSTALADOR.md`, seção 7, para a lista completa de testes e o único ponto
   parcial — desinstalação silenciosa travando no ambiente de automação usado, não no script).
 - Documentação de uso no `README.md` (seção "Instalação (Windows)") e detalhamento técnico
-  em `Documentation/INSTALADOR.md`.
+  em `Docs/INSTALADOR.md`.
 
 ---
 
@@ -100,9 +100,9 @@ manual, e confirmação de que os dois softwares tinham sido instalados manualme
 
 **Entregue:**
 
-- `Documentation/INSTALADOR.md` — documentação técnica do processo de instalação criado na
+- `Docs/INSTALADOR.md` — documentação técnica do processo de instalação criado na
   solicitação anterior.
-- `Documentation/LOG_SOLICITACOES.md` — este arquivo, com o histórico de pedidos.
+- `Docs/LOG_SOLICITACOES.md` — este arquivo, com o histórico de pedidos.
 - Commit na branch `Sistema` com todas as alterações da sessão anterior (instalador) mais
   esta documentação.
 
@@ -149,11 +149,90 @@ dados restantes ficam para a próxima entrega, conforme plano apresentado e acei
 - `SystemMode` estendido (Manutenção/Emergência) com confirmação e auditoria em toda troca de modo.
 - `FireControlService` e `MainViewModel` passaram a gravar auditoria (`acoes_realizadas`,
   `objetos_detectados`, `alteracoes_modo`) nos pontos únicos onde essas ações já passavam.
-- Documentação: `Documentation/MODELO_DADOS.md` (schema + relacionamentos + plano de migração
-  SQL) e `Documentation/ETAPA1_FUNDACAO.md` (arquitetura antes/depois, arquivos alterados,
+- Documentação: `Docs/MODELO_DADOS.md` (schema + relacionamentos + plano de migração
+  SQL) e `Docs/ETAPA1_FUNDACAO.md` (arquitetura antes/depois, arquivos alterados,
   como validar cada funcionalidade, o que falta para fechar a Etapa 1).
 - Build limpo (0 erros, 0 avisos) e validação de ponta a ponta (login real, Shell renderizada,
   CSVs de auditoria gerados) usando captura direta de janela (`PrintWindow`) e verificação
   criptográfica isolada do hash de senha — sem automação de teclado, depois que uma tentativa
   de `SendKeys` acabou digitando em uma janela errada (WhatsApp Web) por roubo de foco; o
   incidente foi reportado ao usuário assim que percebido.
+
+---
+
+## 2026-08-10 — Aba "Configurações do Arduino" (ambiente, compilação, monitor serial)
+
+**Pedido (resumo — texto completo com ~15 seções detalhadas, preservado no histórico da
+conversa):** adicionar uma nova aba ao menu lateral, "Configurações do Arduino", organizada em
+três seções — (1) Ambiente Arduino: caminho do `arduino-cli.exe`, detecção automática (caminho
+salvo → pasta do app → PATH → locais comuns), seleção de placa/FQBN, porta COM e baud rate;
+(2) Compilação: seleção de sketch `.ino` (com `Arduino/ArduinoSimulation.ino` como padrão
+inicial), compilar/cancelar de forma assíncrona via `arduino-cli compile --fqbn <fqbn>
+<pasta>`, com `ArgumentList` seguro (nunca shell), console em tempo real e status decidido só
+pelo código de saída; (3) Monitor serial em tempo real, reaproveitando a comunicação serial já
+existente e sem permitir duas conexões concorrentes na mesma porta (com confirmação do usuário
+antes de desconectar uma sessão já ativa). Pedido explícito para: analisar todo o projeto antes
+de alterar qualquer arquivo; reutilizar a arquitetura MVVM e a comunicação serial existentes
+(sem criar uma segunda implementação concorrente); implementar apenas compilação, não
+upload/gravação de firmware, sem consultar antes; persistir as configurações em
+`%LocalAppData%\RadarTorres` (nunca em `C:\Program Files\...`); adicionar testes para as
+partes testáveis sem hardware físico; rodar `dotnet restore`/`build`/`test` e corrigir erros;
+atualizar `README.md` e os quatro documentos em `Docs/`; não commitar/pushar sem autorização.
+
+**Imprevisto encontrado durante a sessão (fora do controle do assistente):** a pasta
+`Documentation/` foi renomeada para `Docs/` no disco (e um `Bem-vindo.md` solto na raiz foi
+apagado) enquanto a sessão estava em andamento — consistente com uma ação do Obsidian rodando
+em paralelo (há uma pasta `.obsidian/` na raiz, indicando que o repositório é aberto como
+vault). O assistente identificou a mudança via `git status`, parou antes de editar qualquer
+documento e perguntou ao usuário como proceder; a resposta foi manter `Docs/` e atualizar todas
+as referências a `Documentation/` no código/documentação/README para `Docs/`.
+
+**Entregue:**
+
+- **Modelos** (`Models/`): `ArduinoBoardOption`/`ArduinoBoardCatalog` (catálogo padrão de
+  placas), `ArduinoCliInfo`/`ArduinoCliSource`, `ArduinoCliOutputLine`/`ArduinoCliOutputStream`,
+  `ArduinoCompileResult`/`ArduinoCompileStatus`.
+- **Configuração** (`Configuration/ArduinoCliSettings.cs`): preferências da aba, persistidas em
+  `%LocalAppData%\RadarTorres\arduino-settings.json`.
+- **Serviços** (`Services/`): `IArduinoCliLocatorService`/`ArduinoCliLocatorService` (detecção
+  do CLI, versão, placas instaladas — só leitura de disco/PATH e execução do CLI já instalado,
+  nunca download); `IArduinoCompilerService`/`ArduinoCompilerService` (compilação assíncrona e
+  cancelável via `Process`/`ArgumentList`, com pontos `internal` testáveis isoladamente —
+  `BuildCompileProcessStartInfo`, `ExecuteAsync`, `DetermineStatus`, `ResolveSketchFolder`);
+  `IArduinoSettingsRepository`/`ArduinoSettingsRepository` (persistência JSON).
+- **ViewModel** (`ViewModels/ArduinoSettingsViewModel.cs`): as três seções pedidas, reutilizando
+  a **mesma instância Singleton** de `ISerialCommunicationService` já usada pela tela de
+  Monitoramento (nenhuma segunda implementação de comunicação serial) — ao conectar em uma
+  porta já em uso com parâmetros diferentes, pede confirmação antes de desconectar; consoles de
+  compilação e do monitor limitados a 4000 linhas cada.
+- **View** (`Views/ArduinoSettingsView.xaml` + code-behind mínimo): mesmo padrão visual das
+  demais telas (`DynamicResource` de tema, tipografia, GroupBox/Border), com diálogos de
+  arquivo e rolagem automática do console tratados no code-behind (nunca lógica de negócio).
+- **Novos conversores** (`Converters/`): `ArduinoCompileStatusToBrushConverter`,
+  `ArduinoOutputStreamToBrushConverter`, `BoolToFoundBrushConverter`.
+- Novo item de menu `MenuItem.ConfiguracoesArduino` (`Sidebar.ConfiguracoesArduino`, pt-BR/
+  en-US), roteado em `NavigationService`, visível para todos os perfis autenticados (mesma
+  regra dos demais itens não administrativos).
+- Registro na injeção de dependência existente (`App.xaml.cs`): `ArduinoSettingsViewModel` e
+  `ArduinoSettingsView` como Singleton (mesmo padrão de `MainViewModel`/`MonitoramentoView`,
+  para preservar o estado da conexão/compilação entre navegações pela barra lateral).
+- **Testes automatizados** — novo projeto `tests/RadarTorres.Tests` (xUnit, adicionado à
+  `RadarTorres.sln`), 21 testes cobrindo: localização do Arduino CLI; montagem segura de
+  argumentos (`ArgumentList`, nunca string concatenada); interpretação de código de saída;
+  cancelamento (processo real via `powershell.exe`, morto pela árvore de processos);
+  persistência (round-trip, arquivo ausente, JSON corrompido); limite de linhas dos consoles de
+  compilação e do monitor serial; e disputa pelo uso da porta serial (reconexão evitada quando
+  já conectado nos mesmos parâmetros). Todos os dublês ficam em
+  `tests/RadarTorres.Tests/Fakes/`.
+- Atualização de todas as referências a `Documentation/` (código-fonte, README, documentos) para
+  `Docs/`, em função do imprevisto relatado acima.
+- Documentação atualizada: `README.md` (pré-requisitos, seção de uso da nova aba, estrutura de
+  pastas, testes), `Docs/ARQUITETURA.md` (seção 5.1), `Docs/DOCUMENTACAO_TECNICA.md`
+  (novos Models/Services/ViewModel/Converters, limitações), `Docs/COMUNICACAO_ARDUINO.md`
+  (seção 8, completa) e este arquivo.
+- `dotnet restore` + `dotnet build RadarTorres.sln` (0 erros, 0 avisos) + `dotnet test` (21/21
+  aprovados) executados com sucesso; validação manual adicional: aplicativo iniciado e
+  encerrado sem exceções (smoke test de inicialização/DI/XAML).
+- Não implementado nesta entrega, por instrução explícita do pedido: gravação/upload de
+  firmware (`arduino-cli upload`) — ficou apenas registrado como próximo passo natural, a ser
+  implementado somente mediante nova consulta ao usuário.
