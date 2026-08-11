@@ -16,7 +16,21 @@ public enum SystemMode
     LocationAutoTower = 2,
 
     /// <summary>Localização + seleção automática + acionamento demonstrativo automático (laser/indicador).</summary>
-    LocationAutoFire = 3
+    LocationAutoFire = 3,
+
+    /// <summary>
+    /// Manutenção: sistema propositalmente fora de operação normal para inspeção/ajustes.
+    /// Equivalente ao "Manutenção" administrativo auditado em <c>alteracoes_modo</c>
+    /// (ver <see cref="Services.ModeAuditService"/>). Não processa alvos.
+    /// </summary>
+    Maintenance = 4,
+
+    /// <summary>
+    /// Emergência: sistema pausado por segurança (equivalente ao "Emergência/sistema
+    /// pausado" administrativo). Bloqueia qualquer acionamento até retorno explícito a
+    /// outro modo. Não processa alvos.
+    /// </summary>
+    Emergency = 5
 }
 
 /// <summary>Estado da conexão serial com o Arduino (ou com o simulador).</summary>

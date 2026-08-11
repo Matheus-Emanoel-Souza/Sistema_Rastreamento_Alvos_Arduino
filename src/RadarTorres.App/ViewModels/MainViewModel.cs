@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using RadarTorres.App.Configuration;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
+using RadarTorres.App.Repositories;
 using RadarTorres.App.Services;
 
 namespace RadarTorres.App.ViewModels;
@@ -28,6 +29,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly ITowerSelectionService _towerService;
     private readonly IFireControlService _fireControlService;
     private readonly ISimulationService _simulationService;
+    private readonly IObjetoDetectadoRepository _objetoRepository;
+    private readonly IAlteracaoModoRepository _alteracaoModoRepository;
+    private readonly IAuthService _authService;
+    private readonly IPermissionService _permissionService;
     private readonly Dispatcher _dispatcher;
 
     public MainViewModel(
@@ -36,7 +41,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         ITargetTrackingService trackingService,
         ITowerSelectionService towerService,
         IFireControlService fireControlService,
-        ISimulationService simulationService)
+        ISimulationService simulationService,
+        IObjetoDetectadoRepository objetoRepository,
+        IAlteracaoModoRepository alteracaoModoRepository,
+        IAuthService authService,
+        IPermissionService permissionService)
     {
         _logger = logger;
         _serialService = serialService;
@@ -44,6 +53,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _towerService = towerService;
         _fireControlService = fireControlService;
         _simulationService = simulationService;
+        _objetoRepository = objetoRepository;
+        _alteracaoModoRepository = alteracaoModoRepository;
+        _authService = authService;
+        _permissionService = permissionService;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
         _minDistance = AppConfig.Current.RadarSettings.MinSafetyDistanceMeters;
@@ -56,16 +69,17 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _serialService.MessageReceived += OnSerialMessageReceived;
         _serialService.CommunicationError += OnCommunicationError;
 
-        _trackingService.TargetCreated += OnTargetCreatedOrUpdated;
+        _trackingService.TargetCreated += OnTargetCreated;
         _trackingService.TargetUpdated += OnTargetCreatedOrUpdated;
         _trackingService.TargetRemoved += OnTargetRemoved;
 
         _simulationService.ReadingGenerated += OnSimulationReadingGenerated;
+        _authService.SessionChanged += OnAuthSessionChanged;
 
         RefreshPortsCommand = new RelayCommand(RefreshPorts);
         ConnectCommand = new RelayCommand(async () => await ConnectAsync(), () => !IsConnected);
         DisconnectCommand = new RelayCommand(() => _serialService.Disconnect(), () => IsConnected);
-        ManualFireCommand = new RelayCommand(async () => await ManualFireAsync(), () => SelectedTarget is not null && CurrentMode != SystemMode.Off);
+        ManualFireCommand = new RelayCommand(async () => await ManualFireAsync(), () => SelectedTarget is not null && CurrentMode != SystemMode.Off && PodeExecutarAcoes);
         ClearRadarCommand = new RelayCommand(ClearRadar);
         TogglePauseCommand = new RelayCommand(() => IsPaused = !IsPaused);
 
@@ -113,6 +127,25 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public bool IsConnected => ConnectionStatus == ConnectionState.Connected;
 
+    /// <summary>
+    /// Se o usuário conectado pode executar ações que alteram o estado do sistema
+    /// (Requisito 11 — controle de acesso por perfil). Perfil Visualizador é somente-consulta.
+    /// </summary>
+    public bool PodeExecutarAcoes => _permissionService.PodeExecutarAcoes(_authService.CurrentUser?.Perfil ?? PerfilUsuario.Visualizador);
+
+    /// <summary>Inverso de <see cref="PodeExecutarAcoes"/> — conveniência para bind direto com <c>BooleanToVisibilityConverter</c> no XAML.</summary>
+    public bool NaoPodeExecutarAcoes => !PodeExecutarAcoes;
+
+    private void OnAuthSessionChanged(object? sender, EventArgs e)
+    {
+        RunOnUi(() =>
+        {
+            OnPropertyChanged(nameof(PodeExecutarAcoes));
+            OnPropertyChanged(nameof(NaoPodeExecutarAcoes));
+            RelayCommand.RaiseCanExecuteChangedForAll();
+        });
+    }
+
     // ---------------------------------------------------------------- Modo / simulação / pausa
 
     private SystemMode _currentMode = SystemMode.Off;
@@ -122,10 +155,32 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         set
         {
             SystemMode old = _currentMode;
+            if (old == value) return;
+
+            if (!PodeExecutarAcoes)
+            {
+                _logger.Warning("Seu perfil (Visualizador) não permite alterar o modo do sistema.");
+                OnPropertyChanged(nameof(CurrentMode));
+                return;
+            }
+
+            // Requisito "Histórico de alteração dos modos": confirma com o usuário antes de
+            // aplicar qualquer troca de modo, e audita tanto sucesso quanto cancelamento.
+            string pergunta = $"Confirma a troca do modo \"{DescribeMode(old)}\" para \"{DescribeMode(value)}\"?";
+            bool confirmado = MessageBox.Show(pergunta, "Confirmar alteração de modo", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+
+            if (!confirmado)
+            {
+                RegistrarAlteracaoModo(old, value, ResultadoAlteracaoModo.Erro, "Alteração cancelada pelo usuário na confirmação.");
+                OnPropertyChanged(nameof(CurrentMode)); // garante que o RadioButton volte ao valor anterior na UI
+                return;
+            }
+
             if (SetProperty(ref _currentMode, value))
             {
                 OnPropertyChanged(nameof(SystemStatusText));
                 OnModeChanged(old, value);
+                RegistrarAlteracaoModo(old, value, ResultadoAlteracaoModo.Sucesso, null);
             }
         }
     }
@@ -316,7 +371,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private async Task ManualFireAsync()
     {
         if (SelectedTarget is null) return;
-        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
+        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Manual);
     }
 
     private void ClearRadar()
@@ -356,8 +411,56 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         SystemMode.LocationOnly => "SOMENTE LOCALIZAÇÃO",
         SystemMode.LocationAutoTower => "LOCALIZAÇÃO + SELEÇÃO AUTOMÁTICA DE TORRE",
         SystemMode.LocationAutoFire => "LOCALIZAÇÃO + ACIONAMENTO DEMONSTRATIVO AUTOMÁTICO",
+        SystemMode.Maintenance => "MANUTENÇÃO",
+        SystemMode.Emergency => "EMERGÊNCIA (SISTEMA PAUSADO)",
         _ => mode.ToString()
     };
+
+    private void RegistrarAlteracaoModo(SystemMode anterior, SystemMode novo, ResultadoAlteracaoModo resultado, string? observacao)
+    {
+        try
+        {
+            DateTime agora = DateTime.Now;
+            _alteracaoModoRepository.Add(new AlteracaoModo
+            {
+                ModoAnterior = DescribeMode(anterior),
+                NovoModo = DescribeMode(novo),
+                DataHoraSolicitacao = agora,
+                UsuarioSolicitante = _authService.CurrentUser?.Login ?? "—",
+                DataHoraExecucao = resultado == ResultadoAlteracaoModo.Sucesso ? agora : null,
+                Resultado = resultado,
+                Observacao = observacao
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível gravar o registro de auditoria da troca de modo: {ex.Message}");
+        }
+    }
+
+    private void RegistrarObjetoDetectado(Target target)
+    {
+        try
+        {
+            _objetoRepository.Add(new ObjetoDetectado
+            {
+                Tipo = "Alvo genérico",
+                X = target.X,
+                Y = target.Y,
+                Z = null,
+                Quadrante = QuadrantHelper.ToDisplayLabel(target.Quadrant),
+                DataHora = DateTime.Now,
+                Dispositivo = IsSimulationMode ? "Simulador" : "Arduino",
+                NivelConfianca = null,
+                Observacao = null,
+                ReferenciaImagem = null
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível gravar o registro do objeto detectado: {ex.Message}");
+        }
+    }
 
     private async Task SendCommandSafeAsync(string command)
     {
@@ -440,7 +543,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 FireAuthorizationResult auth = _fireControlService.Authorize(target, MinDistance);
                 if (auth.Authorized)
                 {
-                    _ = _fireControlService.TryFireAsync(target, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
+                    _ = _fireControlService.TryFireAsync(target, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Automatica);
                 }
                 else
                 {
@@ -450,6 +553,18 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
 
         SelectedTarget ??= target;
+    }
+
+    /// <summary>
+    /// Disparado apenas na primeira detecção de um alvo (não a cada atualização de posição) —
+    /// é o ponto de gravação do histórico de objetos detectados (Requisito 4). Encaminha para
+    /// <see cref="OnTargetCreatedOrUpdated"/> para manter a mesma lógica de seleção de
+    /// torre/acionamento automático já existente para alvos novos.
+    /// </summary>
+    private void OnTargetCreated(object? sender, Target target)
+    {
+        RegistrarObjetoDetectado(target);
+        OnTargetCreatedOrUpdated(sender, target);
     }
 
     private void OnTargetRemoved(object? sender, Target target)
@@ -472,10 +587,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _serialService.ConnectionStateChanged -= OnConnectionStateChanged;
         _serialService.MessageReceived -= OnSerialMessageReceived;
         _serialService.CommunicationError -= OnCommunicationError;
-        _trackingService.TargetCreated -= OnTargetCreatedOrUpdated;
+        _trackingService.TargetCreated -= OnTargetCreated;
         _trackingService.TargetUpdated -= OnTargetCreatedOrUpdated;
         _trackingService.TargetRemoved -= OnTargetRemoved;
         _simulationService.ReadingGenerated -= OnSimulationReadingGenerated;
+        _authService.SessionChanged -= OnAuthSessionChanged;
         _serialService.Dispose();
     }
 }
