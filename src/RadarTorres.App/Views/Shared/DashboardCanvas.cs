@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using RadarTorres.App.Models;
 
 namespace RadarTorres.App.Views.Shared;
@@ -20,7 +22,12 @@ namespace RadarTorres.App.Views.Shared;
 ///   restaurar todo o layout") — um card oculto continua existindo como filho do canvas, só não
 ///   é desenhado nem participa da checagem de sobreposição;
 /// * rastreia a ordem de empilhamento (Panel.ZIndex), trazendo um card para frente quando o
-///   usuário começa a arrastá-lo/redimensioná-lo (Requisito "ordem dos componentes").
+///   usuário começa a arrastá-lo/redimensioná-lo (Requisito "ordem dos componentes");
+/// * "ímã" de alinhamento ao arrastar (Requisito "ajuda a deixar as janelas alinhadas"): ao
+///   mover um card, se alguma de suas bordas/centro passa perto da borda/centro de outro card
+///   visível (ou da borda/centro do próprio canvas), a posição é ajustada para encostar
+///   exatamente nessa referência, com uma linha-guia tracejada mostrando onde alinhou —
+///   mesmo princípio de "smart guides" de editores gráficos (PowerPoint, Figma).
 /// </summary>
 public class DashboardCanvas : Canvas
 {
@@ -31,8 +38,14 @@ public class DashboardCanvas : Canvas
     private const double DefaultCardHeight = 150;
     private const double DefaultGap = 12;
 
+    /// <summary>Distância máxima (em pixels) para uma borda/centro "grudar" em outra durante o
+    /// arraste.</summary>
+    private const double SnapThreshold = 8;
+
     private Size _lastSize = Size.Empty;
     private int _nextZIndex = 1;
+    private Line? _verticalGuide;
+    private Line? _horizontalGuide;
 
     /// <summary>Disparado depois de qualquer mudança concluída no layout — arraste/
     /// redimensionamento (Thumb solto), ocultar, reexibir, restaurar padrão ou aplicar um
@@ -48,7 +61,9 @@ public class DashboardCanvas : Canvas
 
     /// <summary>Aplica um deslocamento de arraste ao card, respeitando os limites do canvas e
     /// recusando o movimento (mantendo a posição anterior) se ele resultar em sobreposição com
-    /// outro card visível.</summary>
+    /// outro card visível. Antes de aplicar, tenta "imantar" cada eixo (independentemente) à
+    /// borda/centro mais próximo de outro card visível ou do próprio canvas, dentro de
+    /// <see cref="SnapThreshold"/> pixels — ver <see cref="SnapAxis"/>.</summary>
     public void RequestMove(DashboardCard card, double deltaX, double deltaY)
     {
         double width = card.ActualWidth > 0 ? card.ActualWidth : card.Width;
@@ -57,11 +72,35 @@ public class DashboardCanvas : Canvas
         double left = Clamp(GetLeft(card) + deltaX, 0, Math.Max(0, ActualWidth - width));
         double top = Clamp(GetTop(card) + deltaY, 0, Math.Max(0, ActualHeight - height));
 
+        var otherEdgesX = CollectSnapEdges(card, horizontal: true);
+        var otherEdgesY = CollectSnapEdges(card, horizontal: false);
+        (double snappedLeft, double? guideX) = SnapAxis(left, width, otherEdgesX);
+        (double snappedTop, double? guideY) = SnapAxis(top, height, otherEdgesY);
+
+        snappedLeft = Clamp(snappedLeft, 0, Math.Max(0, ActualWidth - width));
+        snappedTop = Clamp(snappedTop, 0, Math.Max(0, ActualHeight - height));
+
+        var snappedProposed = new Rect(snappedLeft, snappedTop, width, height);
+        if (!OverlapsAnyVisible(card, snappedProposed))
+        {
+            SetLeft(card, snappedLeft);
+            SetTop(card, snappedTop);
+            UpdateSnapGuides(guideX, guideY);
+            return;
+        }
+
+        // O ajuste do imã encostaria em outro card — tenta a posição "crua" (sem imã) antes de
+        // desistir do movimento inteiro.
         var proposed = new Rect(left, top, width, height);
-        if (OverlapsAnyVisible(card, proposed)) return;
+        if (OverlapsAnyVisible(card, proposed))
+        {
+            HideSnapGuides();
+            return;
+        }
 
         SetLeft(card, left);
         SetTop(card, top);
+        HideSnapGuides();
     }
 
     /// <summary>Aplica um redimensionamento (a partir do canto inferior direito) ao card,
@@ -127,8 +166,13 @@ public class DashboardCanvas : Canvas
         Children.OfType<DashboardCard>().Where(c => c.Visibility != Visibility.Visible).ToList();
 
     /// <summary>Notifica que algo no layout mudou (arraste/redimensionamento concluído, card
-    /// ocultado/reexibido, layout restaurado ou aplicado).</summary>
-    public void NotifyLayoutChanged() => LayoutChanged?.Invoke(this, EventArgs.Empty);
+    /// ocultado/reexibido, layout restaurado ou aplicado). Também esconde as linhas-guia do
+    /// imã, que só fazem sentido durante o arraste em si.</summary>
+    public void NotifyLayoutChanged()
+    {
+        HideSnapGuides();
+        LayoutChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>Snapshot do layout atual (posição, tamanho, visibilidade e ordem de
     /// empilhamento), como frações do tamanho do canvas, pronto para persistir.</summary>
@@ -317,4 +361,130 @@ public class DashboardCanvas : Canvas
 
     private static double Clamp(double value, double min, double max) =>
         max < min ? min : Math.Min(Math.Max(value, min), max);
+
+    // ---------------------------------------------------------------- Imã de alinhamento
+
+    /// <summary>Posições (início, fim, centro) de referência no eixo pedido, vindas de todos os
+    /// cards visíveis diferentes de <paramref name="exclude"/> e das bordas/centro do próprio
+    /// canvas — candidatas a "imantar" o card que está sendo arrastado.</summary>
+    private List<double> CollectSnapEdges(DashboardCard exclude, bool horizontal)
+    {
+        var edges = new List<double>();
+
+        double canvasExtent = horizontal ? ActualWidth : ActualHeight;
+        if (canvasExtent > 0)
+        {
+            edges.Add(0);
+            edges.Add(canvasExtent);
+            edges.Add(canvasExtent / 2);
+        }
+
+        foreach (DashboardCard other in Children.OfType<DashboardCard>())
+        {
+            if (ReferenceEquals(other, exclude) || other.Visibility != Visibility.Visible) continue;
+
+            double start = horizontal ? GetLeft(other) : GetTop(other);
+            double extent = horizontal
+                ? (other.ActualWidth > 0 ? other.ActualWidth : other.Width)
+                : (other.ActualHeight > 0 ? other.ActualHeight : other.Height);
+
+            edges.Add(start);
+            edges.Add(start + extent);
+            edges.Add(start + extent / 2);
+        }
+
+        return edges;
+    }
+
+    /// <summary>Tenta ajustar <paramref name="start"/> (posição bruta, já dentro dos limites do
+    /// canvas) para que o início, o fim ou o centro do card coincida exatamente com alguma
+    /// referência em <paramref name="candidates"/>, se a diferença for menor que
+    /// <see cref="SnapThreshold"/>. Entre várias referências dentro do limite, usa a mais
+    /// próxima. Retorna a posição ajustada (ou a original, se nada "imantou") e a coordenada da
+    /// linha-guia a desenhar, se houve ajuste.</summary>
+    private static (double Value, double? Guide) SnapAxis(double start, double extent, IReadOnlyList<double> candidates)
+    {
+        double end = start + extent;
+        double center = start + extent / 2;
+
+        double bestDistance = SnapThreshold;
+        double? bestValue = null;
+        double? bestGuide = null;
+
+        foreach (double candidate in candidates)
+        {
+            TryBetter(candidate - start, start, candidate);
+            TryBetter(candidate - end, start + (candidate - end), candidate);
+            TryBetter(candidate - center, start + (candidate - center), candidate);
+        }
+
+        return (bestValue ?? start, bestGuide);
+
+        void TryBetter(double delta, double snappedStart, double guide)
+        {
+            double distance = Math.Abs(delta);
+            if (distance >= bestDistance) return;
+
+            bestDistance = distance;
+            bestValue = snappedStart;
+            bestGuide = guide;
+        }
+    }
+
+    /// <summary>Cria (uma única vez) as duas linhas-guia usadas pelo imã e as adiciona ao
+    /// canvas, sempre por cima dos cards.</summary>
+    private void EnsureSnapGuides()
+    {
+        if (_verticalGuide is not null) return;
+
+        var guideBrush = TryFindBrush("AccentBrush", Brushes.DeepSkyBlue);
+
+        _verticalGuide = new Line { Stroke = guideBrush, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 4, 3 }, Visibility = Visibility.Collapsed, IsHitTestVisible = false };
+        _horizontalGuide = new Line { Stroke = guideBrush, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 4, 3 }, Visibility = Visibility.Collapsed, IsHitTestVisible = false };
+
+        Children.Add(_verticalGuide);
+        Children.Add(_horizontalGuide);
+        SetZIndex(_verticalGuide, int.MaxValue);
+        SetZIndex(_horizontalGuide, int.MaxValue);
+    }
+
+    /// <summary>Mostra as linhas-guia nas coordenadas onde o imã "grudou" (ou esconde o eixo
+    /// correspondente, se não houve ajuste naquele eixo).</summary>
+    private void UpdateSnapGuides(double? guideX, double? guideY)
+    {
+        EnsureSnapGuides();
+
+        if (guideX.HasValue)
+        {
+            _verticalGuide!.X1 = _verticalGuide.X2 = guideX.Value;
+            _verticalGuide.Y1 = 0;
+            _verticalGuide.Y2 = Math.Max(ActualHeight, 1);
+            _verticalGuide.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            _verticalGuide!.Visibility = Visibility.Collapsed;
+        }
+
+        if (guideY.HasValue)
+        {
+            _horizontalGuide!.Y1 = _horizontalGuide.Y2 = guideY.Value;
+            _horizontalGuide.X1 = 0;
+            _horizontalGuide.X2 = Math.Max(ActualWidth, 1);
+            _horizontalGuide.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            _horizontalGuide!.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void HideSnapGuides()
+    {
+        if (_verticalGuide is not null) _verticalGuide.Visibility = Visibility.Collapsed;
+        if (_horizontalGuide is not null) _horizontalGuide.Visibility = Visibility.Collapsed;
+    }
+
+    private static Brush TryFindBrush(string key, Brush fallback) =>
+        Application.Current.TryFindResource(key) as Brush ?? fallback;
 }
