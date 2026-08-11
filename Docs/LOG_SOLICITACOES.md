@@ -303,3 +303,40 @@ em `ArduinoSettingsRepository` (JSON em `%LocalAppData%\RadarTorres`).
 - `dotnet build` (0 erros, 0 avisos) e `dotnet test` (21/21 aprovados) executados com sucesso.
   Validação visual do arraste/redimensionamento na UI ficou pendente de execução manual pelo
   usuário (ambiente do assistente não tem display).
+
+---
+
+## 2026-08-11 — Push, fluxo de branches (Sistema → TESTE → homologacao) e bugs encontrados ao rodar o app
+
+**Pedido (resumo):** push da branch `Sistema`, atualizar `TESTE` com merge de `Sistema`,
+parar e mostrar eventuais conflitos sem resolver sozinho, rodar o app e informar endereço de
+acesso, criar `homologacao` a partir da branch estável do projeto sem mesclar/commitar/fazer
+push nela até aprovação, e perguntar antes de qualquer ponto do fluxo que ficasse ambíguo. Em
+seguida, pedido para recompilar e rodar o app, e depois para registrar na documentação os bugs
+encontrados nessa execução, para resolução futura.
+
+**Esclarecimentos obtidos antes de agir** (`AskUserQuestion`): branch estável usada como base
+de `homologacao` = `main`; passo de "informar endereço de acesso" foi pulado (app é desktop
+WPF, sem servidor/URL).
+
+**Entregue:**
+
+- `git push origin Sistema` (já estava sincronizada com o remoto).
+- `TESTE` atualizada com `git merge Sistema` — fast-forward, sem conflitos (`TESTE` não tinha
+  nenhum commit próprio divergente).
+- Branch `homologacao` criada a partir de `main`; checkout feito, sem merge/commit/push (etapa
+  seguinte aguardando aprovação do usuário após validação em `TESTE`).
+- `dotnet build` (0 erros/avisos) e execução do app (`dotnet run`, branch `TESTE`) — o processo
+  chegou a abrir a janela de login, mas **caiu com `StackOverflowException`** durante a
+  execução nesta sessão de automação. Os dois bugs identificados (um real/pré-existente no
+  tratador global de exceções, outro possivelmente específico do ambiente de automação sem
+  desktop interativo) foram documentados em `Docs/DOCUMENTACAO_TECNICA.md`, nova seção "Bugs
+  conhecidos" dentro de "Limitações e próximos passos":
+  1. `App.OnDispatcherUnhandledException` sem trava de reentrância — se a própria exibição do
+     `MessageBox` de erro lançar uma exceção, entra em loop infinito até estourar a pilha.
+  2. Falha nativa de renderização de texto (`DirectWrite`/`TextAnalyzer.GetGlyphs`) observada
+     apenas nesta sessão de automação, que foi o gatilho do bug 1 — ainda não confirmado se
+     acontece em uso normal (desktop interativo real); nenhum frame do crash pertence ao
+     código da aplicação (nada de `DashboardCanvas`/`DashboardCard`/`PainelPrincipalView`).
+- Nenhum commit/push feito para essas alterações de documentação nem para o restante do fluxo
+  pendente (merge em `homologacao`) — aguardando aprovação do usuário.
