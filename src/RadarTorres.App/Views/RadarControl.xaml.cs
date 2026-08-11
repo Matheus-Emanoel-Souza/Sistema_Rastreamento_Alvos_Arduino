@@ -94,7 +94,13 @@ public partial class RadarControl : UserControl
 
     private void Render()
     {
-        double size = Math.Min(RadarCanvas.ActualWidth, RadarCanvas.ActualHeight);
+        // Mede o espaço disponível pelo próprio controle (RootGrid), nunca por RadarCanvas:
+        // DrawStaticLayer fixa RadarCanvas.Width/Height a cada redesenho para manter o radar
+        // quadrado/centralizado dentro de uma área que pode não ser quadrada — se a medição
+        // partisse do próprio RadarCanvas, ela ficaria "presa" no último tamanho que nós mesmos
+        // fixamos, e o radar nunca acompanharia o card encolhendo ou crescendo depois da
+        // primeira renderização.
+        double size = Math.Min(RootGrid.ActualWidth, RootGrid.ActualHeight);
         if (size <= 1) return;
 
         if (_staticLayerDirty)
