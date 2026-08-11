@@ -80,6 +80,7 @@
   "Dashboard.EstadoComunicacao": "Communication status",
   "Dashboard.UltimaAtualizacao": "Last updated",
   "Dashboard.SemRegistro": "No record yet",
+  "Dashboard.RestaurarLayoutPadrao": "Restore default layout",
 
   "HelpDesk.Title": "Open a support ticket",
   "HelpDesk.Titulo": "Title",

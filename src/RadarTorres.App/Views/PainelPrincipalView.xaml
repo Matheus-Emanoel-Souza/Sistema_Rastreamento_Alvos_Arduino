@@ -2,20 +2,12 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="clr-namespace:RadarTorres.App.Localization"
-             xmlns:conv="clr-namespace:RadarTorres.App.Converters">
+             xmlns:conv="clr-namespace:RadarTorres.App.Converters"
+             xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared">
 
     <UserControl.Resources>
         <conv:ConnectionStateToBrushConverter x:Key="ConnectionStateToBrushConverter"/>
 
-        <Style x:Key="CardBorder" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="18,14"/>
-            <Setter Property="Margin" Value="0,0,12,12"/>
-            <Setter Property="MinWidth" Value="220"/>
-        </Style>
         <Style x:Key="CardLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="12"/>
@@ -29,65 +21,73 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="4">
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,16">
+            <Button DockPanel.Dock="Right" Padding="12,6" Cursor="Hand"
+                    Background="Transparent" BorderBrush="{DynamicResource PanelBorderBrush}"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    Content="{loc:Loc Dashboard.RestaurarLayoutPadrao}"
+                    Command="{Binding RestoreDefaultLayoutCommand}"/>
             <TextBlock Text="{loc:Loc Dashboard.Title}" FontSize="20" FontWeight="Bold"
-                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,16"/>
+                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+        </DockPanel>
 
-            <WrapPanel Orientation="Horizontal">
-                <Border Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Dashboard.ObjetosDetectados}" Style="{StaticResource CardLabel}"/>
-                        <TextBlock Text="{Binding TotalObjetosDetectados}" Style="{StaticResource CardValue}" Foreground="{DynamicResource AccentBrush}"/>
-                    </StackPanel>
-                </Border>
+        <!--
+            Cada card é arrastável (cabeçalho) e redimensionável (alça no canto inferior
+            direito); o DashboardCanvas impede sobreposição e mantém o layout proporcional ao
+            redimensionar a janela. Posição/tamanho iniciais (Canvas.Left/Top/Width/Height)
+            abaixo são só um estado inicial válido — assim que a tela carrega, o code-behind
+            aplica o layout salvo (ou a grade padrão, na primeira execução).
+        -->
+        <shared:DashboardCanvas x:Name="LayoutCanvas" Grid.Row="1" ClipToBounds="True">
+            <shared:DashboardCard x:Name="CardObjetosDetectados" CardId="ObjetosDetectados"
+                                   Title="{loc:Loc Dashboard.ObjetosDetectados}"
+                                   Canvas.Left="0" Canvas.Top="0" Width="260" Height="150">
+                <TextBlock Text="{Binding TotalObjetosDetectados}" Style="{StaticResource CardValue}" Foreground="{DynamicResource AccentBrush}"/>
+            </shared:DashboardCard>
 
-                <Border Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Dashboard.AcoesRealizadas}" Style="{StaticResource CardLabel}"/>
-                        <TextBlock Text="{Binding TotalAcoesRealizadas}" Style="{StaticResource CardValue}" Foreground="{DynamicResource TargetBrush}"/>
-                    </StackPanel>
-                </Border>
+            <shared:DashboardCard x:Name="CardAcoesRealizadas" CardId="AcoesRealizadas"
+                                   Title="{loc:Loc Dashboard.AcoesRealizadas}"
+                                   Canvas.Left="272" Canvas.Top="0" Width="260" Height="150">
+                <TextBlock Text="{Binding TotalAcoesRealizadas}" Style="{StaticResource CardValue}" Foreground="{DynamicResource TargetBrush}"/>
+            </shared:DashboardCard>
 
-                <Border Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Dashboard.ModoAtual}" Style="{StaticResource CardLabel}"/>
-                        <TextBlock Text="{Binding ModoAtual}" Style="{StaticResource CardValue}" FontSize="16"/>
-                    </StackPanel>
-                </Border>
+            <shared:DashboardCard x:Name="CardModoAtual" CardId="ModoAtual"
+                                   Title="{loc:Loc Dashboard.ModoAtual}"
+                                   Canvas.Left="544" Canvas.Top="0" Width="260" Height="150">
+                <TextBlock Text="{Binding ModoAtual}" Style="{StaticResource CardValue}" FontSize="16"/>
+            </shared:DashboardCard>
 
-                <Border Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Dashboard.EstadoComunicacao}" Style="{StaticResource CardLabel}"/>
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center"
-                                     Fill="{Binding EstadoComunicacao, Converter={StaticResource ConnectionStateToBrushConverter}}"/>
-                            <TextBlock Text="{Binding EstadoComunicacao}" Style="{StaticResource CardValue}" FontSize="16" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+            <shared:DashboardCard x:Name="CardEstadoComunicacao" CardId="EstadoComunicacao"
+                                   Title="{loc:Loc Dashboard.EstadoComunicacao}"
+                                   Canvas.Left="0" Canvas.Top="162" Width="260" Height="150">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center"
+                             Fill="{Binding EstadoComunicacao, Converter={StaticResource ConnectionStateToBrushConverter}}"/>
+                    <TextBlock Text="{Binding EstadoComunicacao}" Style="{StaticResource CardValue}" FontSize="16" VerticalAlignment="Center"/>
+                </StackPanel>
+            </shared:DashboardCard>
 
-                <Border Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Dashboard.UltimaAlteracaoModo}" Style="{StaticResource CardLabel}"/>
-                        <TextBlock Text="{Binding UltimaAlteracaoModoTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
-                    </StackPanel>
-                </Border>
+            <shared:DashboardCard x:Name="CardUltimaAlteracaoModo" CardId="UltimaAlteracaoModo"
+                                   Title="{loc:Loc Dashboard.UltimaAlteracaoModo}"
+                                   Canvas.Left="272" Canvas.Top="162" Width="260" Height="150">
+                <StackPanel>
+                    <TextBlock Text="{Binding UltimaAlteracaoModoTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
+                    <TextBlock Text="{loc:Loc Dashboard.UsuarioResponsavel}" Style="{StaticResource CardLabel}" Margin="0,10,0,4"/>
+                    <TextBlock Text="{Binding UsuarioResponsavelUltimaAlteracao}" Style="{StaticResource CardValue}" FontSize="16"/>
+                </StackPanel>
+            </shared:DashboardCard>
 
-                <Border Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Dashboard.UsuarioResponsavel}" Style="{StaticResource CardLabel}"/>
-                        <TextBlock Text="{Binding UsuarioResponsavelUltimaAlteracao}" Style="{StaticResource CardValue}" FontSize="16"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource CardBorder}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Dashboard.UltimaAtualizacao}" Style="{StaticResource CardLabel}"/>
-                        <TextBlock Text="{Binding UltimaAtualizacaoTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
-                    </StackPanel>
-                </Border>
-            </WrapPanel>
-        </StackPanel>
-    </ScrollViewer>
+            <shared:DashboardCard x:Name="CardUltimaAtualizacao" CardId="UltimaAtualizacao"
+                                   Title="{loc:Loc Dashboard.UltimaAtualizacao}"
+                                   Canvas.Left="544" Canvas.Top="162" Width="260" Height="150">
+                <TextBlock Text="{Binding UltimaAtualizacaoTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
+            </shared:DashboardCard>
+        </shared:DashboardCanvas>
+    </Grid>
 </UserControl>
