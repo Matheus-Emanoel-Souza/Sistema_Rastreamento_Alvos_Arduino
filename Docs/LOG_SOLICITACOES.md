@@ -253,3 +253,53 @@ orientação na documentação como uma seção de "Dicas".
 `README.md`, logo após a opção "A partir do código-fonte", com os dois comandos
 (`dotnet run --project src/RadarTorres.App` e `dotnet publish ... --self-contained true -o
 <pasta do usuário>`).
+
+---
+
+## 2026-08-11 — Layout personalizável dos cards do painel principal
+
+**Pedido (texto integral):**
+
+> Claude, na tela de dashboards do meu aplicativo, implemente uma funcionalidade que permita:
+>
+> * Redimensionar individualmente cada dashboard;
+> * Arrastar e reposicionar os dashboards livremente na tela;
+> * Evitar sobreposição entre os elementos;
+> * Salvar o tamanho e a posição definidos pelo usuário;
+> * Manter o layout responsivo em diferentes tamanhos de tela;
+> * Adicionar uma opção para restaurar o layout padrão.
+>
+> Antes de implementar, analise a estrutura atual do projeto e me explique brevemente qual
+> será a solução utilizada.
+
+**Análise apresentada antes de implementar:** o painel principal (`PainelPrincipalView.xaml`)
+era um `WrapPanel` estático com 6 cards; o projeto não tem nenhuma biblioteca de UI/drag-drop
+de terceiros, então a solução usaria WPF puro, seguindo o padrão de persistência já existente
+em `ArduinoSettingsRepository` (JSON em `%LocalAppData%\RadarTorres`).
+
+**Entregue:**
+
+- `Models/DashboardCardLayout.cs` — posição/tamanho de um card como fração (0..1) do canvas.
+- `Services/IDashboardLayoutRepository.cs` + `DashboardLayoutRepository.cs` — persistência em
+  `%LocalAppData%\RadarTorres\dashboard-layout.json`, mesmo padrão de
+  `ArduinoSettingsRepository`.
+- `Views/Shared/DashboardCard.xaml(.cs)` — card com cabeçalho arrastável (`Thumb`) e alça de
+  redimensionamento no canto (`Thumb`), conteúdo livre via `CardContent`/`[ContentProperty]`.
+- `Views/Shared/DashboardCanvas.cs` — `Canvas` customizado com anticolisão (`Rect.IntersectsWith`,
+  recusa o gesto em vez de empurrar os demais cards), limites do canvas, reescala proporcional
+  em `SizeChanged` (responsividade) e snapshot/restauração do layout.
+- `Views/PainelPrincipalView.xaml` — troca o `WrapPanel` pelo `DashboardCanvas` com 6
+  `DashboardCard`, mais o botão "Restaurar layout padrão".
+- `Views/PainelPrincipalView.xaml.cs` — carrega o layout salvo (ou a grade padrão, na primeira
+  execução) ao abrir a tela, salva a cada `LayoutChanged` (gesto concluído, não a cada pixel) e
+  trata a restauração do padrão.
+- `ViewModels/PainelPrincipalViewModel.cs` — novo `RestoreDefaultLayoutCommand` e evento
+  `RestoreLayoutRequested` (a ViewModel não manipula elementos visuais diretamente, mesmo
+  padrão já usado em `ArduinoSettingsViewModel` para diálogos de arquivo).
+- Registro em `App.xaml.cs` (`IDashboardLayoutRepository`) e chave de localização
+  `Dashboard.RestaurarLayoutPadrao` (pt-BR/en-US).
+- Documentação atualizada: `Docs/ARQUITETURA.md` (seção 5.2), `Docs/DOCUMENTACAO_TECNICA.md`
+  (novos Models/Services/ViewModel/Views), `README.md` (estrutura de pastas) e este arquivo.
+- `dotnet build` (0 erros, 0 avisos) e `dotnet test` (21/21 aprovados) executados com sucesso.
+  Validação visual do arraste/redimensionamento na UI ficou pendente de execução manual pelo
+  usuário (ambiente do assistente não tem display).

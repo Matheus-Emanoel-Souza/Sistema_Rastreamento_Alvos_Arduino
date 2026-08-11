@@ -388,11 +388,13 @@ Sistema_Rastreamento_Alvos_Arduino/
     │   ├── Data/ · Repositories/       (persistência em CSV)
     │   ├── Helpers/                    (CoordinateConverter, DistanceCalculator, QuadrantHelper, RelayCommand)
     │   ├── Localization/ · Resources/  (pt-BR / en-US)
-    │   ├── Models/                     (Target, Tower, SensorReading, SystemState, LogEntry, Arduino*, ...)
-    │   ├── Services/                   (Serial*, Target/TowerSelection, FireControl, Simulation, Auth, Logging, Arduino*)
+    │   ├── Models/                     (Target, Tower, SensorReading, SystemState, LogEntry, Arduino*, DashboardCardLayout, ...)
+    │   ├── Services/                   (Serial*, Target/TowerSelection, FireControl, Simulation, Auth, Logging, Arduino*, DashboardLayout*)
     │   ├── Themes/                     (Light.xaml, Dark.xaml)
-    │   ├── ViewModels/                 (MainViewModel, ArduinoSettingsViewModel, ViewModelBase, ...)
-    │   └── Views/                      (MainWindow, RadarControl, ArduinoSettingsView, Shell/...)
+    │   ├── ViewModels/                 (MainViewModel, ArduinoSettingsViewModel, PainelPrincipalViewModel, ViewModelBase, ...)
+    │   └── Views/                      (MainWindow, RadarControl, ArduinoSettingsView, PainelPrincipalView,
+    │       Shell/..., Shared/ — DashboardCanvas + DashboardCard: cards do painel principal
+    │       arrastáveis/redimensionáveis, sem sobreposição, com layout persistido por usuário)
     └── RadarTorres.Launcher/          (launcher avulso — ver seção "Instalação")
 ```
 

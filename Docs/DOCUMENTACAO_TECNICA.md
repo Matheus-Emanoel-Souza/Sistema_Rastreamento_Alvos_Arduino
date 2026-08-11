@@ -66,6 +66,14 @@ duração). **Por que existe:** separa a interpretação de sucesso/falha (só c
 cancelamento explícito) do texto bruto do console. **Quem usa:** `ArduinoCompilerService`
 (produz), `ArduinoSettingsViewModel` (exibe o status final).
 
+### `DashboardCardLayout` (`Models/DashboardCardLayout.cs`)
+**Função:** posição (`RelX`/`RelY`) e tamanho (`RelWidth`/`RelHeight`) de um card do painel
+principal, sempre como fração (0..1) do tamanho do `DashboardCanvas` — nunca em pixels
+absolutos. **Por que existe:** é o único jeito de o layout continuar proporcional em qualquer
+resolução de tela (ver `Docs/ARQUITETURA.md`, seção 5.2). **Quem usa:** `DashboardCanvas`
+(produz/consome via `GetLayoutSnapshot`/`ApplyLayoutSnapshot`), `IDashboardLayoutRepository`
+(persiste).
+
 ---
 
 ## Configuration
@@ -195,6 +203,15 @@ IProgress<ArduinoCliOutputLine>, CancellationToken)`. **Quem usa:** `ArduinoSett
 `%LocalAppData%\RadarTorres\arduino-settings.json` por padrão (o construtor aceita um caminho
 alternativo, usado nos testes). **Quem usa:** `ArduinoSettingsViewModel`.
 
+### `DashboardLayoutRepository` (`IDashboardLayoutRepository`)
+**Função:** carrega/grava o layout dos cards do painel principal
+(`Dictionary<string, DashboardCardLayout>`, chave = `DashboardCard.CardId`) em JSON, em
+`%LocalAppData%\RadarTorres\dashboard-layout.json` por padrão (mesmo padrão de
+`ArduinoSettingsRepository`, inclusive o caminho alternativo para testes). **Métodos:**
+`Load()` (retorna `null` se o arquivo nunca existiu), `Save(layout)`, `Clear()` (usado por
+"Restaurar layout padrão"). **Quem usa:** `PainelPrincipalView.xaml.cs` (nunca a ViewModel —
+ver seção Views).
+
 ---
 
 ## ViewModels
@@ -217,9 +234,42 @@ recebe a **mesma instância Singleton** de `ISerialCommunicationService` usada p
 `CompileCommand`/`CancelCompileCommand`, `ConnectCommand`/`DisconnectCommand`. **Quem usa:**
 `ArduinoSettingsView.xaml` (via `DataContext`).
 
+### `PainelPrincipalViewModel` (trecho de layout)
+**Função (nesta funcionalidade):** expõe `RestoreDefaultLayoutCommand` e o evento
+`RestoreLayoutRequested`, disparado quando o comando executa. **Por que não faz mais do que
+isso:** posição/tamanho de elementos visuais (`DashboardCanvas`) não é estado de domínio —
+a ViewModel não referencia nenhum tipo de `System.Windows.Controls`. Quem efetivamente aplica
+a restauração é o code-behind da View (ver `DashboardCanvas`/`DashboardCard` em Views abaixo).
+
 ---
 
 ## Views
+
+### `DashboardCanvas` (`Views/Shared/DashboardCanvas.cs`)
+**Função:** `Canvas` customizado que hospeda os `DashboardCard` do painel principal e decide
+se um arraste/redimensionamento proposto é válido. **Por que existe:** é o único lugar que
+conhece as regras de posicionamento do painel — nenhum `DashboardCard` sabe sobre os outros.
+**Como funciona:** guarda posição/tamanho como pixels em `Canvas.Left`/`Top`/`Width`/`Height`
+(a fonte de verdade em tempo de execução), mas produz/consome `DashboardCardLayout` (frações)
+para persistência; em `SizeChanged`, reescala todos os cards pela razão entre o tamanho novo e
+o anterior, preservando a fração ocupada por cada um. **Métodos principais:**
+`RequestMove(card, deltaX, deltaY)`, `RequestResize(card, deltaWidth, deltaHeight)` (ambos
+recusam a mudança se ela colidir com outro card via `Rect.IntersectsWith` ou sair dos limites
+do canvas), `GetLayoutSnapshot()`/`ApplyLayoutSnapshot(layout)`, `ResetToDefaultLayout()`
+(grade fixa de 3 colunas). **Evento:** `LayoutChanged` (disparado por `DashboardCard` ao soltar
+o mouse — `DragCompleted`). **Quem usa:** `PainelPrincipalView.xaml` (hospeda os 6 cards do
+painel), `PainelPrincipalView.xaml.cs` (carrega/salva o layout).
+
+### `DashboardCard` (`Views/Shared/DashboardCard.xaml`)
+**Função:** card individual do painel principal, com cabeçalho arrastável (`Thumb` com
+`Cursor=SizeAll`) e alça de redimensionamento no canto inferior direito (`Thumb` com
+`Cursor=SizeNWSE`). **Por que existe:** encapsula a chrome visual (borda, cabeçalho, alça) uma
+única vez, para os 6 cards do painel reutilizarem. **Como funciona:** não decide nada sozinho —
+cada `Thumb.DragDelta` só repassa o gesto para `(Parent as DashboardCanvas).RequestMove/
+RequestResize`; o conteúdo interno de cada card é definido por quem usa o controle e mapeado
+para a propriedade `CardContent` via `[ContentProperty]`. **Propriedades:** `CardId` (chave
+estável usada na persistência), `Title`, `CardContent`. **Quem usa:**
+`PainelPrincipalView.xaml` (6 instâncias, uma por indicador do painel).
 
 ### `RadarControl`
 **Função:** desenha o radar circular (ver README, seção 9, para o funcionamento visual

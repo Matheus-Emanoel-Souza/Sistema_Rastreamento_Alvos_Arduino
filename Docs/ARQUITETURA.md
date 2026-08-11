@@ -143,6 +143,46 @@ Decisões relevantes desta funcionalidade:
   descartam as linhas mais antigas acima de um limite fixo (4000), seguindo o mesmo padrão já
   usado por `LoggingService` (limite de 500 no console de eventos da tela de Monitoramento).
 
+## 5.2 Painel principal — layout de cards arrastável/redimensionável
+
+```mermaid
+flowchart LR
+    VIEW["PainelPrincipalView.xaml.cs\n(code-behind — único ponto que toca elementos visuais)"]
+    CANVAS["DashboardCanvas : Canvas\n(anticolisão, limites, reescala proporcional)"]
+    CARD["DashboardCard : UserControl\n(cabeçalho arrastável + alça de redimensionamento)"]
+    REPO["IDashboardLayoutRepository\n(%LocalAppData%\\RadarTorres\\dashboard-layout.json)"]
+
+    CARD -- "DragDelta / DragCompleted" --> CANVAS
+    CANVAS -- "LayoutChanged" --> VIEW
+    VIEW -- "Load / Save / Clear" --> REPO
+    VMEVT["PainelPrincipalViewModel\n.RestoreLayoutRequested"] --> VIEW
+```
+
+Decisões relevantes desta funcionalidade:
+
+* **Posição/tamanho guardados como fração do canvas, não em pixels.** `DashboardCardLayout`
+  (`RelX`/`RelY`/`RelWidth`/`RelHeight`, todos 0..1) é o que vai para o JSON. Isso resolve o
+  requisito de responsividade: ao reabrir a tela em outra resolução, ou redimensionar a janela,
+  cada card ocupa exatamente a mesma proporção da tela — nunca sai da área visível nem fica
+  desproporcional. `DashboardCanvas` também reescala `Canvas.Left/Top/Width/Height` de todos
+  os cards pela razão entre o novo e o antigo `SizeChanged`, mantendo a mesma fração enquanto o
+  usuário arrasta a borda da janela em tempo real.
+* **Anticolisão por rejeição, não por empurrão.** A cada `DragDelta` (arraste ou
+  redimensionamento), `DashboardCanvas` calcula o retângulo proposto e testa
+  `Rect.IntersectsWith` contra todos os outros cards; se colidir ou sair dos limites do canvas,
+  o delta é simplesmente ignorado (o card "trava" na última posição válida) — mais simples e
+  previsível do que reorganizar os demais cards a cada gesto.
+* **Nenhuma lógica de posicionamento na ViewModel.** Igual ao padrão já usado em
+  `ArduinoSettingsView` para diálogos de arquivo (seção 5.1): posição/tamanho de elementos
+  visuais é estado de UI, não de domínio. `PainelPrincipalViewModel` só expõe
+  `RestoreDefaultLayoutCommand` e o evento `RestoreLayoutRequested`; quem efetivamente lê/grava
+  o `DashboardCanvas` é o code-behind de `PainelPrincipalView`.
+* **Persistência no mesmo padrão de `ArduinoSettingsRepository`.** `DashboardLayoutRepository`
+  grava um único JSON (`Dictionary<string, DashboardCardLayout>`, chave = `DashboardCard.CardId`)
+  em `%LocalAppData%\RadarTorres\dashboard-layout.json`, a cada `DragCompleted` (não a cada
+  pixel de `DragDelta`, para não gerar I/O excessivo). "Restaurar layout padrão" rearranja os
+  cards em uma grade fixa (3 colunas) e regrava o arquivo.
+
 ## 5. Extensibilidade
 
 * **Trocar o protocolo serial:** só `SerialProtocolParser` precisa mudar; todo o resto do
