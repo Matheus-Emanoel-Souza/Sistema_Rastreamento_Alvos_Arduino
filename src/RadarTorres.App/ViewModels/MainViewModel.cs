@@ -21,7 +21,7 @@ namespace RadarTorres.App.ViewModels;
 /// Nenhuma regra de negócio mora aqui — esta classe apenas decide "quando chamar o quê"
 /// em resposta a eventos da UI ou dos serviços.
 /// </summary>
-public sealed class MainViewModel : ViewModelBase, IDisposable
+public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 {
     private readonly ILoggingService _logger;
     private readonly ISerialCommunicationService _serialService;
@@ -86,6 +86,20 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         RefreshPorts();
         _logger.Success("Sistema iniciado");
     }
+
+    // ---------------------------------------------------------------- Navegação/layout
+
+    /// <summary>Disparado toda vez que o usuário navega para a tela de Monitoramento (view
+    /// Singleton, pode ser revisitada várias vezes, inclusive por usuários diferentes após um
+    /// logout/login). O code-behind da View usa isso para recarregar o layout dos cards do
+    /// usuário atualmente logado — carregar/salvar layout é estado visual, não pertence à
+    /// ViewModel (mesmo princípio de <c>PainelPrincipalViewModel.ScreenActivated</c>).</summary>
+    public event EventHandler? ScreenActivated;
+
+    /// <summary>Chamado pelo NavigationService toda vez que o usuário volta a esta tela.
+    /// Nenhum dado precisa ser recarregado aqui (a tela já reage a eventos em tempo real) — só
+    /// avisa a View para recarregar o layout salvo do usuário atual.</summary>
+    public void OnNavigatedTo() => ScreenActivated?.Invoke(this, EventArgs.Empty);
 
     // ---------------------------------------------------------------- Coleções expostas
 
