@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -71,14 +72,43 @@ public partial class RadarControl : UserControl
     /// <summary>Disparado quando o usuário clica em um alvo desenhado no radar.</summary>
     public event EventHandler<int>? TargetClicked;
 
+    private const double MinZoom = 0.5;
+    private const double MaxZoom = 3.0;
+    private const double ZoomStep = 0.25;
+
+    private const double MinRangeMultiplier = 0.5;
+    private const double MaxRangeMultiplier = 5.0;
+    private const double RangeStep = 0.5;
+
     private readonly DispatcherTimer _renderTimer;
     private readonly Dictionary<int, TargetVisual> _targetVisuals = new();
     private readonly Dictionary<int, TowerVisual> _towerVisuals = new();
     private bool _staticLayerDirty = true;
 
+    /// <summary>Fator de escala visual do radar, independente do tamanho do card que o hospeda
+    /// (quão grande o círculo aparece na tela). 1.0 = preenche exatamente o espaço disponível;
+    /// acima disso o radar fica maior que o espaço visível e pode ser rolado
+    /// (<see cref="RadarScrollViewer"/>); abaixo disso fica menor, centralizado com margem ao
+    /// redor. Não muda o que é mostrado, só o tamanho em pixels — para "enxergar mais longe"
+    /// (mesmo espaço na tela representando uma distância maior), ver <see cref="_rangeMultiplier"/>.</summary>
+    private double _zoom = 1.0;
+
+    /// <summary>Multiplica <c>RadarSettings.MaxDetectionDistanceMeters</c> (Requisito "aumentar
+    /// o raio do radar, como se quisesse ver coisas mais longe"): acima de 1.0, o círculo
+    /// externo passa a representar uma distância maior — alvos/torres mais distantes da base
+    /// ficam visíveis dentro do mesmo círculo (mais "encolhidos" em relação ao centro); abaixo
+    /// de 1.0, o círculo mostra só as proximidades da base, em mais detalhe.</summary>
+    private double _rangeMultiplier = 1.0;
+
+    /// <summary>Distância (em metros) representada pela borda externa do radar agora —
+    /// distância configurada em <c>appsettings.json</c> multiplicada pelo alcance atual.</summary>
+    private double EffectiveMaxDistanceMeters => AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters * _rangeMultiplier;
+
     public RadarControl()
     {
         InitializeComponent();
+
+        RangeLabel.Text = $"{EffectiveMaxDistanceMeters:0.#} m";
 
         int refreshMs = Math.Max(30, AppConfig.Current.RadarSettings.RefreshRateMs);
         _renderTimer = new DispatcherTimer(DispatcherPriority.Render)
@@ -92,6 +122,62 @@ public partial class RadarControl : UserControl
         SizeChanged += (_, _) => { _staticLayerDirty = true; Render(); };
     }
 
+    private void ZoomInButton_Click(object sender, RoutedEventArgs e) => ChangeZoom(ZoomStep);
+
+    private void ZoomOutButton_Click(object sender, RoutedEventArgs e) => ChangeZoom(-ZoomStep);
+
+    private void ZoomResetButton_Click(object sender, RoutedEventArgs e) => SetZoom(1.0);
+
+    private void RangeInButton_Click(object sender, RoutedEventArgs e) => ChangeRange(RangeStep);
+
+    private void RangeOutButton_Click(object sender, RoutedEventArgs e) => ChangeRange(-RangeStep);
+
+    private void RangeResetButton_Click(object sender, RoutedEventArgs e) => SetRange(1.0);
+
+    /// <summary>Ctrl+roda do mouse controla o zoom visual; Shift+roda controla o alcance (raio)
+    /// do radar — mesmo princípio de mapas/editores gráficos. Sem modificador, a roda continua
+    /// rolando o conteúdo normalmente pelo ScrollViewer.</summary>
+    private void RadarScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        switch (Keyboard.Modifiers)
+        {
+            case ModifierKeys.Control:
+                ChangeZoom(e.Delta > 0 ? ZoomStep : -ZoomStep);
+                e.Handled = true;
+                break;
+            case ModifierKeys.Shift:
+                ChangeRange(e.Delta > 0 ? RangeStep : -RangeStep);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void ChangeZoom(double delta) => SetZoom(_zoom + delta);
+
+    private void SetZoom(double value)
+    {
+        double clamped = Math.Clamp(value, MinZoom, MaxZoom);
+        if (Math.Abs(clamped - _zoom) < 0.001) return;
+
+        _zoom = clamped;
+        ZoomLabel.Text = $"{_zoom:0%}";
+        _staticLayerDirty = true;
+        Render();
+    }
+
+    private void ChangeRange(double delta) => SetRange(_rangeMultiplier + delta);
+
+    private void SetRange(double multiplier)
+    {
+        double clamped = Math.Clamp(multiplier, MinRangeMultiplier, MaxRangeMultiplier);
+        if (Math.Abs(clamped - _rangeMultiplier) < 0.001) return;
+
+        _rangeMultiplier = clamped;
+        RangeLabel.Text = $"{EffectiveMaxDistanceMeters:0.#} m";
+        _staticLayerDirty = true; // os rótulos de distância dos anéis mudam com o alcance
+        Render();
+    }
+
     private void Render()
     {
         // Mede o espaço disponível pelo próprio controle (RootGrid), nunca por RadarCanvas:
@@ -99,24 +185,28 @@ public partial class RadarControl : UserControl
         // quadrado/centralizado dentro de uma área que pode não ser quadrada — se a medição
         // partisse do próprio RadarCanvas, ela ficaria "presa" no último tamanho que nós mesmos
         // fixamos, e o radar nunca acompanharia o card encolhendo ou crescendo depois da
-        // primeira renderização.
-        double size = Math.Min(RootGrid.ActualWidth, RootGrid.ActualHeight);
-        if (size <= 1) return;
+        // primeira renderização. O fator de zoom multiplica esse espaço disponível: acima de
+        // 100% o radar fica maior que a área visível (rolável pelo ScrollViewer), abaixo fica
+        // menor.
+        double availableSize = Math.Min(RootGrid.ActualWidth, RootGrid.ActualHeight);
+        if (availableSize <= 1) return;
+
+        double size = availableSize * _zoom;
+        double maxDistance = EffectiveMaxDistanceMeters;
 
         if (_staticLayerDirty)
         {
-            DrawStaticLayer(size);
+            DrawStaticLayer(size, maxDistance);
             _staticLayerDirty = false;
         }
 
-        double maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
         DrawTowers(size, maxDistance);
         DrawTargets(size, maxDistance);
     }
 
     // ---------------------------------------------------------------- Camada estática
 
-    private void DrawStaticLayer(double size)
+    private void DrawStaticLayer(double size, double maxDistance)
     {
         StaticLayer.Children.Clear();
         RadarCanvas.Width = size;
@@ -137,7 +227,6 @@ public partial class RadarControl : UserControl
         StaticLayer.Children.Add(baseCircle);
 
         int ringCount = Math.Max(1, AppConfig.Current.RadarSettings.DistanceRingCount);
-        double maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
         double radius = size / 2.0;
 
         for (int i = 1; i <= ringCount; i++)
