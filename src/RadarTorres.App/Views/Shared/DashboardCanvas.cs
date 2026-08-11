@@ -8,13 +8,19 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Views.Shared;
 
 /// <summary>
-/// Canvas customizado que hospeda os <see cref="DashboardCard"/> do painel principal e é o
-/// único responsável por decidir se um arraste/redimensionamento proposto por um card é válido:
-/// não pode sair da área visível nem sobrepor outro card (Requisitos "arrastar e reposicionar
-/// livremente" e "evitar sobreposição"). Também mantém o layout proporcional quando o tamanho
-/// do canvas muda (Requisito "responsivo em diferentes tamanhos de tela"), reescalando
-/// Canvas.Left/Top/Width/Height de todos os cards pela razão entre o tamanho novo e o anterior
-/// — o que preserva exatamente a fração ocupada por cada card.
+/// Canvas customizado que hospeda os <see cref="DashboardCard"/> de uma tela (painel principal
+/// ou monitoramento) e é o único responsável por decidir se um arraste/redimensionamento
+/// proposto por um card é válido: não pode sair da área visível nem sobrepor outro card visível
+/// (Requisitos "arrastar e reposicionar livremente" e "evitar sobreposição"). Também:
+/// * mantém o layout proporcional quando o tamanho do canvas muda (Requisito "responsivo em
+///   diferentes tamanhos de tela"), reescalando Canvas.Left/Top/Width/Height de todos os cards
+///   pela razão entre o tamanho novo e o anterior — o que preserva exatamente a fração ocupada
+///   por cada card;
+/// * oculta/reexibe cards individualmente (Requisitos "fechar/ocultar" e "reabrir sem
+///   restaurar todo o layout") — um card oculto continua existindo como filho do canvas, só não
+///   é desenhado nem participa da checagem de sobreposição;
+/// * rastreia a ordem de empilhamento (Panel.ZIndex), trazendo um card para frente quando o
+///   usuário começa a arrastá-lo/redimensioná-lo (Requisito "ordem dos componentes").
 /// </summary>
 public class DashboardCanvas : Canvas
 {
@@ -24,13 +30,15 @@ public class DashboardCanvas : Canvas
     private const double DefaultCardWidth = 260;
     private const double DefaultCardHeight = 150;
     private const double DefaultGap = 12;
-    private const int DefaultColumns = 3;
 
     private Size _lastSize = Size.Empty;
+    private int _nextZIndex = 1;
 
-    /// <summary>Disparado depois que um arraste ou redimensionamento é concluído (Thumb solto)
-    /// e a posição/tamanho final é válida — o assinante (a View) persiste o layout nesse ponto,
-    /// em vez de a cada pixel de DragDelta.</summary>
+    /// <summary>Disparado depois de qualquer mudança concluída no layout — arraste/
+    /// redimensionamento (Thumb solto), ocultar, reexibir, restaurar padrão ou aplicar um
+    /// layout salvo. Quem hospeda o canvas usa isso para, por exemplo, atualizar o menu de
+    /// "painéis ocultos"; não implica salvar em disco automaticamente (isso só acontece quando
+    /// o usuário aciona "Definir layout como padrão" explicitamente).</summary>
     public event EventHandler? LayoutChanged;
 
     public DashboardCanvas()
@@ -40,7 +48,7 @@ public class DashboardCanvas : Canvas
 
     /// <summary>Aplica um deslocamento de arraste ao card, respeitando os limites do canvas e
     /// recusando o movimento (mantendo a posição anterior) se ele resultar em sobreposição com
-    /// outro card.</summary>
+    /// outro card visível.</summary>
     public void RequestMove(DashboardCard card, double deltaX, double deltaY)
     {
         double width = card.ActualWidth > 0 ? card.ActualWidth : card.Width;
@@ -50,7 +58,7 @@ public class DashboardCanvas : Canvas
         double top = Clamp(GetTop(card) + deltaY, 0, Math.Max(0, ActualHeight - height));
 
         var proposed = new Rect(left, top, width, height);
-        if (OverlapsAny(card, proposed)) return;
+        if (OverlapsAnyVisible(card, proposed)) return;
 
         SetLeft(card, left);
         SetTop(card, top);
@@ -58,7 +66,7 @@ public class DashboardCanvas : Canvas
 
     /// <summary>Aplica um redimensionamento (a partir do canto inferior direito) ao card,
     /// respeitando o tamanho mínimo, os limites do canvas e recusando a mudança se ela resultar
-    /// em sobreposição com outro card.</summary>
+    /// em sobreposição com outro card visível.</summary>
     public void RequestResize(DashboardCard card, double deltaWidth, double deltaHeight)
     {
         double left = GetLeft(card);
@@ -70,18 +78,60 @@ public class DashboardCanvas : Canvas
         double height = Clamp(currentHeight + deltaHeight, MinCardHeight, Math.Max(MinCardHeight, ActualHeight - top));
 
         var proposed = new Rect(left, top, width, height);
-        if (OverlapsAny(card, proposed)) return;
+        if (OverlapsAnyVisible(card, proposed)) return;
 
         card.Width = width;
         card.Height = height;
     }
 
-    /// <summary>Notifica que um gesto (arraste ou redimensionamento) terminou — a View escuta
-    /// isso para gravar o layout em disco.</summary>
+    /// <summary>Traz o card para frente dos demais (novo maior ZIndex) — chamado ao começar a
+    /// arrastar/redimensionar.</summary>
+    public void BringToFront(DashboardCard card) => SetZIndex(card, _nextZIndex++);
+
+    /// <summary>Oculta o card (Requisito 1: fechar/ocultar). Ele continua no canvas — só some
+    /// da tela e da checagem de sobreposição — pronto para ser reexibido por
+    /// <see cref="ShowCard"/> sem afetar a posição de nenhum outro card.</summary>
+    public void HideCard(DashboardCard card)
+    {
+        if (card.Visibility != Visibility.Visible) return;
+
+        card.Visibility = Visibility.Collapsed;
+        NotifyLayoutChanged();
+    }
+
+    /// <summary>Reexibe um card oculto (Requisito 2). Tenta primeiro a última posição/tamanho
+    /// conhecidos; se isso agora sobrepuser outro card visível (por exemplo, algo foi movido
+    /// para lá enquanto estava oculto), procura o próximo espaço livre no canvas.</summary>
+    public void ShowCard(DashboardCard card)
+    {
+        if (card.Visibility == Visibility.Visible) return;
+
+        double width = card.ActualWidth > 0 ? card.ActualWidth : (card.Width > 0 ? card.Width : card.DefaultWidth);
+        double height = card.ActualHeight > 0 ? card.ActualHeight : (card.Height > 0 ? card.Height : card.DefaultHeight);
+        var lastKnown = new Rect(GetLeft(card), GetTop(card), width, height);
+
+        var target = OverlapsAnyVisible(card, lastKnown) ? FindFreeSlot(width, height) : lastKnown;
+
+        SetLeft(card, target.X);
+        SetTop(card, target.Y);
+        card.Width = target.Width;
+        card.Height = target.Height;
+        card.Visibility = Visibility.Visible;
+        BringToFront(card);
+        NotifyLayoutChanged();
+    }
+
+    /// <summary>Cards atualmente ocultos, na ordem em que aparecem no canvas — usado para
+    /// popular o menu "Painéis ocultos".</summary>
+    public IReadOnlyList<DashboardCard> GetHiddenCards() =>
+        Children.OfType<DashboardCard>().Where(c => c.Visibility != Visibility.Visible).ToList();
+
+    /// <summary>Notifica que algo no layout mudou (arraste/redimensionamento concluído, card
+    /// ocultado/reexibido, layout restaurado ou aplicado).</summary>
     public void NotifyLayoutChanged() => LayoutChanged?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>Snapshot do layout atual, como frações do tamanho do canvas, pronto para
-    /// persistir.</summary>
+    /// <summary>Snapshot do layout atual (posição, tamanho, visibilidade e ordem de
+    /// empilhamento), como frações do tamanho do canvas, pronto para persistir.</summary>
     public Dictionary<string, DashboardCardLayout> GetLayoutSnapshot()
     {
         var snapshot = new Dictionary<string, DashboardCardLayout>();
@@ -97,6 +147,8 @@ public class DashboardCanvas : Canvas
                 RelY = GetTop(card) / ActualHeight,
                 RelWidth = (card.ActualWidth > 0 ? card.ActualWidth : card.Width) / ActualWidth,
                 RelHeight = (card.ActualHeight > 0 ? card.ActualHeight : card.Height) / ActualHeight,
+                IsVisible = card.Visibility == Visibility.Visible,
+                ZIndex = GetZIndex(card),
             };
         }
 
@@ -104,13 +156,14 @@ public class DashboardCanvas : Canvas
     }
 
     /// <summary>Aplica um layout salvo anteriormente. Cards sem entrada no dicionário (ex.:
-    /// versão nova com um card a mais) recebem o layout padrão individualmente.</summary>
+    /// versão nova com um card a mais) recebem o arranjo padrão individualmente, visíveis.</summary>
     public void ApplyLayoutSnapshot(Dictionary<string, DashboardCardLayout> layout)
     {
         if (ActualWidth <= 0 || ActualHeight <= 0) return;
 
         var cards = Children.OfType<DashboardCard>().ToList();
         var missing = new List<DashboardCard>();
+        int maxZIndex = 0;
 
         foreach (DashboardCard card in cards)
         {
@@ -122,6 +175,9 @@ public class DashboardCanvas : Canvas
                 SetTop(card, Clamp(rect.RelY * ActualHeight, 0, Math.Max(0, ActualHeight - height)));
                 card.Width = width;
                 card.Height = height;
+                card.Visibility = rect.IsVisible ? Visibility.Visible : Visibility.Collapsed;
+                SetZIndex(card, rect.ZIndex);
+                maxZIndex = Math.Max(maxZIndex, rect.ZIndex);
             }
             else
             {
@@ -131,34 +187,59 @@ public class DashboardCanvas : Canvas
 
         if (missing.Count > 0)
         {
-            ArrangeDefaultGrid(missing);
+            ArrangeDefaultFlow(missing);
         }
 
+        _nextZIndex = maxZIndex + 1;
         _lastSize = new Size(ActualWidth, ActualHeight);
+        NotifyLayoutChanged();
     }
 
-    /// <summary>Rearranja todos os cards em uma grade padrão (Requisito "restaurar layout
-    /// padrão"), na ordem em que aparecem no XAML.</summary>
+    /// <summary>Rearranja todos os cards no arranjo padrão do sistema (Requisito "retornar ao
+    /// padrão do sistema"): todos visíveis, em fluxo da esquerda para a direita / cima para
+    /// baixo na ordem em que aparecem no XAML, usando o tamanho preferido de cada um
+    /// (<see cref="DashboardCard.DefaultWidth"/>/<see cref="DashboardCard.DefaultHeight"/>).
+    /// Não mexe em nenhum arquivo salvo em disco — só no estado em memória/tela.</summary>
     public void ResetToDefaultLayout()
     {
-        ArrangeDefaultGrid(Children.OfType<DashboardCard>().ToList());
+        var cards = Children.OfType<DashboardCard>().ToList();
+        ArrangeDefaultFlow(cards);
+        _nextZIndex = 1;
         _lastSize = new Size(ActualWidth, ActualHeight);
+        NotifyLayoutChanged();
     }
 
-    private void ArrangeDefaultGrid(IReadOnlyList<DashboardCard> cards)
+    private void ArrangeDefaultFlow(IReadOnlyList<DashboardCard> cards)
     {
-        double canvasWidth = ActualWidth > 0 ? ActualWidth : DefaultCardWidth * DefaultColumns + DefaultGap * (DefaultColumns + 1);
-        double columnWidth = Math.Max(MinCardWidth, (canvasWidth - DefaultGap * (DefaultColumns + 1)) / DefaultColumns);
+        double canvasWidth = ActualWidth > 0 ? ActualWidth : DefaultCardWidth * 3 + DefaultGap * 4;
 
-        for (int i = 0; i < cards.Count; i++)
+        double x = DefaultGap;
+        double y = DefaultGap;
+        double rowHeight = 0;
+
+        foreach (DashboardCard card in cards)
         {
-            int row = i / DefaultColumns;
-            int column = i % DefaultColumns;
+            double preferredWidth = card.DefaultWidth > 0 ? card.DefaultWidth : DefaultCardWidth;
+            double preferredHeight = card.DefaultHeight > 0 ? card.DefaultHeight : DefaultCardHeight;
+            double width = Clamp(preferredWidth, MinCardWidth, Math.Max(MinCardWidth, canvasWidth - DefaultGap * 2));
+            double height = Math.Max(MinCardHeight, preferredHeight);
 
-            SetLeft(cards[i], DefaultGap + column * (columnWidth + DefaultGap));
-            SetTop(cards[i], DefaultGap + row * (DefaultCardHeight + DefaultGap));
-            cards[i].Width = columnWidth;
-            cards[i].Height = DefaultCardHeight;
+            if (x > DefaultGap && x + width + DefaultGap > canvasWidth)
+            {
+                x = DefaultGap;
+                y += rowHeight + DefaultGap;
+                rowHeight = 0;
+            }
+
+            SetLeft(card, x);
+            SetTop(card, y);
+            card.Width = width;
+            card.Height = height;
+            card.Visibility = Visibility.Visible;
+            SetZIndex(card, 0);
+
+            x += width + DefaultGap;
+            rowHeight = Math.Max(rowHeight, height);
         }
     }
 
@@ -186,11 +267,43 @@ public class DashboardCanvas : Canvas
         _lastSize = e.NewSize;
     }
 
-    private bool OverlapsAny(DashboardCard card, Rect proposed)
+    /// <summary>Procura o primeiro espaço livre no canvas (varrendo em linhas) que comporte um
+    /// card do tamanho informado sem sobrepor nenhum card visível — usado por
+    /// <see cref="ShowCard"/> quando a última posição conhecida do card não está mais livre.</summary>
+    private Rect FindFreeSlot(double width, double height)
+    {
+        double canvasWidth = ActualWidth > 0 ? ActualWidth : width + DefaultGap * 2;
+        double canvasHeight = ActualHeight > 0 ? ActualHeight : height + DefaultGap * 2;
+        width = Clamp(width, MinCardWidth, Math.Max(MinCardWidth, canvasWidth - DefaultGap * 2));
+        height = Clamp(height, MinCardHeight, Math.Max(MinCardHeight, canvasHeight - DefaultGap * 2));
+
+        int maxCols = Math.Max(1, (int)((canvasWidth - DefaultGap) / (width + DefaultGap)));
+        int maxRows = Math.Max(1, (int)((canvasHeight - DefaultGap) / (height + DefaultGap)) + 1);
+
+        for (int row = 0; row < maxRows; row++)
+        {
+            for (int col = 0; col < maxCols; col++)
+            {
+                double x = DefaultGap + col * (width + DefaultGap);
+                double y = DefaultGap + row * (height + DefaultGap);
+                var candidate = new Rect(x, y, width, height);
+                if (!OverlapsAnyVisible(null, candidate)) return candidate;
+            }
+        }
+
+        // Canvas sem espaço "limpo" (pequeno demais ou cheio) — reabre mesmo assim; o usuário
+        // pode reposicionar manualmente depois. Melhor reaparecer do que ficar preso oculto.
+        return new Rect(0, 0, width, height);
+    }
+
+    /// <summary>Testa se <paramref name="proposed"/> colide com algum card visível diferente de
+    /// <paramref name="exclude"/> — cards ocultos nunca contam para colisão.</summary>
+    private bool OverlapsAnyVisible(DashboardCard? exclude, Rect proposed)
     {
         foreach (DashboardCard other in Children.OfType<DashboardCard>())
         {
-            if (ReferenceEquals(other, card)) continue;
+            if (ReferenceEquals(other, exclude)) continue;
+            if (other.Visibility != Visibility.Visible) continue;
 
             double otherWidth = other.ActualWidth > 0 ? other.ActualWidth : other.Width;
             double otherHeight = other.ActualHeight > 0 ? other.ActualHeight : other.Height;
