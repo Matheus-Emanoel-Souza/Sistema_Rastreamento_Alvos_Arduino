@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
+using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.Repositories;
 using RadarTorres.App.Services;
@@ -36,8 +37,17 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
 
         _serialService.ConnectionStateChanged += OnConnectionStateChanged;
 
+        RestoreDefaultLayoutCommand = new RelayCommand(() => RestoreLayoutRequested?.Invoke(this, EventArgs.Empty));
+
         Refresh();
     }
+
+    /// <summary>Disparado quando o usuário pede para restaurar o layout padrão dos cards
+    /// (Requisito "restaurar layout padrão"). Tratado no code-behind da View, que é quem
+    /// efetivamente manipula o DashboardCanvas — a ViewModel não conhece elementos visuais.</summary>
+    public event EventHandler? RestoreLayoutRequested;
+
+    public RelayCommand RestoreDefaultLayoutCommand { get; }
 
     public int TotalObjetosDetectados { get; private set; }
 

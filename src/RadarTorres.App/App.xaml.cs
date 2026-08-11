@@ -98,6 +98,9 @@ public partial class App : Application
         services.AddSingleton<IPreferenciasUsuarioRepository, CsvPreferenciasUsuarioRepository>();
         services.AddSingleton<IChamadoAjudaRepository, CsvChamadoAjudaRepository>();
 
+        // --- Layout do painel principal (posição/tamanho dos cards definidos pelo usuário)
+        services.AddSingleton<IDashboardLayoutRepository, DashboardLayoutRepository>();
+
         // --- Infraestrutura nova (autenticação, permissões, idioma, tema, navegação)
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IAuthService, AuthService>();
