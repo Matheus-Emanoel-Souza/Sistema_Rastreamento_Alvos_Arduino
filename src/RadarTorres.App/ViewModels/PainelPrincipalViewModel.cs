@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
-using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.Repositories;
 using RadarTorres.App.Services;
@@ -37,17 +36,15 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
 
         _serialService.ConnectionStateChanged += OnConnectionStateChanged;
 
-        RestoreDefaultLayoutCommand = new RelayCommand(() => RestoreLayoutRequested?.Invoke(this, EventArgs.Empty));
-
         Refresh();
     }
 
-    /// <summary>Disparado quando o usuário pede para restaurar o layout padrão dos cards
-    /// (Requisito "restaurar layout padrão"). Tratado no code-behind da View, que é quem
-    /// efetivamente manipula o DashboardCanvas — a ViewModel não conhece elementos visuais.</summary>
-    public event EventHandler? RestoreLayoutRequested;
-
-    public RelayCommand RestoreDefaultLayoutCommand { get; }
+    /// <summary>Disparado toda vez que o usuário navega para esta tela (view Singleton, pode
+    /// ser revisitada várias vezes, inclusive por usuários diferentes após um logout/login). O
+    /// code-behind da View usa isso para recarregar o layout do card do usuário atualmente
+    /// logado — carregar/salvar layout é estado visual, não pertence à ViewModel (mesmo
+    /// princípio de <c>ArduinoSettingsView</c> para diálogos de arquivo).</summary>
+    public event EventHandler? ScreenActivated;
 
     public int TotalObjetosDetectados { get; private set; }
 
@@ -64,7 +61,11 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
     public string UltimaAtualizacaoTexto { get; private set; } = "—";
 
     /// <summary>Chamado pelo NavigationService toda vez que o usuário volta a esta tela (view Singleton).</summary>
-    public void OnNavigatedTo() => Refresh();
+    public void OnNavigatedTo()
+    {
+        Refresh();
+        ScreenActivated?.Invoke(this, EventArgs.Empty);
+    }
 
     private void OnConnectionStateChanged(object? sender, ConnectionState state)
     {
