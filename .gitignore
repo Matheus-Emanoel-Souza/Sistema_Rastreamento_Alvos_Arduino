@@ -4,6 +4,10 @@ obj/
 *.user
 .vs/
 
+## Instalador (artefatos gerados por build\publish.ps1 - não versionar)
+dist/
+release/
+
 ## Rider / VS Code
 .idea/
 *.suo

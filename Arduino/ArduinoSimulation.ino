@@ -11,7 +11,7 @@
  *  deverá usar, além de interpretar e responder aos comandos enviados pelo
  *  aplicativo C# (RadarTorres.App).
  *
- *  Protocolo (ver Documentation/COMUNICACAO_ARDUINO.md para a especificação completa):
+ *  Protocolo (ver Docs/COMUNICACAO_ARDUINO.md para a especificação completa):
  *
  *   Arduino -> PC:
  *     TARGET;ID=<int>;ANGLE=<0-360>;DIST=<metros>
