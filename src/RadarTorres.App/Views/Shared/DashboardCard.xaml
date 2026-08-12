@@ -1,13 +1,22 @@
 <UserControl x:Class="RadarTorres.App.Views.Shared.DashboardCard"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization">
     <!--
-        Card arrastável/redimensionável do painel principal. Deve ser filho direto de um
-        DashboardCanvas, que é quem efetivamente aplica o movimento/redimensionamento (com
-        verificação de colisão) quando os Thumbs abaixo disparam DragDelta — ver
-        DashboardCanvas.RequestMove/RequestResize. O conteúdo do card é definido por quem usa o
-        controle (ex.: <shared:DashboardCard Title="...">...conteúdo...</shared:DashboardCard>),
-        mapeado para a propriedade CardContent via [ContentProperty] no code-behind.
+        Card arrastável/redimensionável/ocultável de um DashboardCanvas. Deve ser filho direto
+        de um DashboardCanvas, que é quem efetivamente aplica o movimento/redimensionamento/
+        ocultação (com verificação de colisão) quando os Thumbs e o botão de fechar abaixo
+        disparam seus eventos — ver DashboardCanvas.RequestMove/RequestResize/HideCard. O
+        conteúdo do card é definido por quem usa o controle (ex.:
+        <shared:DashboardCard Title="...">...conteúdo...</shared:DashboardCard>), mapeado para
+        a propriedade CardContent via [ContentProperty] no code-behind.
+
+        Atenção: elementos dentro desse conteúdo NÃO podem usar x:Name (o compilador XAML
+        recusa — "já tinha um nome registrado em outro escopo" — porque o DashboardCard, sendo
+        um UserControl compilado, é dono do seu próprio escopo de nomes). Para acessar um
+        elemento filho a partir do code-behind da tela que hospeda o card, use
+        `meuCard.CardContent as TipoDoElemento` em vez de FindName/x:Name (ver
+        MonitoramentoView.xaml.cs, LogEntries_CollectionChanged).
     -->
     <Border Background="{DynamicResource PanelBrush}"
             BorderBrush="{DynamicResource PanelBorderBrush}"
@@ -19,18 +28,33 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Cabeçalho: arrasta o card inteiro (Requisito "arrastar e reposicionar"). -->
+            <!-- Cabeçalho: arrasta o card inteiro (Requisito "arrastar e reposicionar"). O
+                 botão de fechar fica desenhado por cima, no canto superior direito, e por
+                 estar depois do Thumb na árvore visual intercepta o clique ali sem iniciar um
+                 arraste. -->
             <Thumb x:Name="HeaderThumb" Grid.Row="0" Cursor="SizeAll" Background="Transparent"
+                   DragStarted="HeaderThumb_DragStarted"
                    DragDelta="HeaderThumb_DragDelta" DragCompleted="HeaderThumb_DragCompleted">
                 <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
-                        <Border Background="{DynamicResource PanelBorderBrush}" CornerRadius="8,8,0,0" Padding="12,7">
+                        <Border Background="{DynamicResource PanelBorderBrush}" CornerRadius="8,8,0,0" Padding="12,7,32,7">
                             <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                       Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"/>
                         </Border>
                     </ControlTemplate>
                 </Thumb.Template>
             </Thumb>
+
+            <!-- Botão de fechar/ocultar (Requisito 1) — reabertura via o menu "Painéis
+                 ocultos" da tela (Requisito 2), não aqui. -->
+            <Button x:Name="CloseButton" Grid.Row="0" Width="20" Height="20" Margin="0,4,6,0"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Background="Transparent" BorderThickness="0" Cursor="Hand"
+                    Focusable="False" Click="CloseButton_Click"
+                    ToolTip="{loc:Loc Dashboard.OcultarCard}">
+                <TextBlock Text="✕" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </Button>
 
             <!-- Conteúdo do card, definido por quem usa o controle. -->
             <ContentPresenter Grid.Row="1" Margin="16,12"
@@ -41,6 +65,7 @@
             <Thumb x:Name="ResizeThumb" Grid.Row="1" Width="16" Height="16"
                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
                    Cursor="SizeNWSE" Background="Transparent"
+                   DragStarted="ResizeThumb_DragStarted"
                    DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted">
                 <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">

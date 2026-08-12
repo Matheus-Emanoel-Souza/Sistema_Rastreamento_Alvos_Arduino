@@ -24,27 +24,25 @@
     <Grid Margin="4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <DockPanel Grid.Row="0" Margin="0,0,0,16">
-            <Button DockPanel.Dock="Right" Padding="12,6" Cursor="Hand"
-                    Background="Transparent" BorderBrush="{DynamicResource PanelBorderBrush}"
-                    Foreground="{DynamicResource TextSecondaryBrush}"
-                    Content="{loc:Loc Dashboard.RestaurarLayoutPadrao}"
-                    Command="{Binding RestoreDefaultLayoutCommand}"/>
-            <TextBlock Text="{loc:Loc Dashboard.Title}" FontSize="20" FontWeight="Bold"
-                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-        </DockPanel>
+        <TextBlock Grid.Row="0" Text="{loc:Loc Dashboard.Title}" FontSize="20" FontWeight="Bold"
+                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+
+        <!-- Ações de layout (Requisito 3) — mesmo controle reutilizado no Monitoramento. -->
+        <shared:DashboardToolbar x:Name="Toolbar" Grid.Row="1" Margin="0,0,0,12"/>
 
         <!--
-            Cada card é arrastável (cabeçalho) e redimensionável (alça no canto inferior
-            direito); o DashboardCanvas impede sobreposição e mantém o layout proporcional ao
-            redimensionar a janela. Posição/tamanho iniciais (Canvas.Left/Top/Width/Height)
-            abaixo são só um estado inicial válido — assim que a tela carrega, o code-behind
-            aplica o layout salvo (ou a grade padrão, na primeira execução).
+            Cada card é arrastável (cabeçalho), redimensionável (alça no canto inferior
+            direito) e pode ser ocultado (botão "×" no cabeçalho); o DashboardCanvas impede
+            sobreposição e mantém o layout proporcional ao redimensionar a janela. Posição/
+            tamanho iniciais (Canvas.Left/Top/Width/Height) abaixo são só um estado inicial
+            válido — assim que a tela carrega, o code-behind aplica o layout pessoal salvo do
+            usuário logado (ou a grade padrão, se ele nunca salvou um).
         -->
-        <shared:DashboardCanvas x:Name="LayoutCanvas" Grid.Row="1" ClipToBounds="True">
+        <shared:DashboardCanvas x:Name="LayoutCanvas" Grid.Row="2" ClipToBounds="True">
             <shared:DashboardCard x:Name="CardObjetosDetectados" CardId="ObjetosDetectados"
                                    Title="{loc:Loc Dashboard.ObjetosDetectados}"
                                    Canvas.Left="0" Canvas.Top="0" Width="260" Height="150">
