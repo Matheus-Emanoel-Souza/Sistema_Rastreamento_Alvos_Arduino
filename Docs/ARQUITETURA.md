@@ -92,6 +92,97 @@ thread de UI (captura o `Dispatcher` no construtor e usa `CheckAccess()`/`Invoke
 Isso evita que o `MainViewModel` — ou qualquer código futuro — precise lembrar de fazer esse
 despacho manualmente em todo lugar.
 
+## 5.1 Aba "Configurações do Arduino" (ambiente, compilação, monitor serial)
+
+```mermaid
+flowchart LR
+    subgraph ARDVM["ArduinoSettingsViewModel"]
+        direction TB
+    end
+
+    LOC["IArduinoCliLocatorService\n(localiza arduino-cli.exe)"]
+    COMP["IArduinoCompilerService\n(arduino-cli compile, assíncrono/cancelável)"]
+    SET["IArduinoSettingsRepository\n(%LocalAppData%\\RadarTorres\\arduino-settings.json)"]
+    SERIAL["ISerialCommunicationService\n(mesmo Singleton da tela de Monitoramento)"]
+
+    ARDVM --> LOC
+    ARDVM --> COMP
+    ARDVM --> SET
+    ARDVM --> SERIAL
+    MAINVM["MainViewModel\n(tela de Monitoramento)"] --> SERIAL
+```
+
+Decisões relevantes desta funcionalidade:
+
+* **Nenhuma segunda implementação de comunicação serial.** `ArduinoSettingsViewModel` recebe,
+  por injeção de dependência, a **mesma instância Singleton** de `ISerialCommunicationService`
+  já usada por `MainViewModel` (registrada uma única vez em `App.xaml.cs`). O serviço em si já
+  é, portanto, o "coordenador central" da porta serial pedido para evitar dois `SerialPort`
+  abertos ao mesmo tempo — a ViewModel apenas se inscreve nos eventos existentes
+  (`ConnectionStateChanged`, `MessageReceived`, `CommunicationError`) e, ao conectar, verifica
+  se a porta já está em uso com parâmetros diferentes antes de desconectar (com confirmação do
+  usuário) e reconectar. Ver `Docs/COMUNICACAO_ARDUINO.md`, seção 8.4.
+* **Compilação como processo filho assíncrono e cancelável.** `ArduinoCompilerService` chama
+  `arduino-cli compile --fqbn <fqbn> <pasta-do-sketch>` via `System.Diagnostics.Process` com
+  `ProcessStartInfo.ArgumentList` (nunca concatenação de string interpretada por um shell),
+  captura `stdout`/`stderr` em tempo real através de `IProgress<ArduinoCliOutputLine>`, e
+  respeita um `CancellationToken` (mata a árvore de processos ao cancelar). Sucesso/falha é
+  decidido só pelo código de saída do processo (e pelo cancelamento explícito), nunca pela
+  simples presença de texto em `stderr`.
+* **Detecção do Arduino CLI sem downloads silenciosos.** `ArduinoCliLocatorService` só faz
+  leitura do sistema de arquivos/`PATH` e execução do CLI já instalado (`version`,
+  `board listall`) — nunca baixa nada. Ver ordem de busca em `Docs/COMUNICACAO_ARDUINO.md`,
+  seção 8.1.
+* **Persistência separada das preferências de usuário existentes.** As preferências desta aba
+  (caminho do CLI, último sketch, FQBN, porta/baud, preferências do console) são de
+  máquina/instalação, não por usuário do RadarTorres — por isso vivem em um arquivo JSON
+  próprio em `%LocalAppData%\RadarTorres\arduino-settings.json`
+  (`IArduinoSettingsRepository`), separado do CSV `preferencias_usuario` (tema/idioma) e do
+  `appsettings.json` somente-leitura da instalação.
+* **Consoles com limite de linhas.** Tanto o console de compilação quanto o do monitor serial
+  descartam as linhas mais antigas acima de um limite fixo (4000), seguindo o mesmo padrão já
+  usado por `LoggingService` (limite de 500 no console de eventos da tela de Monitoramento).
+
+## 5.2 Painel principal — layout de cards arrastável/redimensionável
+
+```mermaid
+flowchart LR
+    VIEW["PainelPrincipalView.xaml.cs\n(code-behind — único ponto que toca elementos visuais)"]
+    CANVAS["DashboardCanvas : Canvas\n(anticolisão, limites, reescala proporcional)"]
+    CARD["DashboardCard : UserControl\n(cabeçalho arrastável + alça de redimensionamento)"]
+    REPO["IDashboardLayoutRepository\n(%LocalAppData%\\RadarTorres\\dashboard-layout.json)"]
+
+    CARD -- "DragDelta / DragCompleted" --> CANVAS
+    CANVAS -- "LayoutChanged" --> VIEW
+    VIEW -- "Load / Save / Clear" --> REPO
+    VMEVT["PainelPrincipalViewModel\n.RestoreLayoutRequested"] --> VIEW
+```
+
+Decisões relevantes desta funcionalidade:
+
+* **Posição/tamanho guardados como fração do canvas, não em pixels.** `DashboardCardLayout`
+  (`RelX`/`RelY`/`RelWidth`/`RelHeight`, todos 0..1) é o que vai para o JSON. Isso resolve o
+  requisito de responsividade: ao reabrir a tela em outra resolução, ou redimensionar a janela,
+  cada card ocupa exatamente a mesma proporção da tela — nunca sai da área visível nem fica
+  desproporcional. `DashboardCanvas` também reescala `Canvas.Left/Top/Width/Height` de todos
+  os cards pela razão entre o novo e o antigo `SizeChanged`, mantendo a mesma fração enquanto o
+  usuário arrasta a borda da janela em tempo real.
+* **Anticolisão por rejeição, não por empurrão.** A cada `DragDelta` (arraste ou
+  redimensionamento), `DashboardCanvas` calcula o retângulo proposto e testa
+  `Rect.IntersectsWith` contra todos os outros cards; se colidir ou sair dos limites do canvas,
+  o delta é simplesmente ignorado (o card "trava" na última posição válida) — mais simples e
+  previsível do que reorganizar os demais cards a cada gesto.
+* **Nenhuma lógica de posicionamento na ViewModel.** Igual ao padrão já usado em
+  `ArduinoSettingsView` para diálogos de arquivo (seção 5.1): posição/tamanho de elementos
+  visuais é estado de UI, não de domínio. `PainelPrincipalViewModel` só expõe
+  `RestoreDefaultLayoutCommand` e o evento `RestoreLayoutRequested`; quem efetivamente lê/grava
+  o `DashboardCanvas` é o code-behind de `PainelPrincipalView`.
+* **Persistência no mesmo padrão de `ArduinoSettingsRepository`.** `DashboardLayoutRepository`
+  grava um único JSON (`Dictionary<string, DashboardCardLayout>`, chave = `DashboardCard.CardId`)
+  em `%LocalAppData%\RadarTorres\dashboard-layout.json`, a cada `DragCompleted` (não a cada
+  pixel de `DragDelta`, para não gerar I/O excessivo). "Restaurar layout padrão" rearranja os
+  cards em uma grade fixa (3 colunas) e regrava o arquivo.
+
 ## 5. Extensibilidade
 
 * **Trocar o protocolo serial:** só `SerialProtocolParser` precisa mudar; todo o resto do
