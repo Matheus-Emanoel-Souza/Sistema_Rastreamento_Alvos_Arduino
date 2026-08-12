@@ -1,0 +1,116 @@
+# PROPOSTA DE TCC
+
+**Alunos:**
+**Matheus Emanoel** – Curso: Engenharia da Computação
+**Gabriel Vascoselos moraes** – Curso: Engenharia da Computação
+
+## Sistema de Detecção Ultrassônica, Localização de Alvos e Seleção Automatizada de Torres
+
+### 1. Proposta
+
+O presente Trabalho de Conclusão de Curso propõe o desenvolvimento de um sistema experimental de **detecção, localização e acompanhamento de objetos utilizando sensores ultrassônicos de baixo custo**, integrados a uma estrutura física composta por uma base central e torres demonstrativas distribuídas ao seu redor.
+
+Os dados obtidos pelos sensores serão processados por um microcontrolador Arduino e enviados para um software supervisório desenvolvido em **C#**, responsável por representar os objetos detectados em uma interface semelhante a um radar, calcular suas posições, analisar sua movimentação e selecionar automaticamente a torre mais adequada para acompanhar cada alvo.
+
+O sistema será utilizado exclusivamente como **plataforma acadêmica e demonstrativa**, empregando LEDs, lasers de baixa potência ou representação virtual para indicar o direcionamento das torres.
+
+### 2. Problema a ser estudado
+
+Sensores ultrassônicos possuem baixo custo e fácil integração com sistemas embarcados, porém estão sujeitos a limitações relacionadas a alcance, reflexões, ângulo de incidência, ruídos e variações nas medições.
+
+A principal questão do trabalho será, portanto:
+
+**Como aumentar a confiabilidade e a assertividade de um sistema de localização de objetos baseado em sensores ultrassônicos de baixo custo, comparando diferentes técnicas de aquisição, tratamento e processamento das medições?**
+
+Além de realizar a detecção, o projeto permitirá avaliar diferentes estratégias para identificação da posição do alvo, acompanhamento de sua movimentação e escolha da torre mais adequada.
+
+### 3. Objetivos e métricas de avaliação
+
+O desempenho do sistema será avaliado por meio de métricas quantitativas, possibilitando comparar diferentes configurações e técnicas.
+
+As principais métricas serão:
+
+* **Tempo de resposta:** intervalo entre a detecção física do objeto e sua representação/processamento pelo software.
+* **Erro de distância:** diferença entre a distância real do objeto e a distância medida pelo sensor.
+* **Erro de posicionamento:** diferença entre a posição real conhecida e a posição calculada pelo sistema.
+* **Taxa de detecção:** percentual de objetos corretamente identificados dentro da área monitorada.
+* **Taxa de falsos positivos e falsos negativos:** identificação de detecções incorretas ou objetos não detectados.
+* **Assertividade da seleção da torre:** percentual de situações em que o algoritmo seleciona corretamente a torre mais adequada.
+* **Estabilidade de rastreamento:** capacidade de acompanhar um objeto em movimento sem perda excessiva de leituras.
+* **Alcance útil dos sensores:** distância máxima em que as medições permanecem confiáveis.
+* **Desempenho das técnicas de filtragem:** comparação entre dados brutos e dados tratados por diferentes métodos.
+
+Essas métricas permitirão determinar quais técnicas apresentam melhor relação entre **custo, precisão, velocidade e confiabilidade**.
+
+### 4. Desenvolvimento e etapas do projeto
+
+O projeto será desenvolvido progressivamente em duas grandes frentes: **sistema físico/eletrônico** e **software de controle e processamento**.
+
+**Etapa 1 – Projeto da maquete e estrutura física**
+
+Será definida a dimensão da área experimental, o posicionamento da base, dos sensores e das torres. A maquete deverá permitir que objetos sejam deslocados por diferentes posições e trajetórias conhecidas, possibilitando comparar a posição real com a posição calculada pelo sistema.
+
+Serão definidos e testados os principais componentes, incluindo:
+
+* Arduino ou microcontrolador equivalente;
+* sensores ultrassônicos;
+* estrutura mecânica para fixação e movimentação dos sensores;
+* servomotores, quando necessários para varredura ou direcionamento;
+* LEDs ou lasers de baixa potência para demonstração do direcionamento;
+* fontes de alimentação, cabeamento e circuitos auxiliares;
+* estrutura da maquete e objetos utilizados como alvos experimentais.
+
+**Etapa 2 – Aquisição e comunicação dos sensores**
+
+O Arduino será responsável pela leitura dos sensores e transmissão das informações para o computador por comunicação serial USB.
+
+Serão realizados testes de repetibilidade, alcance, frequência de aquisição, interferência e estabilidade das medições.
+
+**Etapa 3 – Tratamento e comparação das medições**
+
+Serão implementadas diferentes formas de tratamento dos dados dos sensores, permitindo comparar as leituras brutas com técnicas de filtragem e suavização.
+
+O objetivo será identificar quais métodos proporcionam maior precisão e estabilidade sem aumentar excessivamente o tempo de resposta do sistema.
+
+**Etapa 4 – Desenvolvimento do software supervisório**
+
+O programa será desenvolvido em **C#**, utilizando uma arquitetura dividida em módulos responsáveis por:
+
+1. comunicação com o Arduino;
+2. aquisição e interpretação das medições;
+3. processamento e filtragem dos sensores;
+4. conversão de distância e ângulo em coordenadas;
+5. identificação e rastreamento dos alvos;
+6. representação gráfica em formato de radar;
+7. seleção automática das torres;
+8. controle dos dispositivos demonstrativos.
+
+O software também possuirá um **modo de simulação**, permitindo testar algoritmos mesmo sem o hardware conectado.
+
+**Etapa 5 – Cálculos de posicionamento e projeção**
+
+A partir das informações de ângulo, distância e histórico das posições medidas, serão realizados cálculos de geometria, trigonometria e coordenadas cartesianas para determinar a localização dos objetos.
+
+Também poderão ser avaliadas técnicas de estimativa de velocidade, direção e projeção da posição futura do alvo, permitindo estudar diferentes estratégias de acompanhamento e direcionamento das torres demonstrativas.
+
+**Etapa 6 – Seleção automática das torres**
+
+Para cada objeto identificado, o programa calculará sua posição em relação às torres disponíveis.
+
+Serão comparados critérios como quadrante, distância entre torre e alvo e disponibilidade da torre, permitindo desenvolver e avaliar diferentes algoritmos de seleção.
+
+**Etapa 7 – Validação experimental**
+
+Serão realizados diversos ensaios com objetos posicionados em distâncias e trajetórias previamente conhecidas.
+
+Os resultados medidos serão comparados com os valores reais e organizados em gráficos e tabelas de erro, tempo de resposta, taxa de detecção e assertividade.
+
+### 5. Justificativa acadêmica
+
+O tema apresenta características adequadas para um Trabalho de Conclusão de Curso de Engenharia da Computação por integrar, em um único sistema, diferentes conhecimentos desenvolvidos durante a graduação, como **programação, sistemas embarcados, eletrônica, sensores, comunicação de dados, processamento de sinais, algoritmos, geometria computacional, interfaces gráficas, controle e experimentação**.
+
+Além da integração entre hardware e software, o projeto possui resultados mensuráveis e permite uma comparação experimental entre diferentes técnicas.
+
+O diferencial do trabalho não será apenas construir um sistema capaz de detectar objetos, mas **avaliar cientificamente quais técnicas melhoram a confiabilidade de sensores ultrassônicos de baixo custo**, estabelecendo uma relação entre precisão, velocidade, complexidade computacional e custo.
+
+Dessa forma, o projeto apresenta escopo compatível com um TCC, possibilidade de evolução progressiva, validação quantitativa e uma demonstração física capaz de evidenciar de maneira clara os conceitos estudados durante o curso.

@@ -41,7 +41,9 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
               },
               "icon": "lucide-folder-closed",
               "title": "Explorador de arquivos"
@@ -183,29 +185,30 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "ff3256ecb79059fe",
+  "active": "347f574e037b32e0",
   "lastOpenFiles": [
-    "2026-08-08.md",
+    "Documentation/Proposta/Proposta_ChatGpt.txt",
+    "Documentation/Proposta",
+    "Documentation/Nova pasta",
+    "Documentation/DOCUMENTACAO_TECNICA.md",
+    "Documentation/COMUNICACAO_ARDUINO.md",
+    "Documentation/ARQUITETURA.md",
+    "Documentation/ALGORITMO_SELECAO_TORRE.md",
     "README_LOCAL.md",
+    "2026-08-08.md",
     "Bem-vindo.md",
     "crie um link.md",
     "README.md",
     "Sem título 1.base",
     "Sem título.md",
     "Sem título.canvas",
-    "Documentation/DOCUMENTACAO_TECNICA.md",
     "Sem título.base",
     "LICENSE",
-    "Documentation/COMUNICACAO_ARDUINO.md",
-    "Documentation/ARQUITETURA.md",
-    "Documentation/ALGORITMO_SELECAO_TORRE.md",
     "README.md.tmp.8076.07e4b9600caf",
     "src/RadarTorres.App/obj/Debug/net9.0-windows/RadarTorres.App.csproj.FileListAbsolute.txt",
     "src/RadarTorres.App/bin/Debug/net9.0-windows/RadarTorres.App.pdb",
     "src/RadarTorres.App/bin/Debug/net9.0-windows/RadarTorres.App.dll",
     "src/RadarTorres.App/bin/Debug/net9.0-windows/RadarTorres.App.runtimeconfig.json",
-    "src/RadarTorres.App/bin/Debug/net9.0-windows/RadarTorres.App.deps.json",
-    "src/RadarTorres.App/bin/Debug/net9.0-windows/appsettings.json",
     "screenshot2.png",
     "screenshot.png"
   ]
