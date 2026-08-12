@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Launcher avulso do RadarTorres.
+
+    Não é a UI principal do sistema (essa continua em RadarTorres.App). Este é
+    um executável pequeno e independente, pensado para ser distribuído/copiado
+    separadamente (área de trabalho, pendrive, pin na barra de tarefas etc.)
+    para quem já tem o RadarTorres instalado e só quer um atalho único e
+    estável para abri-lo, sem depender do Menu Iniciar.
+
+    Publicado self-contained em arquivo único (PublishSingleFile) para gerar
+    um .exe que roda sem exigir o .NET Desktop Runtime instalado na máquina
+    — mesma abordagem do app principal (ver RadarTorres.App.csproj e
+    installer\RadarTorres.iss), só que num único arquivo (o app principal usa
+    vários arquivos porque é publicado via Inno Setup).
+
+    Native AOT foi avaliado, mas exige o linker C++ do Visual Studio Build
+    Tools (workload "Desktop development with C++") instalado na máquina que
+    compila — dependência extra que este projeto evita de propósito.
+
+    Publicar:
+      dotnet publish src\RadarTorres.Launcher -c Release -r win-x64
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>RadarTorres.Launcher</RootNamespace>
+    <AssemblyName>RadarTorres-Launcher</AssemblyName>
+    <ApplicationIcon>..\RadarTorres.App\Assets\RadarTorres.ico</ApplicationIcon>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Exigido pelo source generator do LibraryImportAttribute (P/Invoke do
+         MessageBoxW abaixo), mesmo sem código unsafe escrito à mão aqui. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Self-contained + arquivo único: um .exe que já leva o runtime .NET
+         embutido, sem depender do que estiver instalado no PC do usuário.
+         Só compila para win-x64 (mesma arquitetura do app principal). -->
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Product>RadarTorres</Product>
+    <AssemblyTitle>RadarTorres - Abrir aplicativo</AssemblyTitle>
+    <Description>Atalho para abrir o RadarTorres já instalado, sem passar pelo Menu Iniciar.</Description>
+    <Company>TCC - Engenharia da Computação</Company>
+    <Copyright>Copyright © 2026</Copyright>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <NeutralLanguage>pt-BR</NeutralLanguage>
+  </PropertyGroup>
+
+</Project>

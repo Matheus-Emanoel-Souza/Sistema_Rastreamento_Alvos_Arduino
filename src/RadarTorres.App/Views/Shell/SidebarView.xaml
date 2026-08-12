@@ -1,0 +1,66 @@
+<UserControl x:Class="RadarTorres.App.Views.Shell.SidebarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization">
+
+    <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,1,0">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="Width" Value="210"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                        <Setter Property="Width" Value="52"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+
+        <DockPanel>
+            <Button DockPanel.Dock="Top" Command="{Binding ToggleSidebarCommand}"
+                    Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}"
+                    FontSize="16" Padding="14,12" HorizontalContentAlignment="Left" Cursor="Hand">
+                <Button.Content>
+                    <TextBlock Text="&#9776;"/>
+                </Button.Content>
+            </Button>
+
+            <ItemsControl ItemsSource="{Binding MenuItems}" DockPanel.Dock="Top">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding Item}"
+                                ToolTip="{Binding Label}"
+                                Cursor="Hand"
+                                HorizontalContentAlignment="Left"
+                                Padding="14,10" BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding DataContext.IsSidebarCollapsed, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DockPanel>
+    </Border>
+</UserControl>
