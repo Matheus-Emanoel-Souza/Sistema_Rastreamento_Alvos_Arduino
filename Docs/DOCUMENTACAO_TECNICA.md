@@ -306,6 +306,58 @@ origem), `BoolToFoundBrushConverter` (indicador "CLI encontrado/não encontrado"
 
 ## Limitações e próximos passos
 
+**Bugs conhecidos (não corrigidos ainda):**
+
+1. **`App.OnDispatcherUnhandledException` pode entrar em loop infinito e derrubar o processo
+   com `StackOverflowException`.**
+   * **Onde:** `src/RadarTorres.App/App.xaml.cs`, método `OnDispatcherUnhandledException`.
+   * **Causa raiz:** o tratador global de exceções da UI chama `MessageBox.Show(...)` para
+     avisar o usuário. Se a *própria* exibição do `MessageBox` (que também depende de
+     layout/renderização de texto do WPF) disparar uma nova exceção, o WPF a captura e chama
+     `OnDispatcherUnhandledException` de novo — que tenta mostrar outro `MessageBox` — que
+     falha de novo — e assim por diante, sem nenhuma trava contra reentrância. Isso estoura a
+     pilha (`StackOverflowException`), que o CLR não deixa capturar: o processo morre
+     imediatamente, sem a mensagem de erro amigável que o tratador deveria mostrar.
+   * **Como foi observado:** ao rodar `dotnet run --project src/RadarTorres.App` em uma sessão
+     sem um desktop interativo "de verdade" (ver bug 2 abaixo), uma falha de renderização de
+     texto entrou nesse ciclo e derrubou o processo com `Stack overflow.` no console. O stack
+     trace do crash mostra dezenas de repetições do mesmo ciclo
+     `Dispatcher.CatchException → App.OnDispatcherUnhandledException → MessageBox.Show → nova
+     exceção → Dispatcher.CatchException → ...`, sem nenhum frame do código da aplicação além
+     do próprio tratador — só WPF interno.
+   * **Impacto:** baixo em uso normal (a maioria das exceções não acontece durante a própria
+     exibição do `MessageBox`), mas quando acontece o resultado é o pior possível: o app morre
+     sem log e sem a mensagem que o usuário deveria ver.
+   * **Sugestão de correção:** adicionar uma trava de reentrância (ex.: um `bool
+     _isHandlingUnhandledException` verificado no início do método) e, se já estiver
+     tratando uma exceção, pular o `MessageBox.Show` e ir direto para um log em arquivo (ou
+     `Environment.FailFast` com a mensagem original) em vez de tentar mostrar UI de novo. O
+     mesmo raciocínio vale para `OnDomainUnhandledException`, que também chama `MessageBox.Show`.
+
+2. **Falha de renderização de texto (`DirectWrite`/`TextAnalyzer.GetGlyphs`) observada ao
+   rodar o app fora de uma sessão de desktop interativa real.**
+   * **Onde observado:** ao compilar e rodar o app através desta sessão de automação (sem um
+     usuário logado interativamente em uma sessão de desktop do Windows com GPU/driver de
+     vídeo completo), o processo `RadarTorres.App` chegou a abrir a janela de login
+     normalmente, mas em algum momento de *layout* (`TextBlock.MeasureOverride` →
+     `TextFormatterImp.FormatLine` → `TextAnalyzer.GetGlyphs`) uma exceção nativa foi lançada
+     durante o *shaping* de texto — o que disparou o bug 1 acima.
+   * **Hipótese (não confirmada):** este ambiente de automação provavelmente não tem uma
+     sessão de desktop interativa "completa" (Window Station 0 com GPU/DirectWrite plenamente
+     funcional), algo que WPF exige para desenhar texto. Não há evidência de que isso
+     aconteça em uma sessão normal de desktop do Windows (uso interativo comum), mas **ainda
+     não foi validado rodando o app diretamente em uma sessão de desktop real** — só nesta
+     automação.
+   * **Ação necessária:** validar se o app roda normalmente (sem esse erro) quando executado
+     diretamente pelo usuário, fora de qualquer automação — se sim, o bug 2 é uma limitação do
+     ambiente de teste e não do aplicativo; se o erro se repetir em uso normal, investigar a
+     fundo (drivers de vídeo, fontes instaladas, hardware acceleration do WPF — ver
+     `RenderOptions`/`ProcessRenderMode`).
+   * **Nenhum frame do crash pertence ao código da aplicação** (nada de `DashboardCanvas`,
+     `DashboardCard`, `PainelPrincipalView`, etc.) — todos os frames são internos do
+     WPF/DirectWrite e do tratador do bug 1, o que descarta (mas não prova 100%) uma causa
+     ligada à funcionalidade de layout arrastável/redimensionável do painel principal.
+
 **Limitações conhecidas desta entrega:**
 
 * O algoritmo de seleção de torre não considera ângulo de cobertura/orientação física da

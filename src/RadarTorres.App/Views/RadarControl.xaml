@@ -9,15 +9,65 @@
     <!--
         Componente visual do radar. Duas camadas de Canvas sobrepostas:
         - StaticLayer: círculos concêntricos, linhas de quadrante, marcação de Norte/0° e rótulos
-          de distância — redesenhada apenas quando o tamanho do controle muda.
+          de distância — redesenhada apenas quando o tamanho do controle ou o zoom mudam.
         - DynamicLayer: torres, alvos e linhas de associação alvo->torre — atualizada a cada tick
           do timer de renderização (RadarSettings.RefreshRateMs), reaproveitando os elementos
           visuais já existentes em vez de recriar tudo a cada atualização.
+
+        O zoom (botões +/- ou Ctrl+roda do mouse) escala o desenho independente do espaço
+        disponível: em vez de sempre preencher exatamente o espaço do card (como antes), o
+        radar é desenhado em "espaço disponível × fator de zoom" — o ScrollViewer permite rolar
+        até as partes que ficarem fora da área visível quando o zoom aumenta o radar além do
+        espaço do card.
+
+        O alcance (botões +/- ou Shift+roda do mouse, canto superior esquerdo) é diferente do
+        zoom: não muda o tamanho em pixels do radar, muda a distância real que a borda externa
+        representa — "ver mais longe" (alvos/torres distantes passam a caber dentro do mesmo
+        círculo) ou "ver mais perto" (só as proximidades da base, com mais detalhe).
     -->
     <Grid x:Name="RootGrid">
-        <Canvas x:Name="RadarCanvas" ClipToBounds="True">
-            <Canvas x:Name="StaticLayer"/>
-            <Canvas x:Name="DynamicLayer"/>
-        </Canvas>
+        <ScrollViewer x:Name="RadarScrollViewer"
+                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                      PreviewMouseWheel="RadarScrollViewer_PreviewMouseWheel">
+            <Canvas x:Name="RadarCanvas" ClipToBounds="True">
+                <Canvas x:Name="StaticLayer"/>
+                <Canvas x:Name="DynamicLayer"/>
+            </Canvas>
+        </ScrollViewer>
+
+        <!-- Controles de zoom (Ctrl+roda do mouse também funciona), sobrepostos no canto
+             superior direito. -->
+        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                BorderThickness="1" CornerRadius="4" Padding="2" Opacity="0.92">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="ZoomOutButton" Content="−" Width="22" Height="22" Padding="0"
+                        Margin="1" Cursor="Hand" ToolTip="Diminuir escala do radar" Click="ZoomOutButton_Click"/>
+                <TextBlock x:Name="ZoomLabel" Text="100%" Width="40" TextAlignment="Center"
+                           VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11"/>
+                <Button x:Name="ZoomInButton" Content="+" Width="22" Height="22" Padding="0"
+                        Margin="1" Cursor="Hand" ToolTip="Aumentar escala do radar" Click="ZoomInButton_Click"/>
+                <Button x:Name="ZoomResetButton" Content="⤢" Width="22" Height="22" Padding="0"
+                        Margin="1,1,1,1" Cursor="Hand" ToolTip="Ajustar escala ao espaço disponível" Click="ZoomResetButton_Click"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Controles de alcance/raio (Shift+roda do mouse também funciona), sobrepostos no
+             canto superior esquerdo — "ver mais longe" aumenta a distância representada pela
+             borda externa do radar, sem mudar o tamanho em pixels. -->
+        <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6"
+                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                BorderThickness="1" CornerRadius="4" Padding="2" Opacity="0.92">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="RangeOutButton" Content="−" Width="22" Height="22" Padding="0"
+                        Margin="1" Cursor="Hand" ToolTip="Ver mais perto (diminuir o alcance do radar)" Click="RangeOutButton_Click"/>
+                <TextBlock x:Name="RangeLabel" Text="—" Width="52" TextAlignment="Center"
+                           VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11"/>
+                <Button x:Name="RangeInButton" Content="+" Width="22" Height="22" Padding="0"
+                        Margin="1" Cursor="Hand" ToolTip="Ver mais longe (aumentar o alcance do radar)" Click="RangeInButton_Click"/>
+                <Button x:Name="RangeResetButton" Content="⤢" Width="22" Height="22" Padding="0"
+                        Margin="1,1,1,1" Cursor="Hand" ToolTip="Restaurar o alcance padrão" Click="RangeResetButton_Click"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>
