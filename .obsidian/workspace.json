@@ -11,14 +11,10 @@
             "id": "ff3256ecb79059fe",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "README_LOCAL.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "README_LOCAL"
+              "title": "Nova aba"
             }
           }
         ]
@@ -71,12 +67,16 @@
             "type": "leaf",
             "state": {
               "type": "bookmarks",
-              "state": {},
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
               "icon": "lucide-bookmark",
               "title": "Marcadores"
             }
           }
-        ]
+        ],
+        "currentTab": 2
       }
     ],
     "direction": "horizontal",
@@ -185,30 +185,39 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "347f574e037b32e0",
+  "active": "ff3256ecb79059fe",
   "lastOpenFiles": [
-    "Documentation/Proposta/Proposta_ChatGpt.txt",
-    "Documentation/Proposta",
-    "Documentation/Nova pasta",
+    "tests/RadarTorres.Tests/bin/Debug/net9.0-windows/Microsoft.TestPlatform.CrossPlatEngine.dll",
+    "Docs/CONTEXTO_PROJETO.md",
+    "Docs/CONTEXTO_PROJETO.md.tmp.3152.06772f6fca25",
+    "tests/RadarTorres.Tests/bin/Debug/net9.0-windows/RadarTorres.Tests.dll",
+    "tests/RadarTorres.Tests/bin/Debug/net9.0-windows/testhost.exe",
+    "tests/RadarTorres.Tests/bin/Debug/net9.0-windows/testhost.dll",
+    "src/RadarTorres.Launcher/bin/Debug/net9.0-windows/win-x64/WindowsBase.dll",
+    "src/RadarTorres.Launcher/bin/Debug/net9.0-windows/win-x64/System.Xml.XPath.XDocument.dll",
+    "src/RadarTorres.Launcher/bin/Debug/net9.0-windows/win-x64/System.Xml.XPath.dll",
+    "src/RadarTorres.Launcher/bin/Debug/net9.0-windows/win-x64/System.Xml.XmlSerializer.dll",
+    "src/RadarTorres.Launcher/bin/Debug/net9.0-windows/win-x64/System.Xml.XmlDocument.dll",
+    "src/RadarTorres.Launcher/bin/Debug/net9.0-windows/win-x64/System.Xml.XDocument.dll",
+    "Docs/MODELO_DADOS.md",
+    "Docs/LOG_SOLICITACOES.md",
+    "Docs/INSTALADOR.md",
+    "Docs/ETAPA1_FUNDACAO.md",
+    "Docs/DOCUMENTACAO_TECNICA.md",
+    "Docs/COMUNICACAO_ARDUINO.md",
+    "Docs/ARQUITETURA.md",
+    "Docs/ALGORITMO_SELECAO_TORRE.md",
+    "README_LOCAL.md",
     "Documentation/DOCUMENTACAO_TECNICA.md",
     "Documentation/COMUNICACAO_ARDUINO.md",
     "Documentation/ARQUITETURA.md",
     "Documentation/ALGORITMO_SELECAO_TORRE.md",
-    "README_LOCAL.md",
     "2026-08-08.md",
     "Bem-vindo.md",
     "crie um link.md",
     "README.md",
-    "Sem título 1.base",
     "Sem título.md",
     "Sem título.canvas",
-    "Sem título.base",
-    "LICENSE",
-    "README.md.tmp.8076.07e4b9600caf",
-    "src/RadarTorres.App/obj/Debug/net9.0-windows/RadarTorres.App.csproj.FileListAbsolute.txt",
-    "src/RadarTorres.App/bin/Debug/net9.0-windows/RadarTorres.App.pdb",
-    "src/RadarTorres.App/bin/Debug/net9.0-windows/RadarTorres.App.dll",
-    "src/RadarTorres.App/bin/Debug/net9.0-windows/RadarTorres.App.runtimeconfig.json",
     "screenshot2.png",
     "screenshot.png"
   ]
