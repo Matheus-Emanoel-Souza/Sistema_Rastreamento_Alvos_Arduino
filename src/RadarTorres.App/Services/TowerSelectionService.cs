@@ -23,12 +23,14 @@ namespace RadarTorres.App.Services;
 public sealed class TowerSelectionService : ITowerSelectionService
 {
     private readonly ILoggingService _logger;
+    private readonly IDeadZoneService _deadZoneService;
 
     public ObservableCollection<Tower> Towers { get; } = new();
 
-    public TowerSelectionService(ILoggingService logger)
+    public TowerSelectionService(ILoggingService logger, IDeadZoneService deadZoneService)
     {
         _logger = logger;
+        _deadZoneService = deadZoneService;
         LoadTowersFromConfig();
     }
 
@@ -51,6 +53,16 @@ public sealed class TowerSelectionService : ITowerSelectionService
 
     public TowerSelectionResult SelectTowerFor(Target target)
     {
+        DeadZone? blockingZone = _deadZoneService.FindBlockingZone(target);
+        if (blockingZone is not null)
+        {
+            string zoneReason = $"ALVO EM ZONA MORTA ({blockingZone.Name} — {blockingZone.Description}) — NENHUMA TORRE SELECIONADA";
+            _logger.Warning($"Alvo #{target.Id:D2}: {zoneReason}");
+            target.SelectedTower = null;
+            target.DistanceToSelectedTower = 0;
+            return new TowerSelectionResult(false, null, 0, zoneReason);
+        }
+
         List<Tower> available = Towers.Where(t => t.IsAvailable && t.State != TowerState.Offline && t.State != TowerState.Unavailable).ToList();
 
         if (available.Count == 0)
