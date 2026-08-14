@@ -80,6 +80,12 @@ public partial class App : Application
         services.AddSingleton<IFireControlService, FireControlService>();
         services.AddSingleton<ISimulationService, SimulationService>();
 
+        // --- Zonas mortas (quadrante/faixa de distância onde nenhuma torre é selecionada nem
+        //     acionamento é autorizado). Repositório e serviço únicos para toda a instalação,
+        //     consultados por TowerSelectionService/FireControlService acima.
+        services.AddSingleton<IDeadZoneRepository, DeadZoneRepository>();
+        services.AddSingleton<IDeadZoneService, DeadZoneService>();
+
         // --- Aba "Configurações do Arduino" (ambiente/compilação/monitor serial). O compilador
         //     e o localizador do CLI não guardam estado entre chamadas (Transient); as
         //     preferências persistidas usam o mesmo arquivo em disco independentemente da

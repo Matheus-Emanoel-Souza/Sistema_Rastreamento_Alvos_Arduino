@@ -56,6 +56,11 @@ public partial class MonitoramentoView : UserControl
 
     private void Radar_TargetClicked(object? sender, int targetId) => _viewModel.SelectTargetById(targetId);
 
+    private void Radar_DeadZoneQuadrantSelected(object? sender, Models.Quadrant quadrant) => _viewModel.OnRadarQuadrantSelected(quadrant);
+
+    private void Radar_DeadZoneRangeSelected(object? sender, (double MinDistance, double MaxDistance) range) =>
+        _viewModel.OnRadarRangeSelected(range.MinDistance, range.MaxDistance);
+
     private void LogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action != NotifyCollectionChangedAction.Add) return;

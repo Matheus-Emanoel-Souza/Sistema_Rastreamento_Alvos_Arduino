@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -51,6 +53,20 @@ public partial class RadarControl : UserControl
     public static readonly DependencyProperty SelectedTargetIdProperty =
         DependencyProperty.Register(nameof(SelectedTargetId), typeof(int?), typeof(RadarControl), new PropertyMetadata(null));
 
+    public static readonly DependencyProperty DeadZonesProperty =
+        DependencyProperty.Register(nameof(DeadZones), typeof(IEnumerable), typeof(RadarControl),
+            new PropertyMetadata(null, OnDeadZonesChanged));
+
+    /// <summary>
+    /// <c>null</c> = clique no radar funciona só como seleção de alvo (comportamento normal).
+    /// <see cref="DeadZoneType.Quadrant"/>/<see cref="DeadZoneType.DistanceRange"/> = clique
+    /// (quadrante) ou arraste radial (faixa de distância) no radar define uma zona morta — ver
+    /// <see cref="RadarCanvas_MouseLeftButtonDown"/>.
+    /// </summary>
+    public static readonly DependencyProperty DeadZoneEditModeProperty =
+        DependencyProperty.Register(nameof(DeadZoneEditMode), typeof(DeadZoneType?), typeof(RadarControl),
+            new PropertyMetadata(null, OnDeadZoneEditModeChanged));
+
     public IEnumerable? Targets
     {
         get => (IEnumerable?)GetValue(TargetsProperty);
@@ -63,6 +79,21 @@ public partial class RadarControl : UserControl
         set => SetValue(TowersProperty, value);
     }
 
+    /// <summary>Zonas mortas ativas, desenhadas na camada estática (sombreamento translúcido
+    /// sobre o quadrante ou a faixa de distância bloqueada). Opcional — se não vinculado, o
+    /// radar simplesmente não desenha nenhum sombreamento.</summary>
+    public IEnumerable? DeadZones
+    {
+        get => (IEnumerable?)GetValue(DeadZonesProperty);
+        set => SetValue(DeadZonesProperty, value);
+    }
+
+    public DeadZoneType? DeadZoneEditMode
+    {
+        get => (DeadZoneType?)GetValue(DeadZoneEditModeProperty);
+        set => SetValue(DeadZoneEditModeProperty, value);
+    }
+
     public int? SelectedTargetId
     {
         get => (int?)GetValue(SelectedTargetIdProperty);
@@ -71,6 +102,15 @@ public partial class RadarControl : UserControl
 
     /// <summary>Disparado quando o usuário clica em um alvo desenhado no radar.</summary>
     public event EventHandler<int>? TargetClicked;
+
+    /// <summary>Disparado ao clicar dentro de um quadrante do radar com <see cref="DeadZoneEditMode"/>
+    /// igual a <see cref="DeadZoneType.Quadrant"/>.</summary>
+    public event EventHandler<Quadrant>? DeadZoneQuadrantSelected;
+
+    /// <summary>Disparado ao soltar o botão do mouse após arrastar radialmente no radar com
+    /// <see cref="DeadZoneEditMode"/> igual a <see cref="DeadZoneType.DistanceRange"/> — os
+    /// valores já vêm ordenados (mínima ≤ máxima) e limitados ao alcance atual do radar.</summary>
+    public event EventHandler<(double MinDistance, double MaxDistance)>? DeadZoneRangeSelected;
 
     private const double MinZoom = 0.5;
     private const double MaxZoom = 3.0;
@@ -84,6 +124,22 @@ public partial class RadarControl : UserControl
     private readonly Dictionary<int, TargetVisual> _targetVisuals = new();
     private readonly Dictionary<int, TowerVisual> _towerVisuals = new();
     private bool _staticLayerDirty = true;
+    private INotifyCollectionChanged? _watchedDeadZonesCollection;
+
+    // ---- Estado da última renderização, guardado para converter coordenadas de mouse (que
+    //      chegam entre um Render() e outro) de volta para metros — ver ScreenToWorldMeters.
+    private double _lastRenderedSize;
+    private double _lastRenderedMaxDistance = 1;
+
+    // ---- Arraste radial em andamento (modo DistanceRange) — ver RadarCanvas_MouseLeftButtonDown/Move/Up.
+    private bool _isDraggingRange;
+    private double _dragStartMeters;
+    private Ellipse? _rangePreviewStart;
+    private Ellipse? _rangePreviewCurrent;
+
+    /// <summary>Largura mínima (m) de uma faixa arrastada para valer como zona — evita que um
+    /// clique simples (sem arraste de verdade) no modo Faixa crie uma zona de espessura ~0.</summary>
+    private const double MinRangeDragMeters = 0.15;
 
     /// <summary>Fator de escala visual do radar, independente do tamanho do card que o hospeda
     /// (quão grande o círculo aparece na tela). 1.0 = preenche exatamente o espaço disponível;
@@ -120,6 +176,11 @@ public partial class RadarControl : UserControl
         Loaded += (_, _) => { _renderTimer.Start(); Render(); };
         Unloaded += (_, _) => _renderTimer.Stop();
         SizeChanged += (_, _) => { _staticLayerDirty = true; Render(); };
+
+        RadarCanvas.MouseLeftButtonDown += RadarCanvas_MouseLeftButtonDown;
+        RadarCanvas.MouseMove += RadarCanvas_MouseMove;
+        RadarCanvas.MouseLeftButtonUp += RadarCanvas_MouseLeftButtonUp;
+        RadarCanvas.LostMouseCapture += (_, _) => CancelRangeDrag();
     }
 
     private void ZoomInButton_Click(object sender, RoutedEventArgs e) => ChangeZoom(ZoomStep);
@@ -127,6 +188,206 @@ public partial class RadarControl : UserControl
     private void ZoomOutButton_Click(object sender, RoutedEventArgs e) => ChangeZoom(-ZoomStep);
 
     private void ZoomResetButton_Click(object sender, RoutedEventArgs e) => SetZoom(1.0);
+
+    /// <summary>Reage à troca da coleção inteira vinculada em <see cref="DeadZones"/> (o binding
+    /// só dispara isso uma vez, quando resolve — a coleção em si nunca é trocada em tempo de
+    /// execução, é sempre a mesma <c>ObservableCollection</c> do serviço). Passa a observar
+    /// tanto a coleção (zonas adicionadas/removidas) quanto cada zona individualmente (o
+    /// campo <see cref="DeadZone.Enabled"/> muda sem a coleção em si mudar).</summary>
+    private static void OnDeadZonesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var control = (RadarControl)d;
+        control.DetachDeadZoneWatchers(e.OldValue as IEnumerable);
+        control.AttachDeadZoneWatchers(e.NewValue as IEnumerable);
+        control._staticLayerDirty = true;
+        control.Render();
+    }
+
+    private void AttachDeadZoneWatchers(IEnumerable? source)
+    {
+        if (source is INotifyCollectionChanged incc)
+        {
+            _watchedDeadZonesCollection = incc;
+            incc.CollectionChanged += DeadZones_CollectionChanged;
+        }
+
+        if (source is null) return;
+        foreach (DeadZone zone in source.Cast<DeadZone>())
+        {
+            zone.PropertyChanged += DeadZone_PropertyChanged;
+        }
+    }
+
+    private void DetachDeadZoneWatchers(IEnumerable? source)
+    {
+        if (_watchedDeadZonesCollection is not null)
+        {
+            _watchedDeadZonesCollection.CollectionChanged -= DeadZones_CollectionChanged;
+            _watchedDeadZonesCollection = null;
+        }
+
+        if (source is null) return;
+        foreach (DeadZone zone in source.Cast<DeadZone>())
+        {
+            zone.PropertyChanged -= DeadZone_PropertyChanged;
+        }
+    }
+
+    private void DeadZones_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+        {
+            foreach (DeadZone zone in e.OldItems) zone.PropertyChanged -= DeadZone_PropertyChanged;
+        }
+        if (e.NewItems is not null)
+        {
+            foreach (DeadZone zone in e.NewItems) zone.PropertyChanged += DeadZone_PropertyChanged;
+        }
+
+        _staticLayerDirty = true;
+        Render();
+    }
+
+    private void DeadZone_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(DeadZone.Enabled)) return;
+
+        _staticLayerDirty = true;
+        Render();
+    }
+
+    /// <summary>Só troca o cursor (cruz = "clique/arraste aqui define uma zona morta") — nenhuma
+    /// outra reação necessária, o modo em si é lido diretamente de <see cref="DeadZoneEditMode"/>
+    /// a cada evento de mouse.</summary>
+    private static void OnDeadZoneEditModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var control = (RadarControl)d;
+        control.RadarCanvas.Cursor = e.NewValue is null ? Cursors.Arrow : Cursors.Cross;
+        if (e.NewValue is null) control.CancelRangeDrag();
+    }
+
+    /// <summary>
+    /// Início da interação de zona morta no radar (Requisito "definir zona morta com o mouse").
+    /// Ignorado quando <see cref="DeadZoneEditMode"/> é <c>null</c> (comportamento normal —
+    /// clique só seleciona alvo, tratado pelo handler do próprio <see cref="Ellipse"/> do alvo,
+    /// que marca <c>e.Handled</c> e por isso nunca chega aqui) ou quando o clique caiu em cima
+    /// de um alvo/torre (mesmo motivo).
+    /// </summary>
+    private void RadarCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DeadZoneEditMode is null) return;
+
+        (double worldX, double worldY) = ScreenToWorldMeters(e.GetPosition(RadarCanvas));
+
+        if (DeadZoneEditMode == DeadZoneType.Quadrant)
+        {
+            Quadrant quadrant = QuadrantHelper.Determine(worldX, worldY);
+            if (quadrant != Quadrant.None)
+            {
+                DeadZoneQuadrantSelected?.Invoke(this, quadrant);
+            }
+            e.Handled = true;
+            return;
+        }
+
+        // DeadZoneType.DistanceRange: começa o arraste radial — o raio (metros) do ponto de
+        // clique vira uma das duas bordas da faixa, a outra borda é onde o botão for solto.
+        _isDraggingRange = true;
+        _dragStartMeters = DistanceFromCenter(worldX, worldY);
+        RadarCanvas.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void RadarCanvas_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isDraggingRange) return;
+
+        (double worldX, double worldY) = ScreenToWorldMeters(e.GetPosition(RadarCanvas));
+        UpdateRangePreview(_dragStartMeters, DistanceFromCenter(worldX, worldY));
+    }
+
+    private void RadarCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isDraggingRange) return;
+
+        (double worldX, double worldY) = ScreenToWorldMeters(e.GetPosition(RadarCanvas));
+        double endMeters = DistanceFromCenter(worldX, worldY);
+        double startMeters = _dragStartMeters;
+
+        CancelRangeDrag(); // já solta a captura e remove a prévia antes de notificar o evento
+
+        double min = Math.Min(startMeters, endMeters);
+        double max = Math.Max(startMeters, endMeters);
+        if (max - min < MinRangeDragMeters) return; // clique sem arraste de verdade — ignora
+
+        DeadZoneRangeSelected?.Invoke(this, (min, Math.Min(max, _lastRenderedMaxDistance)));
+    }
+
+    /// <summary>Interrompe um arraste de faixa em andamento sem disparar
+    /// <see cref="DeadZoneRangeSelected"/> — usado ao desligar o modo de edição no meio de um
+    /// arraste e como limpeza comum antes de notificar um arraste concluído.</summary>
+    private void CancelRangeDrag()
+    {
+        if (!_isDraggingRange) return;
+
+        _isDraggingRange = false;
+        if (RadarCanvas.IsMouseCaptured) RadarCanvas.ReleaseMouseCapture();
+        RemoveRangePreview();
+    }
+
+    private (double X, double Y) ScreenToWorldMeters(Point screenPoint) =>
+        CoordinateConverter.ScreenToWorld(screenPoint, _lastRenderedSize, _lastRenderedMaxDistance);
+
+    private static double DistanceFromCenter(double worldX, double worldY) => Math.Sqrt(worldX * worldX + worldY * worldY);
+
+    /// <summary>Dois círculos tracejados (raio inicial do arraste + raio atual do mouse) dando
+    /// feedback visual de onde a faixa ficaria se o botão fosse solto agora.</summary>
+    private void UpdateRangePreview(double startMeters, double currentMeters)
+    {
+        double radius = _lastRenderedSize / 2.0;
+        var center = new Point(radius, radius);
+
+        _rangePreviewStart ??= CreateRangePreviewCircle();
+        _rangePreviewCurrent ??= CreateRangePreviewCircle();
+
+        PositionRangePreviewCircle(_rangePreviewStart, center, MetersToPixels(startMeters, radius, _lastRenderedMaxDistance));
+        PositionRangePreviewCircle(_rangePreviewCurrent, center, MetersToPixels(currentMeters, radius, _lastRenderedMaxDistance));
+    }
+
+    private Ellipse CreateRangePreviewCircle()
+    {
+        var circle = new Ellipse
+        {
+            Stroke = TryFindBrush("DangerBrush", Brushes.Red),
+            StrokeThickness = 1.5,
+            StrokeDashArray = new DoubleCollection { 4, 3 },
+            Fill = Brushes.Transparent,
+            IsHitTestVisible = false
+        };
+        DynamicLayer.Children.Add(circle);
+        return circle;
+    }
+
+    private static void PositionRangePreviewCircle(Ellipse circle, Point center, double radiusPx)
+    {
+        circle.Width = circle.Height = Math.Max(0, radiusPx * 2);
+        Canvas.SetLeft(circle, center.X - radiusPx);
+        Canvas.SetTop(circle, center.Y - radiusPx);
+    }
+
+    private void RemoveRangePreview()
+    {
+        if (_rangePreviewStart is not null)
+        {
+            DynamicLayer.Children.Remove(_rangePreviewStart);
+            _rangePreviewStart = null;
+        }
+        if (_rangePreviewCurrent is not null)
+        {
+            DynamicLayer.Children.Remove(_rangePreviewCurrent);
+            _rangePreviewCurrent = null;
+        }
+    }
 
     private void RangeInButton_Click(object sender, RoutedEventArgs e) => ChangeRange(RangeStep);
 
@@ -194,6 +455,12 @@ public partial class RadarControl : UserControl
         double size = availableSize * _zoom;
         double maxDistance = EffectiveMaxDistanceMeters;
 
+        // Guardado para converter posições de mouse (ScreenToWorldMeters) fora do fluxo normal
+        // de renderização — eventos de clique/arraste chegam a qualquer momento entre um tick
+        // do _renderTimer e outro.
+        _lastRenderedSize = size;
+        _lastRenderedMaxDistance = maxDistance;
+
         if (_staticLayerDirty)
         {
             DrawStaticLayer(size, maxDistance);
@@ -228,6 +495,10 @@ public partial class RadarControl : UserControl
 
         int ringCount = Math.Max(1, AppConfig.Current.RadarSettings.DistanceRingCount);
         double radius = size / 2.0;
+
+        // Sombreamento das zonas mortas ativas, desenhado antes dos anéis/rótulos de
+        // distância para que eles continuem legíveis por cima do preenchimento translúcido.
+        DrawDeadZones(size, radius, maxDistance);
 
         for (int i = 1; i <= ringCount; i++)
         {
@@ -286,6 +557,75 @@ public partial class RadarControl : UserControl
         Canvas.SetTop(label, y);
         StaticLayer.Children.Add(label);
     }
+
+    /// <summary>
+    /// Sombreia, em vermelho translúcido, cada zona morta ativa: um quarto de círculo inteiro
+    /// para <see cref="DeadZoneType.Quadrant"/>, ou um anel entre <see cref="DeadZone.MinDistance"/>
+    /// e <see cref="DeadZone.MaxDistance"/> para <see cref="DeadZoneType.DistanceRange"/>
+    /// (mesma conversão metros→pixel de <see cref="CoordinateConverter.WorldToScreen"/>, só que
+    /// aplicada a um raio em vez de a um ponto).
+    /// </summary>
+    private void DrawDeadZones(double size, double radius, double maxDistance)
+    {
+        var zones = (DeadZones?.Cast<DeadZone>() ?? Enumerable.Empty<DeadZone>()).Where(z => z.Enabled);
+        Brush brush = TryFindBrush("DangerBrush", Brushes.Red);
+        var center = new Point(radius, radius);
+
+        // Pontos onde cada semieixo cruza a borda do radar, na ordem Leste->Norte->Oeste->Sul —
+        // percorrida sempre no mesmo sentido (anti-horário em tela), cada par consecutivo
+        // delimita exatamente um quadrante (Q1=Leste->Norte, Q2=Norte->Oeste, Q3=Oeste->Sul,
+        // Q4=Sul->Leste), na mesma convenção de QuadrantHelper.
+        Point east = new(size, radius);
+        Point north = new(radius, 0);
+        Point west = new(0, radius);
+        Point south = new(radius, size);
+
+        foreach (DeadZone zone in zones)
+        {
+            Geometry? geometry = zone.Type == DeadZoneType.Quadrant
+                ? QuadrantWedge(zone.Quadrant, center, radius, east, north, west, south)
+                : DistanceRing(zone, center, radius, maxDistance);
+
+            if (geometry is null) continue;
+
+            StaticLayer.Children.Add(new Path { Data = geometry, Fill = brush, Opacity = 0.18 });
+        }
+    }
+
+    private static Geometry? QuadrantWedge(Quadrant quadrant, Point center, double radius, Point east, Point north, Point west, Point south)
+    {
+        (Point from, Point to) = quadrant switch
+        {
+            Quadrant.Q1 => (east, north),
+            Quadrant.Q2 => (north, west),
+            Quadrant.Q3 => (west, south),
+            Quadrant.Q4 => (south, east),
+            _ => (east, east) // Quadrant.None nunca é usado por uma zona morta — nada a desenhar.
+        };
+
+        if (from == to) return null;
+
+        var figure = new PathFigure { StartPoint = center, IsClosed = true };
+        figure.Segments.Add(new LineSegment(from, true));
+        figure.Segments.Add(new ArcSegment(to, new Size(radius, radius), 0, false, SweepDirection.Counterclockwise, true));
+        return new PathGeometry(new[] { figure });
+    }
+
+    private static Geometry? DistanceRing(DeadZone zone, Point center, double radius, double maxDistance)
+    {
+        double outerPx = MetersToPixels(zone.MaxDistance, radius, maxDistance);
+        if (outerPx <= 0) return null;
+
+        double innerPx = MetersToPixels(zone.MinDistance, radius, maxDistance);
+        var outer = new EllipseGeometry(center, outerPx, outerPx);
+        if (innerPx <= 0) return outer;
+
+        var inner = new EllipseGeometry(center, innerPx, innerPx);
+        return new CombinedGeometry(GeometryCombineMode.Exclude, outer, inner);
+    }
+
+    private static double MetersToPixels(double meters, double radius, double maxDistance) =>
+        Math.Clamp(meters, 0, maxDistance) / maxDistance * radius;
 
     // ---------------------------------------------------------------- Torres (camada dinâmica)
 
@@ -365,7 +705,10 @@ public partial class RadarControl : UserControl
             if (!_targetVisuals.TryGetValue(target.Id, out TargetVisual? visual))
             {
                 var circle = new Ellipse { Width = 14, Height = 14, StrokeThickness = 2, Stroke = Brushes.White, Cursor = System.Windows.Input.Cursors.Hand };
-                circle.MouseLeftButtonDown += (_, _) => TargetClicked?.Invoke(this, target.Id);
+                // e.Handled = true impede que o clique "vaze" para RadarCanvas_MouseLeftButtonDown
+                // por baixo — clicar num alvo sempre seleciona o alvo, nunca também conta como
+                // clique de zona morta, mesmo com DeadZoneEditMode ativo.
+                circle.MouseLeftButtonDown += (_, e) => { TargetClicked?.Invoke(this, target.Id); e.Handled = true; };
 
                 var label = new TextBlock { FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
 
