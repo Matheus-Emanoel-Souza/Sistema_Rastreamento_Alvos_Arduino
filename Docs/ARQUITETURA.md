@@ -229,6 +229,54 @@ Decisões relevantes desta funcionalidade:
   duas `EllipseGeometry`, modo `Exclude`) para zona por faixa de distância — ambos com o mesmo
   `CoordinateConverter` já usado para posicionar alvos/torres.
 
+## 5.4 Console de eventos fixável na lateral (Monitoramento)
+
+* **O card sai do `DashboardCanvas`, não ganha um modo "sempre por cima" dentro dele.**
+  `MonitoramentoView.SetLogPinned` realoca o mesmo `ListBox` (nunca uma cópia) entre
+  `CardConsoleEventos.CardContent` e um `ContentControl` numa faixa fixa na borda direita —
+  fixado, o card some do canvas via `DashboardCanvas.HideCard` (mesmo mecanismo de
+  ocultar/reexibir já existente), então nunca compete por posição/redimensionamento com os
+  demais cards.
+* **Recurso exclusivo deste card.** `DashboardCard`/`DashboardCanvas` continuam sem nenhuma
+  noção de "fixado" — só `DashboardCardLayout.IsPinnedRight` (persistido) e o code-behind de
+  `MonitoramentoView` sabem que esse conceito existe, e só para `CardId == "ConsoleEventos"`.
+* **Estado persiste com o layout do usuário**, no mesmo arquivo JSON de sempre
+  (`IDashboardLayoutRepository`) — `IsPinnedRight` é só mais um campo do
+  `DashboardCardLayout` daquele card.
+
+## 5.5 Exportar/importar "Objetos Detectados" (CSV, XML, PDF)
+
+```mermaid
+flowchart LR
+    VM["ObjetosDetectadosViewModel"]
+    SVC["IObjetoDetectadoExportService"]
+    REPO["IObjetoDetectadoRepository\n(objetos_detectados.csv)"]
+    VIEW["ObjetosDetectadosView\n(SaveFileDialog / OpenFileDialog)"]
+
+    VIEW -- "ExportRequested/ImportRequested" --> VM
+    VM -- "caminho escolhido" --> SVC
+    SVC -- "ImportCsv/ImportXml" --> VM
+    VM -- "Add (Id novo)" --> REPO
+```
+
+* **Mesmo mapeamento de colunas para persistir e para exportar/importar CSV.**
+  `CsvObjetoDetectadoRepository.BuildColumns()` é estático e reaproveitado por
+  `ObjetoDetectadoExportService` (que só aponta um `CsvTableStore` novo para o arquivo
+  escolhido pelo usuário) — exportar e depois reimportar o mesmo arquivo é garantidamente
+  simétrico, sem duas fontes de verdade para o formato.
+* **XML via `XmlSerializer` puro** (`List<ObjetoDetectado>`, sem biblioteca externa).
+  **PDF via PdfSharp** (única dependência nova do projeto para isso) — só exportação: um PDF
+  não guarda estrutura de dados confiável para reler de volta, então não existe "importar PDF".
+* **Importar é mutação real, exportar é só leitura.** Cada linha lida do CSV/XML vira um
+  `IObjetoDetectadoRepository.Add` de verdade (Id do arquivo é descartado, o repositório
+  atribui um novo — evita colidir com o histórico já existente) — por isso só perfis com
+  `PodeExecutarAcoes` (Visualizador não) podem importar; exportar fica liberado pra qualquer
+  perfil autenticado.
+* **Nenhum diálogo de arquivo na ViewModel.** `ObjetosDetectadosViewModel` só dispara
+  `ExportRequested`/`ImportRequested`; quem mostra `SaveFileDialog`/`OpenFileDialog` e devolve
+  o caminho escolhido é `ObjetosDetectadosView`, mesmo padrão já usado em
+  `ArduinoSettingsView` para os diálogos de arquivo do CLI/sketch.
+
 ## 5. Extensibilidade
 
 * **Trocar o protocolo serial:** só `SerialProtocolParser` precisa mudar; todo o resto do

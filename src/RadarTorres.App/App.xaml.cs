@@ -99,6 +99,7 @@ public partial class App : Application
         // --- Dados (CSV hoje — ver TODO(SQL) em AppDataPaths)
         services.AddSingleton<IUsuarioRepository, CsvUsuarioRepository>();
         services.AddSingleton<IObjetoDetectadoRepository, CsvObjetoDetectadoRepository>();
+        services.AddTransient<IObjetoDetectadoExportService, ObjetoDetectadoExportService>();
         services.AddSingleton<IAcaoRealizadaRepository, CsvAcaoRealizadaRepository>();
         services.AddSingleton<IAlteracaoModoRepository, CsvAlteracaoModoRepository>();
         services.AddSingleton<IPreferenciasUsuarioRepository, CsvPreferenciasUsuarioRepository>();
@@ -124,6 +125,11 @@ public partial class App : Application
 
         services.AddTransient<PainelPrincipalViewModel>();
         services.AddSingleton<PainelPrincipalView>();
+
+        // Singleton igual às demais telas de navegação (PainelPrincipalView, MonitoramentoView):
+        // recarrega a lista sozinha no Loaded a cada navegação (ver ObjetosDetectadosView.Loaded).
+        services.AddTransient<ObjetosDetectadosViewModel>();
+        services.AddSingleton<ObjetosDetectadosView>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginWindow>();
