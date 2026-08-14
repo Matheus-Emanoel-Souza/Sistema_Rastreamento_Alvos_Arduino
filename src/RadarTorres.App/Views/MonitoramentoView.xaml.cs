@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
+using RadarTorres.App.Models;
 using RadarTorres.App.Services;
 using RadarTorres.App.ViewModels;
 using RadarTorres.App.Views.Shared;
@@ -25,6 +28,21 @@ public partial class MonitoramentoView : UserControl
     private readonly IDashboardLayoutRepository _layoutRepository;
     private readonly IAuthService _authService;
 
+    /// <summary>
+    /// Referência estável ao ListBox do console de eventos, capturada uma única vez na
+    /// construção. Necessária porque, ao fixar (<see cref="SetLogPinned"/>), esse mesmo
+    /// controle é realocado de <c>CardConsoleEventos.CardContent</c> para
+    /// <c>PinnedLogHost.Content</c> — sem essa referência própria, <c>CardConsoleEventos.CardContent
+    /// as ListBox</c> pararia de encontrá-lo assim que ele saísse do card (é exatamente esse o
+    /// padrão que este campo substitui, usado antes só em <see cref="LogEntries_CollectionChanged"/>).
+    /// </summary>
+    private ListBox? _logListBox;
+
+    /// <summary>Se o console de eventos está atualmente na faixa lateral (<see cref="PinnedLogPanel"/>)
+    /// em vez de dentro do <see cref="LayoutCanvas"/> — usado só para excluí-lo do menu
+    /// "Painéis ocultos" (fixado não é a mesma coisa que oculto).</summary>
+    private bool _isLogPinned;
+
     public MonitoramentoView(MainViewModel viewModel, IDashboardLayoutRepository layoutRepository, IAuthService authService)
     {
         InitializeComponent();
@@ -33,6 +51,8 @@ public partial class MonitoramentoView : UserControl
         _layoutRepository = layoutRepository;
         _authService = authService;
         DataContext = _viewModel;
+
+        _logListBox = CardConsoleEventos.CardContent as ListBox;
 
         _viewModel.LogEntries.CollectionChanged += LogEntries_CollectionChanged;
 
@@ -56,7 +76,7 @@ public partial class MonitoramentoView : UserControl
 
     private void Radar_TargetClicked(object? sender, int targetId) => _viewModel.SelectTargetById(targetId);
 
-    private void Radar_DeadZoneQuadrantSelected(object? sender, Models.Quadrant quadrant) => _viewModel.OnRadarQuadrantSelected(quadrant);
+    private void Radar_DeadZoneQuadrantSelected(object? sender, Quadrant quadrant) => _viewModel.OnRadarQuadrantSelected(quadrant);
 
     private void Radar_DeadZoneRangeSelected(object? sender, (double MinDistance, double MaxDistance) range) =>
         _viewModel.OnRadarRangeSelected(range.MinDistance, range.MaxDistance);
@@ -65,13 +85,49 @@ public partial class MonitoramentoView : UserControl
     {
         if (e.Action != NotifyCollectionChangedAction.Add) return;
 
-        // CardConsoleEventos.CardContent (não FindName) porque o ListBox está dentro do
-        // conteúdo de um DashboardCard, que tem seu próprio escopo de nomes — ver comentário
-        // equivalente sobre "x:Name" em DashboardCard.xaml.
-        if (CardConsoleEventos.CardContent is ListBox listBox && listBox.Items.Count > 0)
+        // _logListBox (não CardConsoleEventos.CardContent) porque o ListBox pode estar tanto
+        // dentro do card quanto na faixa lateral fixada — ver comentário no campo.
+        if (_logListBox is { Items.Count: > 0 } listBox)
         {
             listBox.ScrollIntoView(listBox.Items[^1]);
         }
+    }
+
+    // ---------------------------------------------------------------- Fixar console na lateral
+
+    private void PinLogToggle_Checked(object sender, RoutedEventArgs e) => SetLogPinned(true);
+
+    private void PinLogToggle_Unchecked(object sender, RoutedEventArgs e) => SetLogPinned(false);
+
+    /// <summary>
+    /// Move o ListBox do console de eventos entre <c>CardConsoleEventos</c> (card arrastável
+    /// normal, dentro do <see cref="LayoutCanvas"/>) e <see cref="PinnedLogPanel"/> (faixa fixa
+    /// na borda direita, fora do canvas) — sempre o mesmo controle realocado, nunca uma cópia,
+    /// então nenhum binding/ItemTemplate precisa existir duas vezes.
+    /// </summary>
+    private void SetLogPinned(bool pinned)
+    {
+        if (_logListBox is null || pinned == _isLogPinned) return;
+
+        if (pinned)
+        {
+            CardConsoleEventos.CardContent = null;
+            LayoutCanvas.HideCard(CardConsoleEventos); // some do canvas — não é "oculto", é "mudou de lugar"
+            PinnedLogHost.Content = _logListBox;
+            PinnedLogColumn.Width = new GridLength(340);
+            PinnedLogPanel.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            PinnedLogHost.Content = null;
+            PinnedLogPanel.Visibility = Visibility.Collapsed;
+            PinnedLogColumn.Width = new GridLength(0);
+            CardConsoleEventos.CardContent = _logListBox;
+            LayoutCanvas.ShowCard(CardConsoleEventos); // volta à última posição/tamanho conhecidos
+        }
+
+        _isLogPinned = pinned;
+        RefreshHiddenPanelsMenu(); // fixado não deve aparecer/desaparecer do menu "Painéis ocultos"
     }
 
     private void LoadLayoutForCurrentUser()
@@ -80,9 +136,11 @@ public partial class MonitoramentoView : UserControl
         if (saved is { Count: > 0 })
         {
             LayoutCanvas.ApplyLayoutSnapshot(saved);
+            ApplyLogPinFromSnapshot(saved);
         }
         else
         {
+            PinLogToggle.IsChecked = false;
             LayoutCanvas.ResetToDefaultLayout();
         }
 
@@ -91,12 +149,18 @@ public partial class MonitoramentoView : UserControl
 
     private void OnSaveMyLayout(object? sender, EventArgs e)
     {
-        _layoutRepository.Save(LayoutKey, LayoutCanvas.GetLayoutSnapshot());
+        var snapshot = LayoutCanvas.GetLayoutSnapshot();
+        ApplyLogPinToSnapshot(snapshot);
+        _layoutRepository.Save(LayoutKey, snapshot);
         Toolbar.ShowStatus(LocalizationService.Current?["Dashboard.LayoutSalvoComoPadrao"] ?? "Layout salvo.", success: true);
     }
 
     private void OnSystemDefault(object? sender, EventArgs e)
     {
+        // "Padrão do sistema" nunca inclui o console fixado — solta antes de rearranjar, senão
+        // ArrangeDefaultFlow reexibiria o card vazio (o ListBox continuaria em PinnedLogHost).
+        PinLogToggle.IsChecked = false;
+
         // Só recalcula o arranjo em memória/tela — nunca toca no arquivo salvo (Requisito 6).
         LayoutCanvas.ResetToDefaultLayout();
         RefreshHiddenPanelsMenu();
@@ -109,12 +173,30 @@ public partial class MonitoramentoView : UserControl
         if (saved is { Count: > 0 })
         {
             LayoutCanvas.ApplyLayoutSnapshot(saved);
+            ApplyLogPinFromSnapshot(saved);
             RefreshHiddenPanelsMenu();
             Toolbar.ShowStatus(LocalizationService.Current?["Dashboard.MeuLayoutRestaurado"] ?? "Seu layout foi restaurado.", success: true);
         }
         else
         {
             Toolbar.ShowStatus(LocalizationService.Current?["Dashboard.SemLayoutPessoalSalvo"] ?? "Você ainda não salvou um layout pessoal.", success: false);
+        }
+    }
+
+    /// <summary>Lê <c>IsPinnedRight</c> do card do console (se houver entrada salva) e aplica via
+    /// o toggle — atribuir <c>PinLogToggle.IsChecked</c> dispara Checked/Unchecked, que já chama
+    /// <see cref="SetLogPinned"/>; nenhuma outra lógica precisa ser duplicada aqui.</summary>
+    private void ApplyLogPinFromSnapshot(Dictionary<string, DashboardCardLayout> snapshot)
+    {
+        bool pinned = snapshot.TryGetValue(CardConsoleEventos.CardId, out DashboardCardLayout? layout) && layout.IsPinnedRight;
+        PinLogToggle.IsChecked = pinned;
+    }
+
+    private void ApplyLogPinToSnapshot(Dictionary<string, DashboardCardLayout> snapshot)
+    {
+        if (snapshot.TryGetValue(CardConsoleEventos.CardId, out DashboardCardLayout? layout))
+        {
+            layout.IsPinnedRight = _isLogPinned;
         }
     }
 
@@ -129,7 +211,13 @@ public partial class MonitoramentoView : UserControl
 
     private void RefreshHiddenPanelsMenu()
     {
-        var hidden = LayoutCanvas.GetHiddenCards().Select(c => (c.CardId, c.Title)).ToList();
+        // O card do console de eventos some do canvas tanto quando ocultado (Requisito 1) quanto
+        // quando fixado na lateral (SetLogPinned) — só o primeiro caso deve aparecer aqui, senão
+        // "reabrir" um card fixado via este menu entraria em conflito com PinnedLogHost.
+        var hidden = LayoutCanvas.GetHiddenCards()
+            .Where(c => !(_isLogPinned && c == CardConsoleEventos))
+            .Select(c => (c.CardId, c.Title))
+            .ToList();
         Toolbar.SetHiddenCards(hidden);
     }
 }

@@ -27,4 +27,13 @@ public sealed class DashboardCardLayout
     /// frente durante um arraste tem o maior valor. Faz parte do que é persistido (Requisito
     /// "ordem dos componentes").</summary>
     public int ZIndex { get; set; }
+
+    /// <summary>
+    /// Só usado hoje pelo card "Console de Eventos" da tela de Monitoramento (Requisito "fixar
+    /// o console de logs na aba lateral direita"): quando verdadeiro, o card sai do
+    /// <c>DashboardCanvas</c> arrastável e vira um painel encaixado na borda direita da tela —
+    /// ver <c>MonitoramentoView.SetLogPinned</c>. Falso (padrão) para qualquer outro card, que
+    /// nunca lê nem grava este campo.
+    /// </summary>
+    public bool IsPinnedRight { get; set; }
 }

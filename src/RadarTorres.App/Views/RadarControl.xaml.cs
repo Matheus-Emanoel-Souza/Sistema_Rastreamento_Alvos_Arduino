@@ -647,7 +647,7 @@ public partial class RadarControl : UserControl
             {
                 var shape = new Polygon
                 {
-                    Points = new PointCollection { new(0, -8), new(7, 7), new(-7, 7) }, // triângulo
+                    Points = new PointCollection { new(-7, -7), new(7, -7), new(7, 7), new(-7, 7) }, // quadrado
                     StrokeThickness = 1,
                     Stroke = Brushes.Black
                 };
