@@ -1,0 +1,96 @@
+<UserControl x:Class="RadarTorres.App.Views.ObjetosDetectadosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource BackgroundBrush}"
+             Foreground="{DynamicResource TextPrimaryBrush}"
+             FontFamily="Segoe UI">
+    <!--
+        Tela "Objetos Detectados" (Requisito 4 — histórico de detecções) + exportação em
+        CSV/XML/PDF e importação em CSV/XML (Requisito "exportar/importar a tabela de logs").
+        Substitui o PlaceholderView que existia aqui antes — ver NavigationService.
+    -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="OBJETOS DETECTADOS" FontSize="18" FontWeight="Bold"
+                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="1" Text="Histórico de detecções (Requisito 4). Exporte para arquivo ou importe registros de volta."
+                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Exportar:" VerticalAlignment="Center" Margin="0,0,8,0"
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <Button Content="CSV" Command="{Binding ExportCommand}" CommandParameter="csv"/>
+            <Button Content="XML" Command="{Binding ExportCommand}" CommandParameter="xml"/>
+            <Button Content="PDF" Command="{Binding ExportCommand}" CommandParameter="pdf"/>
+
+            <Rectangle Width="1" Margin="8,2" Fill="{DynamicResource PanelBorderBrush}"/>
+
+            <TextBlock Text="Importar:" VerticalAlignment="Center" Margin="16,0,8,0"
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <Button Content="CSV" Command="{Binding ImportCommand}" CommandParameter="csv"/>
+            <Button Content="XML" Command="{Binding ImportCommand}" CommandParameter="xml"/>
+            <TextBlock Text="Seu perfil (Visualizador) não permite importar." VerticalAlignment="Center"
+                       Foreground="{DynamicResource WarningBrush}" FontSize="11" Margin="8,0,0,0"
+                       Visibility="{Binding NaoPodeImportar, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+            <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Margin="16,0,0,0" FontSize="12" TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding StatusIsSuccess}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
+
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Itens}" AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True"
+                  GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                  Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                  RowBackground="{DynamicResource PanelBrush}" AlternatingRowBackground="{DynamicResource InputBackgroundBrush}"
+                  HorizontalGridLinesBrush="{DynamicResource PanelBorderBrush}" VerticalGridLinesBrush="{DynamicResource PanelBorderBrush}">
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                    <Setter Property="Padding" Value="8,6"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
+                <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="140"/>
+                <DataGridTextColumn Header="X (m)" Binding="{Binding X, StringFormat={}{0:0.00}}" Width="80"/>
+                <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, StringFormat={}{0:0.00}}" Width="80"/>
+                <DataGridTextColumn Header="Quadrante" Binding="{Binding Quadrante}" Width="90"/>
+                <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="150"/>
+                <DataGridTextColumn Header="Dispositivo" Binding="{Binding Dispositivo}" Width="110"/>
+                <DataGridTextColumn Header="Confiança" Binding="{Binding NivelConfianca, StringFormat={}{0:0%}, TargetNullValue=—}" Width="90"/>
+                <DataGridTextColumn Header="Observação" Binding="{Binding Observacao, TargetNullValue=—}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>
