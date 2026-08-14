@@ -36,4 +36,8 @@ public interface IPermissionService
 
     /// <summary>Se o perfil pode criar/editar/inativar outros usuários.</summary>
     bool PodeGerenciarUsuarios(PerfilUsuario perfil);
+
+    /// <summary>Se o perfil pode criar/ativar/desativar/remover zonas mortas. Demais perfis
+    /// continuam vendo a lista (transparência de onde o sistema não vai atirar), só não editam.</summary>
+    bool PodeGerenciarZonasMortas(PerfilUsuario perfil);
 }

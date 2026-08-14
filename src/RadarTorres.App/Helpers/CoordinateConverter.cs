@@ -51,6 +51,26 @@ public static class CoordinateConverter
         return new Point(screenX, screenY);
     }
 
+    /// <summary>
+    /// Inverso de <see cref="WorldToScreen"/>: converte um ponto em pixels dentro do canvas do
+    /// radar de volta para coordenadas cartesianas de mundo (metros) — usado para interpretar
+    /// cliques/arrastes do mouse sobre o <see cref="Views.RadarControl"/> (ex.: desenhar uma
+    /// zona morta diretamente no radar).
+    /// </summary>
+    public static (double X, double Y) ScreenToWorld(Point screenPoint, double canvasSize, double maxDistanceMeters)
+    {
+        if (maxDistanceMeters <= 0) maxDistanceMeters = 1;
+
+        double radiusPx = canvasSize / 2.0;
+        double scale = radiusPx > 0 ? radiusPx / maxDistanceMeters : 1;
+
+        double worldX = (screenPoint.X - radiusPx) / scale;
+        // Mesma inversão de sinal de WorldToScreen: Y de tela cresce para baixo, Y de mundo cresce para o Norte.
+        double worldY = -(screenPoint.Y - radiusPx) / scale;
+
+        return (worldX, worldY);
+    }
+
     public static double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;
 
     public static double RadiansToDegrees(double radians) => radians * 180.0 / Math.PI;

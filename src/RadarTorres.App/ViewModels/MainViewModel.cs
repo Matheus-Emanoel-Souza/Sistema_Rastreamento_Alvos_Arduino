@@ -29,6 +29,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly ITowerSelectionService _towerService;
     private readonly IFireControlService _fireControlService;
     private readonly ISimulationService _simulationService;
+    private readonly IDeadZoneService _deadZoneService;
     private readonly IObjetoDetectadoRepository _objetoRepository;
     private readonly IAlteracaoModoRepository _alteracaoModoRepository;
     private readonly IAuthService _authService;
@@ -42,6 +43,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         ITowerSelectionService towerService,
         IFireControlService fireControlService,
         ISimulationService simulationService,
+        IDeadZoneService deadZoneService,
         IObjetoDetectadoRepository objetoRepository,
         IAlteracaoModoRepository alteracaoModoRepository,
         IAuthService authService,
@@ -53,6 +55,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _towerService = towerService;
         _fireControlService = fireControlService;
         _simulationService = simulationService;
+        _deadZoneService = deadZoneService;
         _objetoRepository = objetoRepository;
         _alteracaoModoRepository = alteracaoModoRepository;
         _authService = authService;
@@ -83,6 +86,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         ClearRadarCommand = new RelayCommand(ClearRadar);
         TogglePauseCommand = new RelayCommand(() => IsPaused = !IsPaused);
 
+        RemoveDeadZoneCommand = new RelayCommand(zone => { if (zone is DeadZone dz) _deadZoneService.Remove(dz); }, _ => PodeGerenciarZonasMortas);
+        ToggleDeadZoneCommand = new RelayCommand(zone => { if (zone is DeadZone dz) _deadZoneService.SetEnabled(dz, !dz.Enabled); }, _ => PodeGerenciarZonasMortas);
+
         RefreshPorts();
         _logger.Success("Sistema iniciado");
     }
@@ -108,6 +114,92 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     public ObservableCollection<LogEntry> LogEntries => _logger.Entries;
     public ObservableCollection<string> AvailablePorts { get; } = new();
     public int[] AvailableBaudRates => SerialSettings.CommonBaudRates;
+
+    // ---------------------------------------------------------------- Zonas mortas
+    //
+    // Criação é feita diretamente no radar (clique = quadrante, arraste radial = faixa de
+    // distância — ver RadarControl.DeadZoneEditMode e OnRadarQuadrantSelected/
+    // OnRadarRangeSelected abaixo), não por um formulário de coordenadas digitadas.
+
+    public ObservableCollection<DeadZone> DeadZones => _deadZoneService.Zones;
+
+    /// <summary>Nome opcional dado à próxima zona desenhada no radar; em branco, cada zona
+    /// recebe um nome descritivo automático (quadrante ou faixa).</summary>
+    private string _newDeadZoneName = string.Empty;
+    public string NewDeadZoneName
+    {
+        get => _newDeadZoneName;
+        set => SetProperty(ref _newDeadZoneName, value);
+    }
+
+    /// <summary>Qual gesto o radar interpreta enquanto <see cref="IsDeadZoneDrawingActive"/>
+    /// está ligado: <see cref="DeadZoneType.Quadrant"/> = clique, <see cref="DeadZoneType.DistanceRange"/> = arraste radial.</summary>
+    private DeadZoneType _newDeadZoneType;
+    public DeadZoneType NewDeadZoneType
+    {
+        get => _newDeadZoneType;
+        set
+        {
+            if (SetProperty(ref _newDeadZoneType, value))
+            {
+                OnPropertyChanged(nameof(DeadZoneEditMode));
+            }
+        }
+    }
+
+    private bool _isDeadZoneDrawingActive;
+
+    /// <summary>Liga/desliga a interpretação de clique/arraste no radar como definição de zona
+    /// morta — quando desligado, clicar no radar continua selecionando alvos normalmente.</summary>
+    public bool IsDeadZoneDrawingActive
+    {
+        get => _isDeadZoneDrawingActive;
+        set
+        {
+            if (SetProperty(ref _isDeadZoneDrawingActive, value))
+            {
+                OnPropertyChanged(nameof(DeadZoneEditMode));
+            }
+        }
+    }
+
+    /// <summary>Vinculado a <see cref="Views.RadarControl.DeadZoneEditMode"/> — <c>null</c>
+    /// enquanto o modo de desenho estiver desligado ou o perfil não puder gerenciar zonas.</summary>
+    public DeadZoneType? DeadZoneEditMode => IsDeadZoneDrawingActive && PodeGerenciarZonasMortas ? NewDeadZoneType : null;
+
+    public RelayCommand RemoveDeadZoneCommand { get; }
+    public RelayCommand ToggleDeadZoneCommand { get; }
+
+    /// <summary>Chamado pelo code-behind da tela quando o usuário clica dentro de um quadrante
+    /// do radar com o modo de desenho em Quadrante. Clicar num quadrante que já tem zona a
+    /// remove (clique alterna existe/não existe); nenhuma zona existente é editada no local.</summary>
+    public void OnRadarQuadrantSelected(Quadrant quadrant)
+    {
+        if (!PodeGerenciarZonasMortas) return;
+
+        DeadZone? existing = DeadZones.FirstOrDefault(z => z.Type == DeadZoneType.Quadrant && z.Quadrant == quadrant);
+        if (existing is not null)
+        {
+            _deadZoneService.Remove(existing);
+            return;
+        }
+
+        string name = string.IsNullOrWhiteSpace(NewDeadZoneName) ? $"Quadrante {quadrant}" : NewDeadZoneName.Trim();
+        _deadZoneService.AddQuadrantZone(name, quadrant);
+        NewDeadZoneName = string.Empty;
+    }
+
+    /// <summary>Chamado pelo code-behind quando o usuário termina um arraste radial no radar com
+    /// o modo de desenho em Faixa de distância — os limites já chegam ordenados e dentro do
+    /// alcance atual (ver RadarControl.RadarCanvas_MouseLeftButtonUp).</summary>
+    public void OnRadarRangeSelected(double minDistance, double maxDistance)
+    {
+        if (!PodeGerenciarZonasMortas || maxDistance <= minDistance) return;
+
+        string name = string.IsNullOrWhiteSpace(NewDeadZoneName) ? $"Faixa {minDistance:0.0}–{maxDistance:0.0} m" : NewDeadZoneName.Trim();
+        _deadZoneService.AddDistanceRangeZone(name, minDistance, maxDistance);
+        NewDeadZoneName = string.Empty;
+    }
 
     // ---------------------------------------------------------------- Conexão serial
 
@@ -150,12 +242,22 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     /// <summary>Inverso de <see cref="PodeExecutarAcoes"/> — conveniência para bind direto com <c>BooleanToVisibilityConverter</c> no XAML.</summary>
     public bool NaoPodeExecutarAcoes => !PodeExecutarAcoes;
 
+    /// <summary>Se o usuário conectado pode criar/ativar/desativar/remover zonas mortas
+    /// (Administrador apenas — demais perfis só veem a lista).</summary>
+    public bool PodeGerenciarZonasMortas => _permissionService.PodeGerenciarZonasMortas(_authService.CurrentUser?.Perfil ?? PerfilUsuario.Visualizador);
+
+    public bool NaoPodeGerenciarZonasMortas => !PodeGerenciarZonasMortas;
+
     private void OnAuthSessionChanged(object? sender, EventArgs e)
     {
         RunOnUi(() =>
         {
             OnPropertyChanged(nameof(PodeExecutarAcoes));
             OnPropertyChanged(nameof(NaoPodeExecutarAcoes));
+            OnPropertyChanged(nameof(PodeGerenciarZonasMortas));
+            OnPropertyChanged(nameof(NaoPodeGerenciarZonasMortas));
+            OnPropertyChanged(nameof(DeadZoneEditMode));
+            if (!PodeGerenciarZonasMortas) IsDeadZoneDrawingActive = false;
             RelayCommand.RaiseCanExecuteChangedForAll();
         });
     }

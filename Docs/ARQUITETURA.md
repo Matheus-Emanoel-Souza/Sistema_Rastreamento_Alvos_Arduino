@@ -183,6 +183,52 @@ Decisões relevantes desta funcionalidade:
   pixel de `DragDelta`, para não gerar I/O excessivo). "Restaurar layout padrão" rearranja os
   cards em uma grade fixa (3 colunas) e regrava o arquivo.
 
+## 5.3 Zonas mortas (quadrante ou faixa de distância sem torre/acionamento)
+
+```mermaid
+flowchart LR
+    REPO["IDeadZoneRepository\n(%LocalAppData%\\RadarTorres\\dead-zones.json)"]
+    SVC["IDeadZoneService\n(ObservableCollection<DeadZone> + FindBlockingZone)"]
+    TOWER["TowerSelectionService.SelectTowerFor"]
+    FIRE["FireControlService.Authorize"]
+    RADAR["RadarControl\n(sombreamento translúcido)"]
+
+    REPO --> SVC
+    SVC -- "alvo dentro de zona ativa?" --> TOWER
+    SVC -- "alvo dentro de zona ativa?" --> FIRE
+    SVC --> RADAR
+```
+
+Decisões relevantes desta funcionalidade:
+
+* **Alvo continua visível/rastreado — só não recebe torre nem pode ser acionado.** Uma zona
+  morta não filtra o `TargetTrackingService`; `TowerSelectionService.SelectTowerFor` e
+  `FireControlService.Authorize` consultam `IDeadZoneService.FindBlockingZone` antes de
+  qualquer outra regra e recusam a operação (com o alvo continuando visível/selecionável no
+  radar), em vez de esconder o alvo. O bloqueio é checado nos dois pontos independentemente,
+  para que o acionamento manual também respeite a zona mesmo que uma torre já tivesse sido
+  selecionada antes de a zona existir/ser ativada.
+* **Duas formas de zona, um único modelo.** `DeadZone.Type` decide se `Quadrant` (todo um
+  quadrante Q1-Q4) ou `MinDistance`/`MaxDistance` (faixa de distância da base, qualquer
+  direção) é relevante — a UI mostra só os campos pertinentes ao tipo escolhido
+  (`EnumEqualsToVisibilityConverter`).
+* **Persistência única para a instalação, não por usuário.** Mesmo padrão JSON de
+  `ArduinoSettingsRepository`, mas sem chave de usuário: zonas mortas são uma decisão
+  administrativa de segurança, não uma preferência pessoal — todo operador vê a mesma lista.
+* **Só o Administrador cria/ativa/desativa/remove.** `IPermissionService.PodeGerenciarZonasMortas`
+  segue o mesmo princípio dos demais controles de perfil do projeto (checagem centralizada, não
+  espalhada pela UI); os demais perfis continuam vendo a lista somente-leitura, para saber onde
+  o sistema deliberadamente não vai agir.
+* **Sem edição de campos após criada.** Só `Enabled` é mutável numa zona existente — trocar
+  tipo/quadrante/faixa é remover e recriar, o que mantém o formulário e a validação simples
+  (evita, por exemplo, ter que revalidar uma faixa em edição parcial).
+* **Visualização no radar reaproveita a mesma conversão metros→pixel do resto do desenho.**
+  `RadarControl` recebe `DeadZones` como mais uma propriedade de dependência (mesmo padrão de
+  `Targets`/`Towers`) e desenha cada zona ativa na camada estática: um quarto de círculo inteiro
+  (`PathGeometry` com `ArcSegment`) para zona por quadrante, ou um anel (`CombinedGeometry` de
+  duas `EllipseGeometry`, modo `Exclude`) para zona por faixa de distância — ambos com o mesmo
+  `CoordinateConverter` já usado para posicionar alvos/torres.
+
 ## 5. Extensibilidade
 
 * **Trocar o protocolo serial:** só `SerialProtocolParser` precisa mudar; todo o resto do

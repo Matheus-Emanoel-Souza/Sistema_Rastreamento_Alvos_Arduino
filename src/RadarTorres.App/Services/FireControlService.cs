@@ -24,17 +24,20 @@ public sealed class FireControlService : IFireControlService
     private readonly ILoggingService _logger;
     private readonly IAcaoRealizadaRepository _acaoRepository;
     private readonly IAuthService _authService;
+    private readonly IDeadZoneService _deadZoneService;
     private readonly Dispatcher _dispatcher;
 
     public FireControlService(
         ILoggingService logger,
         IAcaoRealizadaRepository acaoRepository,
         IAuthService authService,
+        IDeadZoneService deadZoneService,
         Dispatcher? dispatcher = null)
     {
         _logger = logger;
         _acaoRepository = acaoRepository;
         _authService = authService;
+        _deadZoneService = deadZoneService;
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
     }
 
@@ -43,6 +46,15 @@ public sealed class FireControlService : IFireControlService
         if (!target.IsActive)
         {
             return new FireAuthorizationResult(false, "ALVO NÃO ESTÁ MAIS ATIVO");
+        }
+
+        // Checado antes/independente da torre selecionada: mesmo que uma torre já tivesse
+        // sido escolhida antes de a zona ser criada/ativada, nenhum acionamento (manual ou
+        // automático) sai enquanto o alvo estiver dentro de uma zona morta ativa.
+        DeadZone? blockingZone = _deadZoneService.FindBlockingZone(target);
+        if (blockingZone is not null)
+        {
+            return new FireAuthorizationResult(false, $"ACIONAMENTO BLOQUEADO — ALVO EM ZONA MORTA ({blockingZone.Name} — {blockingZone.Description})");
         }
 
         if (target.SelectedTower is null)
