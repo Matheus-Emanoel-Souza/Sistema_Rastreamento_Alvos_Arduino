@@ -340,3 +340,62 @@ WPF, sem servidor/URL).
      código da aplicação (nada de `DashboardCanvas`/`DashboardCard`/`PainelPrincipalView`).
 - Nenhum commit/push feito para essas alterações de documentação nem para o restante do fluxo
   pendente (merge em `homologacao`) — aguardando aprovação do usuário.
+
+---
+
+## 2026-08-12 a 2026-08-20 — Entrada retroativa (reconstruída a partir do histórico de commits)
+
+**Nota:** estas sessões não foram logadas em tempo real por quem as executou; a entrada abaixo
+foi reconstruída em 2026-08-30 lendo `git log`, sem acesso aos prompts originais do usuário —
+por isso não segue o formato "Pedido / Entregue" das demais entradas, só resume o que o
+histórico do Git mostra.
+
+- **2026-08-12/13** — Consolidação de branches: `Sistema`, `TESTE` e `homologacao` mescladas em
+  `main` (conflito em `README.md` resolvido mantendo a versão da `Sistema`); adição de
+  `Docs/CONTEXTO_PROJETO.md` (commit `2839e25`, "atualização").
+- **2026-08-14** — Branch `TESTE` → `main` (merge `45bf83d`): feature de **zonas mortas**
+  completa (`DeadZone`, persistência JSON, serviço de avaliação, bloqueio de torre/disparo,
+  permissão restrita a Administrador, criação por clique/arraste no radar, card dedicado) +
+  ajustes de UX no radar (torres como quadrado, console de eventos fixado). Mesma data, branch
+  `Tela_de_logs` → `main` (merge `f34527d`): tela de **Objetos Detectados** sai do placeholder
+  (tabela + exportar/importar CSV/XML/PDF).
+- **2026-08-20** — Commit `929d2b5` em `origin/main` (não puxado para o `main` local até
+  2026-08-30, ver entrada abaixo): `Docs/Diagramas_e_requisitos/` — diagrama de classes, de
+  pacotes, DER atual/proposto, Requisitos Funcionais (RF01–RF32), Requisitos Não Funcionais
+  (RNF01–RNF30) e matriz de rastreabilidade, produzidos por análise do código-fonte e da
+  documentação existente.
+
+---
+
+## 2026-08-30 — Handoff do projeto, sincronização com origin e atualização da documentação
+
+**Pedido:** gerar um handoff do projeto e, em seguida, executar as ações recomendadas nesse
+handoff.
+
+**Contexto encontrado no início da sessão:** `main` local estava 1 commit atrás de
+`origin/main` (o commit `929d2b5` de RF/RNF/diagramas de 2026-08-20, nunca puxado); working
+tree com 3 mudanças não commitadas de sessão anterior (remoção de `.claude/settings.local.json`
+do versionamento, `.gitignore` ignorando `.claude/`, e correção em `App.xaml.cs`/
+`LocalizationService.cs` trocando `Assembly.GetExecutingAssembly().Location` por
+`AppContext.BaseDirectory` — o primeiro retorna `""` em publish single-file e quebrava a
+resolução de `appsettings.json`/pasta de localização); `Docs/CONTEXTO_PROJETO.md` desatualizado
+desde 2026-08-12 (não refletia zonas mortas, Objetos Detectados nem o levantamento de RF/RNF);
+`Docs/LOG_SOLICITACOES.md` sem entradas desde 2026-08-11; branch local `TESTE` órfã (upstream
+`origin/TESTE` já apagado).
+
+**Entregue:**
+
+- `dotnet build` (0 erros/avisos) e `dotnet test` (21/21 aprovados) confirmados antes de
+  qualquer alteração, validando o estado da working tree.
+- `git pull origin main --ff-only` — trouxe `Docs/Diagramas_e_requisitos/` sem conflito (só
+  arquivos novos).
+- `Docs/CONTEXTO_PROJETO.md` atualizado: linha do tempo (itens 7–10: zonas mortas, Objetos
+  Detectados, formulário de Chamado de Ajuda, levantamento de RF/RNF/diagramas), estado atual,
+  lista de placeholders restantes (confirmada lendo `NavigationService.cs`: Ações realizadas,
+  Histórico de modos, Usuários, listagem de Chamados/Ajuda, Configurações), roadmap e tabela de
+  documentação — data de "Última atualização" para 2026-08-30.
+- Esta entrada retroativa (2026-08-12 a 2026-08-20) e esta entrada, adicionadas a
+  `Docs/LOG_SOLICITACOES.md`.
+- Demais ações do handoff (decisão sobre commitar/descartar as mudanças pendentes, remoção da
+  branch `TESTE` órfã) tratadas na sequência desta mesma sessão — ver commit(s) associados a
+  esta data, se houver.

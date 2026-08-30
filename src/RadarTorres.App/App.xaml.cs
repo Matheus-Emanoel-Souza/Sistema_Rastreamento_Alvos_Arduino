@@ -201,7 +201,10 @@ public partial class App : Application
     {
         try
         {
-            var baseDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
+            // AppContext.BaseDirectory funciona tanto em publish normal quanto em single-file
+            // (Assembly.Location retorna "" em single-file, o que fazia Path.GetDirectoryName
+            // devolver null e Path.Combine lançar ArgumentNullException).
+            var baseDirectory = AppContext.BaseDirectory;
             var configPath = Path.Combine(baseDirectory, "appsettings.json");
 
             if (!File.Exists(configPath))
