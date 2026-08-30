@@ -5,7 +5,7 @@
 > completo. Cobre: a ideia, como foi construído, o estado atual e o que falta. Para detalhes
 > técnicos linha a linha, os links para `Docs/*.md` no final apontam para as fontes completas.
 >
-> Última atualização: 2026-08-12.
+> Última atualização: 2026-08-30.
 
 ---
 
@@ -95,6 +95,25 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
    mantendo a versão reescrita da `Sistema`, por decisão do usuário. Build (0 erros/avisos) e
    os 21 testes automatizados validados após o merge. `Sistema` e `homologacao` foram
    excluídas (local + remoto); `main` e `TESTE` permanecem.
+7. **Zonas mortas** (via branch `TESTE`, mesclada em `main`): modelo de domínio `DeadZone`,
+   persistência em JSON único da instalação, serviço de negócio que avalia zonas ativas e
+   bloqueia seleção de torre/disparo dentro delas, gestão restrita ao perfil Administrador,
+   criação por clique/arraste direto no radar, card dedicado "ZONAS MORTAS" com sombreamento
+   visual. Ajustes de UX no mesmo ciclo: torres desenhadas como quadrado no radar, console de
+   eventos fixado na faixa lateral direita.
+8. **Tela de Objetos Detectados** (via branch `Tela_de_logs`, mesclada em `main`): a tela sai
+   do placeholder e vira uma tabela real (ViewModel + View), com serviço de
+   exportação/importação em CSV, XML e PDF.
+9. **Formulário de Chamado de Ajuda**: `ChamadoAjuda` (model), `CsvChamadoAjudaRepository`,
+   `HelpDeskFormViewModel`/`HelpDeskFormWindow`, acionado pela TopBar — permite abrir um
+   ticket. É só o lado de *criação*; ainda não existe tela de listagem/gestão dos chamados
+   (ver placeholders na seção 3).
+10. **Levantamento de engenharia de software (2026-08-20)**: `Docs/Diagramas_e_requisitos/`
+    adicionado por análise do código-fonte e da documentação existente — diagrama de classes,
+    diagrama de pacotes, DER atual (CSV) e proposto (SQL), Requisitos Funcionais (RF01–RF32),
+    Requisitos Não Funcionais (RNF01–RNF30) e matriz de rastreabilidade requisito → arquivo/
+    classe/função. Pontos não confirmáveis por código foram sinalizados como inferência no
+    próprio documento (ver `Docs/Diagramas_e_requisitos/README.md`).
 
 ---
 
@@ -110,15 +129,25 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
 - Aba de Configurações do Arduino: detectar `arduino-cli`, compilar sketch, monitor serial.
 - Instalador Windows completo (`Setup.exe`), self-contained, com upgrade preservando
   configurações do usuário.
-- 21 testes automatizados (xUnit) cobrindo a aba do Arduino CLI.
+- 21 testes automatizados (xUnit) cobrindo a aba do Arduino CLI (`dotnet test`: 21/21 aprovados
+  em 2026-08-30; `dotnet build`: 0 erros/avisos).
 - **Todas as branches de trabalho consolidadas na `main`** — é o branch canônico agora.
+- Zonas mortas: criação por clique/arraste no radar, bloqueio de torre/disparo, restrito a
+  Administrador (ver item 7 da linha do tempo).
+- Objetos detectados: tela de tabela real, com exportar/importar (CSV/XML/PDF).
+- Formulário de abertura de Chamado de Ajuda, acessível pela TopBar.
 
 ### Telas ainda "em construção" (placeholder, navegação já funciona)
 
-- Objetos detectados (tabela com filtros/paginação/gráfico) — **pendente**.
+Confirmado lendo `NavigationService.cs` em 2026-08-30:
+
 - Ações realizadas (tabela de auditoria, somente leitura) — **pendente**.
 - Histórico de modos (tabela de auditoria, somente leitura) — **pendente**.
 - Usuários (CRUD completo, restrito a Administrador) — **pendente**.
+- Chamados/Ajuda — **listagem/gestão pendente** (o *formulário de criação* de ticket já existe
+  e funciona; falta a tela de consultar/responder chamados, embora `IChamadoAjudaRepository`
+  já esteja pronto).
+- Configurações — **pendente**, ainda não escopado.
 
 ### Bugs conhecidos (documentados em `Docs/DOCUMENTACAO_TECNICA.md`, seção "Bugs conhecidos")
 
@@ -133,9 +162,9 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
 
 Conforme plano em `Docs/ETAPA1_FUNDACAO.md`, seção 6:
 
-- **Fechar a Etapa 1**: implementar as 4 telas de dados completas listadas acima
-  (Objetos detectados, Ações realizadas, Histórico de modos, Usuários), reaproveitando a
-  fundação já pronta (repositórios, permissões, i18n, tema, navegação).
+- **Fechar a Etapa 1**: implementar as telas de dados completas listadas acima (Ações
+  realizadas, Histórico de modos, Usuários, listagem/gestão de Chamados de Ajuda),
+  reaproveitando a fundação já pronta (repositórios, permissões, i18n, tema, navegação).
 - **Etapa 2**: indicadores gráficos avançados, personalização completa de layout, filtros
   avançados, exportação CSV, notificações.
 - **Etapa 3 ("Qualidade")**: testes automatizados mais amplos, revisão de segurança, ajustes
@@ -189,4 +218,5 @@ Relevante para qualquer IA/assistente que for continuar o trabalho:
 | [`Docs/INSTALADOR.md`](INSTALADOR.md) | Processo de criação do instalador |
 | [`Docs/ETAPA1_FUNDACAO.md`](ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação, roadmap |
 | [`Docs/MODELO_DADOS.md`](MODELO_DADOS.md) | Schema das tabelas CSV, relacionamentos, plano de migração SQL |
+| [`Docs/Diagramas_e_requisitos/`](Diagramas_e_requisitos/README.md) | RF01–RF32, RNF01–RNF30, diagrama de classes, de pacotes, DER atual/proposto, matriz de rastreabilidade |
 | [`Docs/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) | Histórico cronológico completo de todos os pedidos feitos à IA |

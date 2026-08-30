@@ -43,9 +43,9 @@ public sealed class LocalizationService : ILocalizationService
 
     public LocalizationService()
     {
-        _resourcesFolder = Path.Combine(
-            Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? AppContext.BaseDirectory,
-            "Resources", "Localization");
+        // AppContext.BaseDirectory funciona tanto em publish normal quanto em single-file
+        // (Assembly.Location retorna "" em single-file).
+        _resourcesFolder = Path.Combine(AppContext.BaseDirectory, "Resources", "Localization");
 
         Load(_currentLanguage);
     }
