@@ -13,9 +13,13 @@ documentação estão sinalizados como **inferência** nos respectivos arquivos.
 | [`Diagrama_de_Classes.md`](Diagrama_de_Classes.md) | Classes/módulos principais (Models, Services, Repositories, ViewModels, Helpers, e o firmware Arduino representado como módulo/struct) + diagrama Mermaid |
 | [`Diagrama_de_Pacotes.md`](Diagrama_de_Pacotes.md) | Organização em pacotes/namespaces reais do repositório + diagrama Mermaid de dependências |
 | [`Modelo_Banco_de_Dados.md`](Modelo_Banco_de_Dados.md) | Modelo de dados atual (CSV) com DER, e modelo proposto/inferido para migração futura a SQL |
-| [`Requisitos_Funcionais.md`](Requisitos_Funcionais.md) | RF01–RF32, com descrição, atores e evidência em código/documentação |
-| [`Requisitos_Nao_Funcionais.md`](Requisitos_Nao_Funcionais.md) | RNF01–RNF30, classificados por categoria (desempenho, segurança, usabilidade etc.) |
-| [`Matriz_de_Rastreabilidade.md`](Matriz_de_Rastreabilidade.md) | Requisito → arquivo/classe/função → responsabilidade |
+| [`Requisitos_Funcionais.md`](Requisitos_Funcionais.md) | RF01–RF32, com descrição, atores, prioridade, status e evidência em código/documentação |
+| [`Requisitos_Nao_Funcionais.md`](Requisitos_Nao_Funcionais.md) | RNF01–RNF30, classificados por categoria (desempenho, segurança, usabilidade etc.) e status |
+| [`Decisoes_Arquiteturais.md`](Decisoes_Arquiteturais.md) | Escolhas internas de implementação (persistência, MVVM manual, protocolo serial, UX de cards) — não são requisitos do produto |
+| [`Limitacoes_Conhecidas.md`](Limitacoes_Conhecidas.md) | Funcionalidades ainda não implementadas e divergências entre a especificação revisada e o código atual |
+| [`Matriz_de_Rastreabilidade.md`](Matriz_de_Rastreabilidade.md) | Requisito/decisão/limitação → arquivo/classe/função → status |
+| [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml) | Diagrama de Casos de Uso (PlantUML) — atores, 28 casos de uso agrupados, `<<include>>`/`<<extend>>` |
+| [`Casos_de_Uso.md`](Casos_de_Uso.md) | Especificação textual de cada caso de uso (objetivo, atores, fluxos, status) e matriz Caso de Uso × Requisito |
 
 Diagramas Mermaid também foram renderizados como imagem (`.png`) nesta mesma pasta, quando a
 geração foi bem-sucedida — ver seção "Diagramas renderizados" abaixo. O código Mermaid
@@ -38,19 +42,24 @@ permanece nos `.md` para permitir edição futura.
 * Responsabilidade de `ILocalizationService`, `IThemeService`, `INavigationService` e
   `IDeadZoneService` — assinaturas completas não foram lidas nesta varredura; a responsabilidade
   foi inferida do nome da interface e do uso descrito em `Docs/ARQUITETURA.md`.
-* RF16, RF17, RF18 (telas de Ações Realizadas, Histórico de Modos, Usuários) — os repositórios e
-  modelos já existem, mas `Docs/CONTEXTO_PROJETO.md` lista essas telas como "pendentes"; o
-  requisito de dado já está implementado, a tela de consulta dedicada pode não estar.
-* RF23 (tratamento administrativo de chamados) — inferido da existência de `Update` em
-  `IChamadoAjudaRepository` e dos campos `RespostaAdmin`/`DataResolucao`, sem leitura direta da
-  tela correspondente.
+* RF16, RF17 (Ações Realizadas, Histórico de Modos) — **confirmado na revisão de 2026-08-30**:
+  o registro de dados já funciona, a tela de consulta dedicada não existe (`Status: Parcial`).
+* RF18, RF23 (Usuários, tratamento administrativo de chamados) — **confirmado na revisão de
+  2026-08-30**: nenhuma tela consome `IUsuarioRepository`/`IChamadoAjudaRepository.Update`
+  hoje (`Status: Planejado`).
 * Modelo de banco "proposto" em `Modelo_Banco_de_Dados.md` — é a extrapolação do plano de
   migração já documentado pelo próprio projeto (`TODO(SQL)`), não uma implementação existente.
 
-## Ponto não confirmado
+## Revisão de 2026-08-30
 
-Não foi possível confirmar, apenas por leitura estática do código nesta sessão, se as telas de
-Ações Realizadas, Histórico de Modos e Usuários (RF16–RF18) já saíram do estado de placeholder
-mencionado em `Docs/CONTEXTO_PROJETO.md` (datado de 2026-08-12) — o histórico de commits mais
-recente do repositório mostra trabalho ativo na tela de Objetos Detectados, mas não confirma o
-estado das demais.
+Os documentos desta pasta foram revisados para separar corretamente RF, RNF, decisões
+arquiteturais e limitações conhecidas — ver `Docs/LOG_SOLICITACOES.md`, entrada
+"2026-08-30 — Revisão dos documentos de Requisitos". O ponto abaixo, deixado em aberto na
+versão anterior deste README, foi confirmado nessa revisão.
+
+**Confirmado:** as telas de Ações Realizadas, Histórico de Modos, Usuários e Gestão/listagem de
+Chamados de Ajuda (RF16–RF18, RF23) **continuam em `PlaceholderView`** — lido diretamente em
+`Services/NavigationService.cs`. RF16/RF17 têm o registro de dados já funcionando (falta só a
+tela de consulta); RF18/RF23 não têm nenhuma interface, nem de consulta nem de gestão. Ver
+`Limitacoes_Conhecidas.md`, item L02, e o campo `Status` de cada requisito em
+`Requisitos_Funcionais.md`.

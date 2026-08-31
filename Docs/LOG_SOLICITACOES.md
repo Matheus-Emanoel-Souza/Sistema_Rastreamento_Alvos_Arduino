@@ -399,3 +399,102 @@ desde 2026-08-12 (não refletia zonas mortas, Objetos Detectados nem o levantame
 - Demais ações do handoff (decisão sobre commitar/descartar as mudanças pendentes, remoção da
   branch `TESTE` órfã) tratadas na sequência desta mesma sessão — ver commit(s) associados a
   esta data, se houver.
+
+---
+
+## 2026-08-30 — Revisão dos documentos de Requisitos (RF, RNF, decisões arquiteturais, matriz)
+
+**Pedido:** revisar `Requisitos_Funcionais.md`, `Requisitos_Nao_Funcionais.md` e a matriz de
+rastreabilidade, separando corretamente RF, RNF, decisões/restrições arquiteturais e
+limitações atuais, com base em comentários do autor deixados no próprio arquivo (não
+commitados) sobre RF06, RF07, RF08, RF14, RF15, RF19–RF23. Instrução explícita de não alterar
+comportamento do código nesta tarefa — só documentação — e de registrar divergências entre
+especificação desejada e implementação atual em vez de forçar o código a bater com a
+especificação.
+
+**Entregue:**
+
+- `Requisitos_Funcionais.md` reescrito por completo: todos os RF01–RF32 passaram a ter os
+  campos Descrição (sem citar classe/método internos), Atores, Prioridade (Alta/Média/Baixa) e
+  Status (Implementado/Parcial/Planejado/Removido), além da Evidência já existente.
+  - **RF06** reformulado para "Acionamento demonstrativo automático": disparo só no modo
+    Vermelho, sem menção a acionamento manual.
+  - **RF08** reescrito com os 3 estados conceituais (Verde/Amarelo/Vermelho), removendo a
+    enumeração antiga (Off/LocationOnly/LocationAutoTower/LocationAutoFire/Maintenance/
+    Emergency) da especificação.
+  - **RF07** marcado `Removido da especificação funcional` (modo de simulação é ferramenta de
+    desenvolvimento/demonstração, não requisito do produto) — nenhum código alterado, segue
+    documentado em `Docs/DOCUMENTACAO_TECNICA.md` e `README.md`.
+  - **RF25** marcado removido, consolidado em RNF11 (responsividade já era RNF).
+  - **RF32** marcado removido, consolidado em RNF17/RNF18 (instalação/portabilidade já eram RNF).
+  - **RF14, RF15, RF19, RF20, RF21, RF22** mantidos como funcionais (analisados e confirmados
+    como comportamento observável, não característica de qualidade) — RF20/RF21 reformulados
+    para não duplicar RNF12/RNF13.
+  - **RF16, RF17** com `Status: Parcial` (registro funciona, tela de consulta não existe);
+    **RF18, RF23** com `Status: Planejado` (nenhuma UI consome os repositórios já prontos) —
+    confirmado lendo `Services/NavigationService.cs` e os `ViewModel`s do domínio.
+- `Requisitos_Nao_Funcionais.md` reescrito: coluna `Status` adicionada; RNF12/RNF13
+  reformulados para descrever só a qualidade (troca em runtime, consistência visual), evitando
+  duplicar RF20/RF21; RNF16 reformulado para não duplicar RF29 (foco em não bloquear a UI);
+  RNF24 reformulado para não usar "21 testes" como o requisito em si (`Status: Parcial`, com
+  "Evidência atual: 21 testes xUnit aprovados"); RNF20–RNF23, RNF29 e RNF30 esvaziados com
+  ponteiro para o novo local.
+- `Decisoes_Arquiteturais.md` **(novo arquivo)**: DA01–DA05, reunindo o que era RNF20–RNF23
+  (persistência substituível, protocolo serial centralizado, MVVM manual, independência de
+  WPF) e RNF30 (anticolisão de cards por rejeição, decisão de UX).
+- `Limitacoes_Conhecidas.md` **(novo arquivo)**: L01 (reconexão serial automática não
+  implementada, ex-RNF29), L02 (5 telas ainda placeholder), L03 (referência aos bugs já
+  catalogados em `Docs/DOCUMENTACAO_TECNICA.md`, sem duplicar), e a divergência **D1**:
+  `SystemMode` no código ainda usa os 6 valores antigos (não Verde/Amarelo/Vermelho), e
+  `MainViewModel.ManualFireCommand`/`FireControlService.Authorize` ainda permitem acionamento
+  manual sem checagem de modo — documentado, nenhum código alterado.
+- `Matriz_de_Rastreabilidade.md` reescrita: coluna `Status` adicionada à tabela de RF; RF07/
+  RF25/RF32 marcados como removidos com o novo destino; novas tabelas para RNF reformulados,
+  para as Decisões Arquiteturais (DA01–DA05) e para Limitações/Divergências (L01–L03, D1).
+- `Docs/Diagramas_e_requisitos/README.md` atualizado: tabela de arquivos com os 2 novos
+  documentos; seção "Ponto não confirmado" da varredura anterior resolvida e substituída por
+  "Revisão de 2026-08-30"; nota de inferência de RF16–18/RF23 atualizada de "pode não estar"
+  para confirmado (`Parcial`/`Planejado`).
+- Nenhuma alteração de código-fonte. Nenhum commit/push feito — aguardando revisão do usuário.
+
+**Resumo (requisitos removidos/reformulados/movidos, decisões separadas, limitações e
+divergências) apresentado ao usuário na resposta desta sessão, não duplicado aqui.**
+
+---
+
+## 2026-08-30 — Diagrama de Casos de Uso e especificação (baseados nos RF/RNF revisados)
+
+**Pedido:** gerar um Diagrama de Casos de Uso (PlantUML) e um documento de especificação dos
+casos de uso, com base nos requisitos funcionais/não funcionais já revisados, confirmando
+atores e permissões reais no código antes de finalizar, sem inventar funcionalidade fora dos
+requisitos e sem representar acionamento manual nem o modo de simulação.
+
+**Entregue:**
+
+- `Diagrama_Casos_de_Uso.puml` **(novo arquivo)**: fronteira única "Sistema RadarTorres", 5
+  atores (`Usuário` genérico com generalização para `Administrador`/`Operador`/`Visualizador`,
+  mais `Arduino`), 28 casos de uso organizados em 6 agrupamentos visuais (Conta e Acesso,
+  Monitoramento e Operação, Histórico e Dados, Administração, Preferências, Arduino e
+  Comunicação). Modos Verde/Amarelo/Vermelho representados via nota explicativa em "Alterar modo
+  de operação", não como include/extend. Nenhum caso de uso de acionamento manual; "Modo de
+  simulação" fora do diagrama oficial (RF07, removido da especificação funcional). `<<include>>`/
+  `<<extend>>` usados só onde havia dependência real (ex.: acionamento automático inclui seleção
+  de torre e validação de segurança, é extensão do acompanhamento; compilar sketch inclui
+  detectar o CLI).
+- `Casos_de_Uso.md` **(novo arquivo)**: objetivo, tabela de atores (com responsabilidades e uma
+  inconsistência encontrada — `ArduinoSettingsViewModel` não restringe Visualizador, apesar de
+  RF10 descrevê-lo como "somente consulta"), referência ao `.puml` (sem gerar `.svg`/`.png`: não
+  há PlantUML nem `plantuml.jar` instalados localmente, e a instrução foi explícita em não
+  instalar ferramentas só para isso — instruções de como gerar manualmente foram deixadas no
+  documento), especificação completa dos 28 casos de uso (UC01–UC28, com detalhamento maior nos
+  9 casos centrais indicados: autenticação, monitoramento, detecção/rastreamento, seleção de
+  torre, modos, acompanhamento, acionamento automático, zonas mortas, Arduino), matriz Caso de
+  Uso × Requisito, e seção de estado atual vs. planejado (22 implementados, 3 parciais — UC08,
+  UC15, UC16 —, 2 planejados — UC17, UC24).
+- Confirmado em código antes de finalizar: `PermissionService.cs` (regras exatas de
+  `PodeExecutarAcoes`/`PodeGerenciarUsuarios`/`PodeGerenciarZonasMortas`/`PodeVerMenu`),
+  `MainViewModel.CurrentMode` (troca de modo já gated por `PodeExecutarAcoes`, com confirmação e
+  auditoria) e ausência de checagem de permissão em `ArduinoSettingsViewModel`.
+- `Docs/Diagramas_e_requisitos/README.md` e `Matriz_de_Rastreabilidade.md` atualizados com
+  ponteiros para os dois novos arquivos, sem duplicar conteúdo.
+- Nenhuma alteração de código-fonte. Nenhum commit/push feito — aguardando revisão do usuário.
