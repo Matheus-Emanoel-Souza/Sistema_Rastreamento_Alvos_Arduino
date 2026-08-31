@@ -1,0 +1,53 @@
+@startuml Implantacao_RadarTorres
+
+' RadarTorres — Diagrama de Implantação
+' Reflete a distribuição física real do sistema: aplicação desktop única, sem servidor/cloud,
+' comunicando com um Arduino via USB/serial. Ver README.md (raiz) e
+' Docs/COMUNICACAO_ARDUINO.md para o protocolo, e installer/RadarTorres.iss para o instalador.
+
+skinparam shadowing false
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+}
+skinparam artifact {
+  BackgroundColor White
+  BorderColor Black
+}
+skinparam database {
+  BackgroundColor White
+  BorderColor Black
+}
+
+node "Computador do usuário\n(Windows 10/11, 64-bit)" as PC {
+  artifact "RadarTorres.App\n(C# 13 / WPF, MVVM)" as App
+  artifact ".NET 9 Desktop Runtime\n(embutido — instalação self-contained)" as Runtime
+  database "Armazenamento local\n%AppData%\\RadarTorres\\Data\\*.csv\n%LocalAppData%\\RadarTorres\\*.json" as Storage
+
+  App ..> Runtime : executa sobre
+  App --> Storage : lê/grava (usuários, auditoria,\nobjetos detectados, layout, zonas mortas)
+}
+
+node "Arduino\n(microcontrolador)" as MCU {
+  artifact "Firmware\n(ArduinoSimulation.ino ou\nfirmware definitivo dos sensores)" as Firmware
+}
+
+device "Sensores de detecção\n(ângulo + distância)" as Sensores
+device "Torres demonstrativas /\nindicador (laser de baixa\npotência, LED ou simulação)" as Torres
+
+PC -[#black]-> MCU : USB / Serial\n(protocolo texto TIPO;CHAVE=VALOR;...)
+MCU -[#black]-> PC : leituras de alvo\n(TARGET;ID=;ANGLE=;DIST=)
+
+Sensores --> MCU : sinal analógico/digital
+MCU --> Torres : comando de acionamento\ndemonstrativo (modo Vermelho)
+
+note right of PC
+  Nenhum componente de servidor, web ou nuvem —
+  aplicação desktop única, autocontida. Um modo de
+  simulação embutido (fora do escopo de requisitos
+  funcionais do produto) permite operar sem o nó
+  Arduino conectado, usado em desenvolvimento e
+  demonstração.
+end note
+
+@enduml

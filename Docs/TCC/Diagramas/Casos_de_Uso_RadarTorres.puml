@@ -1,0 +1,145 @@
+@startuml Casos_de_Uso_RadarTorres
+
+' RadarTorres — Diagrama de Casos de Uso (versão para o documento acadêmico do TCC)
+' Mesmo modelo validado contra o código-fonte já publicado em
+' Docs/Diagramas_e_requisitos/Diagrama_Casos_de_Uso.puml — reproduzido aqui como artefato
+' independente do pacote Docs/TCC/, para acompanhar Docs/TCC/UML_RadarTorres.md sem obrigar
+' o leitor do TCC a navegar para a pasta de rastreabilidade técnica.
+' Convenção: casos de uso puramente automáticos (reação do sistema a uma leitura do Arduino
+' ou a um modo já ativo) não recebem linha de ator — só são alcançados por <<include>>/
+' <<extend>> a partir de quem realmente os aciona. Isso reforça que não há acionamento manual.
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+}
+skinparam actor {
+  BackgroundColor White
+  BorderColor Black
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor Black
+}
+
+actor "Usuário" as Usuario
+actor "Administrador" as Administrador
+actor "Operador" as Operador
+actor "Visualizador" as Visualizador
+actor "Arduino" as Arduino
+
+Administrador --|> Usuario
+Operador --|> Usuario
+Visualizador --|> Usuario
+
+rectangle "Sistema RadarTorres" {
+
+  package "Conta e Acesso" {
+    usecase "Autenticar-se" as UC01
+    usecase "Alterar senha" as UC02
+  }
+
+  package "Monitoramento e Operação" {
+    usecase "Visualizar painel" as UC03
+    usecase "Monitorar radar" as UC04
+    usecase "Receber/detectar alvos" as UC05
+    usecase "Rastrear alvos" as UC06
+    usecase "Selecionar torre automaticamente" as UC07
+    usecase "Alterar modo de operação\n(Verde / Amarelo / Vermelho)" as UC08
+    usecase "Acompanhar alvo pelas torres" as UC09
+    usecase "Executar acionamento\ndemonstrativo automático" as UC10
+    usecase "Validar regras de segurança\n(distância mínima, zona morta,\ntorre selecionada)" as UC11
+  }
+
+  package "Histórico e Dados" {
+    usecase "Visualizar objetos detectados" as UC12
+    usecase "Exportar objetos detectados" as UC13
+    usecase "Importar objetos detectados" as UC14
+    usecase "Consultar ações realizadas" as UC15
+    usecase "Consultar histórico de modos" as UC16
+  }
+
+  package "Administração" {
+    usecase "Gerenciar usuários" as UC17
+    usecase "Gerenciar zonas mortas" as UC18
+    usecase "Gerenciar chamados" as UC24
+  }
+
+  package "Preferências" {
+    usecase "Alterar idioma" as UC19
+    usecase "Alterar tema" as UC20
+    usecase "Personalizar painel" as UC21
+    usecase "Fixar/desafixar console" as UC22
+    usecase "Abrir chamado de ajuda" as UC23
+  }
+
+  package "Arduino e Comunicação" {
+    usecase "Configurar Arduino" as UC25
+    usecase "Detectar Arduino CLI" as UC26
+    usecase "Compilar sketch" as UC27
+    usecase "Monitorar comunicação serial" as UC28
+  }
+}
+
+Usuario -- UC01
+Usuario -- UC02
+Usuario -- UC03
+Usuario -- UC04
+Usuario -- UC12
+Usuario -- UC13
+Usuario -- UC15
+Usuario -- UC16
+Usuario -- UC19
+Usuario -- UC20
+Usuario -- UC21
+Usuario -- UC22
+Usuario -- UC23
+Usuario -- UC25
+Usuario -- UC26
+Usuario -- UC27
+Usuario -- UC28
+
+Administrador -- UC08
+Operador -- UC08
+Administrador -- UC14
+Operador -- UC14
+
+Administrador -- UC17
+Administrador -- UC18
+Administrador -- UC24
+
+Arduino -- UC05
+Arduino -- UC28
+
+UC04 ..> UC06 : <<include>>
+UC05 ..> UC06 : <<include>>
+UC06 ..> UC07 : <<include>>
+UC07 ..> UC09 : <<include>>
+UC10 ..> UC09 : <<extend>>
+UC10 ..> UC07 : <<include>>
+UC10 ..> UC11 : <<include>>
+
+UC27 ..> UC26 : <<include>>
+UC26 ..> UC25 : <<extend>>
+UC27 ..> UC25 : <<extend>>
+UC28 ..> UC25 : <<extend>>
+
+note right of UC08
+  Define o estado do sistema:
+  Verde = ligado, sem rastreamento/acionamento;
+  Amarelo = habilita UC09 (acompanhar), sem acionar;
+  Vermelho = habilita UC09 e a extensão UC10 (aciona),
+  sempre sujeita a UC11.
+end note
+
+note bottom of UC10
+  Nunca representa acionamento manual.
+  "Modo de simulação" não é caso de uso oficial
+  do produto — é ferramenta de desenvolvimento/teste.
+end note
+
+@enduml
