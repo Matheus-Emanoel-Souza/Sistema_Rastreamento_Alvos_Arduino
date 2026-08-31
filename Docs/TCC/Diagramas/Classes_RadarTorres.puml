@@ -1,0 +1,192 @@
+@startuml Classes_RadarTorres
+
+' RadarTorres — Diagrama de Classes (acadêmico/conceitual)
+' Não é exaustivo: prioriza as entidades de domínio e os serviços centrais necessários para
+' compreender o sistema, conforme Docs/TCC/UML_RadarTorres.md, seção 5. Atributos e operações
+' foram simplificados aos mais relevantes conceitualmente — a lista completa está no próprio
+' código-fonte (src/RadarTorres.App/Models, .../Services) e em Docs/DOCUMENTACAO_TECNICA.md.
+' Todas as classes/interfaces abaixo existem no código; nenhuma foi inventada para o diagrama.
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+}
+
+package "Modelos de Domínio" {
+
+  enum SystemMode {
+    Off
+    LocationOnly
+    LocationAutoTower
+    LocationAutoFire
+    Maintenance
+    Emergency
+  }
+
+  enum PerfilUsuario {
+    Administrador
+    Operador
+    Visualizador
+  }
+
+  class SensorReading {
+    +TargetId: int
+    +Angle: double
+    +Distance: double
+    +Source: DataSource
+  }
+
+  class Target {
+    +Id: int
+    +Angle: double
+    +Distance: double
+    +X: double
+    +Y: double
+    +Quadrant: Quadrant
+    +IsActive: bool
+    +SelectedTower: Tower
+  }
+
+  class Tower {
+    +Id: int
+    +Name: string
+    +X: double
+    +Y: double
+    +PreferredQuadrant: Quadrant
+    +State: TowerState
+    +IsAvailable: bool
+  }
+
+  class DeadZone {
+    +Id: int
+    +Name: string
+    +Type: DeadZoneType
+    +Quadrant: Quadrant
+    +MinDistance: double
+    +MaxDistance: double
+    +Enabled: bool
+  }
+
+  class Usuario {
+    +Id: int
+    +Nome: string
+    +Login: string
+    +Perfil: PerfilUsuario
+    +Ativo: bool
+  }
+
+  class ObjetoDetectado {
+    +Id: int
+    +X: double
+    +Y: double
+    +Quadrante: string
+    +DataHora: DateTime
+    +Dispositivo: string
+  }
+
+  class AcaoRealizada {
+    +Id: int
+    +Dispositivo: string
+    +DataHora: DateTime
+    +UsuarioResponsavel: string
+    +Origem: OrigemAcao
+    +Resultado: ResultadoAcao
+  }
+
+  class AlteracaoModo {
+    +Id: int
+    +ModoAnterior: string
+    +NovoModo: string
+    +DataHoraSolicitacao: DateTime
+    +UsuarioSolicitante: string
+    +Resultado: ResultadoAlteracaoModo
+  }
+
+  class ChamadoAjuda {
+    +Id: int
+    +UsuarioId: int
+    +Titulo: string
+    +Categoria: string
+    +Status: StatusChamado
+    +RespostaAdmin: string
+  }
+}
+
+package "Serviços (interfaces)" {
+
+  interface ITargetTrackingService {
+    +ProcessReading(SensorReading)
+    +PurgeStaleTargets()
+    +ClearAll()
+  }
+
+  interface ITowerSelectionService {
+    +SelectTowerFor(Target): TowerSelectionResult
+    +RecomputeTowerStates(Target[*])
+  }
+
+  interface IFireControlService {
+    +Authorize(Target, double): FireAuthorizationResult
+    +TryFireAsync(Target, ...): bool
+  }
+
+  interface IDeadZoneService {
+    +AddQuadrantZone(...)
+    +AddDistanceRangeZone(...)
+    +FindBlockingZone(Target): DeadZone
+  }
+
+  interface ISerialCommunicationService {
+    +ConnectAsync(...): bool
+    +SendCommandAsync(string): bool
+    +GetAvailablePorts(): string[*]
+  }
+
+  interface IAuthService {
+    +CurrentUser: Usuario
+    +LoginAsync(...): AuthResult
+    +AlterarSenhaAsync(...): AuthResult
+  }
+
+  interface IPermissionService {
+    +PodeExecutarAcoes(PerfilUsuario): bool
+    +PodeGerenciarUsuarios(PerfilUsuario): bool
+    +PodeGerenciarZonasMortas(PerfilUsuario): bool
+  }
+}
+
+' ---------------------------------------------------------------- Associações entre modelos
+Target "0..1" -- "0..1" Tower : SelectedTower >
+Usuario "1" -- "1" PerfilUsuario : possui >
+Usuario "1" -- "0..*" AcaoRealizada : solicita (quando manual) >
+Usuario "1" -- "0..*" AlteracaoModo : solicita >
+Usuario "1" -- "0..*" ChamadoAjuda : abre >
+
+' ---------------------------------------------------------------- Serviço ↔ modelo que gerencia
+ITargetTrackingService "1" o-- "*" Target : Targets
+ITowerSelectionService "1" o-- "*" Tower : Towers
+IDeadZoneService "1" o-- "*" DeadZone : Zones
+
+' ---------------------------------------------------------------- Dependências entre serviços
+ITargetTrackingService ..> SensorReading : consome
+ITowerSelectionService ..> IDeadZoneService : consulta (bloqueio)
+IFireControlService ..> IDeadZoneService : consulta (bloqueio)
+IFireControlService ..> Target : autoriza/aciona
+IFireControlService ..> AcaoRealizada : registra >
+IAuthService ..> Usuario : autentica
+IPermissionService ..> PerfilUsuario : avalia
+
+note right of SystemMode
+  Consultado hoje pela camada de apresentação
+  (ex.: MainViewModel.CurrentMode), não por
+  IFireControlService diretamente — o enum ainda
+  usa a nomenclatura antiga (6 valores), não os 3
+  estados conceituais Verde/Amarelo/Vermelho da
+  especificação revisada. Ver divergência D1 em
+  Docs/Diagramas_e_requisitos/Limitacoes_Conhecidas.md.
+end note
+
+@enduml
