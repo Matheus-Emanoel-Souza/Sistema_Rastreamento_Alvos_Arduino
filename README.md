@@ -41,13 +41,13 @@ Fornecer uma plataforma de software completa para:
 
 1. Receber, de forma assíncrona e não bloqueante, leituras de sensores enviadas por um
    Arduino via serial (protocolo texto simples, documentado em
-   [`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md)).
+   [`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md)).
 2. Converter as leituras (ângulo + distância) em posição cartesiana e exibi-las em tempo
    real em um radar circular, dividido em quatro quadrantes.
 3. Selecionar automaticamente, entre um conjunto configurável de torres demonstrativas
    posicionadas ao redor da base, qual delas está mais próxima/melhor posicionada para
    cada alvo (algoritmo documentado em
-   [`Docs/ALGORITMO_SELECAO_TORRE.md`](Docs/ALGORITMO_SELECAO_TORRE.md)).
+   [`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md)).
 4. Permitir um modo de acionamento **demonstrativo** (indicador/laser de baixa potência ou
    simulação puramente em software), sempre respeitando uma distância mínima de segurança.
 5. Funcionar de ponta a ponta mesmo sem nenhum Arduino conectado, através de um modo de
@@ -171,8 +171,8 @@ Senha:   admin123
 
 Troque a senha padrão em **Perfil > Alterar senha** assim que possível. Detalhes completos
 (arquitetura, tabelas, como validar cada funcionalidade) em
-[`Docs/ETAPA1_FUNDACAO.md`](Docs/ETAPA1_FUNDACAO.md) e
-[`Docs/MODELO_DADOS.md`](Docs/MODELO_DADOS.md).
+[`Docs/Projeto/ETAPA1_FUNDACAO.md`](Docs/Projeto/ETAPA1_FUNDACAO.md) e
+[`Docs/Tecnica/MODELO_DADOS.md`](Docs/Tecnica/MODELO_DADOS.md).
 
 ### Conectar ao Arduino
 
@@ -188,7 +188,7 @@ Troque a senha padrão em **Perfil > Alterar senha** assim que possível. Detalh
 
 Se a conexão cair (cabo desconectado, porta ocupada, etc.), o software detecta a falha
 automaticamente e registra o evento no console, sem travar ou fechar a aplicação — detalhes em
-[`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md).
+[`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md).
 
 ### Modo de simulação
 
@@ -224,7 +224,7 @@ e acompanhar a saída em tempo real, sem sair do aplicativo:
 
 Esta aba implementa apenas **compilação**; gravação/upload de firmware para a placa não está
 incluída. Detalhes completos em
-[`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md), seção 8.
+[`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md), seção 8.
 
 ### Configurar as torres
 
@@ -291,7 +291,7 @@ usuário final não precisa ter nenhuma versão do .NET instalada antes de rodar
 Isso prioriza confiabilidade em demonstração (funciona em qualquer Windows 10/11 x64 "limpo",
 sem depender de internet) e simplicidade (o instalador só copia arquivos), ao custo de um
 pacote maior (~42 MB comprimido). Racional completo em
-[`Docs/INSTALADOR.md`](Docs/INSTALADOR.md).
+[`Docs/Projeto/INSTALADOR.md`](Docs/Projeto/INSTALADOR.md).
 
 ### Solução de problemas
 
@@ -325,8 +325,8 @@ Views (WPF/XAML)  <-->  ViewModels (MainViewModel)  <-->  Services (regras de ne
   recriar a interface.
 
 Detalhes completos de cada classe estão em
-[`Docs/DOCUMENTACAO_TECNICA.md`](Docs/DOCUMENTACAO_TECNICA.md) e o racional
-arquitetural em [`Docs/ARQUITETURA.md`](Docs/ARQUITETURA.md).
+[`Docs/Tecnica/DOCUMENTACAO_TECNICA.md`](Docs/Tecnica/DOCUMENTACAO_TECNICA.md) e o racional
+arquitetural em [`Docs/Tecnica/ARQUITETURA.md`](Docs/Tecnica/ARQUITETURA.md).
 
 ### Como funciona o radar (resumo)
 
@@ -348,7 +348,7 @@ existentes em vez de recriar a árvore visual — mantendo a interface fluida.
    mínima de segurança.
 
 Matemática completa em
-[`Docs/ALGORITMO_SELECAO_TORRE.md`](Docs/ALGORITMO_SELECAO_TORRE.md).
+[`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md).
 
 ---
 
@@ -367,14 +367,10 @@ Sistema_Rastreamento_Alvos_Arduino/
 │   └── RadarTorres.iss                (script do Inno Setup 6)
 ├── dist/                              (gerado pelo build — Setup.exe; não versionado)
 ├── Docs/
-│   ├── ARQUITETURA.md
-│   ├── COMUNICACAO_ARDUINO.md
-│   ├── ALGORITMO_SELECAO_TORRE.md
-│   ├── DOCUMENTACAO_TECNICA.md
-│   ├── ETAPA1_FUNDACAO.md
-│   ├── INSTALADOR.md
-│   ├── MODELO_DADOS.md
-│   └── LOG_SOLICITACOES.md
+│   ├── Tecnica/                        (arquitetura, protocolo Arduino, modelo de dados, algoritmo, referência de classes)
+│   ├── Projeto/                        (contexto do TCC, etapas, instalador, log de solicitações)
+│   └── Documentos_Entregaveis/         (documentos acadêmicos entregáveis: UML e Requisitos do Sistema)
+│       └── Diagramas_e_requisitos/     (requisitos, casos de uso, diagramas, matriz de rastreabilidade)
 ├── tests/
 │   └── RadarTorres.Tests/             (xUnit — Arduino CLI, compilação, persistência, portas)
 └── src/
@@ -434,16 +430,18 @@ melhor desempenho de redesenho em tempo real — todos requisitos centrais deste
 
 ## 📚 Documentação adicional
 
+> Índice completo (com a pasta `Documentos_Entregaveis/`, que inclui `Diagramas_e_requisitos/`) em [`Docs/README.md`](Docs/README.md).
+
 | Documento | Conteúdo |
 |---|---|
-| [`Docs/ARQUITETURA.md`](Docs/ARQUITETURA.md) | Decisões arquiteturais e diagramas |
-| [`Docs/DOCUMENTACAO_TECNICA.md`](Docs/DOCUMENTACAO_TECNICA.md) | Referência de cada classe/serviço |
-| [`Docs/COMUNICACAO_ARDUINO.md`](Docs/COMUNICACAO_ARDUINO.md) | Protocolo serial completo |
-| [`Docs/ALGORITMO_SELECAO_TORRE.md`](Docs/ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
-| [`Docs/INSTALADOR.md`](Docs/INSTALADOR.md) | Processo de criação do instalador: decisões, arquivos, testes realizados |
-| [`Docs/ETAPA1_FUNDACAO.md`](Docs/ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação |
-| [`Docs/MODELO_DADOS.md`](Docs/MODELO_DADOS.md) | Modelo de dados |
-| [`Docs/LOG_SOLICITACOES.md`](Docs/LOG_SOLICITACOES.md) | Histórico das solicitações feitas ao assistente ao longo do projeto |
+| [`Docs/Tecnica/ARQUITETURA.md`](Docs/Tecnica/ARQUITETURA.md) | Decisões arquiteturais e diagramas |
+| [`Docs/Tecnica/DOCUMENTACAO_TECNICA.md`](Docs/Tecnica/DOCUMENTACAO_TECNICA.md) | Referência de cada classe/serviço |
+| [`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md) | Protocolo serial completo |
+| [`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
+| [`Docs/Projeto/INSTALADOR.md`](Docs/Projeto/INSTALADOR.md) | Processo de criação do instalador: decisões, arquivos, testes realizados |
+| [`Docs/Projeto/ETAPA1_FUNDACAO.md`](Docs/Projeto/ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação |
+| [`Docs/Tecnica/MODELO_DADOS.md`](Docs/Tecnica/MODELO_DADOS.md) | Modelo de dados |
+| [`Docs/Projeto/LOG_SOLICITACOES.md`](Docs/Projeto/LOG_SOLICITACOES.md) | Histórico das solicitações feitas ao assistente ao longo do projeto |
 
 ---
 

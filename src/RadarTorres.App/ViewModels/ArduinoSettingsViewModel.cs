@@ -15,7 +15,7 @@ namespace RadarTorres.App.ViewModels;
 
 /// <summary>
 /// ViewModel da aba "Configurações do Arduino": ambiente (localização do Arduino CLI),
-/// compilação de sketches e monitor serial em tempo real (ver Docs/COMUNICACAO_ARDUINO.md).
+/// compilação de sketches e monitor serial em tempo real (ver Docs/Tecnica/COMUNICACAO_ARDUINO.md).
 /// </summary>
 /// <remarks>
 /// <para><b>Reuso da comunicação serial existente</b>: esta tela NÃO cria uma segunda conexão

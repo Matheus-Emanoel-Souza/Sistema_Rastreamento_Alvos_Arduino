@@ -28,8 +28,8 @@ permanece nos `.md` para permitir edição futura.
 ## Como este levantamento foi produzido
 
 1. Leitura da estrutura completa de diretórios do repositório.
-2. Leitura de `Docs/ARQUITETURA.md`, `Docs/MODELO_DADOS.md`, `Docs/COMUNICACAO_ARDUINO.md`,
-   `Docs/CONTEXTO_PROJETO.md` e `Docs/DOCUMENTACAO_TECNICA.md` (documentação técnica já mantida
+2. Leitura de `Docs/Tecnica/ARQUITETURA.md`, `Docs/Tecnica/MODELO_DADOS.md`, `Docs/Tecnica/COMUNICACAO_ARDUINO.md`,
+   `Docs/Projeto/CONTEXTO_PROJETO.md` e `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` (documentação técnica já mantida
    pelo autor do projeto).
 3. Leitura direta do código-fonte: todos os arquivos em `Models/`, as interfaces de `Services/`
    e `Repositories/`, `appsettings.json`, `Arduino/ArduinoSimulation.ino` e ViewModels
@@ -41,7 +41,7 @@ permanece nos `.md` para permitir edição futura.
 
 * Responsabilidade de `ILocalizationService`, `IThemeService`, `INavigationService` e
   `IDeadZoneService` — assinaturas completas não foram lidas nesta varredura; a responsabilidade
-  foi inferida do nome da interface e do uso descrito em `Docs/ARQUITETURA.md`.
+  foi inferida do nome da interface e do uso descrito em `Docs/Tecnica/ARQUITETURA.md`.
 * RF16, RF17 (Ações Realizadas, Histórico de Modos) — **confirmado na revisão de 2026-08-30**:
   o registro de dados já funciona, a tela de consulta dedicada não existe (`Status: Parcial`).
 * RF18, RF23 (Usuários, tratamento administrativo de chamados) — **confirmado na revisão de
@@ -53,7 +53,7 @@ permanece nos `.md` para permitir edição futura.
 ## Revisão de 2026-08-30
 
 Os documentos desta pasta foram revisados para separar corretamente RF, RNF, decisões
-arquiteturais e limitações conhecidas — ver `Docs/LOG_SOLICITACOES.md`, entrada
+arquiteturais e limitações conhecidas — ver `Docs/Projeto/LOG_SOLICITACOES.md`, entrada
 "2026-08-30 — Revisão dos documentos de Requisitos". O ponto abaixo, deixado em aberto na
 versão anterior deste README, foi confirmado nessa revisão.
 

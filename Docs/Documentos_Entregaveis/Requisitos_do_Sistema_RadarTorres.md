@@ -57,8 +57,8 @@ Seção 5.
 ## 3. Requisitos Funcionais
 
 Levantados a partir do código-fonte do RadarTorres e da documentação técnica do projeto
-(`Docs/Diagramas_e_requisitos/Requisitos_Funcionais.md`, já revisada para separar produto,
-arquitetura e limitações — ver `Docs/LOG_SOLICITACOES.md` para o histórico dessa revisão). Os
+(`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Requisitos_Funcionais.md`, já revisada para separar produto,
+arquitetura e limitações — ver `Docs/Projeto/LOG_SOLICITACOES.md` para o histórico dessa revisão). Os
 identificadores RF07, RF25 e RF32 foram mantidos na numeração, marcados como removidos da
 especificação funcional, para preservar a rastreabilidade histórica com versões anteriores da
 documentação — sem deixar nenhuma lacuna silenciosa na sequência de IDs.
@@ -164,7 +164,7 @@ O modo de simulação sem hardware existe exclusivamente para desenvolvimento, t
 demonstração do sistema sem um Arduino conectado — não é uma função operacional entregue ao
 usuário final do produto, e sim um recurso de apoio a desenvolvimento e demonstração. Por isso
 não integra a lista oficial de requisitos funcionais; permanece documentado tecnicamente em
-`Docs/DOCUMENTACAO_TECNICA.md` e no `README.md` do projeto.
+`Docs/Tecnica/DOCUMENTACAO_TECNICA.md` e no `README.md` do projeto.
 
 #### RF08 — Modos de operação do sistema
 
@@ -462,7 +462,7 @@ interface — mais previsível para o usuário — sem uma exigência de negóci
 dela, por isso tratada aqui como decisão de design, não como requisito não funcional.
 
 A relação completa dessas decisões com o arquivo/classe correspondente está em
-`Docs/Diagramas_e_requisitos/Decisoes_Arquiteturais.md`, que preserva a referência aos IDs de
+`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Decisoes_Arquiteturais.md`, que preserva a referência aos IDs de
 RNF originalmente atribuídos a cada uma antes desta reclassificação (RNF20–RNF23 e RNF30).
 
 ## 6. Limitações atuais
@@ -486,7 +486,7 @@ evita que uma tela ainda incompleta seja lida como um requisito atendido.
   Arduino hoje só compila o sketch (RF29); gravar o binário compilado na placa é o próximo passo
   natural dessa funcionalidade, mas depende de decisão e implementação futuras.
 * **Bugs conhecidos, não corrigidos.** Já catalogados tecnicamente em
-  `Docs/DOCUMENTACAO_TECNICA.md` — um tratador de exceções sem trava de reentrância que pode, em
+  `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` — um tratador de exceções sem trava de reentrância que pode, em
   cenários específicos, encerrar o processo sem exibir mensagem ao usuário; e uma falha de
   renderização de texto observada apenas em ambiente de automação, ainda não confirmada em uso
   interativo normal.
@@ -504,7 +504,7 @@ evita que uma tela ainda incompleta seja lida como um requisito atendido.
 
 Os requisitos funcionais e não funcionais especificados neste documento não são um exercício
 isolado: serviram diretamente de base para a modelagem UML apresentada em
-`Docs/TCC/UML_RadarTorres.md`. O diagrama de casos de uso deriva, requisito a requisito, dos RFs
+`Docs/Documentos_Entregaveis/UML_RadarTorres.md`. O diagrama de casos de uso deriva, requisito a requisito, dos RFs
 válidos listados na Seção 3 — cada caso de uso do diagrama está ligado a pelo menos um requisito
 funcional real, e nenhum foi incluído sem essa correspondência. O diagrama de classes representa
 as entidades e os serviços que sustentam esses mesmos requisitos (o alvo rastreado, a torre, a
@@ -575,4 +575,4 @@ o que garante coerência entre a especificação do sistema e o projeto técnico
 | RNF28 | Confiabilidade | Média | Atendido |
 
 A evidência técnica detalhada (arquivo/classe/função por requisito) permanece exclusivamente em
-`Docs/Diagramas_e_requisitos/Matriz_de_Rastreabilidade.md`, não duplicada nesta matriz resumida.
+`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Matriz_de_Rastreabilidade.md`, não duplicada nesta matriz resumida.

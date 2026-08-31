@@ -18,7 +18,7 @@ public interface IObjetoDetectadoExportService
     void ExportXml(IEnumerable<ObjetoDetectado> itens, string filePath);
 
     /// <summary>Relatório em PDF (só leitura — não existe importação de PDF, ver
-    /// <c>Docs/ARQUITETURA.md</c>: um PDF não guarda estrutura de dados confiável para reler).</summary>
+    /// <c>Docs/Tecnica/ARQUITETURA.md</c>: um PDF não guarda estrutura de dados confiável para reler).</summary>
     void ExportPdf(IEnumerable<ObjetoDetectado> itens, string filePath);
 
     /// <summary>Lê um arquivo CSV no mesmo formato de <see cref="ExportCsv"/> (mesmas colunas,

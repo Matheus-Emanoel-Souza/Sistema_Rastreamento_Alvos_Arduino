@@ -23,7 +23,7 @@ reaproveitando a base já validada aqui.
 |---|---|
 | `MainWindow` era a única janela do app | `LoginWindow` → `ShellWindow` (barra superior + barra lateral + área de conteúdo navegável); o conteúdo antigo virou `MonitoramentoView`, um item do menu |
 | Serviços instanciados manualmente em `MainWindow.xaml.cs` | Composition root com `Microsoft.Extensions.DependencyInjection` em `App.xaml.cs` (evolução já prevista no comentário original de `AppConfig.cs`) |
-| Sem persistência (tudo em memória) | 6 "tabelas" CSV em `%AppData%\RadarTorres\Data\` — ver `Docs/MODELO_DADOS.md` |
+| Sem persistência (tudo em memória) | 6 "tabelas" CSV em `%AppData%\RadarTorres\Data\` — ver `Docs/Tecnica/MODELO_DADOS.md` |
 | Sem conceito de usuário | Login obrigatório, 3 perfis (Administrador/Operador/Visualizador), sessão em memória |
 | 100% português hardcoded | `ILocalizationService` + JSON (`Resources/Localization/pt-BR.json`, `en-US.json`) + `{loc:Loc Chave}` no XAML |
 | Cores fixas em `App.xaml` | `Themes/Dark.xaml` / `Themes/Light.xaml`, trocados em runtime; app já usava `DynamicResource` em tudo, então nenhuma tela precisou ser redesenhada |

@@ -174,7 +174,7 @@ adicionais) e também atualiza a lista de portas COM.
    sozinho como erro.
 
 Esta etapa cobre apenas **compilação**. Gravação/upload do firmware compilado para a placa
-(`arduino-cli upload`) não foi implementada — ver `Docs/LOG_SOLICITACOES.md` para o
+(`arduino-cli upload`) não foi implementada — ver `Docs/Projeto/LOG_SOLICITACOES.md` para o
 racional.
 
 ### 8.4 Monitor serial da aba Configurações do Arduino

@@ -108,12 +108,12 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
    `HelpDeskFormViewModel`/`HelpDeskFormWindow`, acionado pela TopBar — permite abrir um
    ticket. É só o lado de *criação*; ainda não existe tela de listagem/gestão dos chamados
    (ver placeholders na seção 3).
-10. **Levantamento de engenharia de software (2026-08-20)**: `Docs/Diagramas_e_requisitos/`
+10. **Levantamento de engenharia de software (2026-08-20)**: `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/`
     adicionado por análise do código-fonte e da documentação existente — diagrama de classes,
     diagrama de pacotes, DER atual (CSV) e proposto (SQL), Requisitos Funcionais (RF01–RF32),
     Requisitos Não Funcionais (RNF01–RNF30) e matriz de rastreabilidade requisito → arquivo/
     classe/função. Pontos não confirmáveis por código foram sinalizados como inferência no
-    próprio documento (ver `Docs/Diagramas_e_requisitos/README.md`).
+    próprio documento (ver `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/README.md`).
 
 ---
 
@@ -149,7 +149,7 @@ Confirmado lendo `NavigationService.cs` em 2026-08-30:
   já esteja pronto).
 - Configurações — **pendente**, ainda não escopado.
 
-### Bugs conhecidos (documentados em `Docs/DOCUMENTACAO_TECNICA.md`, seção "Bugs conhecidos")
+### Bugs conhecidos (documentados em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, seção "Bugs conhecidos")
 
 1. `App.OnDispatcherUnhandledException` sem trava de reentrância — se o próprio `MessageBox`
    de erro lançar uma exceção, pode entrar em loop até estourar a pilha (`StackOverflowException`).
@@ -160,7 +160,7 @@ Confirmado lendo `NavigationService.cs` em 2026-08-30:
 
 ## 4. O que falta / próximos passos (roadmap)
 
-Conforme plano em `Docs/ETAPA1_FUNDACAO.md`, seção 6:
+Conforme plano em `Docs/Projeto/ETAPA1_FUNDACAO.md`, seção 6:
 
 - **Fechar a Etapa 1**: implementar as telas de dados completas listadas acima (Ações
   realizadas, Histórico de modos, Usuários, listagem/gestão de Chamados de Ajuda),
@@ -193,7 +193,7 @@ Relevante para qualquer IA/assistente que for continuar o trabalho:
 - **Nunca usar comandos destrutivos** (`git push --force`, `reset --hard` etc.) sem consultar
   antes.
 - **Documentar cada sessão**: toda sessão de trabalho relevante deve ganhar uma entrada em
-  `Docs/LOG_SOLICITACOES.md` (pedido + resumo do entregue) — não substituir entradas
+  `Docs/Projeto/LOG_SOLICITACOES.md` (pedido + resumo do entregue) — não substituir entradas
   anteriores, só acrescentar.
 - **Não quebrar funcionalidade existente**: mudanças devem ser aditivas quando possível;
   qualquer remoção/alteração de comportamento já existente deve ser sinalizada.
@@ -211,12 +211,12 @@ Relevante para qualquer IA/assistente que for continuar o trabalho:
 | Documento | Conteúdo |
 |---|---|
 | [`README.md`](../README.md) | Visão geral, instalação, uso, estrutura de pastas |
-| [`Docs/ARQUITETURA.md`](ARQUITETURA.md) | Decisões arquiteturais e diagramas (mermaid) |
-| [`Docs/DOCUMENTACAO_TECNICA.md`](DOCUMENTACAO_TECNICA.md) | Referência de cada classe/serviço, limitações e bugs conhecidos |
-| [`Docs/COMUNICACAO_ARDUINO.md`](COMUNICACAO_ARDUINO.md) | Protocolo serial completo |
-| [`Docs/ALGORITMO_SELECAO_TORRE.md`](ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
-| [`Docs/INSTALADOR.md`](INSTALADOR.md) | Processo de criação do instalador |
-| [`Docs/ETAPA1_FUNDACAO.md`](ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação, roadmap |
-| [`Docs/MODELO_DADOS.md`](MODELO_DADOS.md) | Schema das tabelas CSV, relacionamentos, plano de migração SQL |
-| [`Docs/Diagramas_e_requisitos/`](Diagramas_e_requisitos/README.md) | RF01–RF32, RNF01–RNF30, diagrama de classes, de pacotes, DER atual/proposto, matriz de rastreabilidade |
-| [`Docs/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) | Histórico cronológico completo de todos os pedidos feitos à IA |
+| [`Docs/Tecnica/ARQUITETURA.md`](../Tecnica/ARQUITETURA.md) | Decisões arquiteturais e diagramas (mermaid) |
+| [`Docs/Tecnica/DOCUMENTACAO_TECNICA.md`](../Tecnica/DOCUMENTACAO_TECNICA.md) | Referência de cada classe/serviço, limitações e bugs conhecidos |
+| [`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](../Tecnica/COMUNICACAO_ARDUINO.md) | Protocolo serial completo |
+| [`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](../Tecnica/ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
+| [`Docs/Projeto/INSTALADOR.md`](INSTALADOR.md) | Processo de criação do instalador |
+| [`Docs/Projeto/ETAPA1_FUNDACAO.md`](ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação, roadmap |
+| [`Docs/Tecnica/MODELO_DADOS.md`](../Tecnica/MODELO_DADOS.md) | Schema das tabelas CSV, relacionamentos, plano de migração SQL |
+| [`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/`](../Documentos_Entregaveis/Diagramas_e_requisitos/README.md) | RF01–RF32, RNF01–RNF30, diagrama de classes, de pacotes, DER atual/proposto, matriz de rastreabilidade |
+| [`Docs/Projeto/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) | Histórico cronológico completo de todos os pedidos feitos à IA |

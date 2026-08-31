@@ -10,7 +10,7 @@ o comportamento observável do sistema (como um ator interage com ele para ating
 para uso na documentação e na defesa do Trabalho de Conclusão de Curso.
 
 Levantado a partir dos requisitos funcionais revisados, da `Matriz_de_Rastreabilidade.md`, de
-`Docs/CONTEXTO_PROJETO.md` e de leitura direta do código-fonte para confirmar atores e regras de
+`Docs/Projeto/CONTEXTO_PROJETO.md` e de leitura direta do código-fonte para confirmar atores e regras de
 permissão (`Services/PermissionService.cs`). Nenhum caso de uso foi incluído sem lastro em um
 requisito funcional válido; o modo de simulação (RF07, removido da especificação funcional) não
 aparece como caso de uso oficial.

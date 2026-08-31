@@ -12,7 +12,7 @@ namespace RadarTorres.App.Services;
 /// Implementação real da comunicação serial com o Arduino, usando <see cref="System.IO.Ports.SerialPort"/>.
 /// </summary>
 /// <remarks>
-/// <para><b>Como a concorrência é resolvida aqui</b> (ver também Docs/COMUNICACAO_ARDUINO.md):</para>
+/// <para><b>Como a concorrência é resolvida aqui</b> (ver também Docs/Tecnica/COMUNICACAO_ARDUINO.md):</para>
 /// <list type="bullet">
 /// <item>A abertura da porta (<see cref="SerialPort.Open"/>) é bloqueante, então é executada dentro de
 /// <see cref="Task.Run(Action)"/> a partir de <see cref="ConnectAsync"/>, que é <c>async</c> e nunca

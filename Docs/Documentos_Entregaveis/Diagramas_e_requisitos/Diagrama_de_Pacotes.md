@@ -28,7 +28,7 @@
 
 ## 2. Dependências entre pacotes
 
-Regra observada no código (e documentada em `Docs/ARQUITETURA.md`): a dependência flui em uma
+Regra observada no código (e documentada em `Docs/Tecnica/ARQUITETURA.md`): a dependência flui em uma
 única direção — `Views → ViewModels → Services → (Models | Repositories | Configuration)` —,
 nunca no sentido inverso, e nenhuma classe de `Services`/`Repositories`/`Models` referencia
 tipos de WPF.
@@ -88,9 +88,9 @@ flowchart TB
 * **Views não são referenciadas por nenhum outro pacote** (seta só sai delas) — garante que a
   lógica nunca dependa de WPF, permitindo testar `Services`/`ViewModels` sem UI.
 * **Services nunca dependem de ViewModels ou Views** — a "fronteira MVVM" citada em
-  `Docs/ARQUITETURA.md`.
+  `Docs/Tecnica/ARQUITETURA.md`.
 * **Repositories dependem só de Data e Models** — trocar CSV por SQL (`TODO(SQL)`, ver
-  `Docs/MODELO_DADOS.md`) não exigiria alterar `Services`/`ViewModels`/`Views`, só o pacote
+  `Docs/Tecnica/MODELO_DADOS.md`) não exigiria alterar `Services`/`ViewModels`/`Views`, só o pacote
   `Data`/`Repositories`.
 * **`RadarTorres.Tests`** depende de `Services`/`ViewModels`/`Repositories` só para testá-los
   (referência de projeto de teste, não de produção) — por isso a seta é tracejada.

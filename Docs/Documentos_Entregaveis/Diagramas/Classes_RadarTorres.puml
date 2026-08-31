@@ -2,9 +2,9 @@
 
 ' RadarTorres — Diagrama de Classes (acadêmico/conceitual)
 ' Não é exaustivo: prioriza as entidades de domínio e os serviços centrais necessários para
-' compreender o sistema, conforme Docs/TCC/UML_RadarTorres.md, seção 5. Atributos e operações
+' compreender o sistema, conforme Docs/Documentos_Entregaveis/UML_RadarTorres.md, seção 5. Atributos e operações
 ' foram simplificados aos mais relevantes conceitualmente — a lista completa está no próprio
-' código-fonte (src/RadarTorres.App/Models, .../Services) e em Docs/DOCUMENTACAO_TECNICA.md.
+' código-fonte (src/RadarTorres.App/Models, .../Services) e em Docs/Tecnica/DOCUMENTACAO_TECNICA.md.
 ' Todas as classes/interfaces abaixo existem no código; nenhuma foi inventada para o diagrama.
 
 skinparam shadowing false
@@ -186,7 +186,7 @@ note right of SystemMode
   usa a nomenclatura antiga (6 valores), não os 3
   estados conceituais Verde/Amarelo/Vermelho da
   especificação revisada. Ver divergência D1 em
-  Docs/Diagramas_e_requisitos/Limitacoes_Conhecidas.md.
+  Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Limitacoes_Conhecidas.md.
 end note
 
 @enduml
