@@ -3,7 +3,7 @@
 ## 1. Situação real hoje: não existe banco relacional
 
 O projeto **não usa SQLite, SQL Server ou qualquer SGBD** no momento. A persistência é feita em
-**arquivos CSV**, por decisão explícita registrada em `Docs/MODELO_DADOS.md`: *"no momento faça
+**arquivos CSV**, por decisão explícita registrada em `Docs/Tecnica/MODELO_DADOS.md`: *"no momento faça
 só uma consulta em tabelas de CSV, mas deixe sinalizado que futuramente será convertido para
 SQL"*.
 
@@ -145,8 +145,8 @@ campo `Dispositivo` identifica a fonte (ex.: "Arduino", "Simulador"), não um us
 ## 3. Modelo proposto/inferido — migração futura para SQL
 
 Esta seção é uma **proposta**, não uma implementação existente. É inferida a partir do plano
-descrito em `Docs/MODELO_DADOS.md` ("Plano de migração futura para SQL") e do roadmap em
-`Docs/CONTEXTO_PROJETO.md" ("Migração de persistência: CSV → banco relacional (SQLite/EF Core)
+descrito em `Docs/Tecnica/MODELO_DADOS.md` ("Plano de migração futura para SQL") e do roadmap em
+`Docs/Projeto/CONTEXTO_PROJETO.md" ("Migração de persistência: CSV → banco relacional (SQLite/EF Core)
 quando fizer sentido").
 
 Passos propostos (do próprio repositório, não inventados por esta análise):

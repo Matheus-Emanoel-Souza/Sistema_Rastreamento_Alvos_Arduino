@@ -32,7 +32,7 @@ conexão por watchdog.
 **Prioridade:** Alta.
 **Status:** Implementado.
 **Evidência:** `Services/SerialCommunicationService.cs`, `Services/ISerialCommunicationService.cs`,
-`Services/SerialProtocolParser.cs`, `Docs/COMUNICACAO_ARDUINO.md`.
+`Services/SerialProtocolParser.cs`, `Docs/Tecnica/COMUNICACAO_ARDUINO.md`.
 
 **RF02 – Recepção e validação de leituras de alvo**
 **Descrição:** o sistema deve interpretar mensagens de leitura de alvo, validar os campos
@@ -41,7 +41,7 @@ console, sem interromper a aplicação.
 **Atores:** Arduino, Sistema.
 **Prioridade:** Alta.
 **Status:** Implementado.
-**Evidência:** `Services/SerialProtocolParser.cs` (`TryParse`), `Docs/COMUNICACAO_ARDUINO.md`, seção 2.
+**Evidência:** `Services/SerialProtocolParser.cs` (`TryParse`), `Docs/Tecnica/COMUNICACAO_ARDUINO.md`, seção 2.
 
 **RF03 – Rastreamento de alvos em tempo real**
 **Descrição:** o sistema deve criar um novo alvo a cada leitura válida com identificador inédito,
@@ -60,7 +60,7 @@ quadrantes, reposicionando-os continuamente conforme novas leituras chegam.
 **Prioridade:** Alta.
 **Status:** Implementado.
 **Evidência:** `Views/RadarControl.xaml.cs`, `Helpers/CoordinateConverter.cs`,
-`Docs/ARQUITETURA.md`, seção 3.
+`Docs/Tecnica/ARQUITETURA.md`, seção 3.
 
 **RF05 – Seleção automática de torre**
 **Descrição:** o sistema deve selecionar, entre as torres configuradas, a mais adequada para
@@ -70,7 +70,7 @@ mortas ativas.
 **Prioridade:** Alta.
 **Status:** Implementado.
 **Evidência:** `Services/TowerSelectionService.cs`, `Services/ITowerSelectionService.cs`,
-`Docs/ALGORITMO_SELECAO_TORRE.md`.
+`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`.
 
 **RF06 – Acionamento demonstrativo automático**
 **Descrição:** no modo **Vermelho**, o sistema deve realizar automaticamente o acionamento
@@ -90,7 +90,7 @@ um caminho de acionamento manual não previsto nesta especificação).
 **Motivo:** o modo de simulação sem hardware existe exclusivamente para desenvolvimento, testes
 e demonstração do sistema sem um Arduino conectado — não é uma função operacional do produto
 entregue ao usuário final, e sim um recurso de apoio a desenvolvimento/demonstração. Permanece
-documentado tecnicamente em `Docs/DOCUMENTACAO_TECNICA.md` (seção `SimulationService`) e em
+documentado tecnicamente em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` (seção `SimulationService`) e em
 `README.md` ("Modo de simulação"); nenhum código foi alterado.
 
 **RF08 – Modos de operação do sistema**
@@ -111,7 +111,7 @@ automaticamente" já existe no sistema, mas rotulado com uma nomenclatura de mod
 especificada aqui; não há um estado único claramente equivalente a "Verde". Ver divergência D1
 em `Limitacoes_Conhecidas.md`.
 **Evidência:** `Models/SystemState.cs` (`SystemMode`), `Models/AlteracaoModo.cs`,
-`Docs/MODELO_DADOS.md`, seção 3.
+`Docs/Tecnica/MODELO_DADOS.md`, seção 3.
 
 **RF09 – Autenticação multiusuário**
 **Descrição:** o sistema deve exigir login (usuário/senha) independente da conta do Windows,
@@ -148,7 +148,7 @@ com posição, quadrante, horário e dispositivo de origem.
 **Prioridade:** Média.
 **Status:** Implementado.
 **Evidência:** `Models/ObjetoDetectado.cs`, `Repositories/CsvObjetoDetectadoRepository.cs`,
-`Docs/MODELO_DADOS.md`, seção 3 (`MainViewModel.OnTargetCreated`).
+`Docs/Tecnica/MODELO_DADOS.md`, seção 3 (`MainViewModel.OnTargetCreated`).
 
 **RF13 – Visualização de objetos detectados em tabela**
 **Descrição:** o sistema deve exibir o histórico de detecções em uma tela de tabela dedicada.
@@ -183,7 +183,7 @@ exclusivamente em modo de inserção (sem edição/remoção).
 **Prioridade:** Média.
 **Status:** Parcial — o registro já é gravado automaticamente a cada tentativa de acionamento
 (ver RF06); a tela dedicada de consulta ainda não foi implementada (permanece como item de
-navegação "em construção"; ver `Docs/CONTEXTO_PROJETO.md`, seção 3).
+navegação "em construção"; ver `Docs/Projeto/CONTEXTO_PROJETO.md`, seção 3).
 **Evidência:** `Repositories/IAcaoRealizadaRepository.cs`, `Models/AcaoRealizada.cs`.
 
 **RF17 – Auditoria de alterações de modo**
@@ -264,7 +264,7 @@ restaurados no próximo acesso; deve haver um comando para restaurar o layout pa
 **Status:** Implementado.
 **Evidência:** `Views/Shared/DashboardCanvas.cs`, `Views/Shared/DashboardCard.xaml.cs`,
 `Services/DashboardLayoutRepository.cs`, `Models/DashboardCardLayout.cs`,
-`Docs/ARQUITETURA.md`, seção 5.2.
+`Docs/Tecnica/ARQUITETURA.md`, seção 5.2.
 
 **RF25 – Removido da especificação funcional**
 **Motivo:** a responsividade do layout a mudanças de resolução/tamanho de janela é uma
@@ -278,7 +278,7 @@ de Monitoramento, saindo do canvas arrastável; o estado fixado/não fixado deve
 **Prioridade:** Baixa.
 **Status:** Implementado.
 **Evidência:** `Models/DashboardCardLayout.cs` (`IsPinnedRight`),
-`Views/MonitoramentoView.xaml.cs` (`SetLogPinned`), `Docs/ARQUITETURA.md`, seção 5.4.
+`Views/MonitoramentoView.xaml.cs` (`SetLogPinned`), `Docs/Tecnica/ARQUITETURA.md`, seção 5.4.
 
 **RF27 – Gestão de zonas mortas (áreas de exclusão)**
 **Descrição:** um Administrador deve poder criar, ativar/desativar e remover zonas (por
@@ -289,7 +289,7 @@ embora continuem visíveis/rastreados; demais perfis devem visualizar a lista so
 **Status:** Implementado.
 **Evidência:** `Models/DeadZone.cs`, `Services/IDeadZoneService.cs`,
 `Services/IDeadZoneRepository.cs`, `Services/IPermissionService.cs`
-(`PodeGerenciarZonasMortas`), `Docs/ARQUITETURA.md`, seção 5.3.
+(`PodeGerenciarZonasMortas`), `Docs/Tecnica/ARQUITETURA.md`, seção 5.3.
 
 **RF28 – Detecção do Arduino CLI**
 **Descrição:** o sistema deve localizar o executável do Arduino CLI no computador (caminho
@@ -299,7 +299,7 @@ automaticamente, e exibir a versão detectada.
 **Prioridade:** Média.
 **Status:** Implementado.
 **Evidência:** `Services/ArduinoCliLocatorService.cs`, `Services/IArduinoCliLocatorService.cs`,
-`Docs/COMUNICACAO_ARDUINO.md`, seção 8.1.
+`Docs/Tecnica/COMUNICACAO_ARDUINO.md`, seção 8.1.
 
 **RF29 – Compilação de sketch Arduino pela interface**
 **Descrição:** o usuário deve poder selecionar um sketch `.ino` e uma placa, compilar via
@@ -309,7 +309,7 @@ resultado (sucesso/falha) deve ser decidido pelo código de saída do processo.
 **Prioridade:** Média.
 **Status:** Implementado.
 **Evidência:** `Services/ArduinoCompilerService.cs`, `Services/IArduinoCompilerService.cs`,
-`Docs/COMUNICACAO_ARDUINO.md`, seção 8.3.
+`Docs/Tecnica/COMUNICACAO_ARDUINO.md`, seção 8.3.
 
 **RF30 – Monitor serial pela aba Configurações do Arduino**
 **Descrição:** o usuário deve poder acompanhar mensagens da porta serial diretamente nesta aba,
@@ -319,7 +319,7 @@ reconectar.
 **Atores:** Usuário, Sistema, Arduino.
 **Prioridade:** Média.
 **Status:** Implementado.
-**Evidência:** `ViewModels/ArduinoSettingsViewModel.cs`, `Docs/COMUNICACAO_ARDUINO.md`, seção 8.4.
+**Evidência:** `ViewModels/ArduinoSettingsViewModel.cs`, `Docs/Tecnica/COMUNICACAO_ARDUINO.md`, seção 8.4.
 
 **RF31 – Persistência de preferências da aba Arduino**
 **Descrição:** caminho do CLI, último sketch, placa, porta/baud e preferências do console devem

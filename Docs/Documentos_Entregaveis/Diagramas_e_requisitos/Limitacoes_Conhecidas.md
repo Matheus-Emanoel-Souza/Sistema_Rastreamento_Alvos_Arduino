@@ -15,7 +15,7 @@ em `Requisitos_Funcionais.md`/`Requisitos_Nao_Funcionais.md`:
 Hoje a reconexão após queda de cabo/porta é manual — o usuário precisa clicar em "Conectar"
 novamente. A configuração `SerialSettings.ReconnectAttempts` já existe em `appsettings.json`,
 expressando a intenção do requisito, mas nenhuma lógica de retry automático foi implementada
-ainda. **Evidência:** `appsettings.json`, `Docs/DOCUMENTACAO_TECNICA.md` (seção "Limitações e
+ainda. **Evidência:** `appsettings.json`, `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` (seção "Limitações e
 próximos passos").
 
 **L02 — Telas de consulta/gestão ainda pendentes**
@@ -23,10 +23,10 @@ Cinco itens de menu navegam para uma tela "em construção" (`PlaceholderView`) 
 realizadas** e **Histórico de modos** (o registro já é gravado — RF16/RF17 — só falta a tela de
 consulta), **Usuários** e **Gestão/listagem de chamados de ajuda** (nem o registro tem
 interface de gestão — RF18/RF23), e **Configurações** (nunca chegou a ser escopado).
-**Evidência:** `Services/NavigationService.cs`, `Docs/CONTEXTO_PROJETO.md`, seção 3.
+**Evidência:** `Services/NavigationService.cs`, `Docs/Projeto/CONTEXTO_PROJETO.md`, seção 3.
 
 **L03 — Bugs conhecidos não corrigidos**
-Já catalogados em `Docs/DOCUMENTACAO_TECNICA.md` (seção "Limitações e próximos passos"), não
+Já catalogados em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` (seção "Limitações e próximos passos"), não
 duplicados aqui: (1) `App.OnDispatcherUnhandledException` sem trava de reentrância pode causar
 `StackOverflowException`; (2) falha nativa de renderização de texto (DirectWrite) observada só
 em ambiente de automação sem desktop interativo real, não confirmada em uso normal.

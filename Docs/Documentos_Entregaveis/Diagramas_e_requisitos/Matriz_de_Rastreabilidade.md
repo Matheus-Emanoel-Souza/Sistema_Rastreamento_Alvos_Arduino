@@ -19,7 +19,7 @@ levantamento não é especulativo. Cobre `Requisitos_Funcionais.md`, `Requisitos
 | RF05 | Implementado | `Helpers/DistanceCalculator.cs` | `DistanceCalculator` | Cálculo de distância euclidiana |
 | RF06 | Implementado (ver D1) | `Services/FireControlService.cs` | `FireControlService.TryFireAsync`/`Authorize` | Autorização e execução do acionamento |
 | RF06 | Implementado (ver D1) | `Models/AcaoRealizada.cs`, `Repositories/CsvAcaoRealizadaRepository.cs` | — | Registro de auditoria de acionamento |
-| RF07 | **Removido** — não é mais requisito funcional | `Services/SimulationService.cs` | `SimulationService` (`ISimulationService`) | Geração de alvos fictícios — documentado em `Docs/DOCUMENTACAO_TECNICA.md`, não em RF |
+| RF07 | **Removido** — não é mais requisito funcional | `Services/SimulationService.cs` | `SimulationService` (`ISimulationService`) | Geração de alvos fictícios — documentado em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, não em RF |
 | RF08 | Parcial (ver D1) | `Models/SystemState.cs` | `SystemMode` (enum — ainda 6 valores, não Verde/Amarelo/Vermelho) | Modos de operação do sistema |
 | RF08 | Parcial (ver D1) | `Models/AlteracaoModo.cs`, `Repositories/CsvAlteracaoModoRepository.cs` | — | Registro de auditoria de troca de modo |
 | RF09 | Implementado | `Services/AuthService.cs` | `AuthService` (`IAuthService`) | Login/logout/sessão |
@@ -90,7 +90,7 @@ Só as linhas alteradas nesta revisão; as demais RNF mantêm a evidência já p
 |---|---|---|
 | L01 *(ex-RNF29)* | `appsettings.json` (`SerialSettings.ReconnectAttempts`) | Configuração existe, retry automático não implementado |
 | L02 | `Services/NavigationService.cs` | Telas ainda em `PlaceholderView`: Ações realizadas, Histórico de modos, Usuários, Chamados/Ajuda, Configurações |
-| L03 | `Docs/DOCUMENTACAO_TECNICA.md` | Bugs conhecidos não corrigidos (referência, sem duplicar o texto) |
+| L03 | `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` | Bugs conhecidos não corrigidos (referência, sem duplicar o texto) |
 | D1 | `Models/SystemState.cs` (`SystemMode`), `ViewModels/MainViewModel.cs` (`ManualFireCommand`) | Enum ainda com 6 valores antigos; acionamento manual ainda existe e não é restrito por modo |
 
 ## Rastreabilidade requisito → caso de uso
@@ -103,10 +103,10 @@ acima, então qualquer requisito removido/reformulado nesta tabela deve ser conf
 
 | Requisito(s) | Documento de apoio no repositório |
 |---|---|
-| RF01, RF02, RF28–RF31 | `Docs/COMUNICACAO_ARDUINO.md` |
-| RF03, RF04, RF24, RF26 | `Docs/ARQUITETURA.md` |
-| RF05 | `Docs/ALGORITMO_SELECAO_TORRE.md` |
-| RF08, RF12, RF16–RF19, RF22, RF23 | `Docs/MODELO_DADOS.md` |
-| RF07 (removido) | `Docs/DOCUMENTACAO_TECNICA.md` (seção `SimulationService`), `README.md` |
-| RNF17, RNF18 (ex-RF32) | `Docs/INSTALADOR.md` |
-| Todos | `Docs/DOCUMENTACAO_TECNICA.md`, `Docs/CONTEXTO_PROJETO.md` |
+| RF01, RF02, RF28–RF31 | `Docs/Tecnica/COMUNICACAO_ARDUINO.md` |
+| RF03, RF04, RF24, RF26 | `Docs/Tecnica/ARQUITETURA.md` |
+| RF05 | `Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md` |
+| RF08, RF12, RF16–RF19, RF22, RF23 | `Docs/Tecnica/MODELO_DADOS.md` |
+| RF07 (removido) | `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` (seção `SimulationService`), `README.md` |
+| RNF17, RNF18 (ex-RF32) | `Docs/Projeto/INSTALADOR.md` |
+| Todos | `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, `Docs/Projeto/CONTEXTO_PROJETO.md` |

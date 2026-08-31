@@ -3,7 +3,7 @@
 ' RadarTorres — Diagrama de Implantação
 ' Reflete a distribuição física real do sistema: aplicação desktop única, sem servidor/cloud,
 ' comunicando com um Arduino via USB/serial. Ver README.md (raiz) e
-' Docs/COMUNICACAO_ARDUINO.md para o protocolo, e installer/RadarTorres.iss para o instalador.
+' Docs/Tecnica/COMUNICACAO_ARDUINO.md para o protocolo, e installer/RadarTorres.iss para o instalador.
 
 skinparam shadowing false
 skinparam node {

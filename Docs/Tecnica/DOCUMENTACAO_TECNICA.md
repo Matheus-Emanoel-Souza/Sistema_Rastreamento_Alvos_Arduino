@@ -70,7 +70,7 @@ cancelamento explícito) do texto bruto do console. **Quem usa:** `ArduinoCompil
 **Função:** posição (`RelX`/`RelY`) e tamanho (`RelWidth`/`RelHeight`) de um card do painel
 principal, sempre como fração (0..1) do tamanho do `DashboardCanvas` — nunca em pixels
 absolutos. **Por que existe:** é o único jeito de o layout continuar proporcional em qualquer
-resolução de tela (ver `Docs/ARQUITETURA.md`, seção 5.2). **Quem usa:** `DashboardCanvas`
+resolução de tela (ver `Docs/Tecnica/ARQUITETURA.md`, seção 5.2). **Quem usa:** `DashboardCanvas`
 (produz/consome via `GetLayoutSnapshot`/`ApplyLayoutSnapshot`), `IDashboardLayoutRepository`
 (persiste).
 
@@ -229,7 +229,7 @@ CLI, compilação, monitor serial). **Por que existe:** mesma fronteira MVVM de 
 — nenhuma chamada a `Process`/arquivo/porta serial acontece na View. **Reuso importante:**
 recebe a **mesma instância Singleton** de `ISerialCommunicationService` usada por
 `MainViewModel`, então não existe uma segunda conexão serial concorrente (ver
-`Docs/ARQUITETURA.md`, seção 5.1, e `Docs/COMUNICACAO_ARDUINO.md`, seção 8.4).
+`Docs/Tecnica/ARQUITETURA.md`, seção 5.1, e `Docs/Tecnica/COMUNICACAO_ARDUINO.md`, seção 8.4).
 **Métodos/comandos principais:** `AutoDetectCommand`, `RefreshBoardsAndPortsCommand`,
 `CompileCommand`/`CancelCompileCommand`, `ConnectCommand`/`DisconnectCommand`. **Quem usa:**
 `ArduinoSettingsView.xaml` (via `DataContext`).
@@ -287,7 +287,7 @@ passo natural caso o projeto cresça (ver seção de próximos passos no README)
 > **Nota:** desde a introdução da Shell multiusuário (barra lateral + navegação), o conteúdo
 > descrito acima em `MainWindow` vive em `Views/MonitoramentoView.xaml`, hospedada pela
 > `Views/Shell/ShellWindow.xaml`; a composição de serviços descrita passou para `App.xaml.cs`
-> (ver `Docs/ETAPA1_FUNDACAO.md`). A `ArduinoSettingsView.xaml` segue exatamente o mesmo
+> (ver `Docs/Projeto/ETAPA1_FUNDACAO.md`). A `ArduinoSettingsView.xaml` segue exatamente o mesmo
 > padrão — code-behind mínimo (diálogos de arquivo, rolagem automática do console), tudo o
 > mais em `ArduinoSettingsViewModel`.
 
@@ -367,7 +367,7 @@ origem), `BoolToFoundBrushConverter` (indicador "CLI encontrado/não encontrado"
 * Testes automatizados: o projeto `tests/RadarTorres.Tests` (xUnit) cobre a aba Configurações
   do Arduino (localização do CLI, montagem segura de argumentos, interpretação de código de
   saída, cancelamento, persistência, limite de linhas dos consoles e disputa pela porta
-  serial) — ver `Docs/LOG_SOLICITACOES.md`. O restante da aplicação (algoritmo de seleção de
+  serial) — ver `Docs/Projeto/LOG_SOLICITACOES.md`. O restante da aplicação (algoritmo de seleção de
   torre, parser serial, etc.) ainda não tem testes automatizados, embora a arquitetura
   (serviços com interface, sem dependência de UI) tenha sido desenhada especificamente para
   viabilizá-los facilmente.

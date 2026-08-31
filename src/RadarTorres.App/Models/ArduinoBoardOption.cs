@@ -15,7 +15,7 @@ public sealed record ArduinoBoardOption(string Fqbn, string DisplayName)
 /// <summary>
 /// Lista curada de placas comuns, sempre disponível no combo mesmo sem o Arduino CLI
 /// instalado ou sem nenhum "core" baixado — evita depender de acesso à rede/downloads
-/// silenciosos apenas para preencher a interface (ver Docs/COMUNICACAO_ARDUINO.md).
+/// silenciosos apenas para preencher a interface (ver Docs/Tecnica/COMUNICACAO_ARDUINO.md).
 /// O botão "Atualizar placas e portas" complementa esta lista com o resultado de
 /// <c>arduino-cli board listall</c> quando o CLI está disponível e possui cores instalados.
 /// </summary>

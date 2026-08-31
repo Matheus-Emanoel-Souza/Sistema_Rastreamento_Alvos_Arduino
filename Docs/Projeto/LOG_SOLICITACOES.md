@@ -72,7 +72,7 @@ manual, e confirmação de que os dois softwares tinham sido instalados manualme
 - Ícone (`src/RadarTorres.App/Assets/RadarTorres.ico`) gerado via PowerShell/`System.Drawing`.
 - Metadados de nome/versão/ícone adicionados ao `.csproj`.
 - Publicação **self-contained** (win-x64) escolhida e justificada — dispensa checagem/
-  instalação de .NET no computador do usuário final (ver `Docs/INSTALADOR.md`,
+  instalação de .NET no computador do usuário final (ver `Docs/Projeto/INSTALADOR.md`,
   seção 3).
 - Tratamento global de erros de inicialização em `App.xaml.cs` (mensagens claras em vez de
   crash), sem alterar funcionalidades existentes.
@@ -83,10 +83,10 @@ manual, e confirmação de que os dois softwares tinham sido instalados manualme
 - Script de build (`build/publish.ps1`): automatiza build → publish self-contained →
   geração do instalador em `dist/Setup.exe`.
 - Build, publish e instalador gerados e testados de ponta a ponta (ver
-  `Docs/INSTALADOR.md`, seção 7, para a lista completa de testes e o único ponto
+  `Docs/Projeto/INSTALADOR.md`, seção 7, para a lista completa de testes e o único ponto
   parcial — desinstalação silenciosa travando no ambiente de automação usado, não no script).
 - Documentação de uso no `README.md` (seção "Instalação (Windows)") e detalhamento técnico
-  em `Docs/INSTALADOR.md`.
+  em `Docs/Projeto/INSTALADOR.md`.
 
 ---
 
@@ -100,9 +100,9 @@ manual, e confirmação de que os dois softwares tinham sido instalados manualme
 
 **Entregue:**
 
-- `Docs/INSTALADOR.md` — documentação técnica do processo de instalação criado na
+- `Docs/Projeto/INSTALADOR.md` — documentação técnica do processo de instalação criado na
   solicitação anterior.
-- `Docs/LOG_SOLICITACOES.md` — este arquivo, com o histórico de pedidos.
+- `Docs/Projeto/LOG_SOLICITACOES.md` — este arquivo, com o histórico de pedidos.
 - Commit na branch `Sistema` com todas as alterações da sessão anterior (instalador) mais
   esta documentação.
 
@@ -149,8 +149,8 @@ dados restantes ficam para a próxima entrega, conforme plano apresentado e acei
 - `SystemMode` estendido (Manutenção/Emergência) com confirmação e auditoria em toda troca de modo.
 - `FireControlService` e `MainViewModel` passaram a gravar auditoria (`acoes_realizadas`,
   `objetos_detectados`, `alteracoes_modo`) nos pontos únicos onde essas ações já passavam.
-- Documentação: `Docs/MODELO_DADOS.md` (schema + relacionamentos + plano de migração
-  SQL) e `Docs/ETAPA1_FUNDACAO.md` (arquitetura antes/depois, arquivos alterados,
+- Documentação: `Docs/Tecnica/MODELO_DADOS.md` (schema + relacionamentos + plano de migração
+  SQL) e `Docs/Projeto/ETAPA1_FUNDACAO.md` (arquitetura antes/depois, arquivos alterados,
   como validar cada funcionalidade, o que falta para fechar a Etapa 1).
 - Build limpo (0 erros, 0 avisos) e validação de ponta a ponta (login real, Shell renderizada,
   CSVs de auditoria gerados) usando captura direta de janela (`PrintWindow`) e verificação
@@ -227,8 +227,8 @@ as referências a `Documentation/` no código/documentação/README para `Docs/`
 - Atualização de todas as referências a `Documentation/` (código-fonte, README, documentos) para
   `Docs/`, em função do imprevisto relatado acima.
 - Documentação atualizada: `README.md` (pré-requisitos, seção de uso da nova aba, estrutura de
-  pastas, testes), `Docs/ARQUITETURA.md` (seção 5.1), `Docs/DOCUMENTACAO_TECNICA.md`
-  (novos Models/Services/ViewModel/Converters, limitações), `Docs/COMUNICACAO_ARDUINO.md`
+  pastas, testes), `Docs/Tecnica/ARQUITETURA.md` (seção 5.1), `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`
+  (novos Models/Services/ViewModel/Converters, limitações), `Docs/Tecnica/COMUNICACAO_ARDUINO.md`
   (seção 8, completa) e este arquivo.
 - `dotnet restore` + `dotnet build RadarTorres.sln` (0 erros, 0 avisos) + `dotnet test` (21/21
   aprovados) executados com sucesso; validação manual adicional: aplicativo iniciado e
@@ -298,7 +298,7 @@ em `ArduinoSettingsRepository` (JSON em `%LocalAppData%\RadarTorres`).
   padrão já usado em `ArduinoSettingsViewModel` para diálogos de arquivo).
 - Registro em `App.xaml.cs` (`IDashboardLayoutRepository`) e chave de localização
   `Dashboard.RestaurarLayoutPadrao` (pt-BR/en-US).
-- Documentação atualizada: `Docs/ARQUITETURA.md` (seção 5.2), `Docs/DOCUMENTACAO_TECNICA.md`
+- Documentação atualizada: `Docs/Tecnica/ARQUITETURA.md` (seção 5.2), `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`
   (novos Models/Services/ViewModel/Views), `README.md` (estrutura de pastas) e este arquivo.
 - `dotnet build` (0 erros, 0 avisos) e `dotnet test` (21/21 aprovados) executados com sucesso.
   Validação visual do arraste/redimensionamento na UI ficou pendente de execução manual pelo
@@ -330,7 +330,7 @@ WPF, sem servidor/URL).
   chegou a abrir a janela de login, mas **caiu com `StackOverflowException`** durante a
   execução nesta sessão de automação. Os dois bugs identificados (um real/pré-existente no
   tratador global de exceções, outro possivelmente específico do ambiente de automação sem
-  desktop interativo) foram documentados em `Docs/DOCUMENTACAO_TECNICA.md`, nova seção "Bugs
+  desktop interativo) foram documentados em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, nova seção "Bugs
   conhecidos" dentro de "Limitações e próximos passos":
   1. `App.OnDispatcherUnhandledException` sem trava de reentrância — se a própria exibição do
      `MessageBox` de erro lançar uma exceção, entra em loop infinito até estourar a pilha.
@@ -352,7 +352,7 @@ histórico do Git mostra.
 
 - **2026-08-12/13** — Consolidação de branches: `Sistema`, `TESTE` e `homologacao` mescladas em
   `main` (conflito em `README.md` resolvido mantendo a versão da `Sistema`); adição de
-  `Docs/CONTEXTO_PROJETO.md` (commit `2839e25`, "atualização").
+  `Docs/Projeto/CONTEXTO_PROJETO.md` (commit `2839e25`, "atualização").
 - **2026-08-14** — Branch `TESTE` → `main` (merge `45bf83d`): feature de **zonas mortas**
   completa (`DeadZone`, persistência JSON, serviço de avaliação, bloqueio de torre/disparo,
   permissão restrita a Administrador, criação por clique/arraste no radar, card dedicado) +
@@ -360,7 +360,7 @@ histórico do Git mostra.
   `Tela_de_logs` → `main` (merge `f34527d`): tela de **Objetos Detectados** sai do placeholder
   (tabela + exportar/importar CSV/XML/PDF).
 - **2026-08-20** — Commit `929d2b5` em `origin/main` (não puxado para o `main` local até
-  2026-08-30, ver entrada abaixo): `Docs/Diagramas_e_requisitos/` — diagrama de classes, de
+  2026-08-30, ver entrada abaixo): `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/` — diagrama de classes, de
   pacotes, DER atual/proposto, Requisitos Funcionais (RF01–RF32), Requisitos Não Funcionais
   (RNF01–RNF30) e matriz de rastreabilidade, produzidos por análise do código-fonte e da
   documentação existente.
@@ -378,24 +378,24 @@ tree com 3 mudanças não commitadas de sessão anterior (remoção de `.claude/
 do versionamento, `.gitignore` ignorando `.claude/`, e correção em `App.xaml.cs`/
 `LocalizationService.cs` trocando `Assembly.GetExecutingAssembly().Location` por
 `AppContext.BaseDirectory` — o primeiro retorna `""` em publish single-file e quebrava a
-resolução de `appsettings.json`/pasta de localização); `Docs/CONTEXTO_PROJETO.md` desatualizado
+resolução de `appsettings.json`/pasta de localização); `Docs/Projeto/CONTEXTO_PROJETO.md` desatualizado
 desde 2026-08-12 (não refletia zonas mortas, Objetos Detectados nem o levantamento de RF/RNF);
-`Docs/LOG_SOLICITACOES.md` sem entradas desde 2026-08-11; branch local `TESTE` órfã (upstream
+`Docs/Projeto/LOG_SOLICITACOES.md` sem entradas desde 2026-08-11; branch local `TESTE` órfã (upstream
 `origin/TESTE` já apagado).
 
 **Entregue:**
 
 - `dotnet build` (0 erros/avisos) e `dotnet test` (21/21 aprovados) confirmados antes de
   qualquer alteração, validando o estado da working tree.
-- `git pull origin main --ff-only` — trouxe `Docs/Diagramas_e_requisitos/` sem conflito (só
+- `git pull origin main --ff-only` — trouxe `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/` sem conflito (só
   arquivos novos).
-- `Docs/CONTEXTO_PROJETO.md` atualizado: linha do tempo (itens 7–10: zonas mortas, Objetos
+- `Docs/Projeto/CONTEXTO_PROJETO.md` atualizado: linha do tempo (itens 7–10: zonas mortas, Objetos
   Detectados, formulário de Chamado de Ajuda, levantamento de RF/RNF/diagramas), estado atual,
   lista de placeholders restantes (confirmada lendo `NavigationService.cs`: Ações realizadas,
   Histórico de modos, Usuários, listagem de Chamados/Ajuda, Configurações), roadmap e tabela de
   documentação — data de "Última atualização" para 2026-08-30.
 - Esta entrada retroativa (2026-08-12 a 2026-08-20) e esta entrada, adicionadas a
-  `Docs/LOG_SOLICITACOES.md`.
+  `Docs/Projeto/LOG_SOLICITACOES.md`.
 - Demais ações do handoff (decisão sobre commitar/descartar as mudanças pendentes, remoção da
   branch `TESTE` órfã) tratadas na sequência desta mesma sessão — ver commit(s) associados a
   esta data, se houver.
@@ -424,7 +424,7 @@ especificação.
     Emergency) da especificação.
   - **RF07** marcado `Removido da especificação funcional` (modo de simulação é ferramenta de
     desenvolvimento/demonstração, não requisito do produto) — nenhum código alterado, segue
-    documentado em `Docs/DOCUMENTACAO_TECNICA.md` e `README.md`.
+    documentado em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` e `README.md`.
   - **RF25** marcado removido, consolidado em RNF11 (responsividade já era RNF).
   - **RF32** marcado removido, consolidado em RNF17/RNF18 (instalação/portabilidade já eram RNF).
   - **RF14, RF15, RF19, RF20, RF21, RF22** mantidos como funcionais (analisados e confirmados
@@ -444,14 +444,14 @@ especificação.
   WPF) e RNF30 (anticolisão de cards por rejeição, decisão de UX).
 - `Limitacoes_Conhecidas.md` **(novo arquivo)**: L01 (reconexão serial automática não
   implementada, ex-RNF29), L02 (5 telas ainda placeholder), L03 (referência aos bugs já
-  catalogados em `Docs/DOCUMENTACAO_TECNICA.md`, sem duplicar), e a divergência **D1**:
+  catalogados em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, sem duplicar), e a divergência **D1**:
   `SystemMode` no código ainda usa os 6 valores antigos (não Verde/Amarelo/Vermelho), e
   `MainViewModel.ManualFireCommand`/`FireControlService.Authorize` ainda permitem acionamento
   manual sem checagem de modo — documentado, nenhum código alterado.
 - `Matriz_de_Rastreabilidade.md` reescrita: coluna `Status` adicionada à tabela de RF; RF07/
   RF25/RF32 marcados como removidos com o novo destino; novas tabelas para RNF reformulados,
   para as Decisões Arquiteturais (DA01–DA05) e para Limitações/Divergências (L01–L03, D1).
-- `Docs/Diagramas_e_requisitos/README.md` atualizado: tabela de arquivos com os 2 novos
+- `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/README.md` atualizado: tabela de arquivos com os 2 novos
   documentos; seção "Ponto não confirmado" da varredura anterior resolvida e substituída por
   "Revisão de 2026-08-30"; nota de inferência de RF16–18/RF23 atualizada de "pode não estar"
   para confirmado (`Parcial`/`Planejado`).
@@ -495,13 +495,13 @@ requisitos e sem representar acionamento manual nem o modo de simulação.
   `PodeExecutarAcoes`/`PodeGerenciarUsuarios`/`PodeGerenciarZonasMortas`/`PodeVerMenu`),
   `MainViewModel.CurrentMode` (troca de modo já gated por `PodeExecutarAcoes`, com confirmação e
   auditoria) e ausência de checagem de permissão em `ArduinoSettingsViewModel`.
-- `Docs/Diagramas_e_requisitos/README.md` e `Matriz_de_Rastreabilidade.md` atualizados com
+- `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/README.md` e `Matriz_de_Rastreabilidade.md` atualizados com
   ponteiros para os dois novos arquivos, sem duplicar conteúdo.
 - Nenhuma alteração de código-fonte. Nenhum commit/push feito — aguardando revisão do usuário.
 
 ---
 
-## 2026-08-31 — Documentação acadêmica do TCC: UML e Requisitos do Sistema (pasta Docs/TCC/)
+## 2026-08-31 — Documentação acadêmica do TCC: UML e Requisitos do Sistema (pasta Docs/Documentos_Entregaveis/)
 
 **Pedido:** produzir dois documentos acadêmicos independentes para o TCC — um de UML e um de
 Requisitos do Sistema —, usando um PDF de outro TCC (mesma faculdade) só como referência de
@@ -519,7 +519,7 @@ solicitado.
 
 **Entregue:**
 
-- `Docs/TCC/UML_RadarTorres.md` **(novo, pasta nova)**: introdução acadêmica à UML (definição,
+- `Docs/Documentos_Entregaveis/UML_RadarTorres.md` **(novo, pasta nova)**: introdução acadêmica à UML (definição,
   independência de linguagem, diagramas estruturais vs. comportamentais), UML aplicada ao
   RadarTorres com nota explícita corrigindo MVC→MVVM, os três diagramas (casos de uso, classes,
   implantação) com explicação conceitual + aplicação real, seção dedicada aos modos
@@ -527,17 +527,17 @@ solicitado.
   seção final relacionando UML e MVVM (`View ↔ ViewModel ↔ Services ↔ Models/Persistência`).
   Onde uma definição exigiria referência bibliográfica sem fonte já existente no projeto, foi
   usado o marcador `[REFERÊNCIA BIBLIOGRÁFICA A INSERIR]` em vez de inventar autor/ano.
-- `Docs/TCC/Requisitos_do_Sistema_RadarTorres.md` **(novo)**: introdução à Engenharia de
+- `Docs/Documentos_Entregaveis/Requisitos_do_Sistema_RadarTorres.md` **(novo)**: introdução à Engenharia de
   Requisitos, definição de RF/RNF, os 32 RFs (tabela resumida + especificação individual sem
   citar classe/método — evidência técnica fica só na matriz de rastreabilidade existente),
   RNFs reorganizados por categoria com as reformulações já decididas em sessão anterior (RNF12/
   13/16/24 reformulados, RNF20–23/29/30 movidos), seção própria de Decisões e Restrições
   Arquiteturais, seção de Limitações atuais, seção relacionando requisitos e UML, e matriz
   resumida final (RF+RNF × categoria/prioridade/status, sem evidência técnica).
-- `Docs/TCC/Diagramas/Casos_de_Uso_RadarTorres.puml`: mesmo modelo de 28 casos de uso já validado
-  em `Docs/Diagramas_e_requisitos/Diagrama_Casos_de_Uso.puml`, reproduzido como artefato
-  independente do pacote Docs/TCC/.
-- `Docs/TCC/Diagramas/Classes_RadarTorres.puml` **(novo)**: diagrama de classes conceitual —
+- `Docs/Documentos_Entregaveis/Diagramas/Casos_de_Uso_RadarTorres.puml`: mesmo modelo de 28 casos de uso já validado
+  em `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Diagrama_Casos_de_Uso.puml`, reproduzido como artefato
+  independente do pacote Docs/Documentos_Entregaveis/.
+- `Docs/Documentos_Entregaveis/Diagramas/Classes_RadarTorres.puml` **(novo)**: diagrama de classes conceitual —
   `Target`, `Tower`, `DeadZone`, `SensorReading`, `Usuario`, `ObjetoDetectado`, `AcaoRealizada`,
   `AlteracaoModo`, `ChamadoAjuda`, enums `SystemMode`/`PerfilUsuario`, e as interfaces de serviço
   centrais (`ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`,
@@ -545,13 +545,13 @@ solicitado.
   atributos/operações lidos diretamente do código. Nota explícita: não existe uma classe
   `SystemState` no código (o arquivo `Models/SystemState.cs` só agrupa enums) — o diagrama
   representa `SystemMode` diretamente, em vez de inventar uma classe inexistente.
-- `Docs/TCC/Diagramas/Implantacao_RadarTorres.puml` **(novo)**: computador Windows
+- `Docs/Documentos_Entregaveis/Diagramas/Implantacao_RadarTorres.puml` **(novo)**: computador Windows
   (RadarTorres.App + .NET 9 Desktop Runtime + armazenamento local CSV/JSON) ↔ USB/Serial ↔
   Arduino ↔ sensores/torres demonstrativas. Sem nenhum nó de servidor/web/cloud.
 - Sem SVG: confirmado novamente que não há PlantUML/`plantuml.jar` instalado neste ambiente (só
   o JDK); nenhuma ferramenta foi instalada, conforme instrução.
 - Nenhuma alteração de código-fonte, nenhuma alteração na pasta
-  `Docs/Diagramas_e_requisitos/` (a matriz de rastreabilidade técnica já estava correta e não
+  `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/` (a matriz de rastreabilidade técnica já estava correta e não
   precisou de atualização). Nenhum commit/push/branch feito.
 
 ---
@@ -571,7 +571,7 @@ instalado no lugar.
 
 **Entregue:**
 
-- `Docs/TCC/UML_RadarTorres.pdf` (6 páginas) e `Docs/TCC/Requisitos_do_Sistema_RadarTorres.pdf`
+- `Docs/Documentos_Entregaveis/UML_RadarTorres.pdf` (6 páginas) e `Docs/Documentos_Entregaveis/Requisitos_do_Sistema_RadarTorres.pdf`
   (15 páginas), gerados a partir dos `.md` existentes via um conversor Markdown→LaTeX escrito
   para esta tarefa (não fica no repositório, só no scratchpad da sessão) e compilados com
   `pdflatex` já instalado, sem instalar nada novo sem consultar — inclusive quando o instalador

@@ -121,7 +121,7 @@ Decisões relevantes desta funcionalidade:
   abertos ao mesmo tempo — a ViewModel apenas se inscreve nos eventos existentes
   (`ConnectionStateChanged`, `MessageReceived`, `CommunicationError`) e, ao conectar, verifica
   se a porta já está em uso com parâmetros diferentes antes de desconectar (com confirmação do
-  usuário) e reconectar. Ver `Docs/COMUNICACAO_ARDUINO.md`, seção 8.4.
+  usuário) e reconectar. Ver `Docs/Tecnica/COMUNICACAO_ARDUINO.md`, seção 8.4.
 * **Compilação como processo filho assíncrono e cancelável.** `ArduinoCompilerService` chama
   `arduino-cli compile --fqbn <fqbn> <pasta-do-sketch>` via `System.Diagnostics.Process` com
   `ProcessStartInfo.ArgumentList` (nunca concatenação de string interpretada por um shell),
@@ -131,7 +131,7 @@ Decisões relevantes desta funcionalidade:
   simples presença de texto em `stderr`.
 * **Detecção do Arduino CLI sem downloads silenciosos.** `ArduinoCliLocatorService` só faz
   leitura do sistema de arquivos/`PATH` e execução do CLI já instalado (`version`,
-  `board listall`) — nunca baixa nada. Ver ordem de busca em `Docs/COMUNICACAO_ARDUINO.md`,
+  `board listall`) — nunca baixa nada. Ver ordem de busca em `Docs/Tecnica/COMUNICACAO_ARDUINO.md`,
   seção 8.1.
 * **Persistência separada das preferências de usuário existentes.** As preferências desta aba
   (caminho do CLI, último sketch, FQBN, porta/baud, preferências do console) são de

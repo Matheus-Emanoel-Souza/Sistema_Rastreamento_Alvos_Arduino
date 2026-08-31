@@ -402,7 +402,7 @@ classDiagram
   `src/RadarTorres.App/` — nenhum nome foi inventado.
 * Métodos de `ILocalizationService`, `IThemeService`, `INavigationService` e `IDeadZoneService`
   não tiveram a assinatura completa lida (fora do escopo desta varredura); a responsabilidade
-  listada é **inferida** do uso descrito em `Docs/ARQUITETURA.md` e do nome da interface —
+  listada é **inferida** do uso descrito em `Docs/Tecnica/ARQUITETURA.md` e do nome da interface —
   marcado na tabela de Services acima.
 * `ArduinoSimulation.ino` não usa classes — a representação como `<<module>>`/`<<struct>>` é uma
   adaptação explícita, descrita na seção 1.

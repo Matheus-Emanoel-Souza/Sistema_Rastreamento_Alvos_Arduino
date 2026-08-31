@@ -57,7 +57,7 @@ rastreamento, seleção de torre, controle de acionamento, autenticação, permi
 da camada gráfica; e os `Models` são entidades de domínio simples. O mecanismo de binding MVVM
 do RadarTorres (`ViewModelBase`, `RelayCommand`) foi implementado manualmente, sem um framework
 externo como Prism ou CommunityToolkit.Mvvm — decisão documentada como restrição arquitetural em
-`Docs/Diagramas_e_requisitos/Decisoes_Arquiteturais.md`, tomada para manter o mecanismo de
+`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Decisoes_Arquiteturais.md`, tomada para manter o mecanismo de
 binding inteiramente explicável na defesa do trabalho. Qualquer menção à arquitetura do
 RadarTorres neste documento e nos diagramas associados refere-se exclusivamente a essa
 organização MVVM, nunca a MVC.
@@ -108,13 +108,13 @@ existe, no sistema, um caso de uso de "acionar manualmente".
 Diagrama fonte: [`Diagramas/Casos_de_Uso_RadarTorres.puml`](Diagramas/Casos_de_Uso_RadarTorres.puml).
 A especificação textual completa de cada um dos 28 casos de uso (objetivo, atores, fluxos,
 requisito relacionado e status de implementação) está em
-`Docs/Diagramas_e_requisitos/Casos_de_Uso.md`.
+`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Casos_de_Uso.md`.
 
 ## 4. Modos de operação
 
 Um ponto de atenção específico do RadarTorres, relevante para a leitura de qualquer diagrama que
 envolva o comportamento de rastreamento e acionamento, é o conjunto de modos de operação do
-sistema. A especificação de requisitos revisada (`Docs/Diagramas_e_requisitos/Requisitos_Funcionais.md`,
+sistema. A especificação de requisitos revisada (`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Requisitos_Funcionais.md`,
 RF08) define exatamente três estados:
 
 * **Verde** — sistema ligado, porém sem operação funcional de rastreamento ou acionamento.
@@ -132,7 +132,7 @@ valores herdados de uma versão anterior do sistema (`Off`, `LocationOnly`, `Loc
 `LocationAutoFire`, `Maintenance`, `Emergency`), e que o código ainda expõe um comando de
 acionamento manual (`MainViewModel.ManualFireCommand`) não gated por modo. Essa divergência entre
 a especificação revisada e a implementação atual está documentada em detalhe em
-`Docs/Diagramas_e_requisitos/Limitacoes_Conhecidas.md` (divergência D1) e não foi corrigida no
+`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Limitacoes_Conhecidas.md` (divergência D1) e não foi corrigida no
 código como parte desta tarefa, que é exclusivamente documental.
 
 ## 5. Diagrama de Classes
@@ -187,7 +187,7 @@ dependência externa — e persistindo dados localmente em `%AppData%\RadarTorre
 `%LocalAppData%\RadarTorres\*.json`; e o **Arduino** (microcontrolador), executando o firmware
 responsável pela leitura dos sensores e pelo acionamento das torres demonstrativas. A comunicação
 entre os dois nós ocorre exclusivamente por **USB/serial**, no protocolo textual documentado em
-`Docs/COMUNICACAO_ARDUINO.md`: o computador envia comandos (configuração, acionamento) e o
+`Docs/Tecnica/COMUNICACAO_ARDUINO.md`: o computador envia comandos (configuração, acionamento) e o
 Arduino envia leituras de alvo. Sensores de detecção alimentam o Arduino, e as torres/indicadores
 demonstrativos (laser de baixa potência, LED ou simulação — nunca armamento real) são acionados
 pelo Arduino a partir do comando recebido do computador. Não há nenhum componente de servidor,
