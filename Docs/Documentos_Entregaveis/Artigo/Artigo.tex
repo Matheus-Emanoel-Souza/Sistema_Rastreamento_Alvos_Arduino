@@ -1,0 +1,263 @@
+% !TeX program = xelatex
+% ============================================================
+% Template de TCC (Artigo Científico) — Faculdade UCL
+% Baseado no "Manual de Normalização para Trabalhos de
+% Conclusão de Curso (TCC): Faculdade UCL" (ABNT NBR 6022/6023)
+%
+% Compile com XeLaTeX (usa a fonte Times New Roman do Windows
+% diretamente, sem depender de pacotes extras do CTAN).
+% No VS Code + LaTeX Workshop, a linha "% !TeX program = xelatex"
+% acima já faz isso automaticamente.
+% ============================================================
+\documentclass[12pt,a4paper]{article}
+
+% ---------- Idioma e codificação (XeLaTeX já é UTF-8 nativo) ----------
+\usepackage{fontspec}
+% Observação: o pacote "babel" (hifenização em português e nomes
+% automáticos) não foi incluído porque, no momento da criação deste
+% template, a instalação local do MiKTeX não conseguiu baixar seus
+% arquivos de suporte. Para ativá-lo depois, abra o MiKTeX Console >
+% Pacotes > procure e instale "babel-portuges", depois descomente:
+% \usepackage[brazilian]{babel}
+
+% ---------- Fonte: Times New Roman 12, cor preta ----------
+\setmainfont{Times New Roman}
+% Para usar Arial no lugar, comente a linha acima e use:
+% \setmainfont{Arial}
+
+% ---------- Margens: sup/esq 3 cm, inf/dir 2 cm ----------
+\usepackage[a4paper,top=3cm,left=3cm,bottom=2cm,right=2cm]{geometry}
+
+% ---------- Espaçamento 1,5 no corpo do texto (sem pacote setspace) ----------
+\newcommand{\espacosimples}{\renewcommand{\baselinestretch}{1.0}\selectfont}
+\newcommand{\espacoumemeio}{\renewcommand{\baselinestretch}{1.5}\selectfont}
+\espacoumemeio
+
+% ---------- Parágrafo: sem recuo, 6pt de espaço depois ----------
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% ---------- Numeração de página no canto superior direito ----------
+\makeatletter
+\def\ps@ucl{%
+  \def\@oddhead{\hfil\normalfont\thepage}%
+  \def\@evenhead{\hfil\normalfont\thepage}%
+  \def\@oddfoot{}%
+  \def\@evenfoot{}%
+}
+\makeatother
+\pagestyle{ucl}
+
+% ---------- Títulos das seções: Times 12, negrito, alinhados à esquerda ----------
+% (redefinidos via \@startsection do próprio kernel do LaTeX, sem titlesec)
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{0pt}%
+  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
+  {\normalfont\fontsize{12}{14}\selectfont\bfseries\MakeUppercase}}
+\renewcommand\subsection{\@startsection{subsection}{2}{0pt}%
+  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
+  {\normalfont\fontsize{12}{14}\selectfont\bfseries\MakeUppercase}}
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{0pt}%
+  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
+  {\normalfont\fontsize{12}{14}\selectfont\bfseries\itshape}}
+\renewcommand\paragraph{\@startsection{paragraph}{4}{0pt}%
+  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
+  {\normalfont\fontsize{12}{14}\selectfont}}
+\makeatother
+
+% ---------- Figuras e tabelas ----------
+\usepackage{graphicx}
+\usepackage{array}
+% \caption já existe no kernel do LaTeX (via float); formatamos
+% manualmente com \small em vez de usar o pacote "caption".
+
+% ---------- Cores ----------
+\usepackage{xcolor}
+% Observação: o pacote "hyperref" (links clicáveis) depende de outros
+% pacotes (ltxcmds, infwarerr, etexcmds) que também não puderam ser
+% baixados no momento da criação deste template. Para ativá-lo depois,
+% instale-os pelo MiKTeX Console e descomente a linha abaixo:
+% \usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black]{hyperref}
+
+\begin{document}
+
+% ============================================================
+% PÁGINA 1 — cabeçalho, título, autores, resumo/abstract
+% (conforme Figura 1 do Manual, p. 16)
+% ============================================================
+\thispagestyle{ucl}
+
+\begin{center}
+    % Substitua pelo logo real, se desejar:
+    % \includegraphics[width=4cm]{logo_ucl.png}\\[1em]
+
+    {\fontsize{12}{14}\selectfont Trabalho de Conclusão de Curso de Engenharia da Computação}\\[0.8em]
+
+    {\fontsize{12}{14}\selectfont\bfseries\MakeUppercase{Protótipo para detecção, localização e seleção automática de ação por sensoriamento}:}\\
+    {\fontsize{12}{14}\selectfont\MakeUppercase{Modelo de dados}}\\[0.8em]
+
+    {\fontsize{12}{14}\selectfont\bfseries\itshape Prototype for automatic action detection, localization and selection through sensing:}\\
+    {\fontsize{12}{14}\selectfont\itshape Data model}\\[1.2em]
+\end{center}
+
+\begin{flushright}
+    Gabriel Vasconcellos de Morais\footnote{Graduando(a) em Engenharia da Computação pela Faculdade do Centro Leste -- UCL. E-\textit{mail}: gabrielmorais@ucl.br}\\
+    Matheus Emanoel Gomes Souza\footnote{Graduando(a) em Engenharia da Computação pela Faculdade do Centro Leste -- UCL. E-\textit{mail}: matheusemanoel@ucl.br}\\
+    Anker Douglas Loss\footnote{Orientador(a). Mestre em xxx pela xxx. E-\textit{mail}: anker@ucl.br}
+\end{flushright}
+
+\begin{center}
+    {\fontsize{12}{14}\selectfont\bfseries RESUMO}
+\end{center}
+{\espacosimples
+\noindent O presente trabalho descreve o protótipo RadarTorres, um sistema para detecção,
+localização e seleção automática de ação por sensoriamento, desenvolvido como Trabalho de
+Conclusão de Curso em Engenharia da Computação. O protótipo integra sensores para identificar
+objetos em um ambiente monitorado, registrar seu posicionamento e permitir o acionamento manual
+ou automático de dispositivos de resposta. Este trabalho detalha o modelo de dados da aplicação:
+atualmente a persistência é feita em arquivos CSV organizados por usuário do sistema operacional,
+contemplando seis tabelas -- usuários, objetos detectados, ações realizadas, alterações de modo,
+preferências de usuário e chamados de ajuda --, cada uma acessada por meio de uma interface de
+repositório dedicada. Essa escolha, registrada na documentação técnica do projeto, mantém o
+sistema simples nesta fase e sinaliza explicitamente a intenção de migração futura para um banco
+de dados relacional. Descreve-se a estrutura atual das tabelas, suas relações (por login, sem
+chaves estrangeiras reais) e o modelo proposto para a migração para SQL, no qual as referências
+textuais seriam substituídas por chaves estrangeiras íntegras, sem necessidade de alterar as
+camadas de ViewModel ou Service da aplicação, já que dependem apenas das interfaces de
+repositório. Os resultados indicam que a arquitetura baseada em interfaces viabiliza essa
+migração de forma incremental e de baixo risco.
+
+\noindent\textbf{Palavras-chave}: Sensoriamento; Modelo de dados; Persistência; Migração para SQL; Protótipo.
+\par}
+\espacoumemeio
+
+\begin{center}
+    {\fontsize{12}{14}\selectfont\bfseries ABSTRACT}
+\end{center}
+{\espacosimples
+\noindent This work describes the RadarTorres prototype, a system for automatic action
+detection, localization and selection through sensing, developed as a Final Course Project in
+Computer Engineering. The prototype integrates sensors to identify objects in a monitored
+environment, register their position and allow manual or automatic activation of response
+devices. This work details the application's data model: persistence is currently implemented
+through CSV files organized per operating-system user, covering six tables -- users, detected
+objects, executed actions, mode changes, user preferences and help tickets --, each accessed
+through a dedicated repository interface. This choice, documented in the project's technical
+records, keeps the system simple at this stage while explicitly signaling the intent to migrate
+to a relational database in the future. The current table structure, its relationships (by
+login, without real foreign keys) and the proposed model for the SQL migration are described,
+in which textual references would be replaced by proper foreign keys, without requiring changes
+to the application's ViewModel or Service layers, since they depend only on the repository
+interfaces. Results indicate that the interface-based architecture enables this migration
+incrementally and with low risk.
+
+\noindent\textbf{Keywords}: Sensing; Data model; Persistence; SQL migration; Prototype.
+\par}
+\espacoumemeio
+
+\clearpage
+
+% ============================================================
+% 1 INTRODUÇÃO
+% ============================================================
+\section{Introdução}
+
+Contextualização do tema, apresentando o problema de pesquisa, os objetivos
+(geral e específicos), as hipóteses (se houver) e a justificativa do
+trabalho.
+
+% ============================================================
+% 2 DESENVOLVIMENTO
+% ============================================================
+\section{Desenvolvimento}
+
+\subsection{Fundamentação teórica}
+
+Revisão bibliográfica sobre o assunto, com a devida citação das fontes,
+por exemplo (SOBRENOME, 2024) ou conforme Sobrenome (2024).
+
+\subsection{Procedimentos metodológicos}
+
+Descrição do percurso metodológico adotado para se chegar aos resultados.
+
+\subsection{Modelo de dados}
+
+Na versão atual do protótipo não há um banco de dados relacional em uso: a persistência é feita
+em arquivos CSV, decisão registrada explicitamente na documentação técnica do projeto, que
+sinaliza a intenção de conversão futura para SQL. Os arquivos ficam em uma pasta por usuário do
+Windows (\texttt{\%AppData\%$\backslash$RadarTorres$\backslash$Data$\backslash$}), um por
+entidade, criados com cabeçalho na primeira execução. Cada tabela é acessada por uma interface de
+repositório dedicada (por exemplo, \texttt{IUsuarioRepository}), o que permite trocar a
+implementação em CSV por uma implementação em SQL sem alterar nenhuma camada de ViewModel ou
+Service. A Tabela 1 resume as seis entidades identificadas.
+
+\begin{table}[htbp]
+    \begin{center}
+    {\small Tabela 1: Entidades do modelo de dados (persistência em CSV)}\par
+    \vspace{0.3em}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{p{3.7cm}p{8.8cm}}
+        \hline
+        \textbf{Entidade} & \textbf{Descrição} \\
+        \hline
+        usuarios & Contas de acesso ao aplicativo, com perfil (Administrador, Operador ou
+        Visualizador) e senha armazenada com PBKDF2-HMACSHA256. \\
+        objetos\_detectados & Histórico de detecções: uma linha por primeira detecção de um
+        alvo, evitando registrar cada atualização de posição do radar. \\
+        acoes\_realizadas & Auditoria de acionamentos de dispositivos, somente inserção, para
+        toda tentativa autorizada, bloqueada ou com erro. \\
+        alteracoes\_modo & Auditoria de troca do modo de operação do sistema, também
+        somente inserção. \\
+        preferencias\_usuario & Uma linha por usuário, com preferências de interface
+        (tema, idioma, sidebar). \\
+        chamados\_ajuda & Chamados de suporte abertos pelos usuários, com status e resposta
+        do administrador. \\
+        \hline
+    \end{tabular}\par
+    \vspace{0.3em}
+    {\small Fonte: elaborado pelos autores a partir do código-fonte do projeto.}
+    \end{center}
+\end{table}
+
+Não há integridade referencial imposta pelo armazenamento atual: campos como
+\texttt{UsuarioResponsavel} e \texttt{UsuarioSolicitante} referenciam o login do usuário como
+texto, validado apenas pelo código da aplicação, e não por uma chave estrangeira real.
+
+Para a migração futura, propõe-se implementar uma versão SQL de cada repositório (por exemplo,
+via Entity Framework Core), mantendo a mesma assinatura de método das interfaces já existentes, e
+trocar apenas o registro da implementação no contêiner de injeção de dependência. Com um SGBD
+relacional, as referências textuais por login passariam a ser chaves estrangeiras íntegras por
+identificador numérico, e a relação entre \texttt{usuarios} e \texttt{preferencias\_usuario}
+passaria a ter integridade garantida pelo próprio banco. Nenhuma dessas tabelas SQL, migration ou
+arquivo de banco existe no repositório até o momento; trata-se de uma proposta baseada no
+planejamento já documentado pela equipe do projeto.
+
+\subsection{Resultados e discussão}
+
+Apresentação e análise dos resultados alcançados, com verificação e
+comparação em relação à fundamentação teórica.
+
+% ============================================================
+% 3 CONCLUSÃO
+% ============================================================
+\section{Conclusão}
+
+Retomada dos objetivos e hipóteses apresentados na introdução, indicando se
+foram alcançados/confirmados, além de recomendações e sugestões para
+trabalhos futuros.
+
+% ============================================================
+% REFERÊNCIAS (ABNT NBR 6023:2018)
+% Lista manual, alinhada à esquerda, espaço simples, separadas por
+% um espaço em branco. (Se preferir gerenciar via .bib, instale o
+% pacote "abntex2" pelo MiKTeX Console e troque para \bibliography.)
+% ============================================================
+\clearpage
+\section*{REFERÊNCIAS}
+{\espacosimples\raggedright
+\noindent SOBRENOME, Nome. \textit{Título do livro}. 2. ed. São Paulo: Editora, 2024.
+
+\noindent SOBRENOME, Nome; SOBRENOME, Nome. Título do artigo. \textit{Nome da Revista}, cidade, v. 1, n. 1, p. 1-10, 2024.
+\par}
+
+\end{document}
