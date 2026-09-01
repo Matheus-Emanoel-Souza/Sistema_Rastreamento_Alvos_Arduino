@@ -5,7 +5,8 @@
 Este documento especifica os casos de uso do sistema **RadarTorres**, complementando o
 `Diagrama_Casos_de_Uso.puml` com o detalhamento textual de cada caso de uso: objetivo, atores,
 pré-condições, fluxo principal, fluxos alternativos/exceções e pós-condições. Serve de ponte
-entre `Requisitos_Funcionais.md`/`Requisitos_Nao_Funcionais.md` (o que o sistema deve fazer) e
+entre os requisitos funcionais/não funcionais consolidados em
+`Requisitos_de_Sistema/Requisitos_RadarTorres.pdf` (o que o sistema deve fazer) e
 o comportamento observável do sistema (como um ator interage com ele para atingir um objetivo),
 para uso na documentação e na defesa do Trabalho de Conclusão de Curso.
 
@@ -596,4 +597,4 @@ implementada, só a base de dados/permissão que os sustentaria.
 
 Nenhuma tela hoje em `PlaceholderView` (Ações Realizadas, Histórico de Modos, Usuários,
 Chamados/Ajuda, Configurações) é representada como "Implementado" neste documento nem na matriz
-acima — consistente com `Requisitos_Funcionais.md` e `Limitacoes_Conhecidas.md`.
+acima — consistente com `Requisitos_de_Sistema/Requisitos_RadarTorres.pdf` e `Limitacoes_Conhecidas.md`.

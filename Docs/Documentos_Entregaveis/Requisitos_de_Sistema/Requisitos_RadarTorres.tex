@@ -1,0 +1,57 @@
+% !TeX program = xelatex
+% ============================================================
+% Requisitos Funcionais e Não Funcionais — RadarTorres
+%
+% Documento acadêmico individual (módulo do TCC), com no máximo
+% 5 páginas, pensado para futuramente ser incorporado ao documento
+% principal do TCC junto com os demais módulos (UML, Arquitetura,
+% POO, Diagrama de Classes, Modelo de Banco de Dados, Ferramentas).
+%
+% Mesma estrutura/abordagem usada em
+% Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.tex:
+% documento direto e modular, com o conteúdo em arquivo separado
+% (\input) para reaproveitamento futuro.
+%
+% Compile com XeLaTeX (usa a fonte Times New Roman do Windows
+% diretamente, sem depender de pacotes extras do CTAN que não
+% puderam ser baixados nesta instalação do MiKTeX).
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Fonte: Times New Roman via XeLaTeX (sem babel/inputenc) ----------
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+% ---------- Margens: 2,5 cm em todos os lados ----------
+\usepackage[a4paper,margin=2.5cm]{geometry}
+
+% ---------- Tabelas longas (RF/RNF atravessam página com cabeçalho repetido) ----------
+\usepackage{array}
+\usepackage{longtable}
+
+% ---------- Nomes em português (sem depender do pacote "babel") ----------
+\renewcommand{\tablename}{Tabela}
+
+% ---------- Parágrafo: sem recuo, pequeno espaço entre parágrafos ----------
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+% ---------- Identificação (dados confirmados em Docs/Documentos_Entregaveis/Artigo/Artigo.tex) ----------
+\title{\vspace{-2em}
+  {\normalsize Trabalho de Conclusão de Curso de Engenharia da Computação}\\[.4em]
+  {\large\bfseries Protótipo para detecção, localização e seleção automática de ação por sensoriamento}\\[.2em]
+  {\Large\bfseries Requisitos Funcionais e Não Funcionais}}
+\author{
+  \normalsize Gabriel Vasconcellos de Morais \quad--\quad Matheus Emanoel Gomes Souza\\[.3em]
+  \small Orientador: Anker Douglas Loss\\
+  \small Curso: Engenharia da Computação --- Faculdade do Centro Leste (UCL)
+}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\input{conteudo_requisitos}
+
+\end{document}

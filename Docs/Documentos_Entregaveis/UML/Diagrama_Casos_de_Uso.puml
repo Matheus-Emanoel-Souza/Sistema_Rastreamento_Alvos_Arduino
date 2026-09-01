@@ -1,8 +1,8 @@
 @startuml Diagrama_Casos_de_Uso
 
 ' RadarTorres — Diagrama de Casos de Uso
-' Gerado a partir de Requisitos_Funcionais.md / Requisitos_Nao_Funcionais.md revisados
-' (ver Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Casos_de_Uso.md para a especificação completa).
+' Gerado a partir dos requisitos funcionais/não funcionais revisados
+' (ver Casos_de_Uso.md, nesta mesma pasta, para a especificação completa).
 ' Convenção: casos de uso puramente automáticos (reação do sistema a uma leitura do Arduino
 ' ou a um modo já ativo) não recebem linha de ator — são alcançados só por <<include>>/
 ' <<extend>> a partir de quem realmente os aciona (Usuário observando o radar, ou Arduino

@@ -2,8 +2,8 @@
 
 Escolhas internas de **como** o sistema foi construído — não são requisitos do produto (o
 usuário não percebe/aciona nenhuma delas diretamente) e por isso não devem aparecer como RF nem
-RNF. Cada item aqui listado foi movido de `Requisitos_Nao_Funcionais.md` nesta revisão, com o
-ID original preservado como referência cruzada.
+RNF. Cada item aqui listado foi movido da lista de requisitos não funcionais nesta revisão, com o
+ID original preservado como referência cruzada (ver `Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`).
 
 | ID | Decisão | Categoria | Descrição | Evidência |
 |---|---|---|---|---|

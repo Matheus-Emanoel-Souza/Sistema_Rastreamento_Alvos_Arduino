@@ -13,8 +13,7 @@ documentação estão sinalizados como **inferência** nos respectivos arquivos.
 | [`Diagrama_de_Classes.md`](Diagrama_de_Classes.md) | Classes/módulos principais (Models, Services, Repositories, ViewModels, Helpers, e o firmware Arduino representado como módulo/struct) + diagrama Mermaid |
 | [`Diagrama_de_Pacotes.md`](Diagrama_de_Pacotes.md) | Organização em pacotes/namespaces reais do repositório + diagrama Mermaid de dependências |
 | [`Modelo_Banco_de_Dados.md`](Modelo_Banco_de_Dados.md) | Modelo de dados atual (CSV) com DER, e modelo proposto/inferido para migração futura a SQL |
-| [`Requisitos_Funcionais.md`](Requisitos_Funcionais.md) | RF01–RF32, com descrição, atores, prioridade, status e evidência em código/documentação |
-| [`Requisitos_Nao_Funcionais.md`](Requisitos_Nao_Funcionais.md) | RNF01–RNF30, classificados por categoria (desempenho, segurança, usabilidade etc.) e status |
+| [`Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`](../Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | RF01–RF32 e RNF01–RNF30 consolidados em um único documento, com prioridade/categoria e status |
 | [`Decisoes_Arquiteturais.md`](Decisoes_Arquiteturais.md) | Escolhas internas de implementação (persistência, MVVM manual, protocolo serial, UX de cards) — não são requisitos do produto |
 | [`Limitacoes_Conhecidas.md`](Limitacoes_Conhecidas.md) | Funcionalidades ainda não implementadas e divergências entre a especificação revisada e o código atual |
 | [`Matriz_de_Rastreabilidade.md`](Matriz_de_Rastreabilidade.md) | Requisito/decisão/limitação → arquivo/classe/função → status |
@@ -62,4 +61,4 @@ Chamados de Ajuda (RF16–RF18, RF23) **continuam em `PlaceholderView`** — lid
 `Services/NavigationService.cs`. RF16/RF17 têm o registro de dados já funcionando (falta só a
 tela de consulta); RF18/RF23 não têm nenhuma interface, nem de consulta nem de gestão. Ver
 `Limitacoes_Conhecidas.md`, item L02, e o campo `Status` de cada requisito em
-`Requisitos_Funcionais.md`.
+`Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`.

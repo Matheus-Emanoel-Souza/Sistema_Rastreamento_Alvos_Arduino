@@ -1,7 +1,8 @@
 # Matriz de Rastreabilidade
 
 Relaciona cada requisito ao(s) componente(s) real(is) que o implementam, comprovando que o
-levantamento não é especulativo. Cobre `Requisitos_Funcionais.md`, `Requisitos_Nao_Funcionais.md`,
+levantamento não é especulativo. Cobre os requisitos funcionais e não funcionais consolidados em
+`Requisitos_RadarTorres.pdf` (nesta mesma pasta), além de
 `Decisoes_Arquiteturais.md` e `Limitacoes_Conhecidas.md`.
 
 ## Requisitos Funcionais → implementação
@@ -65,7 +66,7 @@ levantamento não é especulativo. Cobre `Requisitos_Funcionais.md`, `Requisitos
 ## Requisitos Não Funcionais reformulados → implementação
 
 Só as linhas alteradas nesta revisão; as demais RNF mantêm a evidência já publicada em
-`Requisitos_Nao_Funcionais.md`.
+`Requisitos_RadarTorres.pdf`.
 
 | Requisito | Arquivo/Módulo | Classe/Função | Observação |
 |---|---|---|---|

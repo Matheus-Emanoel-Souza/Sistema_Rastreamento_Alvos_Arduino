@@ -1,7 +1,7 @@
 # Limitações Conhecidas e Divergências entre Especificação e Implementação
 
 Este documento reúne dois tipos de conteúdo que **não** devem aparecer como requisito atendido
-em `Requisitos_Funcionais.md`/`Requisitos_Nao_Funcionais.md`:
+em `Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`:
 
 1. **Limitações conhecidas** — comportamento que o sistema deveria ter, mas ainda não tem.
 2. **Divergências** — pontos em que a especificação revisada (o que o sistema *deveria* fazer)

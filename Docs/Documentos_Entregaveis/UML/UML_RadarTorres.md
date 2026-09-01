@@ -114,7 +114,7 @@ requisito relacionado e status de implementação) está em
 
 Um ponto de atenção específico do RadarTorres, relevante para a leitura de qualquer diagrama que
 envolva o comportamento de rastreamento e acionamento, é o conjunto de modos de operação do
-sistema. A especificação de requisitos revisada (`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Requisitos_Funcionais.md`,
+sistema. A especificação de requisitos revisada (`Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`,
 RF08) define exatamente três estados:
 
 * **Verde** — sistema ligado, porém sem operação funcional de rastreamento ou acionamento.
