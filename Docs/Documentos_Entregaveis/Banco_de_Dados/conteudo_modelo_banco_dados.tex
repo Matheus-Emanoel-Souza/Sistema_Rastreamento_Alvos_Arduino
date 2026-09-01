@@ -5,18 +5,6 @@
 % modular quanto, futuramente, no TCC principal.
 % ============================================================
 
-% ------------------------------------------------------------
-% Estilo comum dos diagramas entidade-relacionamento (TikZ)
-% ------------------------------------------------------------
-\tikzset{
-  entidade/.style={draw, rectangle, rounded corners=2pt, align=left,
-    font=\scriptsize, inner sep=4pt, minimum width=2.7cm, fill=black!4},
-  entidaderef/.style={draw, rectangle, rounded corners=2pt, align=left,
-    font=\scriptsize, inner sep=3pt, minimum width=2.1cm, fill=black!10, dashed},
-  relacao/.style={-{Stealth[length=1.8mm]}, font=\tiny},
-  relacaoconceitual/.style={-{Stealth[length=1.8mm]}, dashed, font=\tiny}
-}
-
 \section{Apresentação do Modelo de Dados}
 
 O RadarTorres é um protótipo que detecta alvos por sensoriamento, seleciona automaticamente a
@@ -130,120 +118,52 @@ a evolução do projeto exigir um SGBD relacional.
 \section{Modelo e Relacionamentos}
 \label{sec:modelo}
 
-A Figura~\ref{fig:usuarios} apresenta as entidades de usuários e configurações; a
-Figura~\ref{fig:monitoramento}, as de monitoramento e auditoria; e a
-Figura~\ref{fig:seguranca}, as de segurança e suporte. \texttt{Usuario} aparece nas três, como
-referência dos relacionamentos que partem dele.
+A Figura~\ref{fig:atual} reproduz o Diagrama Entidade-Relacionamento já levantado para as seis
+entidades em CSV (arquivo \texttt{Modelo\_Banco\_de\_Dados.md}, nesta mesma pasta).
 
 \texttt{Usuario} se relaciona 1:1 com \texttt{PreferenciasUsuario} (chave \texttt{UsuarioId},
 igual a \texttt{Usuario.Id}) e 1:N com \texttt{AcaoRealizada} e \texttt{AlteracaoModo} — nesses
 dois últimos casos por \textbf{Login} (texto), sem chave estrangeira real — e com
-\texttt{ChamadoAjuda}, por \texttt{Id} numérico. \texttt{DashboardCardLayout} se associa a
-\texttt{Usuario} apenas pelo \emph{nome do arquivo} (\texttt{tela-idUsuario}); é uma convenção de
-nomenclatura, não uma chave estrangeira. \texttt{ObjetoDetectado} \textbf{não possui nenhum
-vínculo persistido} com \texttt{AcaoRealizada}, \texttt{Usuario} ou qualquer outra entidade — são
-registros independentes. \texttt{DeadZone} e \texttt{ArduinoSettings} também não se relacionam
-com nenhuma outra entidade: são configurações únicas por instalação, não por usuário.
+\texttt{ChamadoAjuda}, por \texttt{Id} numérico. \texttt{ObjetoDetectado} \textbf{não possui
+nenhum vínculo persistido} com \texttt{AcaoRealizada}, \texttt{Usuario} ou qualquer outra
+entidade — são registros independentes, como o próprio diagrama mostra (sem linha de
+relacionamento).
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}
-    \node[entidade] (usuario) at (0,0) {%
-      \begin{tabular}{@{}l@{}}\textbf{USUARIO}\\\hline Id (PK)\\ Login\\ Perfil\end{tabular}};
-    \node[entidade] (prefs) at (3.4,0) {%
-      \begin{tabular}{@{}l@{}}\textbf{PREFERENCIAS\_}\\\textbf{USUARIO}\\\hline
-      UsuarioId (PK/FK)\\ Idioma\\ Tema\end{tabular}};
-    \node[entidade] (dash) at (0,-2.1) {%
-      \begin{tabular}{@{}l@{}}\textbf{DASHBOARD\_}\\\textbf{CARD\_LAYOUT}\\\hline
-      Tela+IdUsuario (nome)\\ RelX, RelY\\ IsVisible, ZIndex\end{tabular}};
-    \node[entidade] (arduino) at (3.6,-2.1) {%
-      \begin{tabular}{@{}l@{}}\textbf{ARDUINO\_}\\\textbf{SETTINGS}\\\hline
-      (único p/ instalação)\\ CliPath, BaudRate\\ SelectedFqbn\end{tabular}};
-    \draw[relacao] (usuario) -- node[above]{1:1} (prefs);
-    \draw[relacaoconceitual] (usuario) -- node[left]{arquivo} (dash);
-  \end{tikzpicture}
-  \caption{Modelo de dados relacionado aos usuários e às configurações. \texttt{ArduinoSettings}
-  não possui relação com nenhuma outra entidade (arquivo único da instalação).}
-  \label{fig:usuarios}
+  \includegraphics[width=\textwidth]{figuras/DER_Atual.png}
+  \caption{Modelo de dados atual (persistência em CSV) — diagrama entidade-relacionamento já
+  levantado a partir do código-fonte do projeto.}
+  \label{fig:atual}
 \end{figure}
 
-\begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}
-    \node[entidaderef] (usuario) at (0,1.3) {%
-      \begin{tabular}{@{}l@{}}\textbf{USUARIO}\\\hline Id (PK) / Login\end{tabular}};
-    \node[entidade] (acao) at (-2.2,0) {%
-      \begin{tabular}{@{}l@{}}\textbf{ACAO\_}\\\textbf{REALIZADA}\\\hline
-      Id (PK)\\ UsuarioResponsavel (FK, nullable)\\ Resultado\end{tabular}};
-    \node[entidade] (modo) at (2.2,0) {%
-      \begin{tabular}{@{}l@{}}\textbf{ALTERACAO\_}\\\textbf{MODO}\\\hline
-      Id (PK)\\ UsuarioSolicitante (FK)\\ Resultado\end{tabular}};
-    \node[entidade] (objeto) at (0,-2.1) {%
-      \begin{tabular}{@{}l@{}}\textbf{OBJETO\_DETECTADO}\\\hline
-      Id (PK)\\ X, Y, Quadrante\\ (sem FK — sem relação persistida)\end{tabular}};
-    \draw[relacaoconceitual] (usuario) -- node[left]{1:N (Login)} (acao);
-    \draw[relacaoconceitual] (usuario) -- node[right]{1:N (Login)} (modo);
-  \end{tikzpicture}
-  \caption{Modelo de dados relacionado ao monitoramento e à auditoria. \texttt{ObjetoDetectado}
-  não possui vínculo persistido com nenhuma outra entidade.}
-  \label{fig:monitoramento}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}
-    \node[entidaderef] (usuario) at (0,0) {%
-      \begin{tabular}{@{}l@{}}\textbf{USUARIO}\\\hline Id (PK)\end{tabular}};
-    \node[entidade] (chamado) at (3.2,0) {%
-      \begin{tabular}{@{}l@{}}\textbf{CHAMADO\_AJUDA}\\\hline
-      Id (PK)\\ UsuarioId (FK)\\ Status\end{tabular}};
-    \node[entidade] (deadzone) at (0,-2) {%
-      \begin{tabular}{@{}l@{}}\textbf{DEAD\_ZONE}\\\hline
-      Id (PK)\\ Type, Quadrant\\ (único p/ instalação, sem FK)\end{tabular}};
-    \draw[relacao] (usuario) -- node[above]{1:N} (chamado);
-  \end{tikzpicture}
-  \caption{Modelo de dados relacionado à segurança e ao suporte. \texttt{DeadZone} não possui
-  relação com nenhuma outra entidade.}
-  \label{fig:seguranca}
-\end{figure}
+{\sloppy
+Três entidades adicionais usam arquivos JSON e não aparecem no diagrama acima, por não
+fazerem parte do levantamento original de CSV (ver Tabela~\ref{tab:entidades}):
+\texttt{DeadZone}, \texttt{Dash\-board\-Card\-Layout} e \texttt{ArduinoSettings}. Nenhuma delas tem
+relacionamento persistido com \texttt{Usuario} ou entre si: \texttt{DeadZone} e
+\texttt{ArduinoSettings} são configurações únicas por instalação, e \texttt{Dash\-board\-Card\-Layout}
+se associa a um usuário apenas pelo \emph{nome do arquivo} (\texttt{tela-idUsuario}) — uma
+convenção de nomenclatura, não uma chave estrangeira — por isso não são representadas em um
+diagrama ER à parte.\par}
 
 \section{Modelo Relacional Proposto}
 \label{sec:proposto}
 
 \textbf{Esta seção descreve uma proposta de migração futura, não o banco atual} — nenhuma dessas
 tabelas, chaves ou \textit{migrations} existe hoje no repositório. A estrutura de dados seria a
-mesma, mas as referências textuais por \texttt{Login} passariam a ser chaves estrangeiras
-íntegras por \texttt{Id} numérico, com integridade garantida pelo próprio SGBD (Figura
-\ref{fig:relacional}).
+mesma da Figura~\ref{fig:atual}, mas as referências textuais por \texttt{Login} passariam a ser
+chaves estrangeiras íntegras por \texttt{Id} numérico, com integridade garantida pelo próprio
+SGBD (Figura~\ref{fig:proposto}). \texttt{ObjetosDetectados} permanece sem chave estrangeira, pelo
+mesmo motivo já explicado na Seção~\ref{sec:modelo}.
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[scale=0.95, every node/.style={transform shape}]
-    \node[entidade] (usuarios) at (0,1.4) {%
-      \begin{tabular}{@{}l@{}}\textbf{USUARIOS}\\\hline Id (PK)\\ Login\end{tabular}};
-    \node[entidade] (prefs) at (-3.2,0) {%
-      \begin{tabular}{@{}l@{}}\textbf{PREFERENCIAS\_}\\\textbf{USUARIO}\\\hline
-      UsuarioId (PK/FK)\end{tabular}};
-    \node[entidade] (acoes) at (-1.6,-2.2) {%
-      \begin{tabular}{@{}l@{}}\textbf{ACOES\_}\\\textbf{REALIZADAS}\\\hline
-      Id (PK)\\ UsuarioResponsavel\\Id (FK)\end{tabular}};
-    \node[entidade] (modo) at (2.8,-2.2) {%
-      \begin{tabular}{@{}l@{}}\textbf{ALTERACOES\_}\\\textbf{MODO}\\\hline
-      Id (PK)\\ UsuarioSolicitante\\Id (FK)\end{tabular}};
-    \node[entidade] (chamados) at (4.6,0.6) {%
-      \begin{tabular}{@{}l@{}}\textbf{CHAMADOS\_}\\\textbf{AJUDA}\\\hline
-      Id (PK)\\ UsuarioId (FK)\end{tabular}};
-    \node[entidade] (objetos) at (-5.6,-2.2) {%
-      \begin{tabular}{@{}l@{}}\textbf{OBJETOS\_}\\\textbf{DETECTADOS}\\\hline
-      Id (PK)\\ (sem FK)\end{tabular}};
-    \draw[relacao] (usuarios) -- node[above,sloped]{1:1} (prefs);
-    \draw[relacao] (usuarios) -- node[above,sloped]{1:N} (acoes);
-    \draw[relacao] (usuarios) -- node[above,sloped]{1:N} (modo);
-    \draw[relacao] (usuarios) -- node[above,sloped]{1:N} (chamados);
-  \end{tikzpicture}
+  \includegraphics[width=\textwidth]{figuras/DER_Proposto.png}
   \caption{Modelo relacional proposto para a migração futura de persistência (CSV/JSON
-  $\rightarrow$ SQL). \texttt{ObjetosDetectados} permanece sem chave estrangeira.}
-  \label{fig:relacional}
+  $\rightarrow$ SQL) — mesmo levantamento já documentado em
+  \texttt{Diagramas\_e\_requisitos/Modelo\_Banco\_de\_Dados.md}.}
+  \label{fig:proposto}
 \end{figure}
 
 \section{Conclusão}
