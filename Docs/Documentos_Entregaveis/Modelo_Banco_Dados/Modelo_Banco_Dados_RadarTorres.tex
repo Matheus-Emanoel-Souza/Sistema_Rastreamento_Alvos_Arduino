@@ -1,0 +1,64 @@
+% !TeX program = xelatex
+% ============================================================
+% Modelo de Banco de Dados — RadarTorres
+%
+% Documento acadêmico individual (módulo do TCC), com no máximo
+% 5 páginas, pensado para futuramente ser incorporado ao documento
+% principal do TCC junto com os demais módulos (UML, Requisitos,
+% Arquitetura, POO, Diagrama de Classes, Ferramentas).
+%
+% Estrutura e aparência visual (hierarquia de títulos, organização
+% de figuras/tabelas, apresentação limpa) baseadas no template
+% "UFMG Estruturas de Dados — Modelo geral de documentação para TP"
+% (Overleaf: ufmg-estruturas-de-dados-modelo-geral-de-documentacao-para-tp).
+% Não foram preservadas referências à UFMG/disciplina original —
+% apenas a organização visual do modelo.
+%
+% Compile com XeLaTeX (usa a fonte Times New Roman do Windows
+% diretamente, sem depender de pacotes extras do CTAN que não
+% puderam ser baixados nesta instalação do MiKTeX — mesma
+% abordagem já usada em Docs/Documentos_Entregaveis/TCC_Template_UCL.tex).
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Fonte: Times New Roman via XeLaTeX (sem babel/inputenc) ----------
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+% ---------- Margens: 2,5 cm em todos os lados ----------
+\usepackage[a4paper,margin=2.5cm]{geometry}
+
+% ---------- Figuras, tabelas e diagramas ----------
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+% ---------- Nomes em português (sem depender do pacote "babel") ----------
+\renewcommand{\figurename}{Figura}
+\renewcommand{\tablename}{Tabela}
+
+% ---------- Parágrafo: sem recuo, pequeno espaço entre parágrafos ----------
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+% ---------- Identificação (dados confirmados em Docs/Documentos_Entregaveis/TCC_Template_UCL.tex) ----------
+\title{\vspace{-2em}
+  {\normalsize Trabalho de Conclusão de Curso de Engenharia da Computação}\\[.4em]
+  {\large\bfseries Protótipo para detecção, localização e seleção automática de ação por sensoriamento}\\[.2em]
+  {\Large\bfseries Modelo de Banco de Dados}}
+\author{
+  \normalsize Gabriel Vasconcellos de Morais \quad--\quad Matheus Emanoel Gomes Souza\\[.3em]
+  \small Orientador: Anker Douglas Loss\\
+  \small Curso: Engenharia da Computação --- Faculdade do Centro Leste (UCL)
+}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\input{conteudo_modelo_banco_dados}
+
+\end{document}
