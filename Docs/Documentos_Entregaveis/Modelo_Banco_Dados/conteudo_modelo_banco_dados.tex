@@ -1,0 +1,261 @@
+% ============================================================
+% Conteúdo acadêmico puro do documento "Modelo de Banco de Dados".
+% SEM \documentclass, \begin{document}/\end{document} nem título —
+% pensado para ser reaproveitado via \input{} tanto no documento
+% modular quanto, futuramente, no TCC principal.
+% ============================================================
+
+% ------------------------------------------------------------
+% Estilo comum dos diagramas entidade-relacionamento (TikZ)
+% ------------------------------------------------------------
+\tikzset{
+  entidade/.style={draw, rectangle, rounded corners=2pt, align=left,
+    font=\scriptsize, inner sep=4pt, minimum width=2.7cm, fill=black!4},
+  entidaderef/.style={draw, rectangle, rounded corners=2pt, align=left,
+    font=\scriptsize, inner sep=3pt, minimum width=2.1cm, fill=black!10, dashed},
+  relacao/.style={-{Stealth[length=1.8mm]}, font=\tiny},
+  relacaoconceitual/.style={-{Stealth[length=1.8mm]}, dashed, font=\tiny}
+}
+
+\section{Apresentação do Modelo de Dados}
+
+O RadarTorres é um protótipo que detecta alvos por sensoriamento, seleciona automaticamente a
+torre mais adequada e permite o acionamento manual ou automático de um indicador demonstrativo.
+Para cumprir esse papel, o sistema precisa preservar, entre execuções, dados de naturezas
+distintas: contas de usuário e seus perfis de acesso, o histórico de objetos detectados pelo
+radar, a auditoria de toda ação de acionamento e de toda troca de modo de operação, e os
+chamados de suporte abertos pelos operadores.
+
+Além dos dados de auditoria, o sistema mantém preferências de interface por usuário (idioma,
+tema, tela inicial), o layout personalizado dos painéis (posição, tamanho e visibilidade de cada
+card), as zonas mortas configuradas por um administrador e as configurações de ambiente do
+Arduino (porta serial, placa, sketch). Cada grupo tem finalidade e ciclo de vida próprios, mas
+todos precisam sobreviver ao fechamento da aplicação.
+
+Por não depender de um servidor de banco de dados, o protótipo prioriza simplicidade de
+instalação e execução local/offline — coerente com o estágio atual do projeto (protótipo
+acadêmico, uso demonstrativo). As seções seguintes descrevem a tecnologia de persistência
+empregada, suas vantagens e limitações, as principais entidades identificadas no código e o
+modelo proposto para uma futura migração relacional.
+
+\section{Tecnologia e Implementação}
+
+O protótipo atual \textbf{não utiliza um Sistema Gerenciador de Banco de Dados relacional}. A
+persistência é realizada localmente por meio de arquivos CSV e JSON, sem servidor e sem
+instalação adicional — portanto não há uma \textit{versão de SGBD} a declarar.
+
+Seis entidades usam arquivos \textbf{CSV}, um por tabela, em
+\texttt{\%AppData\%}\allowbreak\texttt{\textbackslash RadarTorres}\allowbreak\texttt{\textbackslash
+Data\textbackslash} (pasta do usuário do Windows, sem privilégio de administrador) — ver a
+coluna "Persistência" da Tabela~\ref{tab:entidades}. Cada arquivo é criado com cabeçalho na
+primeira execução por \texttt{CsvTableStore<T>}; não há \textit{migration} tradicional — o
+próprio código (modelo + mapeamento de colunas) define o schema.
+
+Outras três entidades usam arquivos \textbf{JSON} individuais em
+\texttt{\%LocalAppData\%}\allowbreak\texttt{\textbackslash RadarTorres\textbackslash}: um único
+arquivo por instalação para zonas mortas e para configurações do Arduino, e um arquivo por tela e
+por usuário para o layout dos painéis (nome com o padrão
+\texttt{dashboard-}\allowbreak\texttt{layout-\{tela\}-\{usuário\}.json}). Cada entidade é
+acessada exclusivamente por uma interface de repositório dedicada (ex.:
+\texttt{IUsuario}\allowbreak\texttt{Repository}, \texttt{IDeadZone}\allowbreak\texttt{Repository}),
+isolando ViewModels e Services do formato de armazenamento.
+
+\textbf{Implementação futura proposta:} existe um plano documentado de migração para um banco
+relacional (SQLite ou Entity Framework Core), trocando apenas a implementação de cada
+repositório sem alterar ViewModels/Services. Essa tecnologia \emph{ainda não foi implementada} —
+não há arquivo de banco, tabela SQL ou \textit{migration} no repositório hoje.
+
+\section{Vantagens e Limitações da Solução Atual}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Vantagens e limitações da persistência atual (CSV/JSON)}
+  \label{tab:vantagens}
+  \small
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular}{p{6.6cm}p{6.6cm}}
+    \hline
+    \textbf{Vantagens} & \textbf{Limitações} \\
+    \hline
+    Simplicidade de instalação, sem servidor & Sem integridade referencial imposta pelo
+    armazenamento \\
+    Funcionamento local/offline & Consultas limitadas (sem SQL; filtragem em memória) \\
+    Baixo acoplamento via interfaces de repositório & Tende a não escalar bem para grande
+    volume de dados \\
+    Fácil distribuição (basta copiar a pasta de dados) & Sem controle de concorrência/transações
+    reais \\
+    Adequado ao estágio atual de protótipo & Relacionamentos garantidos só pelo código da
+    aplicação \\
+    \hline
+  \end{tabular}
+\end{table}
+
+Essas limitações não indicam uma decisão equivocada: CSV/JSON atendem plenamente ao escopo de um
+protótipo de uso demonstrativo. A Seção~\ref{sec:proposto} apresenta o modelo pensado para quando
+a evolução do projeto exigir um SGBD relacional.
+
+\section{Principais Dados do Sistema}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Entidades persistidas identificadas no código-fonte}
+  \label{tab:entidades}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{3.1cm}p{5.8cm}p{4.1cm}}
+    \hline
+    \textbf{Entidade} & \textbf{Finalidade} & \textbf{Persistência} \\
+    \hline
+    Usuario & Conta de acesso, perfil e autenticação & CSV\newline\scriptsize\texttt{usuarios.csv} \\
+    PreferenciasUsuario & Preferências de interface por usuário &
+    CSV\newline\scriptsize\texttt{preferencias\_}\allowbreak\texttt{usuario.csv} \\
+    ObjetoDetectado & Histórico de detecções do radar &
+    CSV\newline\scriptsize\texttt{objetos\_}\allowbreak\texttt{detectados.csv} \\
+    AcaoRealizada & Auditoria de acionamentos (só inserção) &
+    CSV\newline\scriptsize\texttt{acoes\_}\allowbreak\texttt{realizadas.csv} \\
+    AlteracaoModo & Auditoria de troca de modo de operação &
+    CSV\newline\scriptsize\texttt{alteracoes\_}\allowbreak\texttt{modo.csv} \\
+    ChamadoAjuda & Chamados de suporte dos usuários &
+    CSV\newline\scriptsize\texttt{chamados\_}\allowbreak\texttt{ajuda.csv} \\
+    DeadZone & Áreas onde alvos são ignorados pelo sistema &
+    JSON\newline\scriptsize\texttt{dead-zones.json} \\
+    Dashboard\allowbreak CardLayout & Layout dos cards do painel, por tela/usuário &
+    JSON\newline\scriptsize\texttt{dashboard-}\allowbreak\texttt{layout-*.json} \\
+    ArduinoSettings & Configurações de ambiente do Arduino &
+    JSON\newline\scriptsize\texttt{arduino-}\allowbreak\texttt{settings.json} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\section{Modelo e Relacionamentos}
+\label{sec:modelo}
+
+A Figura~\ref{fig:usuarios} apresenta as entidades de usuários e configurações; a
+Figura~\ref{fig:monitoramento}, as de monitoramento e auditoria; e a
+Figura~\ref{fig:seguranca}, as de segurança e suporte. \texttt{Usuario} aparece nas três, como
+referência dos relacionamentos que partem dele.
+
+\texttt{Usuario} se relaciona 1:1 com \texttt{PreferenciasUsuario} (chave \texttt{UsuarioId},
+igual a \texttt{Usuario.Id}) e 1:N com \texttt{AcaoRealizada} e \texttt{AlteracaoModo} — nesses
+dois últimos casos por \textbf{Login} (texto), sem chave estrangeira real — e com
+\texttt{ChamadoAjuda}, por \texttt{Id} numérico. \texttt{DashboardCardLayout} se associa a
+\texttt{Usuario} apenas pelo \emph{nome do arquivo} (\texttt{tela-idUsuario}); é uma convenção de
+nomenclatura, não uma chave estrangeira. \texttt{ObjetoDetectado} \textbf{não possui nenhum
+vínculo persistido} com \texttt{AcaoRealizada}, \texttt{Usuario} ou qualquer outra entidade — são
+registros independentes. \texttt{DeadZone} e \texttt{ArduinoSettings} também não se relacionam
+com nenhuma outra entidade: são configurações únicas por instalação, não por usuário.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \node[entidade] (usuario) at (0,0) {%
+      \begin{tabular}{@{}l@{}}\textbf{USUARIO}\\\hline Id (PK)\\ Login\\ Perfil\end{tabular}};
+    \node[entidade] (prefs) at (3.4,0) {%
+      \begin{tabular}{@{}l@{}}\textbf{PREFERENCIAS\_}\\\textbf{USUARIO}\\\hline
+      UsuarioId (PK/FK)\\ Idioma\\ Tema\end{tabular}};
+    \node[entidade] (dash) at (0,-2.1) {%
+      \begin{tabular}{@{}l@{}}\textbf{DASHBOARD\_}\\\textbf{CARD\_LAYOUT}\\\hline
+      Tela+IdUsuario (nome)\\ RelX, RelY\\ IsVisible, ZIndex\end{tabular}};
+    \node[entidade] (arduino) at (3.6,-2.1) {%
+      \begin{tabular}{@{}l@{}}\textbf{ARDUINO\_}\\\textbf{SETTINGS}\\\hline
+      (único p/ instalação)\\ CliPath, BaudRate\\ SelectedFqbn\end{tabular}};
+    \draw[relacao] (usuario) -- node[above]{1:1} (prefs);
+    \draw[relacaoconceitual] (usuario) -- node[left]{arquivo} (dash);
+  \end{tikzpicture}
+  \caption{Modelo de dados relacionado aos usuários e às configurações. \texttt{ArduinoSettings}
+  não possui relação com nenhuma outra entidade (arquivo único da instalação).}
+  \label{fig:usuarios}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \node[entidaderef] (usuario) at (0,1.3) {%
+      \begin{tabular}{@{}l@{}}\textbf{USUARIO}\\\hline Id (PK) / Login\end{tabular}};
+    \node[entidade] (acao) at (-2.2,0) {%
+      \begin{tabular}{@{}l@{}}\textbf{ACAO\_}\\\textbf{REALIZADA}\\\hline
+      Id (PK)\\ UsuarioResponsavel (FK, nullable)\\ Resultado\end{tabular}};
+    \node[entidade] (modo) at (2.2,0) {%
+      \begin{tabular}{@{}l@{}}\textbf{ALTERACAO\_}\\\textbf{MODO}\\\hline
+      Id (PK)\\ UsuarioSolicitante (FK)\\ Resultado\end{tabular}};
+    \node[entidade] (objeto) at (0,-2.1) {%
+      \begin{tabular}{@{}l@{}}\textbf{OBJETO\_DETECTADO}\\\hline
+      Id (PK)\\ X, Y, Quadrante\\ (sem FK — sem relação persistida)\end{tabular}};
+    \draw[relacaoconceitual] (usuario) -- node[left]{1:N (Login)} (acao);
+    \draw[relacaoconceitual] (usuario) -- node[right]{1:N (Login)} (modo);
+  \end{tikzpicture}
+  \caption{Modelo de dados relacionado ao monitoramento e à auditoria. \texttt{ObjetoDetectado}
+  não possui vínculo persistido com nenhuma outra entidade.}
+  \label{fig:monitoramento}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \node[entidaderef] (usuario) at (0,0) {%
+      \begin{tabular}{@{}l@{}}\textbf{USUARIO}\\\hline Id (PK)\end{tabular}};
+    \node[entidade] (chamado) at (3.2,0) {%
+      \begin{tabular}{@{}l@{}}\textbf{CHAMADO\_AJUDA}\\\hline
+      Id (PK)\\ UsuarioId (FK)\\ Status\end{tabular}};
+    \node[entidade] (deadzone) at (0,-2) {%
+      \begin{tabular}{@{}l@{}}\textbf{DEAD\_ZONE}\\\hline
+      Id (PK)\\ Type, Quadrant\\ (único p/ instalação, sem FK)\end{tabular}};
+    \draw[relacao] (usuario) -- node[above]{1:N} (chamado);
+  \end{tikzpicture}
+  \caption{Modelo de dados relacionado à segurança e ao suporte. \texttt{DeadZone} não possui
+  relação com nenhuma outra entidade.}
+  \label{fig:seguranca}
+\end{figure}
+
+\section{Modelo Relacional Proposto}
+\label{sec:proposto}
+
+\textbf{Esta seção descreve uma proposta de migração futura, não o banco atual} — nenhuma dessas
+tabelas, chaves ou \textit{migrations} existe hoje no repositório. A estrutura de dados seria a
+mesma, mas as referências textuais por \texttt{Login} passariam a ser chaves estrangeiras
+íntegras por \texttt{Id} numérico, com integridade garantida pelo próprio SGBD (Figura
+\ref{fig:relacional}).
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[scale=0.95, every node/.style={transform shape}]
+    \node[entidade] (usuarios) at (0,1.4) {%
+      \begin{tabular}{@{}l@{}}\textbf{USUARIOS}\\\hline Id (PK)\\ Login\end{tabular}};
+    \node[entidade] (prefs) at (-3.2,0) {%
+      \begin{tabular}{@{}l@{}}\textbf{PREFERENCIAS\_}\\\textbf{USUARIO}\\\hline
+      UsuarioId (PK/FK)\end{tabular}};
+    \node[entidade] (acoes) at (-1.6,-2.2) {%
+      \begin{tabular}{@{}l@{}}\textbf{ACOES\_}\\\textbf{REALIZADAS}\\\hline
+      Id (PK)\\ UsuarioResponsavel\\Id (FK)\end{tabular}};
+    \node[entidade] (modo) at (2.8,-2.2) {%
+      \begin{tabular}{@{}l@{}}\textbf{ALTERACOES\_}\\\textbf{MODO}\\\hline
+      Id (PK)\\ UsuarioSolicitante\\Id (FK)\end{tabular}};
+    \node[entidade] (chamados) at (4.6,0.6) {%
+      \begin{tabular}{@{}l@{}}\textbf{CHAMADOS\_}\\\textbf{AJUDA}\\\hline
+      Id (PK)\\ UsuarioId (FK)\end{tabular}};
+    \node[entidade] (objetos) at (-5.6,-2.2) {%
+      \begin{tabular}{@{}l@{}}\textbf{OBJETOS\_}\\\textbf{DETECTADOS}\\\hline
+      Id (PK)\\ (sem FK)\end{tabular}};
+    \draw[relacao] (usuarios) -- node[above,sloped]{1:1} (prefs);
+    \draw[relacao] (usuarios) -- node[above,sloped]{1:N} (acoes);
+    \draw[relacao] (usuarios) -- node[above,sloped]{1:N} (modo);
+    \draw[relacao] (usuarios) -- node[above,sloped]{1:N} (chamados);
+  \end{tikzpicture}
+  \caption{Modelo relacional proposto para a migração futura de persistência (CSV/JSON
+  $\rightarrow$ SQL). \texttt{ObjetosDetectados} permanece sem chave estrangeira.}
+  \label{fig:relacional}
+\end{figure}
+
+\section{Conclusão}
+
+A persistência atual, baseada em arquivos CSV e JSON, atende plenamente ao estágio de protótipo
+do RadarTorres, mantendo a instalação simples e o funcionamento totalmente local. O uso de uma
+interface de repositório dedicada para cada entidade mantém a camada de dados desacoplada das
+demais camadas da aplicação, o que viabiliza uma futura migração para um banco relacional de
+forma incremental, sem exigir mudanças em ViewModels ou Services. O modelo atual já preserva as
+informações necessárias de operação, auditoria e configuração exigidas pelo sistema.
+
+\section*{REFERÊNCIAS}
+\small
+\raggedright
+[REFERÊNCIA BIBLIOGRÁFICA A INSERIR]
