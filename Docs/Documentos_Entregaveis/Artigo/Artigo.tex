@@ -183,17 +183,17 @@ Descrição do percurso metodológico adotado para se chegar aos resultados.
 \subsection{Modelo de dados}
 
 Na versão atual do protótipo não há um banco de dados relacional em uso: a persistência é feita
-em arquivos CSV, decisão registrada explicitamente na documentação técnica do projeto, que
-sinaliza a intenção de conversão futura para SQL. Os arquivos ficam em uma pasta por usuário do
-Windows (\texttt{\%AppData\%$\backslash$RadarTorres$\backslash$Data$\backslash$}), um por
-entidade, criados com cabeçalho na primeira execução. Cada tabela é acessada por uma interface de
-repositório dedicada (por exemplo, \texttt{IUsuarioRepository}), o que permite trocar a
-implementação em CSV por uma implementação em SQL sem alterar nenhuma camada de ViewModel ou
-Service. A Tabela 1 resume as seis entidades identificadas.
+em arquivos CSV, um por entidade, cada um acessado por uma interface de repositório dedicada (por
+exemplo, \texttt{IUsuarioRepository}), o que permite trocar essa implementação por uma
+implementação em SQL sem alterar nenhuma camada de ViewModel ou Service. A Tabela 1 resume as seis
+entidades identificadas e a Figura 1 apresenta o modelo lógico correspondente, já no formato
+proposto para a futura migração relacional (entidades, atributos e relacionamentos por chave
+estrangeira íntegra, independente de detalhes de implementação como caminho de arquivo ou tipo de
+armazenamento).
 
 \begin{table}[htbp]
     \begin{center}
-    {\small Tabela 1: Entidades do modelo de dados (persistência em CSV)}\par
+    {\small Tabela 1: Entidades do modelo de dados}\par
     \vspace{0.3em}
     \renewcommand{\arraystretch}{1.3}
     \begin{tabular}{p{3.7cm}p{8.8cm}}
@@ -201,7 +201,7 @@ Service. A Tabela 1 resume as seis entidades identificadas.
         \textbf{Entidade} & \textbf{Descrição} \\
         \hline
         usuarios & Contas de acesso ao aplicativo, com perfil (Administrador, Operador ou
-        Visualizador) e senha armazenada com PBKDF2-HMACSHA256. \\
+        Visualizador) e senha armazenada com hash. \\
         objetos\_detectados & Histórico de detecções: uma linha por primeira detecção de um
         alvo, evitando registrar cada atualização de posição do radar. \\
         acoes\_realizadas & Auditoria de acionamentos de dispositivos, somente inserção, para
@@ -219,18 +219,22 @@ Service. A Tabela 1 resume as seis entidades identificadas.
     \end{center}
 \end{table}
 
-Não há integridade referencial imposta pelo armazenamento atual: campos como
-\texttt{UsuarioResponsavel} e \texttt{UsuarioSolicitante} referenciam o login do usuário como
-texto, validado apenas pelo código da aplicação, e não por uma chave estrangeira real.
+\begin{figure}[htbp]
+    \begin{center}
+    \includegraphics[width=\textwidth]{../Banco_de_Dados/figuras/DER_Proposto.png}
+    \vspace{0.3em}\par
+    {\small Figura 1: Modelo lógico de dados do RadarTorres.}\par
+    {\small Fonte: elaborado pelos autores a partir do código-fonte do projeto.}
+    \end{center}
+\end{figure}
 
-Para a migração futura, propõe-se implementar uma versão SQL de cada repositório (por exemplo,
-via Entity Framework Core), mantendo a mesma assinatura de método das interfaces já existentes, e
-trocar apenas o registro da implementação no contêiner de injeção de dependência. Com um SGBD
-relacional, as referências textuais por login passariam a ser chaves estrangeiras íntegras por
-identificador numérico, e a relação entre \texttt{usuarios} e \texttt{preferencias\_usuario}
-passaria a ter integridade garantida pelo próprio banco. Nenhuma dessas tabelas SQL, migration ou
-arquivo de banco existe no repositório até o momento; trata-se de uma proposta baseada no
-planejamento já documentado pela equipe do projeto.
+No armazenamento atual (CSV) não há integridade referencial imposta pelo formato de arquivo:
+campos como \texttt{UsuarioResponsavel} referenciam o login do usuário como texto, validado
+apenas pelo código da aplicação. O modelo lógico da Figura 1 já representa a evolução proposta,
+em que essas referências textuais passam a ser chaves estrangeiras íntegras por identificador
+numérico, com integridade garantida pelo próprio SGBD ao migrar a persistência para SQL (por
+exemplo, via Entity Framework Core), sem exigir mudanças nas interfaces de repositório já
+existentes nem nas camadas de ViewModel/Service que dependem delas.
 
 \subsection{Resultados e discussão}
 
