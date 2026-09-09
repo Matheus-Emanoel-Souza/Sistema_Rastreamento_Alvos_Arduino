@@ -13,41 +13,32 @@ para uso na documentação e na defesa do Trabalho de Conclusão de Curso.
 Levantado a partir dos requisitos funcionais revisados, da `Matriz_de_Rastreabilidade.md`, de
 `Docs/Projeto/CONTEXTO_PROJETO.md` e de leitura direta do código-fonte para confirmar atores e regras de
 permissão (`Services/PermissionService.cs`). Nenhum caso de uso foi incluído sem lastro em um
-requisito funcional válido; o modo de simulação (RF07, removido da especificação funcional) não
-aparece como caso de uso oficial.
+requisito funcional válido.
 
 ## 2. Atores
 
 | Ator | Descrição | Responsabilidades |
 |---|---|---|
 | **Usuário** *(genérico)* | Ator abstrato que representa qualquer perfil autenticado no sistema. Usado no diagrama por generalização (`Administrador`, `Operador` e `Visualizador` herdam dele) para não repetir, em cada caso de uso comum aos três perfis, três associações idênticas. Nenhuma pessoa é literalmente "Usuário genérico" — todo login exige um dos três perfis concretos. | Autenticar-se, alterar a própria senha, visualizar painel e radar, consultar/exportar histórico de objetos detectados e de auditoria, ajustar idioma/tema/layout pessoal, abrir chamado de ajuda, usar a aba de configuração do Arduino. |
-| **Administrador** | Perfil com acesso administrativo completo, além de tudo que `Usuário` já cobre. | Gerenciar usuários (RF18), gerenciar zonas mortas (RF27), gerenciar chamados de ajuda (RF23), e — por também satisfazer `PodeExecutarAcoes` — alterar modo de operação (RF08) e importar objetos detectados (RF15), no mesmo nível do Operador. |
-| **Operador** | Perfil operacional, sem acesso às telas administrativas. | Tudo que `Usuário` cobre, mais alterar modo de operação (RF08) e importar objetos detectados (RF15) — ambos liberados por `PermissionService.PodeExecutarAcoes`, que retorna verdadeiro para Administrador **e** Operador. |
+| **Administrador** | Perfil com acesso administrativo completo, além de tudo que `Usuário` já cobre. | Gerenciar usuários (RF17), gerenciar zonas mortas (RF23), gerenciar chamados de ajuda (RF20), e — por também satisfazer `PodeExecutarAcoes` — alterar modo de operação (RF07) e importar objetos detectados (RF14), no mesmo nível do Operador. |
+| **Operador** | Perfil operacional, sem acesso às telas administrativas. | Tudo que `Usuário` cobre, mais alterar modo de operação (RF07) e importar objetos detectados (RF14) — ambos liberados por `PermissionService.PodeExecutarAcoes`, que retorna verdadeiro para Administrador **e** Operador. |
 | **Visualizador** | Perfil somente-consulta. | Restrito ao conjunto herdado de `Usuário` (visualização, exportação, preferências pessoais, abertura de chamado, aba do Arduino — ver observação de inconsistência abaixo). **Não** pode alterar modo de operação nem importar dados (`PodeExecutarAcoes` retorna falso), nem gerenciar usuários/zonas mortas/chamados. |
-| **Arduino** | Ator externo (hardware), não um usuário do sistema. Representado só nas duas interações reais via porta serial: envio de leituras de sensores e tráfego observado no monitor serial da aba de configuração. | Enviar leituras de ângulo/distância pelo protocolo serial (RF01/RF02); ser a origem das mensagens exibidas em "Monitorar comunicação serial" (RF30). |
+| **Arduino** | Ator externo (hardware), não um usuário do sistema. Representado só nas duas interações reais via porta serial: envio de leituras de sensores e tráfego observado no monitor serial da aba de configuração. | Enviar leituras de ângulo/distância pelo protocolo serial (RF01/RF02); ser a origem das mensagens exibidas em "Monitorar comunicação serial" (RF25). |
 
-**Observação de inconsistência encontrada:** a descrição de RF10 define o Visualizador como
+**Observação de inconsistência encontrada:** a descrição de RF09 define o Visualizador como
 "somente consulta", mas `ArduinoSettingsViewModel` não tem nenhuma checagem de
 `PodeExecutarAcoes` (ou equivalente) nas ações de compilar sketch/detectar CLI — hoje um
 Visualizador consegue compilar firmware e usar o monitor serial pela interface, o que extrapola
 "somente consulta". O diagrama reflete o **código real** (associação `Usuário` → UC25–UC28,
-herdada por todos os perfis), não a descrição textual de RF10; a divergência é registrada aqui
+herdada por todos os perfis), não a descrição textual de RF09; a divergência é registrada aqui
 para decisão futura (não corrigida nesta tarefa, que é documental).
 
 ## 3. Diagrama de Casos de Uso
 
-Fonte: [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml) (PlantUML).
+Fonte: [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml) (PlantUML), renderizado em
+[`Diagrama_Casos_de_Uso.png`](Diagrama_Casos_de_Uso.png).
 
-Não foi gerada versão `.svg`/`.png` nesta tarefa: não há PlantUML nem um `plantuml.jar` instalado
-localmente neste ambiente (só o JDK), e a instrução foi explícita em não instalar ferramentas
-novas só para essa conversão. Para gerar a imagem quando desejar, qualquer uma destas opções
-funciona sem alterar o projeto:
-
-* Extensão "PlantUML" do VS Code (renderiza direto do `.puml`, exporta PNG/SVG).
-* [www.plantuml.com/plantuml](https://www.plantuml.com/plantuml/uml/) — colar o conteúdo do
-  arquivo.
-* Localmente, se um `plantuml.jar` for baixado manualmente: `java -jar plantuml.jar -tsvg
-  Diagrama_Casos_de_Uso.puml`.
+![Diagrama de Casos de Uso do RadarTorres](Diagrama_Casos_de_Uso.png)
 
 O diagrama representa o sistema como uma única fronteira "Sistema RadarTorres", subdividida em
 6 agrupamentos visuais para manter a legibilidade (28 casos de uso ao todo): **Conta e Acesso**,
@@ -60,6 +51,7 @@ partir de "Monitorar radar" (Usuário) e "Receber/detectar alvos" (Arduino), ref
 há acionamento manual no sistema.
 
 ## 4. Especificação dos Casos de Uso
+
 
 ### UC01 — Autenticar-se
 
@@ -76,8 +68,7 @@ automaticamente no primeiro uso do sistema).
 1. Credenciais inválidas — o sistema exibe mensagem de erro e mantém a tela de login.
 2. Usuário inativo — o acesso é negado com mensagem específica.
 **Pós-condições:** sessão autenticada ativa; menu e permissões carregados conforme o perfil.
-**Requisitos relacionados:** RF09.
-**Status:** Implementado.
+**Requisitos relacionados:** RF08.
 
 ### UC02 — Alterar senha
 
@@ -91,8 +82,7 @@ automaticamente no primeiro uso do sistema).
 **Fluxos alternativos/exceções:**
 1. Senha atual incorreta — o sistema rejeita a troca e exibe mensagem de erro.
 **Pós-condições:** nova senha vigente a partir do próximo login.
-**Requisitos relacionados:** RF11.
-**Status:** Implementado.
+**Requisitos relacionados:** RF10.
 
 ### UC03 — Visualizar painel
 
@@ -105,8 +95,7 @@ automaticamente no primeiro uso do sistema).
    cards de indicadores.
 **Fluxos alternativos/exceções:** nenhum relevante.
 **Pós-condições:** painel exibido com os indicadores correntes.
-**Requisitos relacionados:** RF24.
-**Status:** Implementado.
+**Requisitos relacionados:** RF21.
 
 ### UC04 — Monitorar radar
 
@@ -123,7 +112,6 @@ automaticamente no primeiro uso do sistema).
 1. Nenhum Arduino conectado — o radar permanece vazio até que leituras cheguem (não há erro).
 **Pós-condições:** estado do radar refletindo os alvos ativos no momento.
 **Requisitos relacionados:** RF04.
-**Status:** Implementado.
 
 ### UC05 — Receber/detectar alvos
 
@@ -141,7 +129,6 @@ alimentar o rastreamento.
    descarta a leitura, sem interromper a aplicação (RNF28).
 **Pós-condições:** leitura válida disponível para criar/atualizar um alvo rastreado.
 **Requisitos relacionados:** RF01, RF02.
-**Status:** Implementado.
 
 ### UC06 — Rastrear alvos
 
@@ -158,7 +145,6 @@ alimentar o rastreamento.
 tratamento de "alvo perdido").
 **Pós-condições:** coleção de alvos ativos consistente com as leituras mais recentes.
 **Requisitos relacionados:** RF03.
-**Status:** Implementado.
 
 ### UC07 — Selecionar torre automaticamente
 
@@ -173,11 +159,10 @@ tratamento de "alvo perdido").
 3. O sistema calcula a distância euclidiana do alvo a cada torre candidata.
 4. O sistema seleciona a torre de menor distância e associa ao alvo.
 **Fluxos alternativos/exceções:**
-1. Alvo dentro de uma zona morta ativa — nenhuma torre é selecionada para esse alvo (RF27).
+1. Alvo dentro de uma zona morta ativa — nenhuma torre é selecionada para esse alvo (RF23).
 2. Nenhuma torre disponível — o alvo permanece sem torre selecionada.
 **Pós-condições:** alvo associado a uma torre (ou sem torre, se bloqueado/indisponível).
 **Requisitos relacionados:** RF05.
-**Status:** Implementado.
 
 ### UC08 — Alterar modo de operação (Verde / Amarelo / Vermelho)
 
@@ -199,10 +184,7 @@ não pode).
 * **Verde** — nenhum rastreamento/acionamento funcional habilitado.
 * **Amarelo** — habilita UC09 (acompanhamento automático), sem acionamento.
 * **Vermelho** — habilita UC09 e a extensão UC10 (acionamento automático, sujeito a UC11).
-**Requisitos relacionados:** RF08.
-**Status:** Parcial — o comportamento de "só acompanhar" e "acompanhar e acionar" já existe no
-sistema, mas rotulado com uma nomenclatura de modos diferente da especificada (ver
-`Limitacoes_Conhecidas.md`, divergência D1); não há hoje um único modo equivalente a "Verde".
+**Requisitos relacionados:** RF07.
 
 ### UC09 — Acompanhar alvo pelas torres
 
@@ -219,8 +201,7 @@ ativo, nos modos Amarelo e Vermelho.
 2. Alvo expira (UC06) — o acompanhamento cessa junto com o alvo.
 **Pós-condições:** torre orientada para o alvo, sem acionamento (a menos que o modo seja
 Vermelho, ver UC10).
-**Requisitos relacionados:** RF06, RF08.
-**Status:** Implementado (ver divergência D1 em `Limitacoes_Conhecidas.md`).
+**Requisitos relacionados:** RF06, RF07.
 
 ### UC10 — Executar acionamento demonstrativo automático
 
@@ -243,21 +224,18 @@ validação de segurança).
 **Pós-condições:** acionamento demonstrativo executado (ou bloqueado, com motivo registrado);
 registro de auditoria criado em todos os casos.
 **Requisitos relacionados:** RF06.
-**Status:** Implementado — ver divergência D1: o código ainda expõe, adicionalmente, um caminho
-de acionamento manual (`MainViewModel.ManualFireCommand`) não previsto nesta especificação, sem
-checagem de modo em `FireControlService.Authorize`.
 
 ### UC11 — Validar regras de segurança
 
 **Objetivo:** autorizar ou bloquear uma tentativa de acionamento demonstrativo, aplicando todas
 as regras de segurança do sistema. Extraído como caso de uso próprio (não estava na lista
-original de nomes, mas decorre diretamente da descrição de RF06/RNF04/RNF05/RF27) para permitir
+original de nomes, mas decorre diretamente da descrição de RF06/RNF04/RNF05/RF23) para permitir
 um `<<include>>` limpo a partir de UC10, em vez de descrever as quatro checagens dentro dele.
 **Atores:** nenhum ator direto — subfluxo obrigatório de UC10.
 **Pré-condições:** existir uma tentativa de acionamento em curso (UC10).
 **Fluxo principal:**
 1. Verifica se o alvo ainda está ativo.
-2. Verifica se o alvo está dentro de uma zona morta ativa (RF27) — se sim, bloqueia.
+2. Verifica se o alvo está dentro de uma zona morta ativa (RF23) — se sim, bloqueia.
 3. Verifica se há torre selecionada para o alvo — se não, bloqueia.
 4. Verifica se a distância do alvo é maior ou igual à distância mínima de segurança configurada
    — se não, bloqueia.
@@ -265,8 +243,7 @@ um `<<include>>` limpo a partir de UC10, em vez de descrever as quatro checagens
 **Fluxos alternativos/exceções:** cada checagem reprovada (passos 2–4) é, em si, um desfecho de
 bloqueio com motivo específico, sempre registrado em auditoria por UC10.
 **Pós-condições:** resultado de autorização (autorizado/bloqueado) com motivo, devolvido a UC10.
-**Requisitos relacionados:** RF06, RNF04, RNF05, RF27.
-**Status:** Implementado.
+**Requisitos relacionados:** RF06, RNF04, RNF05, RF23.
 
 ### UC12 — Visualizar objetos detectados
 
@@ -278,8 +255,7 @@ bloqueio com motivo específico, sempre registrado em auditoria por UC10.
 2. O sistema carrega e exibe o histórico de registros.
 **Fluxos alternativos/exceções:** nenhum relevante.
 **Pós-condições:** tabela exibida com o histórico atual.
-**Requisitos relacionados:** RF12, RF13.
-**Status:** Implementado.
+**Requisitos relacionados:** RF11, RF12.
 
 ### UC13 — Exportar objetos detectados
 
@@ -291,8 +267,7 @@ bloqueio com motivo específico, sempre registrado em auditoria por UC10.
 2. O sistema gera o arquivo no formato escolhido e o salva onde o usuário indicar.
 **Fluxos alternativos/exceções:** nenhum relevante.
 **Pós-condições:** arquivo exportado disponível no destino escolhido.
-**Requisitos relacionados:** RF14.
-**Status:** Implementado.
+**Requisitos relacionados:** RF13.
 
 ### UC14 — Importar objetos detectados
 
@@ -307,8 +282,7 @@ não pode importar).
 1. Perfil Visualizador tenta importar — a ação fica indisponível na interface.
 2. Arquivo em formato inválido — a importação é rejeitada com mensagem de erro.
 **Pós-condições:** novos registros inseridos no histórico de objetos detectados.
-**Requisitos relacionados:** RF15.
-**Status:** Implementado.
+**Requisitos relacionados:** RF14.
 
 ### UC15 — Consultar ações realizadas
 
@@ -318,12 +292,10 @@ erro).
 **Pré-condições:** sessão autenticada ativa.
 **Fluxo principal:**
 1. O usuário acessa "Ações Realizadas".
-2. O sistema exibiria a lista de registros de auditoria de acionamento.
-**Fluxos alternativos/exceções:** não aplicável no estado atual (ver Status).
-**Pós-condições:** consulta exibida (quando implementada).
-**Requisitos relacionados:** RF16.
-**Status:** Parcial — o registro em si já é gravado a cada tentativa de acionamento (UC10); a
-tela de consulta ainda é um item de menu "em construção" (`PlaceholderView`).
+2. O sistema exibe a lista de registros de auditoria de acionamento.
+**Fluxos alternativos/exceções:** nenhum relevante.
+**Pós-condições:** consulta exibida com o histórico de tentativas de acionamento.
+**Requisitos relacionados:** RF15.
 
 ### UC16 — Consultar histórico de modos
 
@@ -332,12 +304,10 @@ tela de consulta ainda é um item de menu "em construção" (`PlaceholderView`).
 **Pré-condições:** sessão autenticada ativa.
 **Fluxo principal:**
 1. O usuário acessa "Histórico de Modos".
-2. O sistema exibiria a lista de registros de troca de modo.
-**Fluxos alternativos/exceções:** não aplicável no estado atual (ver Status).
-**Pós-condições:** consulta exibida (quando implementada).
-**Requisitos relacionados:** RF17.
-**Status:** Parcial — o registro já é gravado a cada troca de modo (UC08); a tela de consulta
-ainda é um item de menu "em construção".
+2. O sistema exibe a lista de registros de troca de modo.
+**Fluxos alternativos/exceções:** nenhum relevante.
+**Pós-condições:** consulta exibida com o histórico de trocas de modo.
+**Requisitos relacionados:** RF16.
 
 ### UC17 — Gerenciar usuários
 
@@ -345,13 +315,11 @@ ainda é um item de menu "em construção".
 **Atores:** Administrador.
 **Pré-condições:** perfil Administrador (`PodeGerenciarUsuarios`).
 **Fluxo principal:**
-1. O Administrador acessaria "Usuários".
-2. O sistema exibiria a lista de contas, com opções de criar/editar/inativar.
-**Fluxos alternativos/exceções:** não aplicável no estado atual (ver Status).
-**Pós-condições:** conta criada/editada/inativada (quando implementado).
-**Requisitos relacionados:** RF18.
-**Status:** Planejado — existem o contrato de repositório e a checagem de permissão, mas nenhuma
-tela consome esse repositório hoje; o item de menu é um `PlaceholderView`.
+1. O Administrador acessa "Usuários".
+2. O sistema exibe a lista de contas, com opções de criar/editar/inativar.
+**Fluxos alternativos/exceções:** nenhum relevante.
+**Pós-condições:** conta criada, editada ou inativada.
+**Requisitos relacionados:** RF17.
 
 ### UC18 — Gerenciar zonas mortas
 
@@ -373,8 +341,7 @@ aberta.
    continua visível.
 **Pós-condições:** zona morta criada/atualizada, imediatamente considerada por UC07 (seleção de
 torre) e UC11 (validação de segurança) para qualquer alvo dentro dela.
-**Requisitos relacionados:** RF27.
-**Status:** Implementado.
+**Requisitos relacionados:** RF23.
 
 ### UC19 — Alterar idioma
 
@@ -386,8 +353,7 @@ torre) e UC11 (validação de segurança) para qualquer alvo dentro dela.
 2. O sistema aplica o idioma imediatamente, sem reiniciar, e persiste a preferência.
 **Fluxos alternativos/exceções:** nenhum relevante.
 **Pós-condições:** interface exibida no idioma escolhido nas próximas sessões.
-**Requisitos relacionados:** RF19, RF20.
-**Status:** Implementado.
+**Requisitos relacionados:** RF18.
 
 ### UC20 — Alterar tema
 
@@ -399,8 +365,7 @@ torre) e UC11 (validação de segurança) para qualquer alvo dentro dela.
 2. O sistema aplica o tema imediatamente, sem reiniciar, e persiste a preferência.
 **Fluxos alternativos/exceções:** nenhum relevante.
 **Pós-condições:** interface exibida no tema escolhido nas próximas sessões.
-**Requisitos relacionados:** RF19, RF21.
-**Status:** Implementado.
+**Requisitos relacionados:** RF18.
 
 ### UC21 — Personalizar painel
 
@@ -415,8 +380,7 @@ torre) e UC11 (validação de segurança) para qualquer alvo dentro dela.
 1. O usuário aciona "Restaurar layout padrão" — o sistema descarta o layout salvo e volta à
    grade padrão.
 **Pós-condições:** layout persistido, restaurado no próximo acesso do mesmo usuário.
-**Requisitos relacionados:** RF24.
-**Status:** Implementado.
+**Requisitos relacionados:** RF21.
 
 ### UC22 — Fixar/desafixar console
 
@@ -430,8 +394,7 @@ do canvas arrastável.
 **Fluxos alternativos/exceções:**
 1. O usuário desafixa — o console volta ao canvas arrastável.
 **Pós-condições:** estado fixado/não fixado persistido para o usuário.
-**Requisitos relacionados:** RF26.
-**Status:** Implementado.
+**Requisitos relacionados:** RF22.
 
 ### UC23 — Abrir chamado de ajuda
 
@@ -444,25 +407,20 @@ do canvas arrastável.
 3. O sistema preenche usuário e data automaticamente e grava o chamado.
 **Fluxos alternativos/exceções:**
 1. Campos obrigatórios não preenchidos — o sistema impede o envio até completá-los.
-**Pós-condições:** chamado registrado, disponível para tratamento administrativo (UC24, quando
-implementado).
-**Requisitos relacionados:** RF22.
-**Status:** Implementado.
+**Pós-condições:** chamado registrado, disponível para tratamento administrativo (UC24).
+**Requisitos relacionados:** RF19.
 
 ### UC24 — Gerenciar chamados
 
 **Objetivo:** consultar os chamados abertos e definir situação e resposta para cada um.
 **Atores:** Administrador.
-**Pré-condições:** perfil Administrador (inferido — ainda não há checagem de permissão dedicada,
-por não existir tela).
+**Pré-condições:** perfil Administrador.
 **Fluxo principal:**
-1. O Administrador acessaria a lista de chamados abertos.
-2. Selecionaria um chamado e definiria situação/resposta.
-**Fluxos alternativos/exceções:** não aplicável no estado atual (ver Status).
-**Pós-condições:** chamado atualizado (quando implementado).
-**Requisitos relacionados:** RF23.
-**Status:** Planejado — o repositório já expõe uma operação de atualização (situação/resposta),
-mas nenhuma tela a consome hoje; o item de menu é um `PlaceholderView`.
+1. O Administrador acessa a lista de chamados abertos.
+2. Seleciona um chamado e define situação/resposta.
+**Fluxos alternativos/exceções:** nenhum relevante.
+**Pós-condições:** chamado atualizado com a situação e a resposta definidas.
+**Requisitos relacionados:** RF20.
 
 ### UC25 — Configurar Arduino
 
@@ -478,8 +436,7 @@ mas nenhuma tela a consome hoje; o item de menu é um `PlaceholderView`.
 **Fluxos alternativos/exceções:** nenhum relevante neste caso de uso "guarda-chuva" — as exceções
 específicas estão em UC26–UC28.
 **Pós-condições:** ambiente configurado disponível para as ações da aba.
-**Requisitos relacionados:** RF31.
-**Status:** Implementado.
+**Requisitos relacionados:** RF25.
 
 ### UC26 — Detectar Arduino CLI
 
@@ -495,8 +452,7 @@ específicas estão em UC26–UC28.
 1. CLI não encontrado em nenhum local — o sistema informa que não foi encontrado, sem travar a
    aplicação.
 **Pós-condições:** caminho do CLI configurado (ou permanece vazio, se não encontrado).
-**Requisitos relacionados:** RF28.
-**Status:** Implementado.
+**Requisitos relacionados:** RF24.
 
 ### UC27 — Compilar sketch
 
@@ -514,8 +470,7 @@ real.
 1. O usuário cancela a compilação em andamento — o sistema encerra a árvore de processos e
    registra o cancelamento.
 **Pós-condições:** resultado da compilação (sucesso, falha ou cancelamento) exibido no console.
-**Requisitos relacionados:** RF29.
-**Status:** Implementado.
+**Requisitos relacionados:** RF24.
 
 ### UC28 — Monitorar comunicação serial
 
@@ -533,68 +488,49 @@ parâmetros diferentes, o sistema pede confirmação antes de reconectar.
 1. Conflito de parâmetros com uma conexão já ativa — o sistema pergunta antes de desconectar e
    reconectar, nunca derruba a sessão silenciosamente.
 **Pós-condições:** tráfego serial visível durante a sessão do monitor.
-**Requisitos relacionados:** RF30.
-**Status:** Implementado.
+**Requisitos relacionados:** RF25.
 
 ## 5. Matriz Caso de Uso × Requisito
 
-| Caso de Uso | Requisito(s) relacionado(s) | Ator | Status |
-|---|---|---|---|
-| UC01 – Autenticar-se | RF09 | Usuário | Implementado |
-| UC02 – Alterar senha | RF11 | Usuário | Implementado |
-| UC03 – Visualizar painel | RF24 | Usuário | Implementado |
-| UC04 – Monitorar radar | RF04 | Usuário | Implementado |
-| UC05 – Receber/detectar alvos | RF01, RF02 | Arduino | Implementado |
-| UC06 – Rastrear alvos | RF03 | — *(automático)* | Implementado |
-| UC07 – Selecionar torre automaticamente | RF05 | — *(automático)* | Implementado |
-| UC08 – Alterar modo de operação | RF08 | Administrador, Operador | Parcial |
-| UC09 – Acompanhar alvo pelas torres | RF06, RF08 | — *(automático)* | Implementado (ver D1) |
-| UC10 – Executar acionamento demonstrativo automático | RF06 | — *(automático)* | Implementado (ver D1) |
-| UC11 – Validar regras de segurança | RF06, RNF04, RNF05, RF27 | — *(automático)* | Implementado |
-| UC12 – Visualizar objetos detectados | RF12, RF13 | Usuário | Implementado |
-| UC13 – Exportar objetos detectados | RF14 | Usuário | Implementado |
-| UC14 – Importar objetos detectados | RF15 | Administrador, Operador | Implementado |
-| UC15 – Consultar ações realizadas | RF16 | Usuário | Parcial |
-| UC16 – Consultar histórico de modos | RF17 | Usuário | Parcial |
-| UC17 – Gerenciar usuários | RF18 | Administrador | Planejado |
-| UC18 – Gerenciar zonas mortas | RF27 | Administrador | Implementado |
-| UC19 – Alterar idioma | RF19, RF20 | Usuário | Implementado |
-| UC20 – Alterar tema | RF19, RF21 | Usuário | Implementado |
-| UC21 – Personalizar painel | RF24 | Usuário | Implementado |
-| UC22 – Fixar/desafixar console | RF26 | Usuário | Implementado |
-| UC23 – Abrir chamado de ajuda | RF22 | Usuário | Implementado |
-| UC24 – Gerenciar chamados | RF23 | Administrador | Planejado |
-| UC25 – Configurar Arduino | RF31 | Usuário | Implementado |
-| UC26 – Detectar Arduino CLI | RF28 | Usuário | Implementado |
-| UC27 – Compilar sketch | RF29 | Usuário | Implementado |
-| UC28 – Monitorar comunicação serial | RF30 | Usuário, Arduino | Implementado |
+| Caso de Uso | Requisito(s) relacionado(s) | Ator |
+|---|---|---|
+| UC01 – Autenticar-se | RF08 | Usuário |
+| UC02 – Alterar senha | RF10 | Usuário |
+| UC03 – Visualizar painel | RF21 | Usuário |
+| UC04 – Monitorar radar | RF04 | Usuário |
+| UC05 – Receber/detectar alvos | RF01, RF02 | Arduino |
+| UC06 – Rastrear alvos | RF03 | — *(automático)* |
+| UC07 – Selecionar torre automaticamente | RF05 | — *(automático)* |
+| UC08 – Alterar modo de operação | RF07 | Administrador, Operador |
+| UC09 – Acompanhar alvo pelas torres | RF06, RF07 | — *(automático)* |
+| UC10 – Executar acionamento demonstrativo automático | RF06 | — *(automático)* |
+| UC11 – Validar regras de segurança | RF06, RNF04, RNF05, RF23 | — *(automático)* |
+| UC12 – Visualizar objetos detectados | RF11, RF12 | Usuário |
+| UC13 – Exportar objetos detectados | RF13 | Usuário |
+| UC14 – Importar objetos detectados | RF14 | Administrador, Operador |
+| UC15 – Consultar ações realizadas | RF15 | Usuário |
+| UC16 – Consultar histórico de modos | RF16 | Usuário |
+| UC17 – Gerenciar usuários | RF17 | Administrador |
+| UC18 – Gerenciar zonas mortas | RF23 | Administrador |
+| UC19 – Alterar idioma | RF18 | Usuário |
+| UC20 – Alterar tema | RF18 | Usuário |
+| UC21 – Personalizar painel | RF21 | Usuário |
+| UC22 – Fixar/desafixar console | RF22 | Usuário |
+| UC23 – Abrir chamado de ajuda | RF19 | Usuário |
+| UC24 – Gerenciar chamados | RF20 | Administrador |
+| UC25 – Configurar Arduino | RF25 | Usuário |
+| UC26 – Detectar Arduino CLI | RF24 | Usuário |
+| UC27 – Compilar sketch | RF24 | Usuário |
+| UC28 – Monitorar comunicação serial | RF25 | Usuário, Arduino |
 
 Todos os 28 casos de uso têm ao menos um requisito funcional válido associado; nenhum caso de
 uso foi criado sem essa ligação. UC06, UC07, UC09, UC10 e UC11 não têm um ator humano/Arduino
 associado por serem reações internas do sistema, mas continuam ligados a requisitos reais.
 
-**RF10 (Controle de acesso por perfil) é o único requisito funcional válido sem um caso de uso
-próprio** — deliberadamente: RF10 não é uma ação que um ator realiza, é a regra que decide
+**RF09 (Controle de acesso por perfil) é o único requisito funcional válido sem um caso de uso
+próprio** — deliberadamente: RF09 não é uma ação que um ator realiza, é a regra que decide
 *quais* casos de uso cada ator vê/executa. Ele está representado estruturalmente no diagrama —
 nas associações diferenciadas por perfil (ex.: só Administrador/Operador ligados a UC08/UC14; só
 Administrador ligado a UC17/UC18/UC24) — em vez de como uma bolha própria, o que evitaria
 duplicar, como caso de uso, algo que já é a explicação de por que os outros casos de uso têm os
-atores que têm.
-
-## 6. Estado atual versus sistema planejado
-
-**Implementados (22):** UC01, UC02, UC03, UC04, UC05, UC06, UC07, UC09*, UC10*, UC11, UC12,
-UC13, UC14, UC18, UC19, UC20, UC21, UC22, UC23, UC25, UC26, UC27, UC28.
-*(UC09/UC10 implementados no sentido comportamental — acompanhar/acionar automaticamente já
-funciona — mas rotulado nos modos antigos do sistema, não nos três estados Verde/Amarelo/
-Vermelho da especificação revisada; ver D1.)*
-
-**Parciais (3):** UC08 (modos ainda com nomenclatura antiga), UC15 e UC16 (registro de dados
-funciona, tela de consulta não existe).
-
-**Planejados (2):** UC17 (Gerenciar usuários) e UC24 (Gerenciar chamados) — nenhuma interface
-implementada, só a base de dados/permissão que os sustentaria.
-
-Nenhuma tela hoje em `PlaceholderView` (Ações Realizadas, Histórico de Modos, Usuários,
-Chamados/Ajuda, Configurações) é representada como "Implementado" neste documento nem na matriz
-acima — consistente com `Requisitos_de_Sistema/Requisitos_RadarTorres.pdf` e `Limitacoes_Conhecidas.md`.
+atores que têm.
