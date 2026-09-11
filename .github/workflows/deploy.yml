@@ -1,3 +1,4 @@
+# Publica site/ no GitHub Pages. Requer Settings -> Pages -> Source = "GitHub Actions".
 name: Deploy site (GitHub Pages)
 
 on:
