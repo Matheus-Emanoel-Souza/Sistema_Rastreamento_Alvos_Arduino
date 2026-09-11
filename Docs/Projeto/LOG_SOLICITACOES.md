@@ -585,3 +585,46 @@ instalado no lugar.
 - Os `.md` continuam sendo a fonte canônica; os PDFs são um artefato derivado, regenerável a
   qualquer momento a partir deles.
 - Nenhuma alteração de código-fonte. Nenhum commit/push/branch feito.
+
+---
+
+## 2026-09-11 — Site oficial do projeto (documentação/TCC/portfólio) via GitHub Pages
+
+**Pedido:** criar um site oficial hospedado no GitHub Pages, funcionando como documentação
+técnica, apresentação do TCC, portfólio e central dos documentos existentes — stack preferida
+React + TypeScript + Tailwind CSS + Vite, com 9 páginas (Home, Projeto, Arquitetura,
+Tecnologias, Visão Computacional, Documentação, Testes, Galeria, Sobre), demonstração
+interativa do radar, deploy automático via GitHub Actions, sem duplicar documentos existentes.
+
+**Antes de codar:** repositório analisado (README, `Docs/Projeto/CONTEXTO_PROJETO.md` como
+"handoff", `Docs/Tecnica/*`, `Docs/Documentos_Entregaveis/*`); branch de trabalho atual
+(`tratamento-de-imagens`) identificada como WIP local não relacionado e não pushada — nova
+branch `feature/site-documentacao` criada a partir de `main` para este trabalho. Plano
+apresentado e aprovado antes da implementação (1 pergunta de esclarecimento sobre estratégia
+de roteamento: HashRouter escolhido).
+
+**Entregue:**
+
+- `site/` — projeto Vite + React 19 + TypeScript + Tailwind CSS v4, `base` configurado para
+  `/Sistema_Rastreamento_Alvos_Arduino/`. Pasta `docs/` evitada de propósito: colidiria
+  case-insensitive com `Docs/` já existente no Windows.
+- 9 páginas em `site/src/pages/`, componentes reutilizáveis (`TechCard`, `Timeline`,
+  `Diagram`, `DocumentationCard`, `RadarSimulation`) em `site/src/components/`, dados
+  estruturados (tecnologias, documentação, testes, timeline) em `site/src/data/`.
+- `RadarSimulation` (Canvas HTML, `site/src/components/radar/`): reproduz em TypeScript a
+  lógica real de `CoordinateConverter`/`QuadrantHelper`/`TowerSelectionService`
+  (`radarMath.ts`) — arrastar o alvo ou usar os sliders recalcula quadrante, distância e
+  torre selecionada ao vivo, não é decorativo.
+- Página Documentação linka os arquivos reais do repositório via URL do GitHub (nenhum
+  documento duplicado dentro do site).
+- Roteamento com `HashRouter` (react-router-dom) — zero configuração extra necessária no
+  GitHub Pages.
+- `.github/workflows/deploy.yml`: build (`npm ci && npm run build` em `site/`) e publicação
+  via `actions/upload-pages-artifact` + `actions/deploy-pages` a cada push em `main` que
+  toque `site/**`; `site/dist` nunca é commitado.
+- Build (`npm run build`) e lint (`npm run lint`, oxlint) validados sem erros/warnings;
+  smoke test do `npm run preview` confirmado (HTTP 200 no path base correto).
+- **Pendência que depende do usuário:** em Settings → Pages do repositório no GitHub, mudar
+  "Source" para "GitHub Actions" — não é possível fazer isso via Git.
+- Commits locais feitos na branch `feature/site-documentacao`; **push não realizado** sem
+  autorização explícita na sessão.
