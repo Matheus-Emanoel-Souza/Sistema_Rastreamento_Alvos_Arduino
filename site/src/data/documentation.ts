@@ -13,6 +13,13 @@ export interface DocumentationSection {
 const REPO_BLOB = 'https://github.com/Matheus-Emanoel-Souza/Sistema_Rastreamento_Alvos_Arduino/blob/main'
 const REPO_TREE = 'https://github.com/Matheus-Emanoel-Souza/Sistema_Rastreamento_Alvos_Arduino/tree/main'
 
+/** Converte um link "blob" do GitHub (página HTML) no arquivo bruto, embutível em <object>/<iframe>. */
+export function toRawUrl(blobUrl: string): string {
+  return blobUrl
+    .replace('https://github.com/', 'https://raw.githubusercontent.com/')
+    .replace('/blob/', '/')
+}
+
 // Todos os links apontam para os arquivos reais já existentes no repositório —
 // nada é duplicado dentro do site, só referenciado.
 export const documentationSections: DocumentationSection[] = [
