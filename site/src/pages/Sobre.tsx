@@ -39,9 +39,6 @@ export default function Sobre() {
             >
               LinkedIn
             </a>
-            <a href="#" className="text-muted line-through" aria-disabled>
-              Currículo (adicionar link)
-            </a>
           </div>
 
           <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
