@@ -27,8 +27,13 @@ export default function Sobre() {
           >
             GitHub
           </a>
-          <a href="#" className="text-muted line-through" aria-disabled>
-            LinkedIn (adicionar link)
+          <a
+            href="https://www.linkedin.com/in/matheus-emanoel-821241184/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent hover:underline"
+          >
+            LinkedIn
           </a>
           <a href="#" className="text-muted line-through" aria-disabled>
             Currículo (adicionar link)
