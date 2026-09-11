@@ -430,18 +430,11 @@ melhor desempenho de redesenho em tempo real — todos requisitos centrais deste
 
 ## 📚 Documentação adicional
 
-> Índice completo (com a pasta `Documentos_Entregaveis/`, que inclui `Diagramas_e_requisitos/`) em [`Docs/README.md`](Docs/README.md).
-
 | Documento | Conteúdo |
 |---|---|
-| [`Docs/Tecnica/ARQUITETURA.md`](Docs/Tecnica/ARQUITETURA.md) | Decisões arquiteturais e diagramas |
-| [`Docs/Tecnica/DOCUMENTACAO_TECNICA.md`](Docs/Tecnica/DOCUMENTACAO_TECNICA.md) | Referência de cada classe/serviço |
-| [`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md) | Protocolo serial completo |
-| [`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
-| [`Docs/Projeto/INSTALADOR.md`](Docs/Projeto/INSTALADOR.md) | Processo de criação do instalador: decisões, arquivos, testes realizados |
-| [`Docs/Projeto/ETAPA1_FUNDACAO.md`](Docs/Projeto/ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação |
-| [`Docs/Tecnica/MODELO_DADOS.md`](Docs/Tecnica/MODELO_DADOS.md) | Modelo de dados |
-| [`Docs/Projeto/LOG_SOLICITACOES.md`](Docs/Projeto/LOG_SOLICITACOES.md) | Histórico das solicitações feitas ao assistente ao longo do projeto |
+| [Requisitos funcionais e não funcionais](Docs/Documentos_Entregaveis/Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | Levantamento completo de requisitos do sistema |
+| [Casos de uso](Docs/Documentos_Entregaveis/UML/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
+| [Modelo Banco de Dados](Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf) | Modelo de dados do sistema |
 
 ---
 
@@ -454,8 +447,8 @@ completo.
 
 ## 👥 Créditos
 
-Desenvolvido por **Matheus Emanoel Souza** como Trabalho de Conclusão de Curso (TCC) em
-Engenharia da Computação.
+Projeto desenvolvido por **Gabriel Vasconselos** e **Matheus Emanoel Souza** como Trabalho de
+Conclusão de Curso (TCC) em Engenharia da Computação.
 
 ---
 
