@@ -32,7 +32,9 @@ export default function Documentacao() {
         ))}
       </div>
 
-      {preview && <PdfPreviewModal item={preview} onClose={() => setPreview(null)} />}
+      {/* key={preview.href}: força remontar ao trocar de item, resetando o estado
+          de carregamento sem precisar resetá-lo manualmente dentro do efeito. */}
+      {preview && <PdfPreviewModal key={preview.href} item={preview} onClose={() => setPreview(null)} />}
     </PageSection>
   )
 }
