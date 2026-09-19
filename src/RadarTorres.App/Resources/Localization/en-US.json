@@ -14,6 +14,16 @@
   "TopBar.Logout": "Log out",
   "TopBar.LoggedInAs": "Signed in as",
 
+  "Shell.FocusMode.Ativar": "Focus mode",
+  "Shell.FocusMode.Desativar": "Exit focus mode",
+  "Shell.FocusMode.Tooltip": "Closes other applications and disables networking to dedicate the computer to RadarTorres",
+  "Shell.FocusMode.Titulo": "Focus mode",
+  "Shell.FocusMode.ConfirmarAtivar": "This will close other open applications and try to disable Wi-Fi/Ethernet/Bluetooth (may prompt for administrator confirmation). Continue?",
+  "Shell.FocusMode.ConfirmarDesativar": "This will restore networking (Wi-Fi/Ethernet/Bluetooth). Closed applications are not reopened automatically. Continue?",
+  "Shell.FocusMode.Resumo": "{0} application(s) closed, {1} could not be closed. Network: {2}",
+  "Shell.FocusMode.RedeOk": "disabled",
+  "Shell.FocusMode.RedeFalhou": "could not be disabled automatically",
+
   "Sidebar.Collapse": "Collapse menu",
   "Sidebar.Expand": "Expand menu",
   "Sidebar.PainelPrincipal": "Dashboard",

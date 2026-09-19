@@ -43,6 +43,8 @@
                     <TextBlock Text="{Binding PerfilUsuario}" Foreground="White" FontSize="10" FontWeight="Bold"/>
                 </Border>
 
+                <Button Content="{Binding FocusModeButtonLabel}" Command="{Binding ToggleFocusModeCommand}"
+                        ToolTip="{loc:Loc Shell.FocusMode.Tooltip}" Style="{StaticResource TopBarButton}"/>
                 <Button x:Name="ProfileButton" Content="{loc:Loc TopBar.Profile}" Click="ProfileButton_Click" Style="{StaticResource TopBarButton}"/>
                 <Button x:Name="HelpButton" Content="{loc:Loc TopBar.Help}" Click="HelpButton_Click" Style="{StaticResource TopBarButton}"/>
                 <Button Content="{loc:Loc TopBar.Logout}" Command="{Binding LogoutCommand}" Style="{StaticResource TopBarButton}"/>

@@ -115,6 +115,7 @@ public partial class App : Application
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IFocusModeService, FocusModeService>();
 
         // --- Telas / ViewModels
         // MainViewModel + MonitoramentoView são Singleton: representam a sessão de

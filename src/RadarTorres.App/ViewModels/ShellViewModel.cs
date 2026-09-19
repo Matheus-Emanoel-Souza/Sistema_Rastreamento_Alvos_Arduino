@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.Repositories;
@@ -22,6 +24,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     private readonly INavigationService _navigationService;
     private readonly IPermissionService _permissionService;
     private readonly IPreferenciasUsuarioRepository _preferenciasRepository;
+    private readonly IFocusModeService _focusModeService;
 
     public ShellViewModel(
         IAuthService authService,
@@ -29,7 +32,8 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         IThemeService themeService,
         INavigationService navigationService,
         IPermissionService permissionService,
-        IPreferenciasUsuarioRepository preferenciasRepository)
+        IPreferenciasUsuarioRepository preferenciasRepository,
+        IFocusModeService focusModeService)
     {
         _authService = authService;
         _localizationService = localizationService;
@@ -37,6 +41,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         _navigationService = navigationService;
         _permissionService = permissionService;
         _preferenciasRepository = preferenciasRepository;
+        _focusModeService = focusModeService;
 
         _authService.SessionChanged += OnSessionChanged;
         _localizationService.PropertyChanged += OnLocalizationChanged;
@@ -47,6 +52,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         NavigateCommand = new RelayCommand(item => Navigate((MenuItem)item!));
         LogoutCommand = new RelayCommand(Logout);
         RestaurarPadraoCommand = new RelayCommand(RestaurarPadrao);
+        ToggleFocusModeCommand = new RelayCommand(async () => await ToggleFocusModeAsync(), () => !_isTogglingFocusMode);
 
         MenuItems = new ObservableCollection<SidebarMenuEntry>();
         RebuildMenu();
@@ -156,6 +162,8 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             entry.Label = _localizationService[entry.LabelKey];
         }
+
+        OnPropertyChanged(nameof(FocusModeButtonLabel));
     }
 
     // ---------------------------------------------------------------- Navegação
@@ -172,6 +180,61 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         foreach (SidebarMenuEntry entry in MenuItems)
         {
             entry.IsSelected = entry.Item == item;
+        }
+    }
+
+    // ---------------------------------------------------------------- Modo foco
+
+    public RelayCommand ToggleFocusModeCommand { get; }
+
+    private bool _isTogglingFocusMode;
+
+    public bool IsFocusModeActive => _focusModeService.IsActive;
+
+    public string FocusModeButtonLabel => _localizationService[IsFocusModeActive
+        ? "Shell.FocusMode.Desativar"
+        : "Shell.FocusMode.Ativar"];
+
+    private async Task ToggleFocusModeAsync()
+    {
+        if (_isTogglingFocusMode) return;
+
+        bool ativando = !_focusModeService.IsActive;
+
+        string pergunta = ativando
+            ? _localizationService["Shell.FocusMode.ConfirmarAtivar"]
+            : _localizationService["Shell.FocusMode.ConfirmarDesativar"];
+
+        bool confirmado = MessageBox.Show(pergunta, _localizationService["Shell.FocusMode.Titulo"],
+            MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        if (!confirmado) return;
+
+        _isTogglingFocusMode = true;
+        RelayCommand.RaiseCanExecuteChangedForAll();
+
+        try
+        {
+            if (ativando)
+            {
+                FocusModeResultado resultado = await _focusModeService.EnterFocusModeAsync();
+                string resumo = string.Format(_localizationService["Shell.FocusMode.Resumo"],
+                    resultado.ProcessosFechados, resultado.ProcessosComFalha,
+                    resultado.RedeDesativada
+                        ? _localizationService["Shell.FocusMode.RedeOk"]
+                        : _localizationService["Shell.FocusMode.RedeFalhou"]);
+                MessageBox.Show(resumo, _localizationService["Shell.FocusMode.Titulo"], MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                await _focusModeService.ExitFocusModeAsync();
+            }
+        }
+        finally
+        {
+            _isTogglingFocusMode = false;
+            OnPropertyChanged(nameof(IsFocusModeActive));
+            OnPropertyChanged(nameof(FocusModeButtonLabel));
+            RelayCommand.RaiseCanExecuteChangedForAll();
         }
     }
 

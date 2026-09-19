@@ -14,6 +14,16 @@
   "TopBar.Logout": "Sair",
   "TopBar.LoggedInAs": "Conectado como",
 
+  "Shell.FocusMode.Ativar": "Modo foco",
+  "Shell.FocusMode.Desativar": "Sair do modo foco",
+  "Shell.FocusMode.Tooltip": "Fecha outros aplicativos e desativa a rede para dedicar o computador ao RadarTorres",
+  "Shell.FocusMode.Titulo": "Modo foco",
+  "Shell.FocusMode.ConfirmarAtivar": "Isso vai fechar outros aplicativos abertos e tentar desativar Wi-Fi/Ethernet/Bluetooth (pode pedir confirmação de administrador). Deseja continuar?",
+  "Shell.FocusMode.ConfirmarDesativar": "Isso vai restaurar a rede (Wi-Fi/Ethernet/Bluetooth). Os aplicativos fechados não são reabertos automaticamente. Deseja continuar?",
+  "Shell.FocusMode.Resumo": "{0} aplicativo(s) fechado(s), {1} não puderam ser fechados. Rede: {2}",
+  "Shell.FocusMode.RedeOk": "desativada",
+  "Shell.FocusMode.RedeFalhou": "não foi possível desativar automaticamente",
+
   "Sidebar.Collapse": "Recolher menu",
   "Sidebar.Expand": "Expandir menu",
   "Sidebar.PainelPrincipal": "Painel principal",
