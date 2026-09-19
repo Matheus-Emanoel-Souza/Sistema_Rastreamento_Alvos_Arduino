@@ -132,6 +132,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         [
             (MenuItem.PainelPrincipal, "Sidebar.PainelPrincipal"),
             (MenuItem.Monitoramento, "Sidebar.Monitoramento"),
+            (MenuItem.Desempenho, "Sidebar.Desempenho"),
             (MenuItem.ObjetosDetectados, "Sidebar.ObjetosDetectados"),
             (MenuItem.AcoesRealizadas, "Sidebar.AcoesRealizadas"),
             (MenuItem.HistoricoModos, "Sidebar.HistoricoModos"),

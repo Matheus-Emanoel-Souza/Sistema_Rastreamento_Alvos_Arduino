@@ -7,6 +7,9 @@ public enum MenuItem
 {
     PainelPrincipal,
     Monitoramento,
+
+    /// <summary>Aba "Desempenho" — métricas operacionais em tempo de execução (ver DesempenhoView).</summary>
+    Desempenho,
     ObjetosDetectados,
     AcoesRealizadas,
     HistoricoModos,

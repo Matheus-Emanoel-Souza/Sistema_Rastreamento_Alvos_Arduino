@@ -53,6 +53,10 @@ public partial class App : Application
         // parser XAML antes de qualquer window existir — ver comentário em LocalizationService.
         LocalizationService.Current = ServiceProvider.GetRequiredService<ILocalizationService>();
 
+        // Bridge estático para o RadarControl (também instanciado via XAML, sem DI) reportar
+        // cada renderização ao monitor de desempenho — ver PerformanceMonitorService.Current.
+        PerformanceMonitorService.Current = ServiceProvider.GetRequiredService<IPerformanceMonitorService>();
+
         AppDataPaths.EnsureDataFolderExists();
         DataSeeder.EnsureDefaultAdmin(
             ServiceProvider.GetRequiredService<IUsuarioRepository>(),
@@ -115,6 +119,7 @@ public partial class App : Application
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IPerformanceMonitorService, PerformanceMonitorService>();
 
         // --- Telas / ViewModels
         // MainViewModel + MonitoramentoView são Singleton: representam a sessão de
@@ -147,6 +152,11 @@ public partial class App : Application
         // estado da compilação entre navegações pela barra lateral.
         services.AddSingleton<ArduinoSettingsViewModel>();
         services.AddSingleton<ArduinoSettingsView>();
+
+        // Singleton igual às demais telas de navegação: o timer de amostragem é iniciado/parado
+        // no Loaded/Unloaded da view (ver DesempenhoView), não a cada navegação.
+        services.AddTransient<DesempenhoViewModel>();
+        services.AddSingleton<DesempenhoView>();
     }
 
     /// <summary>
