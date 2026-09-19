@@ -102,30 +102,20 @@ evitando handles de porta duplicados. Uma futura evolução natural (ver README,
 "Próximos passos") é adicionar reconexão automática com backoff, usando o campo
 `SerialSettings.ReconnectAttempts` já presente na configuração.
 
-## 7. Testando sem hardware físico
+## 7. Aba "Configurações do Arduino" — compilar o firmware e monitorar a serial pela própria interface
 
-Duas formas:
-
-1. **Modo de simulação interno** (recomendado para desenvolvimento do software): não usa a
-   porta serial, gera leituras diretamente em memória via `SimulationService`.
-2. **`Arduino/ArduinoSimulation.ino`**: grave este sketch em um Arduino real (ou em um
-   emulador serial) para validar a camada de comunicação de ponta a ponta, incluindo a
-   própria porta USB, antes de existir qualquer sensor físico.
-
-## 8. Aba "Configurações do Arduino" — compilar o firmware e monitorar a serial pela própria interface
-
-Além da tela de Monitoramento (seção 1–7 acima), o RadarTorres tem uma aba dedicada na barra
+Além da tela de Monitoramento (seção 1–6 acima), o RadarTorres tem uma aba dedicada na barra
 lateral, **Configurações do Arduino**, para instalar/configurar o [Arduino
 CLI](https://arduino.github.io/arduino-cli/), compilar um sketch `.ino` e acompanhar a saída
 serial em tempo real — sem sair do aplicativo. Implementada em
 `ViewModels/ArduinoSettingsViewModel.cs` + `Views/ArduinoSettingsView.xaml`.
 
-### 8.1 Instalar e configurar o Arduino CLI
+### 7.1 Instalar e configurar o Arduino CLI
 
 O **Arduino CLI não é instalado nem baixado automaticamente pelo RadarTorres** — é uma
 ferramenta externa e opcional, necessária apenas para compilar sketches pela própria
-interface (o app funciona normalmente sem ela, tanto em modo simulação quanto conectado a um
-Arduino já gravado por fora). Para instalá-la:
+interface (o app funciona normalmente sem ela, desde que um Arduino já esteja gravado por
+fora). Para instalá-la:
 
 1. Baixe o instalador/zip em <https://arduino.github.io/arduino-cli/latest/installation/>
    (seção Windows).
@@ -139,7 +129,7 @@ Arduino já gravado por fora). Para instalá-la:
    exibida. Se não for encontrado, uma mensagem explica que o CLI é necessário para compilar e
    como configurá-lo — a aba continua funcional para o monitor serial mesmo sem ele.
 
-### 8.2 Selecionar a placa (FQBN)
+### 7.2 Selecionar a placa (FQBN)
 
 O combo **Placa / FQBN** já vem com um catálogo padrão de placas comuns (Uno, Nano, Mega,
 Leonardo, ESP32 Dev Module, NodeMCU) — disponível mesmo sem o Arduino CLI instalado ou sem
@@ -148,7 +138,7 @@ interface. O botão **Atualizar placas e portas** complementa essa lista com o r
 de `arduino-cli board listall` quando o CLI está disponível (útil se você já instalou cores
 adicionais) e também atualiza a lista de portas COM.
 
-### 8.3 Compilar um sketch
+### 7.3 Compilar um sketch
 
 1. Clique em **Selecionar código .ino…** e escolha o arquivo — por padrão, se
    `Arduino/ArduinoSimulation.ino` estiver disponível (execução a partir do repositório) e
@@ -177,7 +167,7 @@ Esta etapa cobre apenas **compilação**. Gravação/upload do firmware compilad
 (`arduino-cli upload`) não foi implementada — ver `Docs/Projeto/LOG_SOLICITACOES.md` para o
 racional.
 
-### 8.4 Monitor serial da aba Configurações do Arduino
+### 7.4 Monitor serial da aba Configurações do Arduino
 
 A seção **Monitor serial** desta aba usa o **mesmo** `ISerialCommunicationService` (Singleton
 via injeção de dependência) já usado pela tela de Monitoramento — não existe uma segunda
@@ -199,7 +189,7 @@ automática), com um contador de mensagens recebidas e um limite de 4000 linhas 
 antigas são descartadas automaticamente para não crescer a memória indefinidamente em sessões
 longas. O console de compilação segue o mesmo limite.
 
-### 8.5 Onde as preferências desta aba são salvas
+### 7.5 Onde as preferências desta aba são salvas
 
 Caminho do Arduino CLI, último sketch usado, FQBN selecionado, última porta COM, baud rate e
 preferências do console (rolagem automática, exibir horário) são persistidos em

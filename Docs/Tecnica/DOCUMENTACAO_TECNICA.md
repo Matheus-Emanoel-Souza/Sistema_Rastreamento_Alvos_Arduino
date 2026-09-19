@@ -29,10 +29,8 @@ configuração, a partir da própria posição da torre. **Quem usa:** `TowerSel
 
 ### `SensorReading` (`Models/SensorReading.cs`)
 **Função:** DTO imutável que representa uma leitura já validada, mas ainda não associada a um
-`Target`. **Por que existe:** para que `TargetTrackingService` não precise saber se a leitura
-veio da serial real ou do simulador — ambos produzem `SensorReading`. **Quem usa:**
-`MainViewModel` cria a partir de `TargetMessage` (serial) ou recebe pronto do
-`SimulationService`; `TargetTrackingService.ProcessReading` consome.
+`Target`. **Quem usa:** `MainViewModel` cria a partir de `TargetMessage` (serial);
+`TargetTrackingService.ProcessReading` consome.
 
 ### `SystemState.cs`
 **Função:** agrupa os enums de estado do sistema: `SystemMode`, `ConnectionState`, `TowerState`,
@@ -84,7 +82,7 @@ resolução de tela (ver `Docs/Tecnica/ARQUITETURA.md`, seção 5.2). **Quem usa
 todo o código; qualquer classe que precise de um valor configurável (baud rate, distância
 mínima, torres, timeouts) lê de `AppConfig.Current`. **Quem usa:** praticamente todos os
 serviços (`SerialCommunicationService`, `TargetTrackingService`, `TowerSelectionService`,
-`SimulationService`, `MainViewModel`).
+`MainViewModel`).
 
 ### `ArduinoCliSettings` (`Configuration/ArduinoCliSettings.cs`)
 **Função:** modelo das preferências da aba Configurações do Arduino (caminho do CLI, último
@@ -161,17 +159,11 @@ automatizados futuros. **Métodos principais:** `SelectTowerFor(Target)`,
 `RecomputeTowerStates(IEnumerable<Target>)`. **Quem usa:** `MainViewModel`.
 
 ### `FireControlService` (`IFireControlService`)
-**Função:** aplica a regra de segurança (distância mínima) e executa/simula o acionamento
+**Função:** aplica a regra de segurança (distância mínima) e executa o acionamento
 demonstrativo. **Por que existe:** concentra em um único lugar a decisão "pode ou não pode
 acionar", que é a parte mais sensível do sistema — nenhum outro componente decide isso.
 **Métodos principais:** `Authorize(Target, minDistance)`, `TryFireAsync(Target, serial?,
 simulationMode, minDistance)`. **Quem usa:** `MainViewModel` (acionamento manual e automático).
-
-### `SimulationService` (`ISimulationService`)
-**Função:** gera e movimenta alvos fictícios, produzindo o mesmo DTO (`SensorReading`) que a
-leitura real. **Por que existe:** permitir desenvolvimento e demonstração completos sem
-hardware. **Métodos principais:** `Start(count?)`, `Stop()`, `AddRandomTarget()`,
-`RemoveTarget(id)`. **Evento:** `ReadingGenerated`. **Quem usa:** `MainViewModel`.
 
 ### `LoggingService` (`ILoggingService`)
 **Função:** console de eventos com timestamp, thread-safe, consumido por toda a aplicação.

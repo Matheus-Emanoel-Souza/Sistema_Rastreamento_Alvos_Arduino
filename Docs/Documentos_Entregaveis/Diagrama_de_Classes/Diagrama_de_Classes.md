@@ -6,25 +6,10 @@
 > `COMUNICACAO_ARDUINO.md`). Nenhum dado foi inventado; onde a fonte é uma inferência (não uma
 > leitura direta de código), isso está marcado explicitamente.
 
-## 1. Observação sobre o Arduino
+## 1. Principais elementos e responsabilidades
 
-O firmware (`Arduino/ArduinoSimulation.ino`) é escrito em C/C++ estilo Arduino **sem
-orientação a objetos formal** — não há `class`, apenas uma `struct SimulatedTarget` (dados
-puros) e funções globais (`setup`, `loop`, e as funções de leitura/envio de protocolo). Por
-isso, no diagrama de classes ele é representado por:
-
-* uma **estrutura de dados** (`SimulatedTarget`), equivalente a uma classe sem métodos;
-* um **módulo de funções globais** (`ArduinoSimulation`), representado como uma classe
-  estereotipada `<<module>>`, reunindo as funções do sketch como se fossem métodos estáticos —
-  adaptação necessária porque o C/C++ para Arduino não tem classes nesse sketch, mas o
-  conjunto de funções tem responsabilidade coesa (gerar alvos simulados e falar o protocolo
-  serial).
-
-Do lado do aplicativo C#, todas as classes seguem POO plena (interfaces `I*Service`/`I*Repository`
-+ implementação, herança de `INotifyPropertyChanged`, etc.), então são representadas de forma
-convencional.
-
-## 2. Principais elementos e responsabilidades
+Todas as classes do aplicativo C# seguem POO plena (interfaces `I*Service`/`I*Repository` +
+implementação, herança de `INotifyPropertyChanged`, etc.), representadas de forma convencional.
 
 ### Models (entidades de domínio)
 
@@ -32,7 +17,7 @@ convencional.
 |---|---|---|---|
 | `Target` | Alvo detectado, vivo em memória, atualizado a cada leitura pelo mesmo `Id` | `Id`, `Angle`, `Distance`, `X`, `Y`, `Quadrant`, `IsActive`, `IsSelected`, `SelectedTower`, `DistanceToSelectedTower`, `LastUpdate` | Implementa `INotifyPropertyChanged` |
 | `Tower` | Torre demonstrativa carregada de `appsettings.json` | `Id`, `Name`, `X`, `Y`, `PreferredQuadrant`, `State`, `IsAvailable`, `DistanceToTarget` | Implementa `INotifyPropertyChanged` |
-| `SensorReading` | DTO imutável de uma leitura já validada (serial real ou simulada) | `TargetId`, `Angle`, `Distance`, `ReceivedAt`, `Source` | Consumido por `TargetTrackingService.ProcessReading` |
+| `SensorReading` | DTO imutável de uma leitura já validada | `TargetId`, `Angle`, `Distance`, `ReceivedAt`, `Source` | Consumido por `TargetTrackingService.ProcessReading` |
 | `DeadZone` | Zona onde alvos não recebem torre/acionamento | `Id`, `Name`, `Type`, `Quadrant`, `MinDistance`, `MaxDistance`, `Enabled` | Implementa `INotifyPropertyChanged` |
 | `Usuario` | Conta de acesso ao aplicativo | `Id`, `Nome`, `Login`, `SenhaHash`, `SenhaSalt`, `Perfil`, `Ativo`, `DataCriacao`, `UltimoAcesso` | — |
 | `ObjetoDetectado` | Registro histórico (CSV) de uma primeira detecção | `Id`, `Tipo`, `X`, `Y`, `Z?`, `Quadrante`, `DataHora`, `Dispositivo`, `NivelConfianca?`, `Observacao?`, `ReferenciaImagem?` | Gerado a partir do evento `TargetCreated` |
@@ -56,7 +41,6 @@ convencional.
 | `TargetTrackingService` (`ITargetTrackingService`) | Cria/atualiza/expira `Target` a partir de `SensorReading` | `ProcessReading`, `PurgeStaleTargets`, `ClearAll`; eventos `TargetCreated`, `TargetUpdated`, `TargetRemoved` | `QuadrantHelper`, `CoordinateConverter` |
 | `TowerSelectionService` (`ITowerSelectionService`) | Algoritmo de seleção de torre | `SelectTowerFor`, `RecomputeTowerStates` | `DistanceCalculator`, `IDeadZoneService` |
 | `FireControlService` (`IFireControlService`) | Regra de segurança + acionamento demonstrativo | `Authorize`, `TryFireAsync` | `IDeadZoneService` |
-| `SimulationService` (`ISimulationService`) | Gera alvos fictícios | `Start`, `Stop`, `AddRandomTarget`, `RemoveTarget`; evento `ReadingGenerated` | `AppConfig` |
 | `LoggingService` (`ILoggingService`) | Console de eventos thread-safe | `Info`, `Success`, `Warning`, `Error`, `Clear` | — |
 | `AuthService` (`IAuthService`) | Login/logout/sessão | `LoginAsync`, `Logout`, `AlterarSenhaAsync`; evento `SessionChanged` | `IUsuarioRepository`, `IPasswordHasher` |
 | `PasswordHasher` (`IPasswordHasher`) | Hash PBKDF2-HMACSHA256 de senha | (hash/verify) | — |
@@ -91,7 +75,7 @@ Todos os repositórios CSV dependem de `CsvTableStore<T>` (composição) e de `A
 | Classe | Responsabilidade | Depende de (composição/DI) |
 |---|---|---|
 | `ViewModelBase` | Implementa `INotifyPropertyChanged` (`SetProperty`) — base de todas as ViewModels | — |
-| `MainViewModel` | Orquestra a tela de Monitoramento (radar, serial, torres, acionamento) | `ISerialCommunicationService`, `ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`, `ISimulationService`, `ILoggingService` |
+| `MainViewModel` | Orquestra a tela de Monitoramento (radar, serial, torres, acionamento) | `ISerialCommunicationService`, `ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`, `ILoggingService` |
 | `ArduinoSettingsViewModel` | Orquestra a aba Configurações do Arduino | `IArduinoCliLocatorService`, `IArduinoCompilerService`, `IArduinoSettingsRepository`, `ISerialCommunicationService` (mesma instância de `MainViewModel`) |
 | `ObjetosDetectadosViewModel` | Lista + exporta/importa `ObjetoDetectado` | `IObjetoDetectadoRepository`, `IObjetoDetectadoExportService`, `ILoggingService`, `IAuthService`, `IPermissionService` |
 | `PainelPrincipalViewModel` | Comando de restaurar layout padrão do painel | (evento consumido pela View) |
@@ -110,14 +94,7 @@ Todos os repositórios CSV dependem de `CsvTableStore<T>` (composição) e de `A
 | `QuadrantHelper` | Determina quadrante Q1-Q4 |
 | `RelayCommand` | Implementação de `ICommand` (MVVM manual) |
 
-### Arduino (`Arduino/ArduinoSimulation.ino`)
-
-| Elemento | Tipo | Equivalente OO | Responsabilidade |
-|---|---|---|---|
-| `SimulatedTarget` | `struct` | Classe de dados (sem métodos) | Guarda `id`, `angle`, `distance` de um alvo fictício |
-| `ArduinoSimulation` (módulo) | Conjunto de funções globais (`setup`, `loop`, geração/envio de `TARGET`, leitura/interpretação de comandos `SYSTEM`/`MODE`/`SET`/`FIRE`) | Classe `<<module>>` (estereótipo, funções estáticas) | Gera alvos simulados e fala o protocolo serial descrito em `COMUNICACAO_ARDUINO.md` |
-
-## 3. Diagrama de Classes (Mermaid)
+## 2. Diagrama de Classes (Mermaid)
 
 ```mermaid
 classDiagram
@@ -243,12 +220,6 @@ classDiagram
         +TryFireAsync(...)
     }
     class FireControlService
-    class ISimulationService {
-        <<interface>>
-        +Start(count)
-        +Stop()
-    }
-    class SimulationService
     class IDeadZoneService {
         <<interface>>
         +FindBlockingZone(Target)
@@ -322,27 +293,11 @@ classDiagram
         +Between()
     }
 
-    %% ===== Arduino (não-OO, representado como módulo) =====
-    class SimulatedTarget {
-        <<struct>>
-        +int id
-        +float angle
-        +float distance
-    }
-    class ArduinoSimulation {
-        <<module>>
-        +setup()
-        +loop()
-        +sendTarget()
-        +handleCommand()
-    }
-
     %% Relacionamentos
     ISerialCommunicationService <|.. SerialCommunicationService
     ITargetTrackingService <|.. TargetTrackingService
     ITowerSelectionService <|.. TowerSelectionService
     IFireControlService <|.. FireControlService
-    ISimulationService <|.. SimulationService
     IDeadZoneService <|.. DeadZoneService
     IAuthService <|.. AuthService
     IPermissionService <|.. PermissionService
@@ -381,7 +336,6 @@ classDiagram
     MainViewModel --> ITargetTrackingService
     MainViewModel --> ITowerSelectionService
     MainViewModel --> IFireControlService
-    MainViewModel --> ISimulationService
     ArduinoSettingsViewModel --> ISerialCommunicationService : mesma instância Singleton
     ObjetosDetectadosViewModel --> IObjetoDetectadoRepository
     ObjetosDetectadosViewModel --> IObjetoDetectadoExportService
@@ -392,11 +346,9 @@ classDiagram
     Usuario "1" --> "*" AcaoRealizada : solicita (manual)
     Usuario "1" --> "*" AlteracaoModo : solicita
     Usuario "1" --> "*" ChamadoAjuda : abre
-
-    ArduinoSimulation ..> SimulatedTarget : gerencia
 ```
 
-## 4. Validação
+## 3. Validação
 
 * Todas as classes/atributos/métodos acima foram lidos diretamente dos arquivos-fonte em
   `src/RadarTorres.App/` — nenhum nome foi inventado.
@@ -404,5 +356,3 @@ classDiagram
   não tiveram a assinatura completa lida (fora do escopo desta varredura); a responsabilidade
   listada é **inferida** do uso descrito em `Docs/Tecnica/ARQUITETURA.md` e do nome da interface —
   marcado na tabela de Services acima.
-* `ArduinoSimulation.ino` não usa classes — a representação como `<<module>>`/`<<struct>>` é uma
-  adaptação explícita, descrita na seção 1.

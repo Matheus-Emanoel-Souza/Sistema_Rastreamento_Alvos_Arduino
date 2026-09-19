@@ -12,7 +12,7 @@ flowchart LR
         direction TB
         VIEW["Views\nMainWindow, RadarControl"]
         VM["ViewModels\nMainViewModel"]
-        SVC["Services\nSerial, Tracking, TowerSelection,\nFireControl, Simulation, Logging"]
+        SVC["Services\nSerial, Tracking, TowerSelection,\nFireControl, Logging"]
         MDL["Models\nTarget, Tower, SensorReading, LogEntry"]
         CFG["Configuration\nAppSettings (appsettings.json)"]
     end
@@ -30,7 +30,7 @@ flowchart LR
 * **ViewModels** (`MainViewModel`) orquestram os serviços — decidem *quando* chamar cada
   serviço em resposta a eventos, mas não implementam nenhuma regra de negócio.
 * **Services** concentram toda a lógica: protocolo serial, rastreamento de alvos, seleção de
-  torres, controle de acionamento e simulação. São interfaces (`I*Service`) + implementação,
+  torres e controle de acionamento. São interfaces (`I*Service`) + implementação,
   o que permite trocar qualquer um deles (ex.: por um dublê de teste) sem tocar na UI.
 * **Models** são entidades de domínio simples, com `INotifyPropertyChanged` para permitir que
   a UI reaja a mudanças de estado sem que a ViewModel precise "empurrar" cada atualização

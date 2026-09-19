@@ -138,8 +138,6 @@ end note
 
 note bottom of UC10
   Nunca representa acionamento manual.
-  "Modo de simulação" não é caso de uso oficial
-  do produto — é ferramenta de desenvolvimento/teste.
 end note
 
 @enduml

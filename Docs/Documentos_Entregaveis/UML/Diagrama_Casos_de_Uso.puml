@@ -155,8 +155,6 @@ end note
 
 note bottom of UC10
   Nunca representa acionamento manual — ver RF06.
-  "Modo de simulação" não é caso de uso oficial do
-  produto (RF07, removido da especificação funcional).
 end note
 
 @enduml
