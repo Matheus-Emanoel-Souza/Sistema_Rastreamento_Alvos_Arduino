@@ -23,10 +23,8 @@ detecção de alvos ao redor de uma base. Ele:
    dividido em 4 quadrantes.
 3. Seleciona automaticamente, entre um conjunto configurável de torres demonstrativas
    posicionadas ao redor da base, qual está mais próxima/adequada para cada alvo.
-4. Permite um modo de acionamento **demonstrativo** (laser de baixa potência / LED /
-   simulação — **nunca armamento real**), respeitando uma distância mínima de segurança.
-5. Funciona de ponta a ponta mesmo **sem Arduino conectado**, via modo de simulação embutido
-   (essencial para desenvolvimento e demonstrações do TCC).
+4. Permite um modo de acionamento **demonstrativo** (laser de baixa potência / LED —
+   **nunca armamento real**), respeitando uma distância mínima de segurança.
 
 Repositório: `Matheus-Emanoel-Souza/Sistema_Rastreamento_Alvos_Arduino` (GitHub).
 
@@ -46,7 +44,6 @@ Repositório: `Matheus-Emanoel-Souza/Sistema_Rastreamento_Alvos_Arduino` (GitHub
 | Injeção de dependência | `Microsoft.Extensions.DependencyInjection`, composition root em `App.xaml.cs` | — |
 | Persistência | **CSV** (`%AppData%\RadarTorres\Data\*.csv`) | Decisão explícita do usuário: por ora CSV, sinalizado (`TODO(SQL)`) para futura migração a banco relacional (SQLite/EF Core) sem alterar ViewModels/Services — cada tabela já tem uma interface de repositório dedicada |
 | Empacotamento | Inno Setup 6 (`installer/RadarTorres.iss`) | Instalador `Setup.exe`, self-contained (embute o .NET 9 Desktop Runtime — usuário final não precisa instalar nada) |
-| Firmware de teste | Arduino (`Arduino/ArduinoSimulation.ino`) | Sem sensores reais, só para desenvolvimento |
 
 ### 2.2 Arquitetura (camadas)
 
@@ -59,20 +56,20 @@ Views (WPF/XAML)  <-->  ViewModels (MainViewModel, ...)  <-->  Services (regras 
 - **Views**: só XAML + pequenos encaminhamentos de eventos de UI.
 - **ViewModels**: orquestram serviços, sem regra de negócio própria.
 - **Services**: 100% da lógica (protocolo serial, rastreamento, seleção de torre,
-  acionamento, simulação, auth, permissões, i18n, tema, layout do painel). Nenhum referencia
+  acionamento, auth, permissões, i18n, tema, layout do painel). Nenhum referencia
   WPF diretamente — interfaces `I*Service` permitem trocar implementação (ex.: testes).
 - **Models**: entidades simples com `INotifyPropertyChanged`.
 
 ### 2.3 Concorrência
 
 Leitura serial roda em `Task.Run` dedicado; timers (`System.Threading.Timer` /
-`DispatcherTimer`) cuidam de watchdog de conexão, simulação e expiração de alvos. Regra geral:
+`DispatcherTimer`) cuidam de watchdog de conexão e expiração de alvos. Regra geral:
 qualquer classe com coleção/evento vinculado à UI é responsável por despachar para o
 `Dispatcher` internamente (captura o Dispatcher no construtor).
 
 ### 2.4 Como o app evoluiu (linha do tempo funcional)
 
-1. **Base inicial**: app único (`MainWindow`), lógica de radar/serial/torres/simulação.
+1. **Base inicial**: app único (`MainWindow`), lógica de radar/serial/torres.
 2. **Instalador Windows**: `Setup.exe` (Inno Setup, self-contained), launcher avulso, ícone,
    tratamento global de erros de inicialização.
 3. **Fundação multiusuário** (Etapa 1, parte A): login, 3 perfis (Administrador/Operador/
@@ -119,8 +116,8 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
 
 ## 3. Estado atual (o que já funciona)
 
-- Radar em tempo real, seleção automática de torre, modo de acionamento demonstrativo, modo
-  de simulação sem hardware — funcionalidade original, validada.
+- Radar em tempo real, seleção automática de torre, modo de acionamento demonstrativo —
+  funcionalidade original, validada.
 - Login multiusuário, 3 perfis, troca de senha, auditoria de ações/modos/detecções gravada em
   CSV.
 - Internacionalização (pt-BR/en-US) e tema (claro/escuro/sistema) trocáveis em runtime.

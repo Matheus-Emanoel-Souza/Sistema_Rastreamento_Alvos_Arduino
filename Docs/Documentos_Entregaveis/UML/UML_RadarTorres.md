@@ -189,7 +189,7 @@ responsável pela leitura dos sensores e pelo acionamento das torres demonstrati
 entre os dois nós ocorre exclusivamente por **USB/serial**, no protocolo textual documentado em
 `Docs/Tecnica/COMUNICACAO_ARDUINO.md`: o computador envia comandos (configuração, acionamento) e o
 Arduino envia leituras de alvo. Sensores de detecção alimentam o Arduino, e as torres/indicadores
-demonstrativos (laser de baixa potência, LED ou simulação — nunca armamento real) são acionados
+demonstrativos (laser de baixa potência ou LED — nunca armamento real) são acionados
 pelo Arduino a partir do comando recebido do computador. Não há nenhum componente de servidor,
 web ou nuvem nessa topologia — deliberadamente, para não representar infraestrutura que o
 RadarTorres não possui.

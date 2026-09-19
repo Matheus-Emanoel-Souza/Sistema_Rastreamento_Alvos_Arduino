@@ -29,11 +29,11 @@ node "Computador do usuário\n(Windows 10/11, 64-bit)" as PC {
 }
 
 node "Arduino\n(microcontrolador)" as MCU {
-  artifact "Firmware\n(ArduinoSimulation.ino ou\nfirmware definitivo dos sensores)" as Firmware
+  artifact "Firmware\n(sensores)" as Firmware
 }
 
 device "Sensores de detecção\n(ângulo + distância)" as Sensores
-device "Torres demonstrativas /\nindicador (laser de baixa\npotência, LED ou simulação)" as Torres
+device "Torres demonstrativas /\nindicador (laser de baixa\npotência ou LED)" as Torres
 
 PC -[#black]-> MCU : USB / Serial\n(protocolo texto TIPO;CHAVE=VALOR;...)
 MCU -[#black]-> PC : leituras de alvo\n(TARGET;ID=;ANGLE=;DIST=)
@@ -43,11 +43,7 @@ MCU --> Torres : comando de acionamento\ndemonstrativo (modo Vermelho)
 
 note right of PC
   Nenhum componente de servidor, web ou nuvem —
-  aplicação desktop única, autocontida. Um modo de
-  simulação embutido (fora do escopo de requisitos
-  funcionais do produto) permite operar sem o nó
-  Arduino conectado, usado em desenvolvimento e
-  demonstração.
+  aplicação desktop única, autocontida.
 end note
 
 @enduml

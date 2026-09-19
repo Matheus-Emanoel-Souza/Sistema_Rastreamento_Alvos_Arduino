@@ -205,8 +205,8 @@ Vermelho, ver UC10).
 
 ### UC10 — Executar acionamento demonstrativo automático
 
-**Objetivo:** realizar automaticamente o acionamento demonstrativo (laser de baixa potência,
-LED ou simulação — nunca armamento real) sobre um alvo, exclusivamente no modo Vermelho.
+**Objetivo:** realizar automaticamente o acionamento demonstrativo (laser de baixa potência ou
+LED — nunca armamento real) sobre um alvo, exclusivamente no modo Vermelho.
 **Atores:** nenhum ator direto — é uma extensão (`<<extend>>`) de UC09, condicionada ao modo
 Vermelho; inclui (`<<include>>`) UC07 (precisa de torre selecionada) e UC11 (precisa passar na
 validação de segurança).
