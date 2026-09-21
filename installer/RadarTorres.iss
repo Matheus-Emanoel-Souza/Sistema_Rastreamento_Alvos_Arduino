@@ -26,7 +26,7 @@
 ; Versão pode ser sobrescrita na linha de comando com /DMyAppVersion=X.Y.Z
 ; (o script build\publish.ps1 faz isso automaticamente lendo o .csproj).
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0"
+  #define MyAppVersion "1.1.0"
 #endif
 
 ; Pasta com a publicação self-contained (saída de `dotnet publish`), relativa
