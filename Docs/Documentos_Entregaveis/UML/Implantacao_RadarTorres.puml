@@ -1,49 +1,64 @@
 @startuml Implantacao_RadarTorres
 
-' RadarTorres — Diagrama de Implantação
+' RadarTorres — Diagrama de Implantação (estilo caixas aninhadas)
 ' Reflete a distribuição física real do sistema: aplicação desktop única, sem servidor/cloud,
 ' comunicando com um Arduino via USB/serial. Ver README.md (raiz) e
 ' Docs/Tecnica/COMUNICACAO_ARDUINO.md para o protocolo, e installer/RadarTorres.iss para o instalador.
+'
+' NOTA METODOLÓGICA: "Apresentação", "Serviços", "Persistência local" e ".NET 9 Desktop Runtime"
+' são apresentados como itens de um mesmo bloco ("RadarTorres.App") por serem partes do MESMO
+' processo .exe, executando no MESMO nó físico — não são componentes distribuídos nem processos
+' separados. Ver Seção 6 de UML_RadarTorres.md.
 
 skinparam shadowing false
+skinparam defaultTextAlignment left
+skinparam ArrowColor #555555
 skinparam node {
   BackgroundColor White
   BorderColor Black
+  FontStyle bold
 }
-skinparam artifact {
-  BackgroundColor White
-  BorderColor Black
+skinparam node<<processo>> {
+  BorderColor #1F6FEB
+  BorderThickness 2
 }
-skinparam database {
-  BackgroundColor White
-  BorderColor Black
-}
-
-node "Computador do usuário\n(Windows 10/11, 64-bit)" as PC {
-  artifact "RadarTorres.App\n(C# 13 / WPF, MVVM)" as App
-  artifact ".NET 9 Desktop Runtime\n(embutido — instalação self-contained)" as Runtime
-  database "Armazenamento local\n%AppData%\\RadarTorres\\Data\\*.csv\n%LocalAppData%\\RadarTorres\\*.json" as Storage
-
-  App ..> Runtime : executa sobre
-  App --> Storage : lê/grava (usuários, auditoria,\nobjetos detectados, layout, zonas mortas)
+skinparam component {
+  BackgroundColor #F4F8FF
+  BorderColor #1F6FEB
+  FontStyle normal
 }
 
-node "Arduino\n(microcontrolador)" as MCU {
-  artifact "Firmware\n(sensores)" as Firmware
+node "Computador do Usuário\n(Windows 10/11, 64-bit)" as PC {
+  node "<<OS>>\nWindows 10/11" as OS {
+    node "RadarTorres.App (.exe)\nself-contained" as App <<processo>> {
+      component "Apresentação\n(Views + ViewModels)" as Apresentacao
+      component "Serviços\n(regra de negócio)" as Servicos
+      component "Persistência local\n(acesso a disco)" as Persistencia
+      component ".NET 9 Desktop\nRuntime" as Runtime
+    }
+  }
 }
 
-device "Sensores de detecção\n(ângulo + distância)" as Sensores
-device "Torres demonstrativas /\nindicador (laser de baixa\npotência ou LED)" as Torres
+node "<<microcontrolador>>\nArduino" as MCU {
+  component "Firmware" as Firmware
+}
 
-PC -[#black]-> MCU : USB / Serial\n(protocolo texto TIPO;CHAVE=VALOR;...)
-MCU -[#black]-> PC : leituras de alvo\n(TARGET;ID=;ANGLE=;DIST=)
+node "Armazenamento local\n%AppData%\\RadarTorres\\Data\\*.csv\n%LocalAppData%\\RadarTorres\\*.json" as Disco
 
-Sensores --> MCU : sinal analógico/digital
-MCU --> Torres : comando de acionamento\ndemonstrativo (modo Vermelho)
+node "Sensores de detecção\n(ângulo + distância)" as Sensores
+node "Torres demonstrativas / indicador\n(laser de baixa potência ou LED)" as Torres
 
-note right of PC
-  Nenhum componente de servidor, web ou nuvem —
-  aplicação desktop única, autocontida.
+Servicos -right-> MCU : USB / Serial\n(TIPO;CHAVE=VALOR;...)
+MCU -right-> Servicos : leituras de alvo\n(TARGET;ID=;ANGLE=;DIST=)
+Persistencia -right-> Disco : lê/grava
+
+Sensores -up-> Firmware : sinal analógico/digital
+Firmware -down-> Torres : acionamento demonstrativo\n(modo Vermelho)
+
+note bottom of PC
+  Apresentação, Serviços, Persistência local e .NET 9 Runtime pertencem
+  a UM ÚNICO processo (RadarTorres.App.exe) no mesmo nó — não há
+  servidor, componente web ou nuvem nesta topologia.
 end note
 
 @enduml

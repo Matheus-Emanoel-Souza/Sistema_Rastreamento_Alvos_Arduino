@@ -180,19 +180,39 @@ para explicar onde o processamento efetivamente ocorre nem como a informação a
 entre o computador e o dispositivo físico.
 
 O diagrama de implantação do RadarTorres, em
-[`Diagramas/Implantacao_RadarTorres.puml`](Diagramas/Implantacao_RadarTorres.puml), representa
-dois nós: o **computador do usuário** (Windows 10/11, 64-bit), executando o artefato
-`RadarTorres.App` sobre o .NET 9 Desktop Runtime — embutido pelo instalador self-contained, sem
-dependência externa — e persistindo dados localmente em `%AppData%\RadarTorres\Data\*.csv` e
-`%LocalAppData%\RadarTorres\*.json`; e o **Arduino** (microcontrolador), executando o firmware
-responsável pela leitura dos sensores e pelo acionamento das torres demonstrativas. A comunicação
-entre os dois nós ocorre exclusivamente por **USB/serial**, no protocolo textual documentado em
-`Docs/Tecnica/COMUNICACAO_ARDUINO.md`: o computador envia comandos (configuração, acionamento) e o
-Arduino envia leituras de alvo. Sensores de detecção alimentam o Arduino, e as torres/indicadores
-demonstrativos (laser de baixa potência ou LED — nunca armamento real) são acionados
-pelo Arduino a partir do comando recebido do computador. Não há nenhum componente de servidor,
-web ou nuvem nessa topologia — deliberadamente, para não representar infraestrutura que o
-RadarTorres não possui.
+[`Implantacao_RadarTorres.puml`](Implantacao_RadarTorres.puml), representa dois nós físicos: o
+**computador do usuário** (Windows 10/11, 64-bit) e o **Arduino** (microcontrolador), conectados
+exclusivamente por **USB/serial**.
+
+Dentro do nó do computador, o artefato real (`RadarTorres.App`, um único processo `.exe`
+self-contained) é segregado visualmente em quatro blocos, cada um com sua responsabilidade
+explicitada, para tornar o diagrama legível sem multiplicar nós físicos que não existem:
+
+* **Apresentação** (`Views` XAML + `ViewModels`) — captura a interação do operador e expõe
+  propriedades/comandos via binding (`ViewModelBase`, `RelayCommand`).
+* **Serviços** (regra de negócio) — as interfaces centrais já descritas na Seção 5
+  (`ISerialCommunicationService`, `ITargetTrackingService`, `ITowerSelectionService`,
+  `IFireControlService`, `IAuthService`, `IPermissionService`, entre outras).
+* **Persistência local** — os arquivos efetivamente gravados em disco:
+  `%AppData%\RadarTorres\Data\*.csv` (usuários, auditoria, objetos detectados) e
+  `%LocalAppData%\RadarTorres\*.json` (layout, zonas mortas, preferências).
+* **.NET 9 Desktop Runtime** — embutido pelo instalador self-contained, sem dependência externa
+  a instalar separadamente na máquina do usuário.
+
+**Nota metodológica.** Essa segregação é puramente didática: os quatro blocos fazem parte do
+mesmo processo `RadarTorres.App.exe` em execução no mesmo nó, não são componentes distribuídos
+em máquinas ou processos diferentes. O diagrama usa o estilo de caixas aninhadas (nó do
+computador → sistema operacional → processo `.exe`, com destaque em azul) para deixar explícito
+que os quatro blocos internos convivem dentro de um único processo — ver nota no próprio `.puml`.
+
+Do outro lado da comunicação serial, o nó **Arduino** executa o artefato **Firmware**, cujas
+quatro responsabilidades também ficam explícitas no diagrama: ler os sensores de ângulo/distância,
+enviar leituras de alvo (`TARGET;ID=;ANGLE=;DIST=`), receber comandos do computador
+(`TIPO;CHAVE=VALOR;...`) e acionar as torres demonstrativas. Sensores de detecção alimentam o
+Arduino, e as torres/indicadores demonstrativos (laser de baixa potência ou LED — nunca armamento
+real) são acionados pelo Arduino a partir do comando recebido do computador. Não há nenhum
+componente de servidor, web ou nuvem nessa topologia — deliberadamente, para não representar
+infraestrutura que o RadarTorres não possui.
 
 ## 7. Relação entre UML e MVVM
 
