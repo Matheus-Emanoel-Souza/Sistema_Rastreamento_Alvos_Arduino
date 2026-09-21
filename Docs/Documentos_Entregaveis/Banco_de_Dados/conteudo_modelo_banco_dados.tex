@@ -34,8 +34,8 @@ instalação adicional — portanto não há uma \textit{versão de SGBD} a decl
 
 Seis entidades usam arquivos \textbf{CSV}, um por tabela, em
 \texttt{\%AppData\%}\allowbreak\texttt{\textbackslash RadarTorres}\allowbreak\texttt{\textbackslash
-Data\textbackslash} (pasta do usuário do Windows, sem privilégio de administrador) — ver a
-coluna "Persistência" da Tabela~\ref{tab:entidades}. Cada arquivo é criado com cabeçalho na
+Data\textbackslash} (pasta do usuário do Windows, sem privilégio de administrador) — ver
+Tabela~\ref{tab:entidades}. Cada arquivo é criado com cabeçalho na
 primeira execução por \texttt{CsvTableStore<T>}; não há \textit{migration} tradicional — o
 próprio código (modelo + mapeamento de colunas) define o schema.
 
@@ -90,27 +90,19 @@ a evolução do projeto exigir um SGBD relacional.
   \label{tab:entidades}
   \small
   \renewcommand{\arraystretch}{1.2}
-  \begin{tabular}{p{3.1cm}p{5.8cm}p{4.1cm}}
+  \begin{tabular}{p{4cm}p{8cm}}
     \hline
-    \textbf{Entidade} & \textbf{Finalidade} & \textbf{Persistência} \\
+    \textbf{Entidade} & \textbf{Finalidade} \\
     \hline
-    Usuario & Conta de acesso, perfil e autenticação & CSV\newline\scriptsize\texttt{usuarios.csv} \\
-    PreferenciasUsuario & Preferências de interface por usuário &
-    CSV\newline\scriptsize\texttt{preferencias\_}\allowbreak\texttt{usuario.csv} \\
-    ObjetoDetectado & Histórico de detecções do radar &
-    CSV\newline\scriptsize\texttt{objetos\_}\allowbreak\texttt{detectados.csv} \\
-    AcaoRealizada & Auditoria de acionamentos (só inserção) &
-    CSV\newline\scriptsize\texttt{acoes\_}\allowbreak\texttt{realizadas.csv} \\
-    AlteracaoModo & Auditoria de troca de modo de operação &
-    CSV\newline\scriptsize\texttt{alteracoes\_}\allowbreak\texttt{modo.csv} \\
-    ChamadoAjuda & Chamados de suporte dos usuários &
-    CSV\newline\scriptsize\texttt{chamados\_}\allowbreak\texttt{ajuda.csv} \\
-    DeadZone & Áreas onde alvos são ignorados pelo sistema &
-    JSON\newline\scriptsize\texttt{dead-zones.json} \\
-    Dashboard\allowbreak CardLayout & Layout dos cards do painel, por tela/usuário &
-    JSON\newline\scriptsize\texttt{dashboard-}\allowbreak\texttt{layout-*.json} \\
-    ArduinoSettings & Configurações de ambiente do Arduino &
-    JSON\newline\scriptsize\texttt{arduino-}\allowbreak\texttt{settings.json} \\
+    Usuario & Conta de acesso, perfil e autenticação \\
+    PreferenciasUsuario & Preferências de interface por usuário \\
+    ObjetoDetectado & Histórico de detecções do radar \\
+    AcaoRealizada & Auditoria de acionamentos (só inserção) \\
+    AlteracaoModo & Auditoria de troca de modo de operação \\
+    ChamadoAjuda & Chamados de suporte dos usuários \\
+    DeadZone & Áreas onde alvos são ignorados pelo sistema \\
+    Dashboard\allowbreak CardLayout & Layout dos cards do painel, por tela/usuário \\
+    ArduinoSettings & Configurações de ambiente do Arduino \\
     \hline
   \end{tabular}
 \end{table}

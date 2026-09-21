@@ -104,15 +104,6 @@ package "Modelos de Domínio" {
     +UsuarioSolicitante: string
     +Resultado: ResultadoAlteracaoModo
   }
-
-  class ChamadoAjuda {
-    +Id: int
-    +UsuarioId: int
-    +Titulo: string
-    +Categoria: string
-    +Status: StatusChamado
-    +RespostaAdmin: string
-  }
 }
 
 package "Serviços (interfaces)" {
@@ -163,7 +154,6 @@ Target "0..1" -- "0..1" Tower : SelectedTower >
 Usuario "1" -- "1" PerfilUsuario : possui >
 Usuario "1" -- "0..*" AcaoRealizada : solicita (quando manual) >
 Usuario "1" -- "0..*" AlteracaoModo : solicita >
-Usuario "1" -- "0..*" ChamadoAjuda : abre >
 
 ' ---------------------------------------------------------------- Serviço ↔ modelo que gerencia
 ITargetTrackingService "1" o-- "*" Target : Targets
