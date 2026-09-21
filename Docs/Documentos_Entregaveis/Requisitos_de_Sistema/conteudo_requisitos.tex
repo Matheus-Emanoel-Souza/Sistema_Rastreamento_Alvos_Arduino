@@ -15,52 +15,51 @@ características de qualidade essa funcionalidade deve ter) levantados a partir 
 (\texttt{src/RadarTorres.App/}), do firmware (\texttt{Arduino/ArduinoSimulation.ino}) e da
 documentação técnica já existente no projeto.
 
-\textbf{Convenções:} o \textbf{Status} reflete o estado real de implementação hoje —
-\emph{Implementado}, \emph{Parcial} ou \emph{Planejado} —, não a intenção original. A
-rastreabilidade completa de cada item até classe/método do código está em
-\texttt{Matriz\_de\_Rastreabilidade.md} (nesta mesma pasta), para não duplicar aqui.
+\textbf{Convenções:} a rastreabilidade completa de cada item até classe/método do código, bem
+como o status de implementação de cada requisito, está em \texttt{Matriz\_de\_Rastreabilidade.md}
+(nesta mesma pasta), para não duplicar aqui.
 
 \section{Requisitos Funcionais}
 
-\begin{longtable}{p{1.1cm}p{6.0cm}p{2.6cm}p{3.3cm}}
+\begin{longtable}{p{1.3cm}p{8.0cm}p{3.6cm}}
   \caption{Requisitos funcionais do RadarTorres} \label{tab:rf} \\
   \hline
-  \textbf{ID} & \textbf{Requisito} & \textbf{Ator(es)} & \textbf{Status} \\
+  \textbf{ID} & \textbf{Requisito} & \textbf{Ator(es)} \\
   \hline
   \endfirsthead
-  \multicolumn{4}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \multicolumn{3}{c}{\small \tablename~\thetable\ (continuação)} \\
   \hline
-  \textbf{ID} & \textbf{Requisito} & \textbf{Ator(es)} & \textbf{Status} \\
+  \textbf{ID} & \textbf{Requisito} & \textbf{Ator(es)} \\
   \hline
   \endhead
   \hline
   \endfoot
   \small
-  RF01 & Comunicação serial com o Arduino & Usuário, Arduino & Implementado \\
-  RF02 & Recepção e validação de leituras de alvo & Arduino, Sistema & Implementado \\
-  RF03 & Rastreamento de alvos em tempo real & Sistema & Implementado \\
-  RF04 & Exibição do radar circular em tempo real & Usuário & Implementado \\
-  RF05 & Seleção automática de torre & Sistema & Implementado \\
-  RF06 & Acionamento demonstrativo automático & Sistema & Implementado (D1) \\
-  RF07 & Modos de operação (Verde/Amarelo/Vermelho) & Usuário & Parcial (D1) \\
-  RF08 & Autenticação multiusuário & Usuário & Implementado \\
-  RF09 & Controle de acesso por perfil & Sistema, Usuário & Implementado \\
-  RF10 & Troca de senha & Usuário & Implementado \\
-  RF11 & Registro histórico de detecções & Sistema & Implementado \\
-  RF12 & Visualização de objetos detectados & Usuário & Implementado \\
-  RF13 & Exportação de objetos detectados (CSV/XML/PDF) & Usuário & Implementado \\
-  RF14 & Importação de objetos detectados (CSV/XML) & Usuário & Implementado \\
-  RF15 & Auditoria de ações realizadas & Sistema, Usuário & Parcial \\
-  RF16 & Auditoria de alterações de modo & Sistema, Usuário & Parcial \\
-  RF17 & Gerenciamento de usuários & Usuário (Admin) & Planejado \\
-  RF18 & Preferências de usuário (idioma, tema, sidebar) & Usuário & Implementado \\
-  RF19 & Abertura de chamado de ajuda & Usuário & Implementado \\
-  RF20 & Tratamento administrativo de chamados & Usuário (Admin) & Planejado \\
-  RF21 & Painel principal com cards personalizáveis & Usuário & Implementado \\
-  RF22 & Console de eventos fixável na lateral & Usuário & Implementado \\
-  RF23 & Gestão de zonas mortas (áreas de exclusão) & Usuário (Admin), Sistema & Implementado \\
-  RF24 & Detecção e compilação de sketch Arduino pela interface & Usuário, Sistema & Implementado \\
-  RF25 & Monitor serial e persistência de configurações da aba Arduino & Usuário, Sistema, Arduino & Implementado \\
+  RF01 & Comunicação serial com o Arduino & Usuário, Arduino \\
+  RF02 & Recepção e validação de leituras de alvo & Arduino, Sistema \\
+  RF03 & Rastreamento de alvos em tempo real & Sistema \\
+  RF04 & Exibição do radar circular em tempo real & Usuário \\
+  RF05 & Seleção automática de torre & Sistema \\
+  RF06 & Acionamento demonstrativo automático (D1) & Sistema \\
+  RF07 & Modos de operação (Verde/Amarelo/Vermelho) (D1) & Usuário \\
+  RF08 & Autenticação multiusuário & Usuário \\
+  RF09 & Controle de acesso por perfil & Sistema, Usuário \\
+  RF10 & Troca de senha & Usuário \\
+  RF11 & Registro histórico de detecções & Sistema \\
+  RF12 & Visualização de objetos detectados & Usuário \\
+  RF13 & Exportação de objetos detectados (CSV/XML/PDF) & Usuário \\
+  RF14 & Importação de objetos detectados (CSV/XML) & Usuário \\
+  RF15 & Auditoria de ações realizadas & Sistema, Usuário \\
+  RF16 & Auditoria de alterações de modo & Sistema, Usuário \\
+  RF17 & Gerenciamento de usuários & Usuário (Admin) \\
+  RF18 & Preferências de usuário (idioma, tema, sidebar) & Usuário \\
+  RF19 & Abertura de chamado de ajuda & Usuário \\
+  RF20 & Tratamento administrativo de chamados & Usuário (Admin) \\
+  RF21 & Painel principal com cards personalizáveis & Usuário \\
+  RF22 & Console de eventos fixável na lateral & Usuário \\
+  RF23 & Gestão de zonas mortas (áreas de exclusão) & Usuário (Admin), Sistema \\
+  RF24 & Detecção e compilação de sketch Arduino pela interface & Usuário, Sistema \\
+  RF25 & Monitor serial e persistência de configurações da aba Arduino & Usuário, Sistema, Arduino \\
 \end{longtable}
 
 \textbf{D1} = divergência entre especificação e implementação atual (o código ainda expõe um
@@ -69,38 +68,38 @@ em \texttt{Limitacoes\_Conhecidas.md}.
 
 \section{Requisitos Não Funcionais}
 
-\begin{longtable}{p{1.4cm}p{7.0cm}p{3.0cm}p{2.4cm}}
+\begin{longtable}{p{1.6cm}p{8.4cm}p{3.4cm}}
   \caption{Requisitos não funcionais do RadarTorres} \label{tab:rnf} \\
   \hline
-  \textbf{ID} & \textbf{Requisito} & \textbf{Categoria} & \textbf{Status} \\
+  \textbf{ID} & \textbf{Requisito} & \textbf{Categoria} \\
   \hline
   \endfirsthead
-  \multicolumn{4}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \multicolumn{3}{c}{\small \tablename~\thetable\ (continuação)} \\
   \hline
-  \textbf{ID} & \textbf{Requisito} & \textbf{Categoria} & \textbf{Status} \\
+  \textbf{ID} & \textbf{Requisito} & \textbf{Categoria} \\
   \hline
   \endhead
   \hline
   \endfoot
   \small
-  RNF01 & Redesenho do radar em $\sim$150\,ms & Desempenho & Atendido \\
-  RNF02 & Leitura serial não bloqueante & Desempenho & Atendido \\
-  RNF03 & Degradação graciosa de falhas de hardware/serial & Confiabilidade & Atendido \\
-  RNF04 & Distância mínima de segurança obrigatória no acionamento & Segurança & Atendido \\
-  RNF05 & Acionamento é só demonstrativo, nunca armamento real & Segurança & Atendido \\
-  RNF06 & Senha de usuário nunca em texto puro & Segurança & Atendido \\
-  RNF07 & Zonas mortas só editáveis por Administrador & Segurança & Atendido \\
-  RNF08 & Montagem segura de comandos de processo externo & Segurança & Atendido \\
-  RNF09 & Arduino CLI nunca baixado automaticamente & Segurança & Atendido \\
-  RNF10 & Interface responsiva a mudanças de resolução/tamanho & Usabilidade & Atendido \\
-  RNF11 & Troca de idioma sem reinício & Usabilidade & Atendido \\
-  RNF12 & Consistência visual entre temas & Usabilidade & Atendido \\
-  RNF13 & Limite de linhas nos consoles (anti-crescimento de memória) & Desempenho & Atendido \\
-  RNF14 & Compilação do sketch não bloqueia a interface & Desempenho & Atendido \\
-  RNF15 & Runtime portátil, sem dependência externa & Portabilidade & Atendido \\
-  RNF16 & Upgrade preserva configurações do usuário & Manutenibilidade & Atendido \\
-  RNF17 & Persistência gravável sem privilégio de administrador & Manutenibilidade & Atendido \\
-  RNF18 & Cobertura de testes automatizados dos componentes críticos & Confiabilidade & Parcial \\
-  RNF19 & Plataforma-alvo Windows Desktop & Compatibilidade & Atendido \\
-  RNF20 & Tolerância a mensagens malformadas do Arduino & Confiabilidade & Atendido \\
+  RNF01 & Redesenho do radar em $\sim$150\,ms & Desempenho \\
+  RNF02 & Leitura serial não bloqueante & Desempenho \\
+  RNF03 & Degradação graciosa de falhas de hardware/serial & Confiabilidade \\
+  RNF04 & Distância mínima de segurança obrigatória no acionamento & Segurança \\
+  RNF05 & Acionamento é só demonstrativo, nunca armamento real & Segurança \\
+  RNF06 & Senha de usuário nunca em texto puro & Segurança \\
+  RNF07 & Zonas mortas só editáveis por Administrador & Segurança \\
+  RNF08 & Montagem segura de comandos de processo externo & Segurança \\
+  RNF09 & Arduino CLI nunca baixado automaticamente & Segurança \\
+  RNF10 & Interface responsiva a mudanças de resolução/tamanho & Usabilidade \\
+  RNF11 & Troca de idioma sem reinício & Usabilidade \\
+  RNF12 & Consistência visual entre temas & Usabilidade \\
+  RNF13 & Limite de linhas nos consoles (anti-crescimento de memória) & Desempenho \\
+  RNF14 & Compilação do sketch não bloqueia a interface & Desempenho \\
+  RNF15 & Runtime portátil, sem dependência externa & Portabilidade \\
+  RNF16 & Upgrade preserva configurações do usuário & Manutenibilidade \\
+  RNF17 & Persistência gravável sem privilégio de administrador & Manutenibilidade \\
+  RNF18 & Cobertura de testes automatizados dos componentes críticos & Confiabilidade \\
+  RNF19 & Plataforma-alvo Windows Desktop & Compatibilidade \\
+  RNF20 & Tolerância a mensagens malformadas do Arduino & Confiabilidade \\
 \end{longtable}
