@@ -1,0 +1,110 @@
+% ============================================================
+% Conteúdo acadêmico puro do documento "Diagrama de Implantação".
+% SEM \documentclass, \begin{document}/\end{document} nem título —
+% pensado para ser reaproveitado via \input{} tanto no documento
+% modular quanto, futuramente, no TCC principal.
+%
+% Fonte do conteúdo: Diagrama_de_Implantacao.md e
+% Implantacao_RadarTorres.puml (nesta mesma pasta), levantados a
+% partir de installer/RadarTorres.iss, src/RadarTorres.App/App.xaml.cs
+% e Docs/Tecnica/COMUNICACAO_ARDUINO.md.
+% ============================================================
+
+\section{Apresentação}
+
+Este documento especifica o diagrama de implantação do sistema \textbf{RadarTorres}, descrevendo
+a distribuição física dos componentes de software sobre os nós de hardware envolvidos: o
+computador do usuário, onde roda a aplicação desktop, e o Arduino, responsável pela leitura dos
+sensores e pelo acionamento das torres demonstrativas. Complementa o \emph{Diagrama de Classes}
+(estrutura estática) e o \emph{Modelo de Banco de Dados} (persistência), mostrando onde cada
+parte do sistema efetivamente executa e como os nós se comunicam.
+
+O sistema representa apenas dois nós físicos reais — computador do usuário e Arduino —, sem
+nenhum componente de servidor, web ou nuvem: trata-se de uma aplicação desktop única e
+autocontida, comunicando-se com um único microcontrolador externo via porta serial.
+
+\section{Nós e Elementos}
+
+\begin{longtable}{p{4.6cm}p{4.2cm}p{6.0cm}}
+  \caption{Nós e elementos do diagrama de implantação} \\
+  \hline
+  \textbf{Nó} & \textbf{Elemento} & \textbf{Papel} \\
+  \hline
+  \endfirsthead
+  \multicolumn{3}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Nó} & \textbf{Elemento} & \textbf{Papel} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  Computador do Usuário (Windows 10/11, 64-bit) & \texttt{RadarTorres.App} (.exe) & Único
+  processo, self-contained, instalado por \texttt{installer/RadarTorres.iss}. \\
+  \quad\llap{$\hookrightarrow$~}dentro do processo & Apresentação (\texttt{Views} +
+  \texttt{ViewModels}) & Captura interação do operador, \emph{binding} declarativo
+  (\texttt{ViewModelBase}, \texttt{RelayCommand}). \\
+  \quad\llap{$\hookrightarrow$~}dentro do processo & Serviços (regra de negócio) &
+  \texttt{ISerialCommunicationService}, \texttt{ITargetTrackingService},
+  \texttt{ITowerSelectionService}, \texttt{IFireControlService}, \texttt{IDeadZoneService},
+  \texttt{IAuthService}, \texttt{IPermissionService}. \\
+  \quad\llap{$\hookrightarrow$~}dentro do processo & Persistência local & Leitura/escrita dos
+  arquivos CSV/JSON de dados e preferências. \\
+  \quad\llap{$\hookrightarrow$~}dentro do processo & .NET 9 Desktop Runtime & Embutido pelo
+  instalador --- sem dependência externa a instalar. \\
+  Arduino (microcontrolador) & Firmware & Lê sensores, envia leituras de alvo, recebe comandos e
+  aciona as torres demonstrativas. \\
+  Armazenamento local (disco do usuário) &
+  \texttt{\%AppData\%\allowbreak\textbackslash RadarTorres\allowbreak\textbackslash
+  Data\allowbreak\textbackslash *.csv} /
+  \texttt{\%LocalAppData\%\allowbreak\textbackslash RadarTorres\allowbreak\textbackslash *.json}
+  & Usuários, auditoria, objetos detectados, layout, zonas mortas, preferências. \\
+  Sensores de detecção & --- & Ângulo + distância, alimentam o Arduino. \\
+  Torres demonstrativas / indicador & --- & Laser de baixa potência ou LED, nunca armamento
+  real. \\
+\end{longtable}
+
+\section{Diagrama de Implantação}
+
+O diagrama representa apenas dois nós físicos reais: o computador do usuário e o Arduino,
+conectados exclusivamente por USB/Serial (protocolo texto \texttt{TIPO;CHAVE=VALOR;\ldots} para
+comandos, \texttt{TARGET;ID=;ANGLE=;DIST=} para leituras). Fonte:
+\texttt{Implantacao\_RadarTorres.puml} (PlantUML), nesta mesma pasta.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{Implantacao_RadarTorres.png}
+  \caption{Diagrama de implantação do RadarTorres.}
+  \label{fig:implantacao}
+\end{figure}
+
+\section{Explicação}
+
+Dentro do nó do computador, o diagrama usa caixas aninhadas (computador $\rightarrow$ sistema
+operacional $\rightarrow$ processo \texttt{.exe}, com destaque em azul) para deixar explícito que
+Apresentação, Serviços, Persistência local e o .NET 9 Runtime são apenas quatro blocos lógicos do
+mesmo processo \texttt{RadarTorres.App.exe} --- não componentes distribuídos em máquinas ou
+processos separados. Os dois acoplamentos mais relevantes desse processo saem da caixa para fora:
+Serviços comunica-se com o Arduino pela porta serial, e a camada de Persistência lê/grava o
+armazenamento local em disco.
+
+Do lado do Arduino, o Firmware concentra as quatro responsabilidades físicas do dispositivo: ler
+os sensores de ângulo/distância, enviar leituras de alvo ao computador, receber comandos e
+acionar as torres demonstrativas.
+
+\section{Conclusão}
+
+O diagrama de implantação evidencia a natureza autocontida do RadarTorres: um único nó de
+software (a aplicação desktop, self-contained sobre o .NET 9) comunicando-se com um único
+microcontrolador externo via porta serial, sem qualquer dependência de infraestrutura de
+servidor, web ou nuvem. Toda a persistência ocorre localmente, no próprio computador do usuário,
+e a segregação em blocos internos (Apresentação/Serviços/Persistência/Runtime) é apenas didática
+--- não representa componentes fisicamente distribuídos.
+
+\section{Validação}
+
+Nós, artefatos e protocolo confirmados em \texttt{installer/RadarTorres.iss},
+\texttt{App.xaml.cs} e \texttt{Docs/Tecnica/COMUNICACAO\_ARDUINO.md}. A segregação em quatro
+blocos internos (Apresentação/Serviços/Persistência/Runtime) é didática, não uma leitura de
+componentes fisicamente distribuídos --- ver Seção 6 de \texttt{UML\_RadarTorres.md} (nesta mesma
+pasta).
