@@ -1,0 +1,161 @@
+% ============================================================
+% Conteúdo acadêmico puro do documento "Diagrama de Classes".
+% SEM \documentclass, \begin{document}/\end{document} nem título —
+% pensado para ser reaproveitado via \input{} tanto no documento
+% modular quanto, futuramente, no TCC principal.
+%
+% Fonte do conteúdo: Classes_RadarTorres.puml (nesta mesma pasta),
+% conforme o próprio código-fonte em src/RadarTorres.App/ (Models,
+% Services). O diagrama é conceitual/acadêmico, não exaustivo:
+% prioriza as entidades de domínio e os serviços centrais
+% necessários para compreender o sistema, conforme
+% Docs/Documentos_Entregaveis/UML/UML_RadarTorres.md, seção 5. A
+% listagem completa de classes (incluindo Repositories, ViewModels
+% e Helpers) está em Diagrama_de_Classes.md, nesta mesma pasta.
+% ============================================================
+
+\section{Apresentação}
+
+Este documento especifica o diagrama de classes do sistema \textbf{RadarTorres}, descrevendo os
+elementos centrais de software (\emph{Models} e \emph{Services}) e seus relacionamentos.
+Complementa o \emph{Modelo de Banco de Dados} (persistência) e o \emph{Diagrama de Implantação}
+(distribuição física), mostrando a estrutura estática do código-fonte em C\# 13 / WPF (padrão
+MVVM).
+
+O diagrama é \textbf{conceitual, não exaustivo}: prioriza as entidades de domínio e os serviços
+centrais necessários para compreender o sistema, com atributos e operações simplificados aos
+mais relevantes conceitualmente. Todas as classes e interfaces abaixo existem no código-fonte;
+nenhuma foi inventada para o diagrama. A listagem completa de classes (incluindo Repositories,
+ViewModels e Helpers) e a assinatura integral de cada membro estão em
+\texttt{Diagrama\_de\_Classes.md}, nesta mesma pasta.
+
+\section{Modelos de Domínio}
+
+\begin{longtable}{p{3.4cm}p{11.0cm}}
+  \caption{Modelos de domínio} \\
+  \hline
+  \textbf{Classe} & \textbf{Atributos / Descrição} \\
+  \hline
+  \endfirsthead
+  \multicolumn{2}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Classe} & \textbf{Atributos / Descrição} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  \texttt{SystemMode} \emph{(enum)} & \texttt{Off}, \texttt{LocationOnly},
+  \texttt{LocationAutoTower}, \texttt{LocationAutoFire}, \texttt{Maintenance},
+  \texttt{Emergency}. \\
+  \texttt{PerfilUsuario} \emph{(enum)} & \texttt{Administrador}, \texttt{Operador},
+  \texttt{Visualizador}. \\
+  \texttt{SensorReading} & \texttt{TargetId}, \texttt{Angle}, \texttt{Distance},
+  \texttt{Source}. DTO de uma leitura já validada. \\
+  \texttt{Target} & \texttt{Id}, \texttt{Angle}, \texttt{Distance}, \texttt{X}, \texttt{Y},
+  \texttt{Quadrant}, \texttt{IsActive}, \texttt{SelectedTower}. Alvo detectado, vivo em
+  memória. \\
+  \texttt{Tower} & \texttt{Id}, \texttt{Name}, \texttt{X}, \texttt{Y},
+  \texttt{PreferredQuadrant}, \texttt{State}, \texttt{IsAvailable}. Torre demonstrativa. \\
+  \texttt{DeadZone} & \texttt{Id}, \texttt{Name}, \texttt{Type}, \texttt{Quadrant},
+  \texttt{MinDistance}, \texttt{MaxDistance}, \texttt{Enabled}. Zona onde alvos não recebem
+  torre/acionamento. \\
+  \texttt{Usuario} & \texttt{Id}, \texttt{Nome}, \texttt{Login}, \texttt{Perfil},
+  \texttt{Ativo}. Conta de acesso ao aplicativo. \\
+  \texttt{ObjetoDetectado} & \texttt{Id}, \texttt{X}, \texttt{Y}, \texttt{Quadrante},
+  \texttt{DataHora}, \texttt{Dispositivo}. Registro histórico de uma primeira detecção. \\
+  \texttt{AcaoRealizada} & \texttt{Id}, \texttt{Dispositivo}, \texttt{DataHora},
+  \texttt{UsuarioResponsavel}, \texttt{Origem}, \texttt{Resultado}. Auditoria de
+  acionamento (só inserção). \\
+  \texttt{AlteracaoModo} & \texttt{Id}, \texttt{ModoAnterior}, \texttt{NovoModo},
+  \texttt{DataHoraSolicitacao}, \texttt{UsuarioSolicitante}, \texttt{Resultado}. Auditoria de
+  troca de \texttt{SystemMode} (só inserção). \\
+\end{longtable}
+
+\section{Serviços (Interfaces)}
+
+Os serviços centrais de negócio são representados por suas interfaces (\texttt{I*Service}), que
+definem o contrato consumido pela camada de apresentação, independente da implementação.
+
+\begin{longtable}{p{4.6cm}p{9.8cm}}
+  \caption{Interfaces de serviço} \\
+  \hline
+  \textbf{Interface} & \textbf{Métodos / Responsabilidade} \\
+  \hline
+  \endfirsthead
+  \multicolumn{2}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Interface} & \textbf{Métodos / Responsabilidade} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  \cls{ITowerSelectionService} & \texttt{SelectTowerFor(Target): TowerSelectionResult};
+  \texttt{RecomputeTowerStates(Target[*])}. Algoritmo de seleção de torre. \\
+  \cls{IFireControlService} & \texttt{Authorize(Target, double):
+  FireAuthorizationResult}; \texttt{TryFireAsync(Target, ...): bool}. Regra de segurança e
+  acionamento demonstrativo. \\
+  \cls{ITargetTrackingService} & \texttt{ProcessReading(SensorReading)};
+  \texttt{PurgeStaleTargets()}; \texttt{ClearAll()}. Cria/atualiza/expira \texttt{Target} a
+  partir de \texttt{SensorReading}. \\
+  \cls{IDeadZoneService} & \texttt{AddQuadrantZone(...)};
+  \texttt{AddDistanceRangeZone(...)}; \texttt{FindBlockingZone(Target): DeadZone}. Avalia se
+  um alvo está bloqueado por uma zona morta. \\
+  \cls{ISerialCommunicationService} & \texttt{ConnectAsync(...): bool};
+  \texttt{SendCommandAsync(string): bool}; \texttt{GetAvailablePorts(): string[*]}. Transporte
+  serial com o Arduino. \\
+  \cls{IAuthService} & \texttt{CurrentUser: Usuario}; \texttt{LoginAsync(...):
+  AuthResult}; \texttt{AlterarSenhaAsync(...): AuthResult}. Login/logout/sessão. \\
+  \cls{IPermissionService} & \texttt{PodeExecutarAcoes(PerfilUsuario): bool};
+  \texttt{PodeGerenciarUsuarios(PerfilUsuario): bool};
+  \texttt{PodeGerenciarZonasMortas(PerfilUsuario): bool}. Regras de acesso por perfil. \\
+\end{longtable}
+
+\section{Diagrama de Classes}
+
+O diagrama a seguir consolida os \emph{Modelos de Domínio} e as \emph{Interfaces de Serviço}
+descritos acima, com os relacionamentos de associação, composição e dependência entre eles.
+Fonte: \texttt{Classes\_RadarTorres.puml}, nesta mesma pasta.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{Diagrama_de_Classes.png}
+  \caption{Diagrama de classes do RadarTorres.}
+  \label{fig:classes}
+\end{figure}
+
+\section{Relacionamentos Principais}
+
+\begin{itemize}
+  \item \texttt{Target} associa-se opcionalmente a \texttt{Tower} (\texttt{SelectedTower},
+  0..1--0..1).
+  \item \texttt{Usuario} possui um \texttt{PerfilUsuario} e solicita (0..*) registros de
+  \texttt{AcaoRealizada} (quando manual) e \texttt{AlteracaoModo}.
+  \item \texttt{ITargetTrackingService} gerencia (1--*) objetos \texttt{Target} e consome
+  \texttt{SensorReading}.
+  \item \texttt{ITowerSelectionService} gerencia (1--*) objetos \texttt{Tower} e consulta
+  \texttt{IDeadZoneService} (bloqueio) antes de selecionar uma torre.
+  \item \texttt{IDeadZoneService} gerencia (1--*) objetos \texttt{DeadZone}.
+  \item \texttt{IFireControlService} consulta \texttt{IDeadZoneService} (bloqueio) e autoriza
+  o acionamento de um \texttt{Target}, registrando o resultado em \texttt{AcaoRealizada}.
+  \item \texttt{IAuthService} autentica \texttt{Usuario}; \texttt{IPermissionService} avalia
+  \texttt{PerfilUsuario}.
+\end{itemize}
+
+\section{Conclusão}
+
+O diagrama de classes evidencia a separação entre a camada de domínio (\emph{Models}) e a camada
+de regras de negócio, representada por interfaces de serviço independentes de implementação
+(\texttt{I*Service}). Essa estrutura mantém as responsabilidades de rastreamento de alvos,
+seleção de torre, controle de acionamento, zonas mortas, autenticação e controle de acesso
+desacopladas entre si, favorecendo substituição de implementações sem alterar os consumidores.
+
+\section{Validação}
+
+Todas as classes, interfaces, atributos e métodos apresentados existem no código-fonte em
+\texttt{src/RadarTorres.App/}; nenhum nome foi inventado. O enum \texttt{SystemMode} é hoje
+consultado pela camada de apresentação (ex.: \texttt{MainViewModel.CurrentMode}), não por
+\texttt{IFireControlService} diretamente --- o enum ainda usa a nomenclatura antiga (6 valores),
+não os 3 estados conceituais Verde/Amarelo/Vermelho da especificação revisada. Ver divergência D1
+em \texttt{Limitacoes\_Conhecidas.md} (pasta \texttt{UML/}).
