@@ -33,9 +33,34 @@
 \newcommand{\espacoumemeio}{\renewcommand{\baselinestretch}{1.5}\selectfont}
 \espacoumemeio
 
-% ---------- Parágrafo: sem recuo, 6pt de espaço depois ----------
+% ---------- Parágrafo: sem recuo ----------
+% Espaço entre parágrafos: o Manual não define um valor fixo pequeno — os
+% exemplos do template separam parágrafos com uma linha em branco inteira
+% (equivalente a uma linha do corpo em espaçamento 1,5). \parskip é setado
+% para \baselineskip logo após \begin{document} (ver abaixo) para reproduzir
+% exatamente isso, já com o espaçamento 1,5 aplicado.
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt}
+
+% ---------- Citação direta longa (ABNT, >3 linhas): recuo 4cm à esquerda,
+% justificado, espaçamento SIMPLES, tamanho 11, espaço de 6pt antes/depois ----------
+\newenvironment{citacaolonga}{%
+  \begin{list}{}{\setlength{\leftmargin}{4cm}\setlength{\rightmargin}{0pt}}
+  \item[]\vspace{6pt}\espacosimples\fontsize{11}{13}\selectfont
+}{%
+  \vspace{6pt}\end{list}\espacoumemeio
+}
+
+% ---------- Legenda de figura/tabela e fonte (ABNT): tamanho 10, espaçamento
+% simples ----------
+\newcommand{\legenda}[1]{{\espacosimples\fontsize{10}{12}\selectfont #1\par}}
+
+% ---------- Notas de rodapé: tamanho 10 (já é o padrão em documentclass
+% 12pt) e espaçamento SIMPLES, mesmo com o corpo do texto em 1,5 ----------
+\makeatletter
+\long\def\@makefntext#1{%
+  \renewcommand{\baselinestretch}{1.0}\selectfont
+  \parindent 1em\noindent \hb@xt@1.8em{\hss\@makefnmark}#1}
+\makeatother
 
 % ---------- Numeração de página no canto superior direito ----------
 \makeatletter
@@ -81,6 +106,12 @@
 
 \begin{document}
 
+% \baselineskip só reflete o espaçamento 1,5 (\espacoumemeio) depois do
+% primeiro \selectfont em contexto normal — por isso \parskip é setado aqui,
+% e não no preâmbulo, para reproduzir a "linha em branco" de separação de
+% parágrafos usada no template.
+\setlength{\parskip}{\baselineskip}
+
 % ============================================================
 % PÁGINA 1 — cabeçalho, título, autores, resumo/abstract
 % (conforme Figura 1 do Manual, p. 16)
@@ -88,8 +119,7 @@
 \thispagestyle{ucl}
 
 \begin{center}
-    % Substitua pelo logo real, se desejar:
-    % \includegraphics[width=4cm]{logo_ucl.png}\\[1em]
+    \includegraphics[width=3.6cm]{figuras/logo_ucl.png}\\[1em]
 
     {\fontsize{12}{14}\selectfont Trabalho de Conclusão de Curso de Engenharia da Computação}\\[0.8em]
 
@@ -110,24 +140,23 @@
     {\fontsize{12}{14}\selectfont\bfseries RESUMO}
 \end{center}
 {\espacosimples
-\noindent O presente trabalho descreve o protótipo RadarTorres, um sistema para detecção,
-localização e seleção automática de ação por sensoriamento, desenvolvido como Trabalho de
-Conclusão de Curso em Engenharia da Computação. O protótipo integra sensores para identificar
-objetos em um ambiente monitorado, registrar seu posicionamento e permitir o acionamento manual
-ou automático de dispositivos de resposta. Este trabalho detalha o modelo de dados da aplicação:
-atualmente a persistência é feita em arquivos CSV organizados por usuário do sistema operacional,
-contemplando seis tabelas -- usuários, objetos detectados, ações realizadas, alterações de modo,
-preferências de usuário e chamados de ajuda --, cada uma acessada por meio de uma interface de
-repositório dedicada. Essa escolha, registrada na documentação técnica do projeto, mantém o
-sistema simples nesta fase e sinaliza explicitamente a intenção de migração futura para um banco
-de dados relacional. Descreve-se a estrutura atual das tabelas, suas relações (por login, sem
-chaves estrangeiras reais) e o modelo proposto para a migração para SQL, no qual as referências
-textuais seriam substituídas por chaves estrangeiras íntegras, sem necessidade de alterar as
-camadas de ViewModel ou Service da aplicação, já que dependem apenas das interfaces de
-repositório. Os resultados indicam que a arquitetura baseada em interfaces viabiliza essa
-migração de forma incremental e de baixo risco.
+\noindent A construção de protótipos de sensoriamento com hardware acessível é um recurso
+didático relevante em Engenharia da Computação, por permitir explorar de forma prática conceitos
+de aquisição de dados. Integrar sensoriamento de baixo custo, processamento em tempo real e
+seleção automática de resposta em um único protótipo exige lidar com comunicação entre hardware e
+software e tratamento de leituras ruidosas. Este trabalho tem como objetivo demonstrar a
+viabilidade de um sistema de detecção, localização e seleção automática de ação construído
+inteiramente com componentes acessíveis, em vez de hardware industrial. O protótipo resultante,
+denominado RadarTorres, converte leituras de ângulo e distância em posição cartesiana, exibindo-as
+em tempo real em um radar circular, seleciona automaticamente, entre torres candidatas posicionadas
+ao redor da base, a mais adequada para responder a cada alvo, e registra em auditoria toda ação
+executada. O processamento e a tomada de decisão são concentrados em uma aplicação desktop, com
+arquitetura pensada para permitir evolução futura sem exigir hardware adicional. Os requisitos do sistema foram levantados por engenharia reversa diretamente
+do código-fonte já implementado, e a validação funcional foi realizada por meio de um modo de
+simulação embutido, na ausência do hardware físico montado. Discutem-se, por fim, as limitações
+inerentes à abordagem de baixo custo adotada.
 
-\noindent\textbf{Palavras-chave}: Sensoriamento; Modelo de dados; Persistência; Migração para SQL; Protótipo.
+\noindent\textbf{Palavras-chave}: Sensoriamento de baixo custo; Detecção e rastreamento de alvos; Seleção automática de ação; Arduino; Protótipo.
 \par}
 \espacoumemeio
 
@@ -162,9 +191,14 @@ incrementally and with low risk.
 % ============================================================
 \section{Introdução}
 
-Contextualização do tema, apresentando o problema de pesquisa, os objetivos
-(geral e específicos), as hipóteses (se houver) e a justificativa do
-trabalho.
+Sistemas automáticos de detecção e resposta a alvos exigem, além de identificar um estímulo,
+rastrear com precisão sua posição e aplicar regras de decisão que evitem respostas indevidas --
+tarefas comumente resolvidas com sensores de radar ou LIDAR, de custo elevado. Como alternativa a
+esse tipo de equipamento, este trabalho adota técnicas de visão computacional, aliadas a hardware
+acessível, como parte central da arquitetura do protótipo. Protótipos didáticos construídos dessa
+forma desempenham papel importante nesse processo, por permitirem que esses conceitos sejam
+explorados de forma prática e replicável em laboratório, reproduzindo os princípios de
+sensoriamento, rastreamento e decisão presentes em sistemas mais sofisticados.
 
 % ============================================================
 % 2 DESENVOLVIMENTO
@@ -178,90 +212,36 @@ por exemplo (SOBRENOME, 2024) ou conforme Sobrenome (2024).
 
 \subsection{Procedimentos metodológicos}
 
-Descrição do percurso metodológico adotado para se chegar aos resultados.
+O percurso metodológico deste trabalho não seguiu o fluxo tradicional de especificação prévia
+seguida de implementação: o protótipo RadarTorres já existia, em desenvolvimento incremental,
+antes do levantamento formal de requisitos. Optou-se, portanto, por uma abordagem de engenharia
+reversa documental, na qual os requisitos funcionais e não funcionais foram extraídos diretamente
+do código-fonte já implementado (\texttt{src/RadarTorres.App/}), do firmware de simulação
+(\texttt{Arduino/ArduinoSimulation.ino}) e da documentação técnica já produzida ao longo do
+projeto, em vez de definidos a priori em um documento de especificação anterior à codificação.
 
-\subsection{Modelo de dados}
+Esse levantamento resultou em 25 requisitos funcionais (RF01--RF25) e 20 requisitos não
+funcionais (RNF01--RNF20), classificados segundo dois critérios objetivos: a \textbf{prioridade},
+atribuída conforme a criticidade de cada requisito para a operação central do sistema
+(comunicação serial, rastreamento, seleção de torre, modos de operação e segurança recebem
+prioridade Alta; suporte administrativo e ferramental, Média; conveniências de interface, Baixa);
+e o \textbf{status}, que reflete o estado real de implementação constatado no código no momento do
+levantamento -- Implementado, Parcial ou Planejado --, e não a intenção original de projeto. Cada
+requisito foi, além disso, rastreado até a classe ou método do código-fonte que o realiza, registro
+mantido em uma matriz de rastreabilidade dedicada, de modo que qualquer afirmação sobre o grau de
+implementação do protótipo possa ser verificada diretamente no código. Divergências encontradas
+entre o comportamento observado no código e a nomenclatura ou fluxo originalmente esperado também
+foram registradas explicitamente, em vez de omitidas ou corrigidas silenciosamente na
+documentação.
 
-Na versão atual do protótipo não há um banco de dados relacional em uso: a persistência é feita
-em arquivos CSV, um por entidade, cada um acessado por uma interface de repositório dedicada (por
-exemplo, \texttt{IUsuarioRepository}), o que permite trocar essa implementação por uma
-implementação em SQL sem alterar nenhuma camada de ViewModel ou Service. A Tabela 1 resume as seis
-entidades identificadas e a Figura 1 apresenta o modelo lógico correspondente, já no formato
-proposto para a futura migração relacional (entidades, atributos e relacionamentos por chave
-estrangeira íntegra, independente de detalhes de implementação como caminho de arquivo ou tipo de
-armazenamento).
-
-\begin{table}[htbp]
-    \begin{center}
-    {\small Tabela 1: Entidades do modelo de dados}\par
-    \vspace{0.3em}
-    \renewcommand{\arraystretch}{1.3}
-    \begin{tabular}{p{3.7cm}p{8.8cm}}
-        \hline
-        \textbf{Entidade} & \textbf{Descrição} \\
-        \hline
-        usuarios & Contas de acesso ao aplicativo, com perfil (Administrador, Operador ou
-        Visualizador) e senha armazenada com hash. \\
-        objetos\_detectados & Histórico de detecções: uma linha por primeira detecção de um
-        alvo, evitando registrar cada atualização de posição do radar. \\
-        acoes\_realizadas & Auditoria de acionamentos de dispositivos, somente inserção, para
-        toda tentativa autorizada, bloqueada ou com erro. \\
-        alteracoes\_modo & Auditoria de troca do modo de operação do sistema, também
-        somente inserção. \\
-        preferencias\_usuario & Uma linha por usuário, com preferências de interface
-        (tema, idioma, sidebar). \\
-        chamados\_ajuda & Chamados de suporte abertos pelos usuários, com status e resposta
-        do administrador. \\
-        \hline
-    \end{tabular}\par
-    \vspace{0.3em}
-    {\small Fonte: elaborado pelos autores a partir do código-fonte do projeto.}
-    \end{center}
-\end{table}
-
-\begin{figure}[htbp]
-    \begin{center}
-    \includegraphics[width=\textwidth]{../Banco_de_Dados/figuras/DER_Proposto.png}
-    \vspace{0.3em}\par
-    {\small Figura 1: Modelo lógico de dados do RadarTorres.}\par
-    {\small Fonte: elaborado pelos autores a partir do código-fonte do projeto.}
-    \end{center}
-\end{figure}
-
-No armazenamento atual (CSV) não há integridade referencial imposta pelo formato de arquivo:
-campos como \texttt{UsuarioResponsavel} referenciam o login do usuário como texto, validado
-apenas pelo código da aplicação. O modelo lógico da Figura 1 já representa a evolução proposta,
-em que essas referências textuais passam a ser chaves estrangeiras íntegras por identificador
-numérico, com integridade garantida pelo próprio SGBD ao migrar a persistência para SQL (por
-exemplo, via Entity Framework Core), sem exigir mudanças nas interfaces de repositório já
-existentes nem nas camadas de ViewModel/Service que dependem delas.
-
-\subsection{Resultados e discussão}
-
-Apresentação e análise dos resultados alcançados, com verificação e
-comparação em relação à fundamentação teórica.
-
-% ============================================================
-% 3 CONCLUSÃO
-% ============================================================
-\section{Conclusão}
-
-Retomada dos objetivos e hipóteses apresentados na introdução, indicando se
-foram alcançados/confirmados, além de recomendações e sugestões para
-trabalhos futuros.
-
-% ============================================================
-% REFERÊNCIAS (ABNT NBR 6023:2018)
-% Lista manual, alinhada à esquerda, espaço simples, separadas por
-% um espaço em branco. (Se preferir gerenciar via .bib, instale o
-% pacote "abntex2" pelo MiKTeX Console e troque para \bibliography.)
-% ============================================================
-\clearpage
-\section*{REFERÊNCIAS}
-{\espacosimples\raggedright
-\noindent SOBRENOME, Nome. \textit{Título do livro}. 2. ed. São Paulo: Editora, 2024.
-
-\noindent SOBRENOME, Nome; SOBRENOME, Nome. Título do artigo. \textit{Nome da Revista}, cidade, v. 1, n. 1, p. 1-10, 2024.
-\par}
+A validação funcional do protótipo, por sua vez, não foi realizada sobre o hardware físico, ainda
+não montado: o sistema conta com um modo de simulação embutido na própria aplicação, que gera
+leituras sintéticas de ângulo e distância no mesmo formato produzido pelo Arduino, permitindo
+exercitar de ponta a ponta o rastreamento de alvos, a seleção automática de torre e as regras de
+zona morta sem depender de uma porta serial conectada. Esse modo de simulação foi o meio primário
+usado para observar o comportamento do sistema durante este trabalho, o que impõe um limite claro
+ao escopo dos resultados relatados: eles atestam a corretude da lógica de decisão implementada em
+software, mas não substituem uma validação de campo com sensores e torres físicas, deixada como
+trabalho futuro.
 
 \end{document}
