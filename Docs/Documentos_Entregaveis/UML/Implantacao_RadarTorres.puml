@@ -32,8 +32,8 @@ node "Arduino\n(microcontrolador)" as MCU {
   artifact "Firmware\n(sensores)" as Firmware
 }
 
-device "Sensores de detecção\n(ângulo + distância)" as Sensores
-device "Torres demonstrativas /\nindicador (laser de baixa\npotência ou LED)" as Torres
+node "Sensores de detecção\n(ângulo + distância)" as Sensores
+node "Torres demonstrativas /\nindicador (laser de baixa\npotência ou LED)" as Torres
 
 PC -[#black]-> MCU : USB / Serial\n(protocolo texto TIPO;CHAVE=VALOR;...)
 MCU -[#black]-> PC : leituras de alvo\n(TARGET;ID=;ANGLE=;DIST=)
