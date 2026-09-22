@@ -80,6 +80,14 @@ public partial class App : Application
         services.AddSingleton<IFireControlService, FireControlService>();
         services.AddSingleton<ISimulationService, SimulationService>();
 
+        // --- Módulo "Câmeras" (visualização em tempo real de até 4 webcams simultâneas).
+        //     ICameraDeviceEnumerator é Singleton só por consistência com o resto do arquivo (é
+        //     sem estado). ICameraCaptureServiceFactory é Singleton (a fábrica em si não guarda
+        //     estado), mas cada painel usa a fábrica para criar sua PRÓPRIA ICameraCaptureService
+        //     (por isso ela não é registrada diretamente no container) — ver CamerasViewModel.
+        services.AddSingleton<ICameraDeviceEnumerator, CameraDeviceEnumerator>();
+        services.AddSingleton<ICameraCaptureServiceFactory, CameraCaptureServiceFactory>();
+
         // --- Zonas mortas (quadrante/faixa de distância onde nenhuma torre é selecionada nem
         //     acionamento é autorizado). Repositório e serviço únicos para toda a instalação,
         //     consultados por TowerSelectionService/FireControlService acima.
@@ -147,6 +155,12 @@ public partial class App : Application
         // estado da compilação entre navegações pela barra lateral.
         services.AddSingleton<ArduinoSettingsViewModel>();
         services.AddSingleton<ArduinoSettingsView>();
+
+        // Singleton igual às demais telas de navegação: a view libera as câmeras de todos os
+        // painéis sozinha ao sair da tela (ver CamerasView.Unloaded), então não precisa ser
+        // recriada a cada navegação.
+        services.AddSingleton<CamerasViewModel>();
+        services.AddSingleton<CamerasView>();
     }
 
     /// <summary>

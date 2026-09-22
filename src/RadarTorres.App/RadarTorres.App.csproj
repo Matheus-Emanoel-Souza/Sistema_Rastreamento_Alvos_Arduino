@@ -44,6 +44,18 @@
          MainWindow.xaml.cs, agora que o número de serviços/repositórios cresceu bastante
          (ver comentário original em Configuration/AppConfig.cs, que já previa esta migração). -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+
+    <!-- Módulo "Câmeras" (visualização em tempo real de webcams via DirectShow). Escolhida em
+         vez de OpenCvSharp4/Emgu.CV por ser uma dependência ordens de grandeza menor — não traz
+         um runtime nativo de visão computacional inteiro só para exibir uma prévia ao vivo — e
+         por já cobrir exatamente o necessário: enumerar dispositivos com nome amigável e
+         entregar quadros decodificados (ver CameraCaptureService). System.Drawing.Common é
+         usado apenas dentro desse serviço, para decodificar o Bitmap do quadro em bytes BGR24
+         crus antes de expor qualquer coisa para a ViewModel/View — aceitável aqui porque o
+         projeto já é exclusivamente Windows (net9.0-windows, RuntimeIdentifiers=win-x64). -->
+    <PackageReference Include="AForge.Video" Version="2.2.5" />
+    <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
