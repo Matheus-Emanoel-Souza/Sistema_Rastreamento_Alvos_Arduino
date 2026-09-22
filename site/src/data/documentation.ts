@@ -61,21 +61,33 @@ export const documentationSections: DocumentationSection[] = [
     title: 'UML',
     items: [
       {
+        title: 'UML aplicada ao RadarTorres',
+        description: 'Introdução à UML e como cada diagrama do projeto se encaixa.',
+        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/UML_RadarTorres.pdf`,
+        kind: 'pdf',
+      },
+      {
         title: 'Casos de uso (PDF entregável)',
         description: 'Documento de casos de uso com diagrama.',
         href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Documento_Casos_de_Uso_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {
+        title: 'Diagrama de Implantação (PDF entregável)',
+        description: 'Distribuição física dos componentes (app desktop + Arduino).',
+        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Diagrama_de_Implantacao_RadarTorres.pdf`,
+        kind: 'pdf',
+      },
+      {
+        title: 'Diagrama de Classes (PDF entregável)',
+        description: 'Modelos de domínio e interfaces de serviço do sistema.',
+        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/Diagrama_de_Classes/Diagrama_de_Classes_RadarTorres.pdf`,
+        kind: 'pdf',
+      },
+      {
         title: 'Pasta UML',
         description: 'Diagramas de casos de uso, pacotes, implantação e decisões arquiteturais.',
         href: `${REPO_TREE}/Docs/Documentos_Entregaveis/UML`,
-        kind: 'folder',
-      },
-      {
-        title: 'Diagrama de Classes',
-        description: 'Diagrama de classes do sistema (PlantUML + imagem).',
-        href: `${REPO_TREE}/Docs/Documentos_Entregaveis/Diagrama_de_Classes`,
         kind: 'folder',
       },
     ],
@@ -122,6 +134,17 @@ export const documentationSections: DocumentationSection[] = [
         description: 'Matemática do radar e da seleção automática de torres.',
         href: `${REPO_BLOB}/Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`,
         kind: 'md',
+      },
+    ],
+  },
+  {
+    title: 'Embasamento Teórico',
+    items: [
+      {
+        title: 'Conceito de UML',
+        description: 'Base teórica de UML usada para fundamentar os diagramas do artigo.',
+        href: `${REPO_BLOB}/Docs/Embasamento_Teorico/Conceito_UML.pdf`,
+        kind: 'pdf',
       },
     ],
   },

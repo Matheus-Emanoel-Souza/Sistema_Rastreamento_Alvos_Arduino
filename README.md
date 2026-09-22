@@ -133,6 +133,9 @@ dotnet run
 
 Ou abra `RadarTorres.sln` (na raiz do projeto) no Visual Studio 2022+ e pressione F5.
 
+Ou, a partir da raiz do repositório, rode `build.bat` — compila a solução inteira (`dotnet restore`
++ `dotnet build -c Release`) com um único comando, sem precisar entrar na pasta do projeto.
+
 ### 💡 Dicas — rodar sem ser administrador do computador
 
 O `Setup.exe` pede elevação de administrador porque instala em `C:\Program Files`. Se você
@@ -359,6 +362,7 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── README.md                          (este arquivo)
 ├── LICENSE
 ├── RadarTorres.sln
+├── build.bat                          (compila a solução em Release — dotnet restore + build)
 ├── Arduino/
 │   └── ArduinoSimulation.ino          (firmware de teste, sem sensores reais)
 ├── build/
@@ -366,11 +370,18 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── installer/
 │   └── RadarTorres.iss                (script do Inno Setup 6)
 ├── dist/                              (gerado pelo build — Setup.exe; não versionado)
+├── site/                              (site oficial de documentação/TCC/portfólio — React + TypeScript)
 ├── Docs/
 │   ├── Tecnica/                        (arquitetura, protocolo Arduino, modelo de dados, algoritmo, referência de classes)
 │   ├── Projeto/                        (contexto do TCC, etapas, instalador, log de solicitações)
-│   └── Documentos_Entregaveis/         (documentos acadêmicos entregáveis: UML e Requisitos do Sistema)
-│       └── Diagramas_e_requisitos/     (requisitos, casos de uso, diagramas, matriz de rastreabilidade)
+│   ├── Embasamento_Teorico/            (conceitos teóricos de apoio ao artigo — ex.: UML)
+│   └── Documentos_Entregaveis/         (documentos acadêmicos entregáveis do TCC)
+│       ├── Requisitos_de_Sistema/      (requisitos funcionais/não funcionais, matriz de rastreabilidade)
+│       ├── UML/                        (casos de uso, diagrama de implantação, decisões arquiteturais)
+│       ├── Diagrama_de_Classes/        (diagrama de classes)
+│       ├── Banco_de_Dados/             (modelo de dados lógico/proposto)
+│       ├── Diagrama_Eletrico/          (diagrama elétrico conceitual do protótipo)
+│       └── Artigo/                     (artigo acadêmico do TCC)
 ├── tests/
 │   └── RadarTorres.Tests/             (xUnit — Arduino CLI, compilação, persistência, portas)
 └── src/
@@ -434,7 +445,11 @@ melhor desempenho de redesenho em tempo real — todos requisitos centrais deste
 |---|---|
 | [Requisitos funcionais e não funcionais](Docs/Documentos_Entregaveis/Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | Levantamento completo de requisitos do sistema |
 | [Casos de uso](Docs/Documentos_Entregaveis/UML/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
+| [Diagrama de Implantação](Docs/Documentos_Entregaveis/UML/Diagrama_de_Implantacao_RadarTorres.pdf) | Distribuição física dos componentes (app desktop + Arduino) |
+| [Diagrama de Classes](Docs/Documentos_Entregaveis/Diagrama_de_Classes/Diagrama_de_Classes_RadarTorres.pdf) | Modelos de domínio e interfaces de serviço |
 | [Modelo Banco de Dados](Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf) | Modelo de dados do sistema |
+| [Artigo do TCC](Docs/Documentos_Entregaveis/Artigo/Artigo.pdf) | Artigo acadêmico do Trabalho de Conclusão de Curso |
+| [Embasamento teórico — UML](Docs/Embasamento_Teorico/Conceito_UML.pdf) | Conceitos de UML aplicados ao projeto |
 
 ---
 
