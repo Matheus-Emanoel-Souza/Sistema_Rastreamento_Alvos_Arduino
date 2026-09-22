@@ -1,0 +1,305 @@
+% ============================================================
+% Conteúdo acadêmico puro do documento "Diagrama de Classes".
+% SEM \documentclass, \begin{document}/\end{document} nem título —
+% pensado para ser reaproveitado via \input{} tanto no documento
+% modular quanto, futuramente, no TCC principal.
+%
+% Fonte do conteúdo: Diagrama_de_Classes.md e Classes_RadarTorres.puml
+% (nesta mesma pasta), levantados a partir de leitura direta do
+% código-fonte em src/RadarTorres.App/ (Models, Services,
+% Repositories, ViewModels) e da documentação técnica já existente
+% em Docs/Tecnica/ (ARQUITETURA.md, DOCUMENTACAO_TECNICA.md,
+% MODELO_DADOS.md, COMUNICACAO_ARDUINO.md).
+% ============================================================
+
+\section{Apresentação}
+
+Este documento especifica o diagrama de classes do sistema \textbf{RadarTorres}, descrevendo os
+principais elementos de software (\emph{Models}, \emph{Services}, \emph{Repositories} e
+\emph{ViewModels}) e seus relacionamentos. Complementa o \emph{Modelo de Banco de Dados}
+(persistência) e o \emph{Diagrama de Implantação} (distribuição física), mostrando a estrutura
+estática do código-fonte em C\# 13 / WPF (padrão MVVM), incluindo o uso pleno de Programação
+Orientada a Objetos: interfaces \texttt{I*Service}/\texttt{I*Repository} com implementação
+separada, herança de \texttt{INotifyPropertyChanged}, composição e generics.
+
+Todas as classes, atributos e métodos listados a seguir foram lidos diretamente do código-fonte
+em \texttt{src/RadarTorres.App/}; nenhum nome foi inventado. Onde a fonte é uma inferência a
+partir do uso documentado (não leitura direta da assinatura completa), isso está marcado
+explicitamente na Seção~\ref{sec:validacao}.
+
+\section{Principais Elementos e Responsabilidades}
+
+\subsection{Models (entidades de domínio)}
+
+\begin{longtable}{p{3.6cm}p{10.8cm}}
+  \caption{Classes de domínio (Models)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endfirsthead
+  \multicolumn{2}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  \texttt{Target} & Alvo detectado, vivo em memória, atualizado a cada leitura pelo mesmo
+  \texttt{Id} (\texttt{Angle}, \texttt{Distance}, \texttt{X}, \texttt{Y}, \texttt{Quadrant},
+  \texttt{IsActive}, \texttt{IsSelected}, \texttt{SelectedTower}). Implementa
+  \texttt{INotifyPropertyChanged}. \\
+  \texttt{Tower} & Torre demonstrativa carregada de \texttt{appsettings.json}
+  (\texttt{Id}, \texttt{Name}, \texttt{X}, \texttt{Y}, \texttt{PreferredQuadrant},
+  \texttt{State}, \texttt{IsAvailable}). Implementa \texttt{INotifyPropertyChanged}. \\
+  \texttt{SensorReading} & DTO imutável de uma leitura já validada (\texttt{TargetId},
+  \texttt{Angle}, \texttt{Distance}, \texttt{ReceivedAt}, \texttt{Source}), consumido por
+  \texttt{TargetTrackingService.ProcessReading}. \\
+  \texttt{DeadZone} & Zona onde alvos não recebem torre/acionamento (\texttt{Id}, \texttt{Name},
+  \texttt{Type}, \texttt{Quadrant}, \texttt{MinDistance}, \texttt{MaxDistance},
+  \texttt{Enabled}). Implementa \texttt{INotifyPropertyChanged}. \\
+  \texttt{Usuario} & Conta de acesso ao aplicativo (\texttt{Id}, \texttt{Nome}, \texttt{Login},
+  \texttt{SenhaHash}, \texttt{SenhaSalt}, \texttt{Perfil}, \texttt{Ativo}). \\
+  \texttt{ObjetoDetectado} & Registro histórico (CSV) de uma primeira detecção, gerado a partir do
+  evento \texttt{TargetCreated} (\texttt{Id}, \texttt{Tipo}, \texttt{X}, \texttt{Y}, \texttt{Z?},
+  \texttt{Quadrante}, \texttt{DataHora}, \texttt{Dispositivo}). \\
+  \texttt{AcaoRealizada} & Auditoria de acionamento (só inserção), gravada por
+  \texttt{FireControlService} (\texttt{Id}, \texttt{Dispositivo}, \texttt{TipoAcao},
+  \texttt{Origem}, \texttt{Resultado}). \\
+  \texttt{AlteracaoModo} & Auditoria de troca de \texttt{SystemMode} (só inserção)
+  (\texttt{ModoAnterior}, \texttt{NovoModo}, \texttt{UsuarioSolicitante},
+  \texttt{Resultado}). \\
+  \cls{PreferenciasUsuario} & Preferências de UI por usuário, relação 1:1 com \texttt{Usuario}
+  (\texttt{UsuarioId} como PK=FK, \texttt{Idioma}, \texttt{Tema}, \texttt{SidebarRecolhida}). \\
+  \texttt{ChamadoAjuda} & Chamado de suporte aberto pelo usuário (\texttt{Id},
+  \texttt{UsuarioId}, \texttt{Titulo}, \texttt{Descricao}, \texttt{Status}). \\
+  \cls{DashboardCardLayout} & Layout persistido de um card do painel (\texttt{RelX/RelY/%
+  RelWidth/RelHeight} normalizados 0..1, \texttt{IsVisible}, \texttt{ZIndex}). \\
+  \texttt{LogEntry} & Linha imutável do console de eventos (\texttt{Timestamp}, \texttt{Level},
+  \texttt{Message}). \\
+  \cls{ArduinoCliInfo} / \cls{ArduinoCompileResult} / \cls{ArduinoCliOutputLine} /
+  \cls{ArduinoBoardOption} & Resultado da detecção/compilação do \texttt{arduino-cli.exe} e
+  linhas de console associadas; \texttt{ArduinoBoardCatalog.DefaultBoards} é a lista curada
+  estática de placas suportadas. \\
+\end{longtable}
+
+\subsection{Services (regras de negócio)}
+
+Seguem o padrão interface (\texttt{I*Service}) + implementação, permitindo injeção de
+dependência e substituição em testes.
+
+\begin{longtable}{p{4.6cm}p{9.8cm}}
+  \caption{Classes de serviço (Services)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endfirsthead
+  \multicolumn{2}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  \cls{SerialProtocolParser} & Interpreta/monta o protocolo textual PC$\leftrightarrow$Arduino
+  (\texttt{TryParse}, \texttt{BuildSystemOn/Off}, \texttt{BuildModeDetection/Auto},
+  \texttt{BuildFire}). \\
+  \cls{SerialCommunicationService} (\cls{ISerialCommunicationService}) & Transporte serial:
+  listar portas, conectar, ler em loop, enviar, watchdog; depende de
+  \texttt{SerialProtocolParser} e \texttt{AppConfig}. \\
+  \cls{TargetTrackingService} (\cls{ITargetTrackingService}) & Cria/atualiza/expira
+  \texttt{Target} a partir de \texttt{SensorReading}; depende de \texttt{QuadrantHelper} e
+  \texttt{CoordinateConverter}. \\
+  \cls{TowerSelectionService} (\cls{ITowerSelectionService}) & Algoritmo de seleção de
+  torre; depende de \texttt{DistanceCalculator} e \texttt{IDeadZoneService}. \\
+  \cls{FireControlService} (\cls{IFireControlService}) & Regra de segurança + acionamento
+  demonstrativo; depende de \texttt{IDeadZoneService}. \\
+  \cls{LoggingService} (\cls{ILoggingService}) & Console de eventos thread-safe
+  (\texttt{Info}, \texttt{Success}, \texttt{Warning}, \texttt{Error}). \\
+  \cls{AuthService} (\cls{IAuthService}) & Login/logout/sessão; depende de
+  \texttt{IUsuarioRepository} e \texttt{IPasswordHasher}. \\
+  \cls{PasswordHasher} (\cls{IPasswordHasher}) & Hash PBKDF2-HMACSHA256 de senha. \\
+  \cls{PermissionService} (\cls{IPermissionService}) & Regras de acesso por perfil
+  (\texttt{PodeVerMenu}, \texttt{PodeExecutarAcoes}, \texttt{PodeGerenciarUsuarios},
+  \texttt{PodeGerenciarZonasMortas}). \\
+  \cls{DeadZoneService} (\cls{IDeadZoneService}) & Avalia se um alvo está bloqueado por uma
+  zona morta; depende de \texttt{IDeadZoneRepository}. \\
+  \cls{ArduinoCliLocatorService} (\cls{IArduinoCliLocatorService}) & Localiza
+  \texttt{arduino-cli.exe} e lista placas instaladas. \\
+  \cls{ArduinoCompilerService} (\cls{IArduinoCompilerService}) & Compila o sketch como
+  processo filho (\texttt{CompileAsync}). \\
+  \cls{ArduinoSettingsRepository} (\cls{IArduinoSettingsRepository}) & Persiste
+  \texttt{ArduinoCliSettings} em JSON. \\
+  \cls{DashboardLayoutRepository} (\cls{IDashboardLayoutRepository}) & Persiste layout dos
+  cards do painel em JSON. \\
+  \cls{ObjetoDetectadoExportService} (\cls{IObjetoDetectadoExportService}) & Exporta/importa
+  \texttt{ObjetoDetectado} (CSV/XML/PDF); depende de \texttt{CsvTableStore},
+  \texttt{XmlSerializer} e PdfSharp. \\
+  \cls{LocalizationService} (\cls{ILocalizationService}) & Internacionalização
+  pt-BR/en-US. \\
+  \cls{ThemeService} (\cls{IThemeService}) & Tema claro/escuro/sistema. \\
+  \cls{NavigationService} (\cls{INavigationService}) & Navegação entre telas da Shell. \\
+\end{longtable}
+
+\subsection{Repositories (persistência CSV)}
+
+\begin{longtable}{p{5.8cm}p{8.6cm}}
+  \caption{Classes de persistência (Repositories)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endfirsthead
+  \multicolumn{2}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  \cls{CsvUsuarioRepository} (\cls{IUsuarioRepository}) & CRUD de \texttt{Usuario} em
+  \texttt{usuarios.csv}. \\
+  \cls{CsvObjetoDetectadoRepository} (\cls{IObjetoDetectadoRepository}) & Insere/lista
+  \texttt{ObjetoDetectado} em \texttt{objetos\_detectados.csv}; expõe \texttt{BuildColumns()}
+  estático reaproveitado pela exportação. \\
+  \cls{CsvAcaoRealizadaRepository} (\cls{IAcaoRealizadaRepository}) & Só-inserção de
+  \texttt{AcaoRealizada}. \\
+  \cls{CsvAlteracaoModoRepository} (\cls{IAlteracaoModoRepository}) & Só-inserção de
+  \texttt{AlteracaoModo}. \\
+  \cls{CsvPreferenciasUsuarioRepository} (\cls{IPreferenciasUsuarioRepository}) & CRUD 1:1
+  de \texttt{PreferenciasUsuario}. \\
+  \cls{CsvChamadoAjudaRepository} (\cls{IChamadoAjudaRepository}) & CRUD (com Update) de
+  \texttt{ChamadoAjuda}. \\
+  \cls{CsvTableStore<T>} & Motor genérico de leitura/escrita CSV usado por composição em
+  todos os repositórios acima (\texttt{EnsureFileWithHeader}, \texttt{Read}, \texttt{Append}). \\
+\end{longtable}
+
+Todos os repositórios CSV dependem de \texttt{CsvTableStore<T>} (composição) e de
+\texttt{AppDataPaths} (caminho em \texttt{\%AppData\%\textbackslash RadarTorres\textbackslash%
+Data\textbackslash}).
+
+\subsection{ViewModels}
+
+\begin{longtable}{p{4.4cm}p{10.0cm}}
+  \caption{Classes de apresentação (ViewModels)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endfirsthead
+  \multicolumn{2}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  \cls{ViewModelBase} & Implementa \texttt{INotifyPropertyChanged} (\texttt{SetProperty}) ---
+  classe base abstrata de todas as ViewModels. \\
+  \cls{MainViewModel} & Orquestra a tela de Monitoramento (radar, serial, torres,
+  acionamento); depende de \texttt{ISerialCommunicationService}, \texttt{ITargetTrackingService},
+  \texttt{ITowerSelectionService}, \texttt{IFireControlService}, \texttt{ILoggingService}. \\
+  \cls{ArduinoSettingsViewModel} & Orquestra a aba Configurações do Arduino; depende de
+  \texttt{IArduinoCliLocatorService}, \texttt{IArduinoCompilerService},
+  \texttt{IArduinoSettingsRepository} e da mesma instância \emph{singleton} de
+  \texttt{ISerialCommunicationService} usada por \texttt{MainViewModel}. \\
+  \cls{ObjetosDetectadosViewModel} & Lista, exporta e importa \texttt{ObjetoDetectado};
+  depende de \texttt{IObjetoDetectadoRepository}, \texttt{IObjetoDetectadoExportService},
+  \texttt{ILoggingService}, \texttt{IAuthService}, \texttt{IPermissionService}. \\
+  \cls{PainelPrincipalViewModel} & Comando de restaurar o layout padrão do painel. \\
+  \cls{LoginViewModel} & Autenticação; depende de \texttt{IAuthService}. \\
+  \cls{ProfileViewModel} & Perfil do usuário logado e troca de senha; depende de
+  \texttt{IAuthService}. \\
+  \cls{HelpDeskFormViewModel} & Envio de \texttt{ChamadoAjuda}; depende de
+  \texttt{IChamadoAjudaRepository} e \texttt{IAuthService}. \\
+  \cls{ShellViewModel} & Estado da casca da aplicação (barra lateral, navegação); depende de
+  \texttt{INavigationService} e \texttt{IPermissionService}. \\
+  \cls{SidebarMenuEntry} & Item de menu da barra lateral (classe de dado, não
+  orquestradora). \\
+\end{longtable}
+
+\subsection{Helpers (funções puras, sem estado)}
+
+\begin{longtable}{p{4.4cm}p{10.0cm}}
+  \caption{Classes utilitárias (Helpers)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endfirsthead
+  \multicolumn{2}{c}{\small \tablename~\thetable\ (continuação)} \\
+  \hline
+  \textbf{Classe} & \textbf{Responsabilidade} \\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  \small
+  \cls{CoordinateConverter} & Conversão polar$\leftrightarrow$cartesiano$\leftrightarrow$tela
+  (\texttt{static}). \\
+  \cls{DistanceCalculator} & Distância euclidiana entre pontos (\texttt{static}). \\
+  \cls{QuadrantHelper} & Determina o quadrante Q1--Q4 de uma coordenada (\texttt{static}). \\
+  \cls{RelayCommand} & Implementação de \texttt{ICommand} (padrão MVVM manual). \\
+\end{longtable}
+
+\section{Diagrama de Classes}
+
+O diagrama a seguir consolida as camadas de \emph{Models}, \emph{Services}, \emph{Repositories} e
+\emph{ViewModels} descritas acima, com os relacionamentos de implementação de interface
+(\texttt{<|..}), herança (\texttt{<|--}), composição, dependência e associação. Fonte:
+\texttt{Classes\_RadarTorres.puml}, nesta mesma pasta.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{Diagrama_de_Classes.png}
+  \caption{Diagrama de classes do RadarTorres.}
+  \label{fig:classes}
+\end{figure}
+
+\section{Relacionamentos Principais}
+
+\begin{itemize}
+  \item Cada serviço de negócio (\texttt{SerialCommunicationService},
+  \texttt{TargetTrackingService}, \texttt{TowerSelectionService}, \texttt{FireControlService},
+  \texttt{AuthService}, \texttt{PermissionService}, \texttt{LoggingService},
+  \texttt{DeadZoneService}, \texttt{ObjetoDetectadoExportService}) implementa uma interface
+  \texttt{I*Service} correspondente, permitindo injeção de dependência e substituição em
+  testes.
+  \item Cada repositório CSV (\texttt{CsvUsuarioRepository}, \texttt{CsvObjetoDetectadoRepository},
+  \texttt{CsvAcaoRealizadaRepository}, \texttt{CsvAlteracaoModoRepository},
+  \texttt{CsvChamadoAjudaRepository}) implementa a interface \texttt{I*Repository}
+  correspondente e compõe \texttt{CsvTableStore<T>} para leitura/escrita.
+  \item \texttt{TargetTrackingService} consome \texttt{SensorReading} e gerencia o ciclo de vida
+  (1..*) dos objetos \texttt{Target}, usando \texttt{QuadrantHelper} e
+  \texttt{CoordinateConverter}.
+  \item \texttt{TowerSelectionService} gerencia (1..*) os objetos \texttt{Tower} e consulta
+  \texttt{IDeadZoneService} antes de selecionar uma torre para um \texttt{Target}
+  (\texttt{Target.SelectedTower}, associação 0..1--1).
+  \item \texttt{FireControlService} consulta \texttt{IDeadZoneService} para autorizar o
+  acionamento demonstrativo.
+  \item Todas as ViewModels herdam de \texttt{ViewModelBase} (\texttt{INotifyPropertyChanged});
+  \texttt{MainViewModel} e \texttt{ArduinoSettingsViewModel} compartilham a mesma instância
+  \emph{singleton} de \texttt{ISerialCommunicationService}.
+  \item \texttt{Usuario} tem relação 1:0..1 com \texttt{PreferenciasUsuario} e 1:* com
+  \texttt{AcaoRealizada}, \texttt{AlteracaoModo} e \texttt{ChamadoAjuda}.
+\end{itemize}
+
+\section{Conclusão}
+
+O diagrama de classes evidencia o uso consistente de Programação Orientada a Objetos no
+RadarTorres: separação entre interface e implementação em toda a camada de serviços e
+repositórios, composição do motor genérico \texttt{CsvTableStore<T>} para persistência, herança
+comum via \texttt{ViewModelBase}/\texttt{INotifyPropertyChanged} na camada de apresentação, e
+funções utilitárias sem estado isoladas em \emph{Helpers}. Essa estrutura mantém as
+responsabilidades de domínio, negócio, persistência e apresentação desacopladas, favorecendo
+testabilidade e substituição de implementações sem alterar os consumidores.
+
+\section{Validação e Limitações}
+\label{sec:validacao}
+
+Todas as classes, atributos e métodos apresentados foram lidos diretamente dos arquivos-fonte em
+\texttt{src/RadarTorres.App/}; nenhum nome foi inventado. As responsabilidades de
+\texttt{ILocalizationService}, \texttt{IThemeService}, \texttt{INavigationService} e
+\texttt{IDeadZoneService} são, em parte, \textbf{inferidas} do uso descrito em
+\texttt{Docs/Tecnica/ARQUITETURA.md} e do nome da interface, já que a assinatura completa desses
+membros não foi lida nesta varredura.
