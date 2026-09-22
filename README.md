@@ -134,7 +134,8 @@ dotnet run
 Ou abra `RadarTorres.sln` (na raiz do projeto) no Visual Studio 2022+ e pressione F5.
 
 Ou, a partir da raiz do repositório, rode `build.bat` — compila a solução inteira (`dotnet restore`
-+ `dotnet build -c Release`) com um único comando, sem precisar entrar na pasta do projeto.
++ `dotnet build -c Release`) com um único comando, sem precisar entrar na pasta do projeto. Depois
+de compilar, rode `run.bat` para abrir o aplicativo (`RadarTorres.App.exe` do build Release).
 
 ### 💡 Dicas — rodar sem ser administrador do computador
 
@@ -363,6 +364,7 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── LICENSE
 ├── RadarTorres.sln
 ├── build.bat                          (compila a solução em Release — dotnet restore + build)
+├── run.bat                            (abre o RadarTorres.App.exe já compilado em Release)
 ├── Arduino/
 │   └── ArduinoSimulation.ino          (firmware de teste, sem sensores reais)
 ├── build/

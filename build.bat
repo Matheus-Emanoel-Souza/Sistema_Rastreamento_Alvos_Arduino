@@ -5,6 +5,8 @@ REM
 REM Uso:
 REM   build.bat            compila em Release (dotnet restore + build)
 REM
+REM Depois de compilar, rode run.bat para abrir o aplicativo.
+REM
 REM Para publicar um instalador distribuivel (self-contained +
 REM Inno Setup), use build\publish.ps1 em vez deste script:
 REM   powershell -ExecutionPolicy Bypass -File build\publish.ps1
@@ -37,4 +39,5 @@ if errorlevel 1 (
 
 echo.
 echo ==^> Build concluido com sucesso.
+echo     Para rodar o aplicativo, use: run.bat
 exit /b 0
