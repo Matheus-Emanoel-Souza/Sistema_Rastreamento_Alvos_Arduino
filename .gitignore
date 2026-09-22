@@ -17,7 +17,9 @@ Thumbs.db
 .DS_Store
 
 ## Claude Code (config local, não do projeto)
+.claude
 .claude/
+CLAUDE.md
 
 ## LaTeX (artefatos de build - só os .tex/.pdf finais são versionados)
 *.aux
