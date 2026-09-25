@@ -20,7 +20,7 @@ public enum SystemMode
 
     /// <summary>
     /// Manutenção: sistema propositalmente fora de operação normal para inspeção/ajustes.
-    /// Equivalente ao "Manutenção" administrativo auditado em <c>alteracoes_modo</c>
+    /// Equivalente ao "Manutenção" administrativo auditado em <c>modo_atual_torre</c>
     /// (ver <see cref="Services.ModeAuditService"/>). Não processa alvos.
     /// </summary>
     Maintenance = 4,

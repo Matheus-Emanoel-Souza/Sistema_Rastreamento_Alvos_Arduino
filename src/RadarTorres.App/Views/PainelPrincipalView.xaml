@@ -71,14 +71,10 @@
                 </StackPanel>
             </shared:DashboardCard>
 
-            <shared:DashboardCard x:Name="CardUltimaAlteracaoModo" CardId="UltimaAlteracaoModo"
-                                   Title="{loc:Loc Dashboard.UltimaAlteracaoModo}"
+            <shared:DashboardCard x:Name="CardUltimaModoAtualTorre" CardId="UltimaModoAtualTorre"
+                                   Title="{loc:Loc Dashboard.UltimaModoAtualTorre}"
                                    Canvas.Left="272" Canvas.Top="162" Width="260" Height="150">
-                <StackPanel>
-                    <TextBlock Text="{Binding UltimaAlteracaoModoTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
-                    <TextBlock Text="{loc:Loc Dashboard.UsuarioResponsavel}" Style="{StaticResource CardLabel}" Margin="0,10,0,4"/>
-                    <TextBlock Text="{Binding UsuarioResponsavelUltimaAlteracao}" Style="{StaticResource CardValue}" FontSize="16"/>
-                </StackPanel>
+                <TextBlock Text="{Binding UltimaModoAtualTorreTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardUltimaAtualizacao" CardId="UltimaAtualizacao"

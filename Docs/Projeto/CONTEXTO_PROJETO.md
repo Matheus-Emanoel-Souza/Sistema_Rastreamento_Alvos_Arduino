@@ -75,7 +75,7 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
 3. **Fundação multiusuário** (Etapa 1, parte A): login, 3 perfis (Administrador/Operador/
    Visualizador), hash de senha (PBKDF2-HMACSHA256), permissões, i18n (pt-BR/en-US), tema
    claro/escuro/sistema, Shell (barra superior + barra lateral + navegação), painel principal
-   com indicadores, auditoria (`objetos_detectados`, `acoes_realizadas`, `alteracoes_modo`),
+   com indicadores, auditoria (`objetos_detectados`, `acoes_realizadas`, `modo_atual_torre`),
    persistência CSV. `MainWindow` virou `MonitoramentoView`, um item de menu dentro da Shell.
 4. **Aba "Configurações do Arduino"**: detecção do `arduino-cli`, compilação de sketch `.ino`
    assíncrona/cancelável (via `Process`/`ArgumentList`, nunca shell), monitor serial reaproveitando
@@ -92,7 +92,7 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
    mantendo a versão reescrita da `Sistema`, por decisão do usuário. Build (0 erros/avisos) e
    os 21 testes automatizados validados após o merge. `Sistema` e `homologacao` foram
    excluídas (local + remoto); `main` e `TESTE` permanecem.
-7. **Zonas mortas** (via branch `TESTE`, mesclada em `main`): modelo de domínio `DeadZone`,
+7. **Zonas mortas** (via branch `TESTE`, mesclada em `main`): modelo de domínio `ZonaMorta`,
    persistência em JSON único da instalação, serviço de negócio que avalia zonas ativas e
    bloqueia seleção de torre/disparo dentro delas, gestão restrita ao perfil Administrador,
    criação por clique/arraste direto no radar, card dedicado "ZONAS MORTAS" com sombreamento

@@ -29,9 +29,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly ITowerSelectionService _towerService;
     private readonly IFireControlService _fireControlService;
     private readonly ISimulationService _simulationService;
-    private readonly IDeadZoneService _deadZoneService;
+    private readonly IZonaMortaService _zonaMortaService;
     private readonly IObjetoDetectadoRepository _objetoRepository;
-    private readonly IAlteracaoModoRepository _alteracaoModoRepository;
+    private readonly IModoAtualTorreRepository _modoAtualTorreRepository;
     private readonly IAuthService _authService;
     private readonly IPermissionService _permissionService;
     private readonly Dispatcher _dispatcher;
@@ -43,9 +43,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         ITowerSelectionService towerService,
         IFireControlService fireControlService,
         ISimulationService simulationService,
-        IDeadZoneService deadZoneService,
+        IZonaMortaService zonaMortaService,
         IObjetoDetectadoRepository objetoRepository,
-        IAlteracaoModoRepository alteracaoModoRepository,
+        IModoAtualTorreRepository modoAtualTorreRepository,
         IAuthService authService,
         IPermissionService permissionService)
     {
@@ -55,9 +55,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _towerService = towerService;
         _fireControlService = fireControlService;
         _simulationService = simulationService;
-        _deadZoneService = deadZoneService;
+        _zonaMortaService = zonaMortaService;
         _objetoRepository = objetoRepository;
-        _alteracaoModoRepository = alteracaoModoRepository;
+        _modoAtualTorreRepository = modoAtualTorreRepository;
         _authService = authService;
         _permissionService = permissionService;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
@@ -86,8 +86,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         ClearRadarCommand = new RelayCommand(ClearRadar);
         TogglePauseCommand = new RelayCommand(() => IsPaused = !IsPaused);
 
-        RemoveDeadZoneCommand = new RelayCommand(zone => { if (zone is DeadZone dz) _deadZoneService.Remove(dz); }, _ => PodeGerenciarZonasMortas);
-        ToggleDeadZoneCommand = new RelayCommand(zone => { if (zone is DeadZone dz) _deadZoneService.SetEnabled(dz, !dz.Enabled); }, _ => PodeGerenciarZonasMortas);
+        RemoveZonaMortaCommand = new RelayCommand(zone => { if (zone is ZonaMorta dz) _zonaMortaService.Remove(dz); }, _ => PodeGerenciarZonasMortas);
+        ToggleZonaMortaCommand = new RelayCommand(zone => { if (zone is ZonaMorta dz) _zonaMortaService.SetEnabled(dz, !dz.Enabled); }, _ => PodeGerenciarZonasMortas);
 
         RefreshPorts();
         _logger.Success("Sistema iniciado");
@@ -118,57 +118,57 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     // ---------------------------------------------------------------- Zonas mortas
     //
     // Criação é feita diretamente no radar (clique = quadrante, arraste radial = faixa de
-    // distância — ver RadarControl.DeadZoneEditMode e OnRadarQuadrantSelected/
+    // distância — ver RadarControl.ZonaMortaEditMode e OnRadarQuadrantSelected/
     // OnRadarRangeSelected abaixo), não por um formulário de coordenadas digitadas.
 
-    public ObservableCollection<DeadZone> DeadZones => _deadZoneService.Zones;
+    public ObservableCollection<ZonaMorta> ZonaMortas => _zonaMortaService.Zones;
 
     /// <summary>Nome opcional dado à próxima zona desenhada no radar; em branco, cada zona
     /// recebe um nome descritivo automático (quadrante ou faixa).</summary>
-    private string _newDeadZoneName = string.Empty;
-    public string NewDeadZoneName
+    private string _newZonaMortaName = string.Empty;
+    public string NewZonaMortaName
     {
-        get => _newDeadZoneName;
-        set => SetProperty(ref _newDeadZoneName, value);
+        get => _newZonaMortaName;
+        set => SetProperty(ref _newZonaMortaName, value);
     }
 
-    /// <summary>Qual gesto o radar interpreta enquanto <see cref="IsDeadZoneDrawingActive"/>
-    /// está ligado: <see cref="DeadZoneType.Quadrant"/> = clique, <see cref="DeadZoneType.DistanceRange"/> = arraste radial.</summary>
-    private DeadZoneType _newDeadZoneType;
-    public DeadZoneType NewDeadZoneType
+    /// <summary>Qual gesto o radar interpreta enquanto <see cref="IsZonaMortaDrawingActive"/>
+    /// está ligado: <see cref="ZonaMortaType.Quadrant"/> = clique, <see cref="ZonaMortaType.DistanceRange"/> = arraste radial.</summary>
+    private ZonaMortaType _newZonaMortaType;
+    public ZonaMortaType NewZonaMortaType
     {
-        get => _newDeadZoneType;
+        get => _newZonaMortaType;
         set
         {
-            if (SetProperty(ref _newDeadZoneType, value))
+            if (SetProperty(ref _newZonaMortaType, value))
             {
-                OnPropertyChanged(nameof(DeadZoneEditMode));
+                OnPropertyChanged(nameof(ZonaMortaEditMode));
             }
         }
     }
 
-    private bool _isDeadZoneDrawingActive;
+    private bool _isZonaMortaDrawingActive;
 
     /// <summary>Liga/desliga a interpretação de clique/arraste no radar como definição de zona
     /// morta — quando desligado, clicar no radar continua selecionando alvos normalmente.</summary>
-    public bool IsDeadZoneDrawingActive
+    public bool IsZonaMortaDrawingActive
     {
-        get => _isDeadZoneDrawingActive;
+        get => _isZonaMortaDrawingActive;
         set
         {
-            if (SetProperty(ref _isDeadZoneDrawingActive, value))
+            if (SetProperty(ref _isZonaMortaDrawingActive, value))
             {
-                OnPropertyChanged(nameof(DeadZoneEditMode));
+                OnPropertyChanged(nameof(ZonaMortaEditMode));
             }
         }
     }
 
-    /// <summary>Vinculado a <see cref="Views.RadarControl.DeadZoneEditMode"/> — <c>null</c>
+    /// <summary>Vinculado a <see cref="Views.RadarControl.ZonaMortaEditMode"/> — <c>null</c>
     /// enquanto o modo de desenho estiver desligado ou o perfil não puder gerenciar zonas.</summary>
-    public DeadZoneType? DeadZoneEditMode => IsDeadZoneDrawingActive && PodeGerenciarZonasMortas ? NewDeadZoneType : null;
+    public ZonaMortaType? ZonaMortaEditMode => IsZonaMortaDrawingActive && PodeGerenciarZonasMortas ? NewZonaMortaType : null;
 
-    public RelayCommand RemoveDeadZoneCommand { get; }
-    public RelayCommand ToggleDeadZoneCommand { get; }
+    public RelayCommand RemoveZonaMortaCommand { get; }
+    public RelayCommand ToggleZonaMortaCommand { get; }
 
     /// <summary>Chamado pelo code-behind da tela quando o usuário clica dentro de um quadrante
     /// do radar com o modo de desenho em Quadrante. Clicar num quadrante que já tem zona a
@@ -177,16 +177,16 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     {
         if (!PodeGerenciarZonasMortas) return;
 
-        DeadZone? existing = DeadZones.FirstOrDefault(z => z.Type == DeadZoneType.Quadrant && z.Quadrant == quadrant);
+        ZonaMorta? existing = ZonaMortas.FirstOrDefault(z => z.Type == ZonaMortaType.Quadrant && z.Quadrant == quadrant);
         if (existing is not null)
         {
-            _deadZoneService.Remove(existing);
+            _zonaMortaService.Remove(existing);
             return;
         }
 
-        string name = string.IsNullOrWhiteSpace(NewDeadZoneName) ? $"Quadrante {quadrant}" : NewDeadZoneName.Trim();
-        _deadZoneService.AddQuadrantZone(name, quadrant);
-        NewDeadZoneName = string.Empty;
+        string name = string.IsNullOrWhiteSpace(NewZonaMortaName) ? $"Quadrante {quadrant}" : NewZonaMortaName.Trim();
+        _zonaMortaService.AddQuadrantZone(name, quadrant);
+        NewZonaMortaName = string.Empty;
     }
 
     /// <summary>Chamado pelo code-behind quando o usuário termina um arraste radial no radar com
@@ -196,9 +196,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     {
         if (!PodeGerenciarZonasMortas || maxDistance <= minDistance) return;
 
-        string name = string.IsNullOrWhiteSpace(NewDeadZoneName) ? $"Faixa {minDistance:0.0}–{maxDistance:0.0} m" : NewDeadZoneName.Trim();
-        _deadZoneService.AddDistanceRangeZone(name, minDistance, maxDistance);
-        NewDeadZoneName = string.Empty;
+        string name = string.IsNullOrWhiteSpace(NewZonaMortaName) ? $"Faixa {minDistance:0.0}–{maxDistance:0.0} m" : NewZonaMortaName.Trim();
+        _zonaMortaService.AddDistanceRangeZone(name, minDistance, maxDistance);
+        NewZonaMortaName = string.Empty;
     }
 
     // ---------------------------------------------------------------- Conexão serial
@@ -256,8 +256,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
             OnPropertyChanged(nameof(NaoPodeExecutarAcoes));
             OnPropertyChanged(nameof(PodeGerenciarZonasMortas));
             OnPropertyChanged(nameof(NaoPodeGerenciarZonasMortas));
-            OnPropertyChanged(nameof(DeadZoneEditMode));
-            if (!PodeGerenciarZonasMortas) IsDeadZoneDrawingActive = false;
+            OnPropertyChanged(nameof(ZonaMortaEditMode));
+            if (!PodeGerenciarZonasMortas) IsZonaMortaDrawingActive = false;
             RelayCommand.RaiseCanExecuteChangedForAll();
         });
     }
@@ -287,7 +287,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
             if (!confirmado)
             {
-                RegistrarAlteracaoModo(old, value, ResultadoAlteracaoModo.Erro, "Alteração cancelada pelo usuário na confirmação.");
+                RegistrarModoAtualTorre(old, value, ResultadoModoAtualTorre.Erro, "Alteração cancelada pelo usuário na confirmação.");
                 OnPropertyChanged(nameof(CurrentMode)); // garante que o RadioButton volte ao valor anterior na UI
                 return;
             }
@@ -296,7 +296,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
             {
                 OnPropertyChanged(nameof(SystemStatusText));
                 OnModeChanged(old, value);
-                RegistrarAlteracaoModo(old, value, ResultadoAlteracaoModo.Sucesso, null);
+                RegistrarModoAtualTorre(old, value, ResultadoModoAtualTorre.Sucesso, null);
             }
         }
     }
@@ -532,18 +532,17 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _ => mode.ToString()
     };
 
-    private void RegistrarAlteracaoModo(SystemMode anterior, SystemMode novo, ResultadoAlteracaoModo resultado, string? observacao)
+    private void RegistrarModoAtualTorre(SystemMode anterior, SystemMode novo, ResultadoModoAtualTorre resultado, string? observacao)
     {
         try
         {
             DateTime agora = DateTime.Now;
-            _alteracaoModoRepository.Add(new AlteracaoModo
+            _modoAtualTorreRepository.Add(new ModoAtualTorre
             {
                 ModoAnterior = DescribeMode(anterior),
                 NovoModo = DescribeMode(novo),
                 DataHoraSolicitacao = agora,
-                UsuarioSolicitante = _authService.CurrentUser?.Login ?? "—",
-                DataHoraExecucao = resultado == ResultadoAlteracaoModo.Sucesso ? agora : null,
+                DataHoraExecucao = resultado == ResultadoModoAtualTorre.Sucesso ? agora : null,
                 Resultado = resultado,
                 Observacao = observacao
             });

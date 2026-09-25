@@ -23,10 +23,4 @@ public partial class TopBarView : UserControl
         window.ShowDialog();
     }
 
-    private void HelpButton_Click(object sender, RoutedEventArgs e)
-    {
-        var window = App.ServiceProvider.GetRequiredService<HelpDeskFormWindow>();
-        window.Owner = Window.GetWindow(this);
-        window.ShowDialog();
-    }
 }

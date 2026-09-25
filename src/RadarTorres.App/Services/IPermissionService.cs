@@ -11,7 +11,6 @@ public enum MenuItem
     AcoesRealizadas,
     HistoricoModos,
     Usuarios,
-    ChamadosAjuda,
 
     /// <summary>Módulo "Câmeras" — visualização em tempo real das webcams conectadas (ver CamerasView).</summary>
     Cameras,

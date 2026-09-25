@@ -18,19 +18,19 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
 {
     private readonly IObjetoDetectadoRepository _objetoRepository;
     private readonly IAcaoRealizadaRepository _acaoRepository;
-    private readonly IAlteracaoModoRepository _alteracaoModoRepository;
+    private readonly IModoAtualTorreRepository _modoAtualTorreRepository;
     private readonly ISerialCommunicationService _serialService;
     private readonly Dispatcher _dispatcher;
 
     public PainelPrincipalViewModel(
         IObjetoDetectadoRepository objetoRepository,
         IAcaoRealizadaRepository acaoRepository,
-        IAlteracaoModoRepository alteracaoModoRepository,
+        IModoAtualTorreRepository modoAtualTorreRepository,
         ISerialCommunicationService serialService)
     {
         _objetoRepository = objetoRepository;
         _acaoRepository = acaoRepository;
-        _alteracaoModoRepository = alteracaoModoRepository;
+        _modoAtualTorreRepository = modoAtualTorreRepository;
         _serialService = serialService;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
@@ -52,9 +52,7 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
 
     public string ModoAtual { get; private set; } = "—";
 
-    public string UltimaAlteracaoModoTexto { get; private set; } = "—";
-
-    public string UsuarioResponsavelUltimaAlteracao { get; private set; } = "—";
+    public string UltimaModoAtualTorreTexto { get; private set; } = "—";
 
     public ConnectionState EstadoComunicacao { get; private set; } = ConnectionState.Disconnected;
 
@@ -77,22 +75,20 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
         TotalObjetosDetectados = _objetoRepository.GetAll().Count;
         TotalAcoesRealizadas = _acaoRepository.GetAll().Count;
 
-        AlteracaoModo? ultima = _alteracaoModoRepository.GetAll()
-            .Where(a => a.Resultado == ResultadoAlteracaoModo.Sucesso)
+        ModoAtualTorre? ultima = _modoAtualTorreRepository.GetAll()
+            .Where(a => a.Resultado == ResultadoModoAtualTorre.Sucesso)
             .OrderByDescending(a => a.DataHoraExecucao ?? a.DataHoraSolicitacao)
             .FirstOrDefault();
 
         if (ultima is not null)
         {
             ModoAtual = ultima.NovoModo;
-            UltimaAlteracaoModoTexto = (ultima.DataHoraExecucao ?? ultima.DataHoraSolicitacao).ToString("dd/MM/yyyy HH:mm:ss");
-            UsuarioResponsavelUltimaAlteracao = ultima.UsuarioSolicitante;
+            UltimaModoAtualTorreTexto = (ultima.DataHoraExecucao ?? ultima.DataHoraSolicitacao).ToString("dd/MM/yyyy HH:mm:ss");
         }
         else
         {
             ModoAtual = "—";
-            UltimaAlteracaoModoTexto = "—";
-            UsuarioResponsavelUltimaAlteracao = "—";
+            UltimaModoAtualTorreTexto = "—";
         }
 
         EstadoComunicacao = _serialService.State;
@@ -101,8 +97,7 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
         OnPropertyChanged(nameof(TotalObjetosDetectados));
         OnPropertyChanged(nameof(TotalAcoesRealizadas));
         OnPropertyChanged(nameof(ModoAtual));
-        OnPropertyChanged(nameof(UltimaAlteracaoModoTexto));
-        OnPropertyChanged(nameof(UsuarioResponsavelUltimaAlteracao));
+        OnPropertyChanged(nameof(UltimaModoAtualTorreTexto));
         OnPropertyChanged(nameof(EstadoComunicacao));
         OnPropertyChanged(nameof(UltimaAtualizacaoTexto));
     }

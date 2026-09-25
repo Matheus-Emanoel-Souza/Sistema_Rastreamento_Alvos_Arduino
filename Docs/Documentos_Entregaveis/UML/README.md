@@ -39,7 +39,7 @@ permanece nos `.md` para permitir edição futura.
 ## Principais inferências assumidas (resumo)
 
 * Responsabilidade de `ILocalizationService`, `IThemeService`, `INavigationService` e
-  `IDeadZoneService` — assinaturas completas não foram lidas nesta varredura; a responsabilidade
+  `IZonaMortaService` — assinaturas completas não foram lidas nesta varredura; a responsabilidade
   foi inferida do nome da interface e do uso descrito em `Docs/Tecnica/ARQUITETURA.md`.
 * RF16, RF17 (Ações Realizadas, Histórico de Modos) — **confirmado na revisão de 2026-08-30**:
   o registro de dados já funciona, a tela de consulta dedicada não existe (`Status: Parcial`).

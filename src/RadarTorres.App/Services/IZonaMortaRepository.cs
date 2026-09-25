@@ -5,9 +5,9 @@ namespace RadarTorres.App.Services;
 
 /// <summary>Persistência das zonas mortas configuradas (independente de usuário — decisão
 /// administrativa da instalação, mesmo espírito de <see cref="IArduinoSettingsRepository"/>).</summary>
-public interface IDeadZoneRepository
+public interface IZonaMortaRepository
 {
-    List<DeadZone> Load();
+    List<ZonaMorta> Load();
 
-    void Save(List<DeadZone> zones);
+    void Save(List<ZonaMorta> zones);
 }

@@ -18,11 +18,11 @@ implementação, herança de `INotifyPropertyChanged`, etc.), representadas de f
 | `Target` | Alvo detectado, vivo em memória, atualizado a cada leitura pelo mesmo `Id` | `Id`, `Angle`, `Distance`, `X`, `Y`, `Quadrant`, `IsActive`, `IsSelected`, `SelectedTower`, `DistanceToSelectedTower`, `LastUpdate` | Implementa `INotifyPropertyChanged` |
 | `Tower` | Torre demonstrativa carregada de `appsettings.json` | `Id`, `Name`, `X`, `Y`, `PreferredQuadrant`, `State`, `IsAvailable`, `DistanceToTarget` | Implementa `INotifyPropertyChanged` |
 | `SensorReading` | DTO imutável de uma leitura já validada | `TargetId`, `Angle`, `Distance`, `ReceivedAt`, `Source` | Consumido por `TargetTrackingService.ProcessReading` |
-| `DeadZone` | Zona onde alvos não recebem torre/acionamento | `Id`, `Name`, `Type`, `Quadrant`, `MinDistance`, `MaxDistance`, `Enabled` | Implementa `INotifyPropertyChanged` |
+| `ZonaMorta` | Zona onde alvos não recebem torre/acionamento | `Id`, `Name`, `Type`, `Quadrant`, `MinDistance`, `MaxDistance`, `Enabled` | Implementa `INotifyPropertyChanged` |
 | `Usuario` | Conta de acesso ao aplicativo | `Id`, `Nome`, `Login`, `SenhaHash`, `SenhaSalt`, `Perfil`, `Ativo`, `DataCriacao`, `UltimoAcesso` | — |
 | `ObjetoDetectado` | Registro histórico (CSV) de uma primeira detecção | `Id`, `Tipo`, `X`, `Y`, `Z?`, `Quadrante`, `DataHora`, `Dispositivo`, `NivelConfianca?`, `Observacao?`, `ReferenciaImagem?` | Gerado a partir do evento `TargetCreated` |
 | `AcaoRealizada` | Auditoria de acionamento (só inserção) | `Id`, `Dispositivo`, `TipoAcao`, `X`, `Y`, `Z?`, `DataHora`, `UsuarioResponsavel?`, `Origem`, `Resultado`, `Observacao?` | Gravado por `FireControlService` |
-| `AlteracaoModo` | Auditoria de troca de `SystemMode` (só inserção) | `Id`, `ModoAnterior`, `NovoModo`, `DataHoraSolicitacao`, `UsuarioSolicitante`, `DataHoraExecucao?`, `Resultado`, `Observacao?` | — |
+| `ModoAtualTorre` | Auditoria de troca de `SystemMode` (só inserção) | `Id`, `ModoAnterior`, `NovoModo`, `DataHoraSolicitacao`, `DataHoraExecucao?`, `Resultado`, `Observacao?` | — |
 | `PreferenciasUsuario` | Preferências de UI por usuário | `UsuarioId` (PK=FK), `Idioma`, `Tema`, `SidebarRecolhida`, `TelaInicial?`, `RegistrosPorPagina` | 1:1 com `Usuario` |
 | `ChamadoAjuda` | Chamado de suporte aberto pelo usuário | `Id`, `UsuarioId`, `UsuarioNome`, `Titulo`, `Descricao`, `Categoria`, `ModuloRelacionado?`, `MensagemErro?`, `DataHoraEnvio`, `Status`, `RespostaAdmin?`, `DataResolucao?` | — |
 | `DashboardCardLayout` | Layout persistido de um card do painel | `RelX/RelY/RelWidth/RelHeight` (0..1), `IsVisible`, `ZIndex`, `IsPinnedRight` | Chave = `DashboardCard.CardId` (fora da classe) |
@@ -39,13 +39,13 @@ implementação, herança de `INotifyPropertyChanged`, etc.), representadas de f
 | `SerialProtocolParser` | Interpreta/monta o protocolo textual PC↔Arduino | `TryParse`, `BuildSystemOn/Off`, `BuildModeDetection/Auto`, `BuildSetMinDistance/MaxDistance`, `BuildFire` | — |
 | `SerialCommunicationService` (`ISerialCommunicationService`) | Transporte serial: listar portas, conectar, ler em loop, enviar, watchdog | `GetAvailablePorts`, `ConnectAsync`, `Disconnect`, `SendCommandAsync`; eventos `MessageReceived`, `ConnectionStateChanged`, `CommunicationError` | `SerialProtocolParser`, `AppConfig` |
 | `TargetTrackingService` (`ITargetTrackingService`) | Cria/atualiza/expira `Target` a partir de `SensorReading` | `ProcessReading`, `PurgeStaleTargets`, `ClearAll`; eventos `TargetCreated`, `TargetUpdated`, `TargetRemoved` | `QuadrantHelper`, `CoordinateConverter` |
-| `TowerSelectionService` (`ITowerSelectionService`) | Algoritmo de seleção de torre | `SelectTowerFor`, `RecomputeTowerStates` | `DistanceCalculator`, `IDeadZoneService` |
-| `FireControlService` (`IFireControlService`) | Regra de segurança + acionamento demonstrativo | `Authorize`, `TryFireAsync` | `IDeadZoneService` |
+| `TowerSelectionService` (`ITowerSelectionService`) | Algoritmo de seleção de torre | `SelectTowerFor`, `RecomputeTowerStates` | `DistanceCalculator`, `IZonaMortaService` |
+| `FireControlService` (`IFireControlService`) | Regra de segurança + acionamento demonstrativo | `Authorize`, `TryFireAsync` | `IZonaMortaService` |
 | `LoggingService` (`ILoggingService`) | Console de eventos thread-safe | `Info`, `Success`, `Warning`, `Error`, `Clear` | — |
 | `AuthService` (`IAuthService`) | Login/logout/sessão | `LoginAsync`, `Logout`, `AlterarSenhaAsync`; evento `SessionChanged` | `IUsuarioRepository`, `IPasswordHasher` |
 | `PasswordHasher` (`IPasswordHasher`) | Hash PBKDF2-HMACSHA256 de senha | (hash/verify) | — |
 | `PermissionService` (`IPermissionService`) | Regras de acesso por perfil | `PodeVerMenu`, `PodeExecutarAcoes`, `PodeGerenciarUsuarios`, `PodeGerenciarZonasMortas` | — |
-| `DeadZoneService` (`IDeadZoneService`) | Avalia se um alvo está bloqueado | `FindBlockingZone` (inferido do uso em `ARQUITETURA.md`) | `IDeadZoneRepository` |
+| `ZonaMortaService` (`IZonaMortaService`) | Avalia se um alvo está bloqueado | `FindBlockingZone` (inferido do uso em `ARQUITETURA.md`) | `IZonaMortaRepository` |
 | `ArduinoCliLocatorService` (`IArduinoCliLocatorService`) | Localiza `arduino-cli.exe` | `Locate`, `GetVersionAsync`, `ListInstalledBoardsAsync` | — |
 | `ArduinoCompilerService` (`IArduinoCompilerService`) | Compila sketch como processo filho | `CompileAsync` | `System.Diagnostics.Process` |
 | `ArduinoSettingsRepository` (`IArduinoSettingsRepository`) | Persiste `ArduinoCliSettings` em JSON | `Load`, `Save` | — |
@@ -62,7 +62,7 @@ implementação, herança de `INotifyPropertyChanged`, etc.), representadas de f
 | `CsvUsuarioRepository` (`IUsuarioRepository`) | CRUD de `Usuario` em `usuarios.csv` |
 | `CsvObjetoDetectadoRepository` (`IObjetoDetectadoRepository`) | Insere/lista `ObjetoDetectado` em `objetos_detectados.csv`; expõe `BuildColumns()` estático reaproveitado pela exportação |
 | `CsvAcaoRealizadaRepository` (`IAcaoRealizadaRepository`) | Só-inserção de `AcaoRealizada` |
-| `CsvAlteracaoModoRepository` (`IAlteracaoModoRepository`) | Só-inserção de `AlteracaoModo` |
+| `CsvModoAtualTorreRepository` (`IModoAtualTorreRepository`) | Só-inserção de `ModoAtualTorre` |
 | `CsvPreferenciasUsuarioRepository` (`IPreferenciasUsuarioRepository`) | CRUD 1:1 de `PreferenciasUsuario` |
 | `CsvChamadoAjudaRepository` (`IChamadoAjudaRepository`) | CRUD (com Update) de `ChamadoAjuda` |
 | `CsvTableStore<T>` | Motor genérico de leitura/escrita CSV usado por todos os repositórios acima (`EnsureFileWithHeader`, etc.) |
@@ -131,10 +131,10 @@ classDiagram
         +DateTime ReceivedAt
         +DataSource Source
     }
-    class DeadZone {
+    class ZonaMorta {
         +int Id
         +string Name
-        +DeadZoneType Type
+        +ZonaMortaType Type
         +Quadrant Quadrant
         +double MinDistance
         +double MaxDistance
@@ -166,12 +166,11 @@ classDiagram
         +ResultadoAcao Resultado
         +string UsuarioResponsavel
     }
-    class AlteracaoModo {
+    class ModoAtualTorre {
         +int Id
         +string ModoAnterior
         +string NovoModo
-        +string UsuarioSolicitante
-        +ResultadoAlteracaoModo Resultado
+        +ResultadoModoAtualTorre Resultado
     }
     class PreferenciasUsuario {
         +int UsuarioId
@@ -220,11 +219,11 @@ classDiagram
         +TryFireAsync(...)
     }
     class FireControlService
-    class IDeadZoneService {
+    class IZonaMortaService {
         <<interface>>
         +FindBlockingZone(Target)
     }
-    class DeadZoneService
+    class ZonaMortaService
     class IAuthService {
         <<interface>>
         +LoginAsync(login, senha)
@@ -263,8 +262,8 @@ classDiagram
     class CsvObjetoDetectadoRepository
     class IAcaoRealizadaRepository { <<interface>> }
     class CsvAcaoRealizadaRepository
-    class IAlteracaoModoRepository { <<interface>> }
-    class CsvAlteracaoModoRepository
+    class IModoAtualTorreRepository { <<interface>> }
+    class CsvModoAtualTorreRepository
     class IChamadoAjudaRepository { <<interface>> }
     class CsvChamadoAjudaRepository
 
@@ -298,7 +297,7 @@ classDiagram
     ITargetTrackingService <|.. TargetTrackingService
     ITowerSelectionService <|.. TowerSelectionService
     IFireControlService <|.. FireControlService
-    IDeadZoneService <|.. DeadZoneService
+    IZonaMortaService <|.. ZonaMortaService
     IAuthService <|.. AuthService
     IPermissionService <|.. PermissionService
     ILoggingService <|.. LoggingService
@@ -306,15 +305,15 @@ classDiagram
     IUsuarioRepository <|.. CsvUsuarioRepository
     IObjetoDetectadoRepository <|.. CsvObjetoDetectadoRepository
     IAcaoRealizadaRepository <|.. CsvAcaoRealizadaRepository
-    IAlteracaoModoRepository <|.. CsvAlteracaoModoRepository
+    IModoAtualTorreRepository <|.. CsvModoAtualTorreRepository
     IChamadoAjudaRepository <|.. CsvChamadoAjudaRepository
 
     SerialCommunicationService --> SerialProtocolParser : usa
     TargetTrackingService --> QuadrantHelper : usa
     TargetTrackingService --> CoordinateConverter : usa
     TowerSelectionService --> DistanceCalculator : usa
-    TowerSelectionService --> IDeadZoneService : consulta
-    FireControlService --> IDeadZoneService : consulta
+    TowerSelectionService --> IZonaMortaService : consulta
+    FireControlService --> IZonaMortaService : consulta
     TargetTrackingService ..> SensorReading : consome
     TargetTrackingService "1" --> "*" Target : gerencia
     TowerSelectionService "1" --> "*" Tower : gerencia
@@ -325,7 +324,7 @@ classDiagram
     CsvUsuarioRepository --> CsvTableStore~T~ : composição
     CsvObjetoDetectadoRepository --> CsvTableStore~T~ : composição
     CsvAcaoRealizadaRepository --> CsvTableStore~T~ : composição
-    CsvAlteracaoModoRepository --> CsvTableStore~T~ : composição
+    CsvModoAtualTorreRepository --> CsvTableStore~T~ : composição
     CsvChamadoAjudaRepository --> CsvTableStore~T~ : composição
 
     ViewModelBase <|-- MainViewModel
@@ -344,7 +343,7 @@ classDiagram
 
     Usuario "1" --> "0..1" PreferenciasUsuario : tem
     Usuario "1" --> "*" AcaoRealizada : solicita (manual)
-    Usuario "1" --> "*" AlteracaoModo : solicita
+    Usuario "1" --> "*" ModoAtualTorre : solicita
     Usuario "1" --> "*" ChamadoAjuda : abre
 ```
 
@@ -352,7 +351,7 @@ classDiagram
 
 * Todas as classes/atributos/métodos acima foram lidos diretamente dos arquivos-fonte em
   `src/RadarTorres.App/` — nenhum nome foi inventado.
-* Métodos de `ILocalizationService`, `IThemeService`, `INavigationService` e `IDeadZoneService`
+* Métodos de `ILocalizationService`, `IThemeService`, `INavigationService` e `IZonaMortaService`
   não tiveram a assinatura completa lida (fora do escopo desta varredura); a responsabilidade
   listada é **inferida** do uso descrito em `Docs/Tecnica/ARQUITETURA.md` e do nome da interface —
   marcado na tabela de Services acima.

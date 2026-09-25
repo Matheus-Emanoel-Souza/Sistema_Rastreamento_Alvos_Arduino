@@ -44,7 +44,6 @@
                 </Border>
 
                 <Button x:Name="ProfileButton" Content="{loc:Loc TopBar.Profile}" Click="ProfileButton_Click" Style="{StaticResource TopBarButton}"/>
-                <Button x:Name="HelpButton" Content="{loc:Loc TopBar.Help}" Click="HelpButton_Click" Style="{StaticResource TopBarButton}"/>
                 <Button Content="{loc:Loc TopBar.Logout}" Command="{Binding LogoutCommand}" Style="{StaticResource TopBarButton}"/>
             </StackPanel>
         </DockPanel>

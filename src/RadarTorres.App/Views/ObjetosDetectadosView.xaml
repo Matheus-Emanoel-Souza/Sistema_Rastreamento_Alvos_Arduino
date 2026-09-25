@@ -51,6 +51,11 @@
                        Foreground="{DynamicResource WarningBrush}" FontSize="11" Margin="8,0,0,0"
                        Visibility="{Binding NaoPodeImportar, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
+            <Rectangle Width="1" Margin="8,2" Fill="{DynamicResource PanelBorderBrush}"/>
+
+            <Button Content="Limpar lista" Command="{Binding ClearCommand}" Margin="16,0,0,0"
+                    ToolTip="Limpa apenas a lista exibida em tela; os registros continuam salvos no arquivo."/>
+
             <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Margin="16,0,0,0" FontSize="12" TextWrapping="Wrap">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">

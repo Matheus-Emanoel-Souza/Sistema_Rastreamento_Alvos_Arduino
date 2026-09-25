@@ -21,7 +21,7 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RF06 | Implementado (ver D1) | `Services/FireControlService.cs` | `FireControlService.TryFireAsync`/`Authorize` | Autorização e execução do acionamento |
 | RF06 | Implementado (ver D1) | `Models/AcaoRealizada.cs`, `Repositories/CsvAcaoRealizadaRepository.cs` | — | Registro de auditoria de acionamento |
 | RF07 | Parcial (ver D1) | `Models/SystemState.cs` | `SystemMode` (enum — ainda 6 valores, não Verde/Amarelo/Vermelho) | Modos de operação do sistema |
-| RF07 | Parcial (ver D1) | `Models/AlteracaoModo.cs`, `Repositories/CsvAlteracaoModoRepository.cs` | — | Registro de auditoria de troca de modo |
+| RF07 | Parcial (ver D1) | `Models/ModoAtualTorre.cs`, `Repositories/CsvModoAtualTorreRepository.cs` | — | Registro de auditoria de troca de modo |
 | RF08 | Implementado | `Services/AuthService.cs` | `AuthService` (`IAuthService`) | Login/logout/sessão |
 | RF08 | Implementado | `Services/PasswordHasher.cs` | `PasswordHasher` (`IPasswordHasher`) | Hash PBKDF2-HMACSHA256 |
 | RF08 | Implementado | `Data/DataSeeder.cs` | `DataSeeder` | Semeia usuário `admin` padrão |
@@ -36,7 +36,7 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RF14 | Implementado | `Services/ObjetoDetectadoExportService.cs` | `ObjetoDetectadoExportService.ImportCsv/Xml` | Leitura de arquivo CSV/XML |
 | RF14 | Implementado | `ViewModels/ObjetosDetectadosViewModel.cs` | `ObjetosDetectadosViewModel.PodeImportar` | Restrição de perfil na importação |
 | RF15 | Parcial — registro ok, tela pendente | `Repositories/IAcaoRealizadaRepository.cs` | `IAcaoRealizadaRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `FireControlService` |
-| RF16 | Parcial — registro ok, tela pendente | `Repositories/IAlteracaoModoRepository.cs` | `IAlteracaoModoRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `MainViewModel` |
+| RF16 | Parcial — registro ok, tela pendente | `Repositories/IModoAtualTorreRepository.cs` | `IModoAtualTorreRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `MainViewModel` |
 | RF17 | Planejado — sem UI | `Repositories/IUsuarioRepository.cs` | `IUsuarioRepository` | Contrato CRUD de usuários (nenhum ViewModel/View o consome hoje) |
 | RF17 | Planejado — sem UI | `Services/IPermissionService.cs` | `IPermissionService.PodeGerenciarUsuarios` | Restrição a Administrador (pronta, mas sem tela para aplicar) |
 | RF18 | Implementado | `Models/PreferenciasUsuario.cs` | `PreferenciasUsuario` | Entidade de preferências |
@@ -52,9 +52,9 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RF21 | Implementado | `Services/DashboardLayoutRepository.cs` | `DashboardLayoutRepository` (`IDashboardLayoutRepository`) | Persistência do layout por usuário |
 | RF22 | Implementado | `Views/MonitoramentoView.xaml.cs` | `MonitoramentoView.SetLogPinned` | Realoca o console para a lateral fixa |
 | RF22 | Implementado | `Models/DashboardCardLayout.cs` | `IsPinnedRight` | Campo persistido do estado fixado |
-| RF23 | Implementado | `Models/DeadZone.cs` | `DeadZone` | Entidade de zona morta |
-| RF23 | Implementado | `Services/IDeadZoneService.cs` | `IDeadZoneService` | Avaliação de bloqueio |
-| RF23 | Implementado | `Services/IDeadZoneRepository.cs` | `IDeadZoneRepository` | Persistência de zonas |
+| RF23 | Implementado | `Models/ZonaMorta.cs` | `ZonaMorta` | Entidade de zona morta |
+| RF23 | Implementado | `Services/IZonaMortaService.cs` | `IZonaMortaService` | Avaliação de bloqueio |
+| RF23 | Implementado | `Services/IZonaMortaRepository.cs` | `IZonaMortaRepository` | Persistência de zonas |
 | RF24 | Implementado | `Services/ArduinoCliLocatorService.cs` | `ArduinoCliLocatorService.Locate` | Localização do `arduino-cli.exe` |
 | RF24 | Implementado | `Services/ArduinoCompilerService.cs` | `ArduinoCompilerService.CompileAsync` | Compilação assíncrona/cancelável |
 | RF25 | Implementado | `ViewModels/ArduinoSettingsViewModel.cs` | `ArduinoSettingsViewModel` | Orquestra monitor serial + reuso da conexão |

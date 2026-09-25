@@ -8,7 +8,7 @@
 
 | Pacote | Caminho | Responsabilidade | Elementos principais |
 |---|---|---|---|
-| `RadarTorres.App.Models` | `src/RadarTorres.App/Models/` | Entidades de domínio e enums compartilhados | `Target`, `Tower`, `SensorReading`, `Usuario`, `ObjetoDetectado`, `AcaoRealizada`, `AlteracaoModo`, `DeadZone`, `PreferenciasUsuario`, `ChamadoAjuda`, `SystemState`, `DashboardCardLayout` |
+| `RadarTorres.App.Models` | `src/RadarTorres.App/Models/` | Entidades de domínio e enums compartilhados | `Target`, `Tower`, `SensorReading`, `Usuario`, `ObjetoDetectado`, `AcaoRealizada`, `ModoAtualTorre`, `ZonaMorta`, `PreferenciasUsuario`, `ChamadoAjuda`, `SystemState`, `DashboardCardLayout` |
 | `RadarTorres.App.Configuration` | `src/RadarTorres.App/Configuration/` | Modelo tipado de `appsettings.json` e preferências de ferramenta externa | `AppSettings`, `AppConfig`, `ArduinoCliSettings` |
 | `RadarTorres.App.Helpers` | `src/RadarTorres.App/Helpers/` | Funções puras de apoio (matemática, comando MVVM) | `CoordinateConverter`, `DistanceCalculator`, `QuadrantHelper`, `RelayCommand` |
 | `RadarTorres.App.Services` | `src/RadarTorres.App/Services/` | Toda a regra de negócio (protocolo serial, rastreamento, seleção de torre, acionamento, autenticação, permissões, exportação, i18n, tema) | `SerialCommunicationService`, `TargetTrackingService`, `TowerSelectionService`, `FireControlService`, `AuthService`, `PermissionService`, `ObjetoDetectadoExportService`, entre outros |

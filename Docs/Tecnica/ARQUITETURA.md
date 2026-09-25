@@ -187,8 +187,8 @@ Decisões relevantes desta funcionalidade:
 
 ```mermaid
 flowchart LR
-    REPO["IDeadZoneRepository\n(%LocalAppData%\\RadarTorres\\dead-zones.json)"]
-    SVC["IDeadZoneService\n(ObservableCollection<DeadZone> + FindBlockingZone)"]
+    REPO["IZonaMortaRepository\n(%LocalAppData%\\RadarTorres\\zona-mortas.json)"]
+    SVC["IZonaMortaService\n(ObservableCollection<ZonaMorta> + FindBlockingZone)"]
     TOWER["TowerSelectionService.SelectTowerFor"]
     FIRE["FireControlService.Authorize"]
     RADAR["RadarControl\n(sombreamento translúcido)"]
@@ -203,12 +203,12 @@ Decisões relevantes desta funcionalidade:
 
 * **Alvo continua visível/rastreado — só não recebe torre nem pode ser acionado.** Uma zona
   morta não filtra o `TargetTrackingService`; `TowerSelectionService.SelectTowerFor` e
-  `FireControlService.Authorize` consultam `IDeadZoneService.FindBlockingZone` antes de
+  `FireControlService.Authorize` consultam `IZonaMortaService.FindBlockingZone` antes de
   qualquer outra regra e recusam a operação (com o alvo continuando visível/selecionável no
   radar), em vez de esconder o alvo. O bloqueio é checado nos dois pontos independentemente,
   para que o acionamento manual também respeite a zona mesmo que uma torre já tivesse sido
   selecionada antes de a zona existir/ser ativada.
-* **Duas formas de zona, um único modelo.** `DeadZone.Type` decide se `Quadrant` (todo um
+* **Duas formas de zona, um único modelo.** `ZonaMorta.Type` decide se `Quadrant` (todo um
   quadrante Q1-Q4) ou `MinDistance`/`MaxDistance` (faixa de distância da base, qualquer
   direção) é relevante — a UI mostra só os campos pertinentes ao tipo escolhido
   (`EnumEqualsToVisibilityConverter`).
@@ -223,7 +223,7 @@ Decisões relevantes desta funcionalidade:
   tipo/quadrante/faixa é remover e recriar, o que mantém o formulário e a validação simples
   (evita, por exemplo, ter que revalidar uma faixa em edição parcial).
 * **Visualização no radar reaproveita a mesma conversão metros→pixel do resto do desenho.**
-  `RadarControl` recebe `DeadZones` como mais uma propriedade de dependência (mesmo padrão de
+  `RadarControl` recebe `ZonaMortas` como mais uma propriedade de dependência (mesmo padrão de
   `Targets`/`Towers`) e desenha cada zona ativa na camada estática: um quarto de círculo inteiro
   (`PathGeometry` com `ArcSegment`) para zona por quadrante, ou um anel (`CombinedGeometry` de
   duas `EllipseGeometry`, modo `Exclude`) para zona por faixa de distância — ambos com o mesmo

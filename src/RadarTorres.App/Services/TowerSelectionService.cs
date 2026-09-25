@@ -23,14 +23,14 @@ namespace RadarTorres.App.Services;
 public sealed class TowerSelectionService : ITowerSelectionService
 {
     private readonly ILoggingService _logger;
-    private readonly IDeadZoneService _deadZoneService;
+    private readonly IZonaMortaService _zonaMortaService;
 
     public ObservableCollection<Tower> Towers { get; } = new();
 
-    public TowerSelectionService(ILoggingService logger, IDeadZoneService deadZoneService)
+    public TowerSelectionService(ILoggingService logger, IZonaMortaService zonaMortaService)
     {
         _logger = logger;
-        _deadZoneService = deadZoneService;
+        _zonaMortaService = zonaMortaService;
         LoadTowersFromConfig();
     }
 
@@ -53,7 +53,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
 
     public TowerSelectionResult SelectTowerFor(Target target)
     {
-        DeadZone? blockingZone = _deadZoneService.FindBlockingZone(target);
+        ZonaMorta? blockingZone = _zonaMortaService.FindBlockingZone(target);
         if (blockingZone is not null)
         {
             string zoneReason = $"ALVO EM ZONA MORTA ({blockingZone.Name} — {blockingZone.Description}) — NENHUMA TORRE SELECIONADA";

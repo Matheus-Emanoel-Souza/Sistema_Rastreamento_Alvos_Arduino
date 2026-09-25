@@ -15,7 +15,7 @@ SQL"). Local dos arquivos:
 ├── usuarios.csv
 ├── objetos_detectados.csv
 ├── acoes_realizadas.csv
-├── alteracoes_modo.csv
+├── modo_atual_torre.csv
 ├── preferencias_usuario.csv
 └── chamados_ajuda.csv
 ```
@@ -55,7 +55,7 @@ ponto de troca (ver `src/RadarTorres.App/Data/AppDataPaths.cs` e
 ```mermaid
 erDiagram
     USUARIOS ||--o{ ACOES_REALIZADAS : "solicita (quando manual)"
-    USUARIOS ||--o{ ALTERACOES_MODO : "solicita"
+    USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
     USUARIOS ||--o{ CHAMADOS_AJUDA : "abre"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
 
@@ -99,12 +99,11 @@ erDiagram
         string Observacao "nullable"
     }
 
-    ALTERACOES_MODO {
+    MODO_ATUAL_TORRE {
         int Id PK
         string ModoAnterior
         string NovoModo
         datetime DataHoraSolicitacao
-        string UsuarioSolicitante FK "Login"
         datetime DataHoraExecucao "nullable"
         string Resultado "Sucesso | Erro"
         string Observacao "nullable"
@@ -136,7 +135,7 @@ erDiagram
 ```
 
 **Nota sobre chaves estrangeiras**: como não há banco relacional ainda, os relacionamentos
-acima (`UsuarioResponsavel`, `UsuarioSolicitante`, `UsuarioId`) são referências por
+acima (`UsuarioResponsavel`, `UsuarioId`) são referências por
 **Login** (texto) ou **Id**, sem integridade referencial imposta pelo armazenamento — a
 consistência é garantida pelo código (`IAuthService.CurrentUser`), não pelo arquivo. Isso é
 resolvido automaticamente ao migrar para SQL (chaves estrangeiras reais).
@@ -165,7 +164,7 @@ Auditoria de acionamentos (Requisito 5) — **somente inserção**: o repositór
 `FireControlService.TryFireAsync`, o único ponto do sistema por onde todo acionamento passa,
 para cada tentativa (autorizada e executada, bloqueada por segurança, ou com erro de envio).
 
-### `alteracoes_modo`
+### `modo_atual_torre`
 Auditoria de troca de modo (Requisito 6) — também somente inserção. Toda troca de
 `SystemMode` (agora incluindo `Manutenção` e `Emergência`, adicionados nesta etapa) passa por
 uma confirmação do usuário antes de ser aplicada; tanto a confirmação quanto o cancelamento

@@ -1,0 +1,137 @@
+// RadarTorres — Espelho DBML do modelo de dados atual
+// Docs: https://dbml.dbdiagram.io/docs
+//
+// O protótipo NÃO usa um SGBD relacional hoje: a persistência é feita em arquivos CSV/JSON
+// locais (ver src/RadarTorres.App/Repositories/ e src/RadarTorres.App/Services/*Repository.cs).
+// Este arquivo é um ESPELHO desse modelo em DBML, para visualizar em https://dbdiagram.io
+// (cole o conteúdo lá) — não é o banco em produção.
+//
+// Gerado a partir da leitura direta do código-fonte em 2026-09 (nomes de coluna e ordem
+// batem exatamente com os CsvColumn<T> de cada *Repository.cs — ver Note de cada tabela).
+// Colunas "FK por texto" (Login em vez de Id) refletem uma limitação real da implementação
+// atual em CSV (sem integridade referencial) — comentadas abaixo em vez de um Ref formal.
+
+Table usuarios {
+  id integer [primary key]
+  nome varchar
+  login varchar [unique, note: 'Login único usado para autenticação']
+  senha_hash varchar [note: 'PBKDF2-HMACSHA256, nunca texto puro']
+  senha_salt varchar
+  perfil varchar [note: 'Administrador | Operador | Visualizador']
+  ativo boolean [default: true]
+  data_criacao timestamp
+  ultimo_acesso timestamp [note: 'NULL = nunca acessou']
+
+  Note: 'usuarios.csv — CsvUsuarioRepository'
+}
+
+Table preferencias_usuario {
+  usuario_id integer [primary key, note: 'FK 1:1 para usuarios.id']
+  idioma varchar [default: 'pt-BR']
+  tema varchar [default: 'Escuro', note: 'Claro | Escuro | Sistema']
+  sidebar_recolhida boolean [default: false]
+  tela_inicial varchar [note: 'NULL = padrão do sistema']
+  registros_por_pagina integer [default: 25]
+
+  Note: 'preferencias_usuario.csv — CsvPreferenciasUsuarioRepository (1:1 com usuarios)'
+}
+
+Table objetos_detectados {
+  id integer [primary key]
+  tipo varchar [note: 'hoje sempre "Alvo genérico"']
+  x float
+  y float
+  z float [note: 'NULL hoje (sensores 2D); reservado p/ 3D futuro']
+  quadrante varchar [note: 'ex.: "Q1"']
+  data_hora timestamp
+  dispositivo varchar [note: '"Arduino", "Simulador", ...']
+  nivel_confianca float [note: '0..1, NULL se não medido']
+  observacao varchar
+  referencia_imagem varchar [note: 'não usado hoje (sem câmera de detecção)']
+
+  Note: 'objetos_detectados.csv — CsvObjetoDetectadoRepository. Sem vínculo persistido com nenhuma outra tabela.'
+}
+
+Table acoes_realizadas {
+  id integer [primary key]
+  dispositivo varchar [note: 'ex.: "Torre 1"']
+  tipo_acao varchar [note: 'hoje sempre "Acionamento demonstrativo"']
+  x float
+  y float
+  z float
+  data_hora timestamp
+  usuario_responsavel varchar [note: 'Login (texto), NULL se automática — sem FK real hoje']
+  origem varchar [note: 'Manual | Automatica']
+  resultado varchar [note: 'Executada | Cancelada | Erro']
+  observacao varchar
+
+  Note: 'acoes_realizadas.csv — CsvAcaoRealizadaRepository. Só inserção (auditoria).'
+}
+
+Table modo_atual_torre {
+  id integer [primary key]
+  modo_anterior varchar
+  novo_modo varchar
+  data_hora_solicitacao timestamp
+  data_hora_execucao timestamp [note: 'hoje igual à solicitação (troca síncrona)']
+  resultado varchar [note: 'Sucesso | Erro']
+  observacao varchar
+
+  Note: 'modo_atual_torre.csv — CsvModoAtualTorreRepository. Só inserção (auditoria).'
+}
+
+Table zona_mortas {
+  id integer [primary key]
+  name varchar
+  type varchar [note: 'Quadrant | DistanceRange']
+  quadrant varchar [note: 'relevante só quando type = Quadrant']
+  min_distance float [note: 'relevante só quando type = DistanceRange']
+  max_distance float
+  enabled boolean [default: true]
+
+  Note: 'zona-mortas.json — ZonaMortaRepository. Hoje é um único arquivo JSON por instalação, não uma tabela relacional.'
+}
+
+Table dashboard_card_layout {
+  tela varchar [note: 'ex.: "Monitoramento", "PainelPrincipal"']
+  usuario_id integer
+  card_id varchar
+  rel_x float [note: 'fração 0..1 do canvas']
+  rel_y float
+  rel_width float
+  rel_height float
+  is_visible boolean [default: true]
+  z_index integer [default: 0]
+  is_pinned_right boolean [default: false, note: 'só usado pelo card "Console de Eventos"']
+
+  indexes {
+    (tela, usuario_id, card_id) [pk]
+  }
+
+  Note: 'dashboard-layout-{tela}-{usuário}.json — DashboardLayoutRepository. Hoje é um arquivo JSON por tela+usuário.'
+}
+
+Table arduino_settings {
+  id integer [primary key, default: 1, note: 'singleton — sempre 1 linha']
+  cli_path varchar
+  placa_fqbn varchar
+  porta_com varchar
+  baud_rate integer
+  ultimo_sketch_path varchar
+
+  Note: 'arduino-settings.json — ArduinoSettingsRepository. Configuração única por instalação.'
+}
+
+Ref: preferencias_usuario.usuario_id - usuarios.id // one-to-one
+
+Ref: dashboard_card_layout.usuario_id > usuarios.id // many-to-one
+
+// Sem Ref formal (FK "por texto", não por id — ver Note de cada tabela acima):
+//   acoes_realizadas.usuario_responsavel  -> usuarios.login
+
+// Fora deste espelho — objetos só em memória, nunca persistidos em disco:
+//   Target, Tower, SensorReading, LogEntry, CameraDevice,
+//   ArduinoCliInfo, ArduinoCompileResult, ArduinoCliOutputLine, ArduinoBoardOption
+//
+// ChamadoAjuda não existe mais no código-fonte atual (não há Model nem Repository) —
+// removido deste espelho mesmo aparecendo em documentação mais antiga do TCC.

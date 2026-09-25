@@ -6,58 +6,58 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Services;
 
 /// <summary>
-/// Implementação de <see cref="IDeadZoneService"/>. Deliberadamente livre de qualquer
+/// Implementação de <see cref="IZonaMortaService"/>. Deliberadamente livre de qualquer
 /// referência a WPF/XAML, mesmo princípio de <see cref="TowerSelectionService"/> — pura lógica
 /// de negócio, testável isoladamente. Carrega as zonas salvas uma única vez na construção e
 /// grava o arquivo inteiro a cada mudança (poucas zonas, poucas mudanças — I/O irrelevante).
 /// </summary>
-public sealed class DeadZoneService : IDeadZoneService
+public sealed class ZonaMortaService : IZonaMortaService
 {
-    private readonly IDeadZoneRepository _repository;
+    private readonly IZonaMortaRepository _repository;
     private readonly ILoggingService _logger;
     private int _nextId;
 
-    public ObservableCollection<DeadZone> Zones { get; } = new();
+    public ObservableCollection<ZonaMorta> Zones { get; } = new();
 
-    public DeadZoneService(IDeadZoneRepository repository, ILoggingService logger)
+    public ZonaMortaService(IZonaMortaRepository repository, ILoggingService logger)
     {
         _repository = repository;
         _logger = logger;
 
-        List<DeadZone> saved = _repository.Load();
-        foreach (DeadZone zone in saved)
+        List<ZonaMorta> saved = _repository.Load();
+        foreach (ZonaMorta zone in saved)
         {
             Zones.Add(zone);
         }
         _nextId = saved.Count > 0 ? saved.Max(z => z.Id) + 1 : 1;
     }
 
-    public DeadZone AddQuadrantZone(string name, Quadrant quadrant)
+    public ZonaMorta AddQuadrantZone(string name, Quadrant quadrant)
     {
-        var zone = new DeadZone
+        var zone = new ZonaMorta
         {
             Id = _nextId++,
             Name = name,
-            Type = DeadZoneType.Quadrant,
+            Type = ZonaMortaType.Quadrant,
             Quadrant = quadrant
         };
         return AddAndPersist(zone);
     }
 
-    public DeadZone AddDistanceRangeZone(string name, double minDistance, double maxDistance)
+    public ZonaMorta AddDistanceRangeZone(string name, double minDistance, double maxDistance)
     {
-        var zone = new DeadZone
+        var zone = new ZonaMorta
         {
             Id = _nextId++,
             Name = name,
-            Type = DeadZoneType.DistanceRange,
+            Type = ZonaMortaType.DistanceRange,
             MinDistance = minDistance,
             MaxDistance = maxDistance
         };
         return AddAndPersist(zone);
     }
 
-    private DeadZone AddAndPersist(DeadZone zone)
+    private ZonaMorta AddAndPersist(ZonaMorta zone)
     {
         Zones.Add(zone);
         Persist();
@@ -65,7 +65,7 @@ public sealed class DeadZoneService : IDeadZoneService
         return zone;
     }
 
-    public void SetEnabled(DeadZone zone, bool enabled)
+    public void SetEnabled(ZonaMorta zone, bool enabled)
     {
         if (zone.Enabled == enabled) return;
 
@@ -74,7 +74,7 @@ public sealed class DeadZoneService : IDeadZoneService
         _logger.Info($"Zona morta \"{zone.Name}\" {(enabled ? "ativada" : "desativada")}");
     }
 
-    public void Remove(DeadZone zone)
+    public void Remove(ZonaMorta zone)
     {
         if (!Zones.Remove(zone)) return;
 
@@ -82,13 +82,13 @@ public sealed class DeadZoneService : IDeadZoneService
         _logger.Info($"Zona morta \"{zone.Name}\" removida");
     }
 
-    public DeadZone? FindBlockingZone(Target target)
+    public ZonaMorta? FindBlockingZone(Target target)
     {
-        foreach (DeadZone zone in Zones)
+        foreach (ZonaMorta zone in Zones)
         {
             if (!zone.Enabled) continue;
 
-            bool blocked = zone.Type == DeadZoneType.Quadrant
+            bool blocked = zone.Type == ZonaMortaType.Quadrant
                 ? zone.Quadrant == target.Quadrant
                 : target.Distance >= zone.MinDistance && target.Distance <= zone.MaxDistance;
 

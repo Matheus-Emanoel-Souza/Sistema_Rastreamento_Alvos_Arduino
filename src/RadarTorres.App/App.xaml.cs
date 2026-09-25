@@ -91,8 +91,8 @@ public partial class App : Application
         // --- Zonas mortas (quadrante/faixa de distância onde nenhuma torre é selecionada nem
         //     acionamento é autorizado). Repositório e serviço únicos para toda a instalação,
         //     consultados por TowerSelectionService/FireControlService acima.
-        services.AddSingleton<IDeadZoneRepository, DeadZoneRepository>();
-        services.AddSingleton<IDeadZoneService, DeadZoneService>();
+        services.AddSingleton<IZonaMortaRepository, ZonaMortaRepository>();
+        services.AddSingleton<IZonaMortaService, ZonaMortaService>();
 
         // --- Aba "Configurações do Arduino" (ambiente/compilação/monitor serial). O compilador
         //     e o localizador do CLI não guardam estado entre chamadas (Transient); as
@@ -109,9 +109,8 @@ public partial class App : Application
         services.AddSingleton<IObjetoDetectadoRepository, CsvObjetoDetectadoRepository>();
         services.AddTransient<IObjetoDetectadoExportService, ObjetoDetectadoExportService>();
         services.AddSingleton<IAcaoRealizadaRepository, CsvAcaoRealizadaRepository>();
-        services.AddSingleton<IAlteracaoModoRepository, CsvAlteracaoModoRepository>();
+        services.AddSingleton<IModoAtualTorreRepository, CsvModoAtualTorreRepository>();
         services.AddSingleton<IPreferenciasUsuarioRepository, CsvPreferenciasUsuarioRepository>();
-        services.AddSingleton<IChamadoAjudaRepository, CsvChamadoAjudaRepository>();
 
         // --- Layout do painel principal (posição/tamanho dos cards definidos pelo usuário)
         services.AddSingleton<IDashboardLayoutRepository, DashboardLayoutRepository>();
@@ -144,9 +143,6 @@ public partial class App : Application
 
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<ShellWindow>();
-
-        services.AddTransient<HelpDeskFormViewModel>();
-        services.AddTransient<HelpDeskFormWindow>();
 
         services.AddTransient<ProfileViewModel>();
         services.AddTransient<ProfileWindow>();

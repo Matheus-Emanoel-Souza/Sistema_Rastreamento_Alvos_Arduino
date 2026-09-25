@@ -60,10 +60,10 @@ package "Modelos de Domínio" {
     +IsAvailable: bool
   }
 
-  class DeadZone {
+  class ZonaMorta {
     +Id: int
     +Name: string
-    +Type: DeadZoneType
+    +Type: ZonaMortaType
     +Quadrant: Quadrant
     +MinDistance: double
     +MaxDistance: double
@@ -96,13 +96,12 @@ package "Modelos de Domínio" {
     +Resultado: ResultadoAcao
   }
 
-  class AlteracaoModo {
+  class ModoAtualTorre {
     +Id: int
     +ModoAnterior: string
     +NovoModo: string
     +DataHoraSolicitacao: DateTime
-    +UsuarioSolicitante: string
-    +Resultado: ResultadoAlteracaoModo
+    +Resultado: ResultadoModoAtualTorre
   }
 }
 
@@ -124,10 +123,10 @@ package "Serviços (interfaces)" {
     +TryFireAsync(Target, ...): bool
   }
 
-  interface IDeadZoneService {
+  interface IZonaMortaService {
     +AddQuadrantZone(...)
     +AddDistanceRangeZone(...)
-    +FindBlockingZone(Target): DeadZone
+    +FindBlockingZone(Target): ZonaMorta
   }
 
   interface ISerialCommunicationService {
@@ -153,17 +152,17 @@ package "Serviços (interfaces)" {
 Target "0..1" -- "0..1" Tower : SelectedTower >
 Usuario "1" -- "1" PerfilUsuario : possui >
 Usuario "1" -- "0..*" AcaoRealizada : solicita (quando manual) >
-Usuario "1" -- "0..*" AlteracaoModo : solicita >
+Usuario "1" -- "0..*" ModoAtualTorre : solicita >
 
 ' ---------------------------------------------------------------- Serviço ↔ modelo que gerencia
 ITargetTrackingService "1" o-- "*" Target : Targets
 ITowerSelectionService "1" o-- "*" Tower : Towers
-IDeadZoneService "1" o-- "*" DeadZone : Zones
+IZonaMortaService "1" o-- "*" ZonaMorta : Zones
 
 ' ---------------------------------------------------------------- Dependências entre serviços
 ITargetTrackingService ..> SensorReading : consome
-ITowerSelectionService ..> IDeadZoneService : consulta (bloqueio)
-IFireControlService ..> IDeadZoneService : consulta (bloqueio)
+ITowerSelectionService ..> IZonaMortaService : consulta (bloqueio)
+IFireControlService ..> IZonaMortaService : consulta (bloqueio)
 IFireControlService ..> Target : autoriza/aciona
 IFireControlService ..> AcaoRealizada : registra >
 IAuthService ..> Usuario : autentica

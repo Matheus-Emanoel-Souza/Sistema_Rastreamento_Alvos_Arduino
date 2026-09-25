@@ -57,7 +57,7 @@ ViewModels e Helpers) e a assinatura integral de cada membro estão em
   memória. \\
   \texttt{Tower} & \texttt{Id}, \texttt{Name}, \texttt{X}, \texttt{Y},
   \texttt{PreferredQuadrant}, \texttt{State}, \texttt{IsAvailable}. Torre demonstrativa. \\
-  \texttt{DeadZone} & \texttt{Id}, \texttt{Name}, \texttt{Type}, \texttt{Quadrant},
+  \texttt{ZonaMorta} & \texttt{Id}, \texttt{Name}, \texttt{Type}, \texttt{Quadrant},
   \texttt{MinDistance}, \texttt{MaxDistance}, \texttt{Enabled}. Zona onde alvos não recebem
   torre/acionamento. \\
   \texttt{Usuario} & \texttt{Id}, \texttt{Nome}, \texttt{Login}, \texttt{Perfil},
@@ -67,9 +67,9 @@ ViewModels e Helpers) e a assinatura integral de cada membro estão em
   \texttt{AcaoRealizada} & \texttt{Id}, \texttt{Dispositivo}, \texttt{DataHora},
   \texttt{UsuarioResponsavel}, \texttt{Origem}, \texttt{Resultado}. Auditoria de
   acionamento (só inserção). \\
-  \texttt{AlteracaoModo} & \texttt{Id}, \texttt{ModoAnterior}, \texttt{NovoModo},
-  \texttt{DataHoraSolicitacao}, \texttt{UsuarioSolicitante}, \texttt{Resultado}. Auditoria de
-  troca de \texttt{SystemMode} (só inserção). \\
+  \texttt{ModoAtualTorre} & \texttt{Id}, \texttt{ModoAnterior}, \texttt{NovoModo},
+  \texttt{DataHoraSolicitacao}, \texttt{Resultado}. Auditoria de troca de
+  \texttt{SystemMode} (só inserção). \\
 \end{longtable}
 
 \section{Serviços (Interfaces)}
@@ -99,8 +99,8 @@ definem o contrato consumido pela camada de apresentação, independente da impl
   \cls{ITargetTrackingService} & \texttt{ProcessReading(SensorReading)};
   \texttt{PurgeStaleTargets()}; \texttt{ClearAll()}. Cria/atualiza/expira \texttt{Target} a
   partir de \texttt{SensorReading}. \\
-  \cls{IDeadZoneService} & \texttt{AddQuadrantZone(...)};
-  \texttt{AddDistanceRangeZone(...)}; \texttt{FindBlockingZone(Target): DeadZone}. Avalia se
+  \cls{IZonaMortaService} & \texttt{AddQuadrantZone(...)};
+  \texttt{AddDistanceRangeZone(...)}; \texttt{FindBlockingZone(Target): ZonaMorta}. Avalia se
   um alvo está bloqueado por uma zona morta. \\
   \cls{ISerialCommunicationService} & \texttt{ConnectAsync(...): bool};
   \texttt{SendCommandAsync(string): bool}; \texttt{GetAvailablePorts(): string[*]}. Transporte
@@ -131,13 +131,13 @@ Fonte: \texttt{Classes\_RadarTorres.puml}, nesta mesma pasta.
   \item \texttt{Target} associa-se opcionalmente a \texttt{Tower} (\texttt{SelectedTower},
   0..1--0..1).
   \item \texttt{Usuario} possui um \texttt{PerfilUsuario} e solicita (0..*) registros de
-  \texttt{AcaoRealizada} (quando manual) e \texttt{AlteracaoModo}.
+  \texttt{AcaoRealizada} (quando manual) e \texttt{ModoAtualTorre}.
   \item \texttt{ITargetTrackingService} gerencia (1--*) objetos \texttt{Target} e consome
   \texttt{SensorReading}.
   \item \texttt{ITowerSelectionService} gerencia (1--*) objetos \texttt{Tower} e consulta
-  \texttt{IDeadZoneService} (bloqueio) antes de selecionar uma torre.
-  \item \texttt{IDeadZoneService} gerencia (1--*) objetos \texttt{DeadZone}.
-  \item \texttt{IFireControlService} consulta \texttt{IDeadZoneService} (bloqueio) e autoriza
+  \texttt{IZonaMortaService} (bloqueio) antes de selecionar uma torre.
+  \item \texttt{IZonaMortaService} gerencia (1--*) objetos \texttt{ZonaMorta}.
+  \item \texttt{IFireControlService} consulta \texttt{IZonaMortaService} (bloqueio) e autoriza
   o acionamento de um \texttt{Target}, registrando o resultado em \texttt{AcaoRealizada}.
   \item \texttt{IAuthService} autentica \texttt{Usuario}; \texttt{IPermissionService} avalia
   \texttt{PerfilUsuario}.

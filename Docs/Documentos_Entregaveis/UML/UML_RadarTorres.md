@@ -154,11 +154,11 @@ conceitual: não representa todas as classes do projeto (haveria dezenas, inclui
 Converters e Helpers, sem ganho de compreensão para o leitor), mas concentra-se nas entidades de
 domínio e nos serviços centrais necessários para entender o funcionamento do sistema. Do lado das
 entidades de domínio estão `Target` (o alvo em rastreamento, com posição, quadrante e torre
-associada), `Tower` (torre demonstrativa configurável), `DeadZone` (área de exclusão),
+associada), `Tower` (torre demonstrativa configurável), `ZonaMorta` (área de exclusão),
 `SensorReading` (leitura bruta de sensor), `Usuario` (conta autenticável, com o atributo
 `Perfil` do tipo `PerfilUsuario`), e os quatro registros de auditoria — `ObjetoDetectado`,
-`AcaoRealizada`, `AlteracaoModo` e `ChamadoAjuda`. Do lado dos serviços estão as interfaces
-`ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`, `IDeadZoneService`,
+`AcaoRealizada`, `ModoAtualTorre` e `ChamadoAjuda`. Do lado dos serviços estão as interfaces
+`ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`, `IZonaMortaService`,
 `ISerialCommunicationService`, `IAuthService` e `IPermissionService` — cada uma responsável por
 uma fatia específica da regra de negócio, seguindo a separação de responsabilidades já descrita
 na Seção 2.

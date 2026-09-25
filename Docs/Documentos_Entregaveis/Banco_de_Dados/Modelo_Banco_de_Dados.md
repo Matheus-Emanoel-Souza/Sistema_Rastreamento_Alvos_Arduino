@@ -14,7 +14,7 @@ Local dos arquivos (por usuário do Windows, sem precisar de administrador):
 ├── usuarios.csv
 ├── objetos_detectados.csv
 ├── acoes_realizadas.csv
-├── alteracoes_modo.csv
+├── modo_atual_torre.csv
 ├── preferencias_usuario.csv
 └── chamados_ajuda.csv
 ```
@@ -28,7 +28,7 @@ por uma implementação SQL sem alterar nenhum ViewModel/Service — cada arquiv
 `TODO(SQL)` marcando esse ponto de troca.
 
 **Não há integridade referencial imposta pelo armazenamento** hoje: campos como
-`UsuarioResponsavel`, `UsuarioSolicitante` e `UsuarioId` são referências por **Login** (texto)
+`UsuarioResponsavel` e `UsuarioId` são referências por **Login** (texto)
 ou **Id**, validadas apenas pelo código (`IAuthService.CurrentUser`), não por chave estrangeira
 real — isso é resolvido automaticamente ao migrar para SQL.
 
@@ -46,7 +46,7 @@ real — isso é resolvido automaticamente ao migrar para SQL.
 * **`acoes_realizadas`** — auditoria de acionamentos, **somente inserção** (o repositório não
   expõe Update/Delete de propósito). Gravado em `FireControlService.TryFireAsync`, para toda
   tentativa (autorizada e executada, bloqueada por segurança, ou com erro).
-* **`alteracoes_modo`** — auditoria de troca de `SystemMode`, também somente inserção; tanto
+* **`modo_atual_torre`** — auditoria de troca de `SystemMode`, também somente inserção; tanto
   confirmação quanto cancelamento de uma troca são registrados.
 * **`preferencias_usuario`** — uma linha por usuário (tema, idioma, sidebar recolhida);
   personalização mais granular (ordem de cartões, colunas por tabela) reservada para etapa
@@ -59,7 +59,7 @@ real — isso é resolvido automaticamente ao migrar para SQL.
 ```mermaid
 erDiagram
     USUARIOS ||--o{ ACOES_REALIZADAS : "solicita (quando manual)"
-    USUARIOS ||--o{ ALTERACOES_MODO : "solicita"
+    USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
     USUARIOS ||--o{ CHAMADOS_AJUDA : "abre"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
 
@@ -103,12 +103,11 @@ erDiagram
         string Observacao "nullable"
     }
 
-    ALTERACOES_MODO {
+    MODO_ATUAL_TORRE {
         int Id PK
         string ModoAnterior
         string NovoModo
         datetime DataHoraSolicitacao
-        string UsuarioSolicitante FK "Login"
         datetime DataHoraExecucao "nullable"
         string Resultado "Sucesso | Erro"
         string Observacao "nullable"
@@ -168,7 +167,7 @@ já implementado.
 ```mermaid
 erDiagram
     USUARIOS ||--o{ ACOES_REALIZADAS : "solicita (quando manual)"
-    USUARIOS ||--o{ ALTERACOES_MODO : "solicita"
+    USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
     USUARIOS ||--o{ CHAMADOS_AJUDA : "abre"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
 
@@ -204,12 +203,11 @@ erDiagram
         string Origem
         string Resultado
     }
-    ALTERACOES_MODO {
+    MODO_ATUAL_TORRE {
         int Id PK
         string ModoAnterior
         string NovoModo
         datetime DataHoraSolicitacao
-        int UsuarioSolicitanteId FK "antes era Login (texto)"
         string Resultado
     }
     PREFERENCIAS_USUARIO {

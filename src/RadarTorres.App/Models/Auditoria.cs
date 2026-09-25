@@ -31,18 +31,9 @@ public enum ResultadoAcao
     Erro
 }
 
-/// <summary>Resultado de uma tentativa de <see cref="AlteracaoModo"/>.</summary>
-public enum ResultadoAlteracaoModo
+/// <summary>Resultado de uma tentativa de <see cref="ModoAtualTorre"/>.</summary>
+public enum ResultadoModoAtualTorre
 {
     Sucesso,
     Erro
-}
-
-/// <summary>Status de acompanhamento de um <see cref="ChamadoAjuda"/>.</summary>
-public enum StatusChamado
-{
-    Aberto,
-    EmAnalise,
-    Resolvido,
-    Cancelado
 }

@@ -9,25 +9,25 @@ namespace RadarTorres.App.Services;
 /// <see cref="ITowerSelectionService"/> (não seleciona torre) e <see cref="IFireControlService"/>
 /// (bloqueia acionamento) antes de qualquer outra regra.
 /// </summary>
-public interface IDeadZoneService
+public interface IZonaMortaService
 {
-    ObservableCollection<DeadZone> Zones { get; }
+    ObservableCollection<ZonaMorta> Zones { get; }
 
     /// <summary>Cria e persiste uma nova zona morta por quadrante.</summary>
-    DeadZone AddQuadrantZone(string name, Quadrant quadrant);
+    ZonaMorta AddQuadrantZone(string name, Quadrant quadrant);
 
     /// <summary>Cria e persiste uma nova zona morta por faixa de distância (m) da base.</summary>
-    DeadZone AddDistanceRangeZone(string name, double minDistance, double maxDistance);
+    ZonaMorta AddDistanceRangeZone(string name, double minDistance, double maxDistance);
 
     /// <summary>Liga/desliga uma zona existente sem removê-la, persistindo a mudança.</summary>
-    void SetEnabled(DeadZone zone, bool enabled);
+    void SetEnabled(ZonaMorta zone, bool enabled);
 
     /// <summary>Remove definitivamente uma zona.</summary>
-    void Remove(DeadZone zone);
+    void Remove(ZonaMorta zone);
 
     /// <summary>
     /// Se o alvo estiver dentro de alguma zona ativa, devolve essa zona (a primeira
     /// encontrada, quando há mais de uma se sobrepondo); caso contrário, <c>null</c>.
     /// </summary>
-    DeadZone? FindBlockingZone(Target target);
+    ZonaMorta? FindBlockingZone(Target target);
 }

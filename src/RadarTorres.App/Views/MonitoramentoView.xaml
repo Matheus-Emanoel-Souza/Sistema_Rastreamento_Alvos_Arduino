@@ -127,12 +127,12 @@
                                    Canvas.Left="0" Canvas.Top="0" Width="560" Height="560">
                 <local:RadarControl Targets="{Binding Targets}"
                                      Towers="{Binding Towers}"
-                                     DeadZones="{Binding DeadZones}"
-                                     DeadZoneEditMode="{Binding DeadZoneEditMode}"
+                                     ZonaMortas="{Binding ZonaMortas}"
+                                     ZonaMortaEditMode="{Binding ZonaMortaEditMode}"
                                      SelectedTargetId="{Binding SelectedTarget.Id}"
                                      TargetClicked="Radar_TargetClicked"
-                                     DeadZoneQuadrantSelected="Radar_DeadZoneQuadrantSelected"
-                                     DeadZoneRangeSelected="Radar_DeadZoneRangeSelected"/>
+                                     ZonaMortaQuadrantSelected="Radar_ZonaMortaQuadrantSelected"
+                                     ZonaMortaRangeSelected="Radar_ZonaMortaRangeSelected"/>
             </shared:DashboardCard>
 
             <!-- ==================== CONTROLE DO SISTEMA ==================== -->
@@ -318,9 +318,9 @@
                     </Grid.RowDefinitions>
 
                     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
-                        <ItemsControl ItemsSource="{Binding DeadZones}">
+                        <ItemsControl ItemsSource="{Binding ZonaMortas}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type models:DeadZone}">
+                                <DataTemplate DataType="{x:Type models:ZonaMorta}">
                                     <Border BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="0,4">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -331,14 +331,14 @@
                                             <CheckBox Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0"
                                                       IsChecked="{Binding Enabled, Mode=OneWay}"
                                                       ToolTip="Ativar/desativar esta zona"
-                                                      Command="{Binding DataContext.ToggleDeadZoneCommand, RelativeSource={RelativeSource AncestorType=shared:DashboardCard}}"
+                                                      Command="{Binding DataContext.ToggleZonaMortaCommand, RelativeSource={RelativeSource AncestorType=shared:DashboardCard}}"
                                                       CommandParameter="{Binding}"/>
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12"/>
                                                 <TextBlock Text="{Binding Description}" Style="{StaticResource LabelText}" Margin="0"/>
                                             </StackPanel>
                                             <Button Grid.Column="2" Content="✕" Padding="4,0" FontSize="11" ToolTip="Remover zona"
-                                                    Command="{Binding DataContext.RemoveDeadZoneCommand, RelativeSource={RelativeSource AncestorType=shared:DashboardCard}}"
+                                                    Command="{Binding DataContext.RemoveZonaMortaCommand, RelativeSource={RelativeSource AncestorType=shared:DashboardCard}}"
                                                     CommandParameter="{Binding}"/>
                                         </Grid>
                                     </Border>
@@ -351,21 +351,21 @@
                         <TextBlock Text="Nova zona morta — desenhe no radar" Style="{StaticResource LabelText}"/>
 
                         <CheckBox Content="Selecionar no radar" FontWeight="SemiBold"
-                                  IsChecked="{Binding IsDeadZoneDrawingActive}"
+                                  IsChecked="{Binding IsZonaMortaDrawingActive}"
                                   ToolTip="Enquanto ligado, clicar/arrastar no radar define zonas em vez de selecionar alvos"/>
 
-                        <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsDeadZoneDrawingActive}" Margin="0,4,0,4">
-                            <RadioButton GroupName="DeadZoneType" Content="Quadrante" Margin="0,0,12,0"
-                                         IsChecked="{Binding NewDeadZoneType, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Quadrant}"/>
-                            <RadioButton GroupName="DeadZoneType" Content="Faixa de distância"
-                                         IsChecked="{Binding NewDeadZoneType, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=DistanceRange}"/>
+                        <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsZonaMortaDrawingActive}" Margin="0,4,0,4">
+                            <RadioButton GroupName="ZonaMortaType" Content="Quadrante" Margin="0,0,12,0"
+                                         IsChecked="{Binding NewZonaMortaType, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Quadrant}"/>
+                            <RadioButton GroupName="ZonaMortaType" Content="Faixa de distância"
+                                         IsChecked="{Binding NewZonaMortaType, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=DistanceRange}"/>
                         </StackPanel>
 
-                        <TextBox Text="{Binding NewDeadZoneName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Nome da próxima zona (opcional)"
-                                  IsEnabled="{Binding IsDeadZoneDrawingActive}"/>
+                        <TextBox Text="{Binding NewZonaMortaName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Nome da próxima zona (opcional)"
+                                  IsEnabled="{Binding IsZonaMortaDrawingActive}"/>
 
                         <TextBlock Style="{StaticResource LabelText}" TextWrapping="Wrap" Margin="0,0,0,4"
-                                   Visibility="{Binding IsDeadZoneDrawingActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   Visibility="{Binding IsZonaMortaDrawingActive, Converter={StaticResource BooleanToVisibilityConverter}}"
                                    Text="Quadrante: clique no radar (clicar de novo remove). Faixa: clique e arraste a partir do centro, solte para confirmar."/>
                     </StackPanel>
 

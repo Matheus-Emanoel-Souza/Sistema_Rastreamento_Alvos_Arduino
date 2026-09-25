@@ -7,25 +7,25 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Services;
 
 /// <summary>
-/// Implementação em JSON de <see cref="IDeadZoneRepository"/>, gravada em
-/// <c>%LocalAppData%\RadarTorres\dead-zones.json</c> — mesmo padrão e mesma pasta de
+/// Implementação em JSON de <see cref="IZonaMortaRepository"/>, gravada em
+/// <c>%LocalAppData%\RadarTorres\zona-mortas.json</c> — mesmo padrão e mesma pasta de
 /// <see cref="ArduinoSettingsRepository"/>/<see cref="DashboardLayoutRepository"/>, mas um
 /// arquivo único para toda a instalação (as zonas mortas são uma decisão administrativa, não
 /// uma preferência por usuário).
 /// </summary>
-public sealed class DeadZoneRepository : IDeadZoneRepository
+public sealed class ZonaMortaRepository : IZonaMortaRepository
 {
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
     private readonly string _filePath;
     private readonly ILoggingService? _logger;
 
-    public DeadZoneRepository(ILoggingService? logger = null)
+    public ZonaMortaRepository(ILoggingService? logger = null)
         : this(DefaultFilePath(), logger)
     {
     }
 
-    public DeadZoneRepository(string filePath, ILoggingService? logger = null)
+    public ZonaMortaRepository(string filePath, ILoggingService? logger = null)
     {
         _filePath = filePath;
         _logger = logger;
@@ -34,19 +34,19 @@ public sealed class DeadZoneRepository : IDeadZoneRepository
     public static string DefaultFilePath() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "RadarTorres",
-        "dead-zones.json");
+        "zona-mortas.json");
 
-    public List<DeadZone> Load()
+    public List<ZonaMorta> Load()
     {
         try
         {
             if (!File.Exists(_filePath))
             {
-                return new List<DeadZone>();
+                return new List<ZonaMorta>();
             }
 
             string json = File.ReadAllText(_filePath);
-            return JsonSerializer.Deserialize<List<DeadZone>>(json) ?? new List<DeadZone>();
+            return JsonSerializer.Deserialize<List<ZonaMorta>>(json) ?? new List<ZonaMorta>();
         }
         catch (Exception ex)
         {
@@ -54,11 +54,11 @@ public sealed class DeadZoneRepository : IDeadZoneRepository
             // nenhuma zona configurada, igual ao tratamento já usado para as demais
             // preferências em JSON do projeto.
             _logger?.Warning($"Não foi possível ler as zonas mortas salvas ({_filePath}): {ex.Message}. Nenhuma zona carregada.");
-            return new List<DeadZone>();
+            return new List<ZonaMorta>();
         }
     }
 
-    public void Save(List<DeadZone> zones)
+    public void Save(List<ZonaMorta> zones)
     {
         try
         {

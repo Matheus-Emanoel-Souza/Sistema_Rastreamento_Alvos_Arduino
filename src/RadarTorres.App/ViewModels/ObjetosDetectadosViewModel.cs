@@ -58,6 +58,7 @@ public sealed class ObjetosDetectadosViewModel : ViewModelBase
 
     public RelayCommand ExportCommand { get; }
     public RelayCommand ImportCommand { get; }
+    public RelayCommand ClearCommand { get; }
 
     public ObjetosDetectadosViewModel(
         IObjetoDetectadoRepository repository,
@@ -74,6 +75,7 @@ public sealed class ObjetosDetectadosViewModel : ViewModelBase
 
         ExportCommand = new RelayCommand(formato => ExportRequested?.Invoke(this, (string)formato!));
         ImportCommand = new RelayCommand(formato => ImportRequested?.Invoke(this, (string)formato!), _ => PodeImportar);
+        ClearCommand = new RelayCommand(_ => ClearList());
 
         _authService.SessionChanged += (_, _) =>
         {
@@ -154,6 +156,15 @@ public sealed class ObjetosDetectadosViewModel : ViewModelBase
             SetStatus($"Falha ao importar: {ex.Message}", success: false);
             _logger.Error($"Falha ao importar Objetos Detectados ({formato.ToUpperInvariant()}): {ex.Message}");
         }
+    }
+
+    /// <summary>Esvazia apenas a lista exibida em tela (não altera o CSV). Serve para separar
+    /// visualmente detecções de sessões diferentes; os registros continuam no arquivo e voltam
+    /// a aparecer no próximo <see cref="Reload"/>.</summary>
+    private void ClearList()
+    {
+        Itens.Clear();
+        SetStatus("Lista limpa (os registros continuam salvos no arquivo).", success: true);
     }
 
     private void SetStatus(string message, bool success)

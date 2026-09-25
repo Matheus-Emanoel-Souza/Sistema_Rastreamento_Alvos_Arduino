@@ -37,7 +37,7 @@ Mais de 50 arquivos novos. Os grupos principais:
 |---|---|
 | `Data/` | `AppDataPaths`, `CsvTableStore<T>`, `CsvColumn<T>`, `CsvConvert`, `DataSeeder` |
 | `Repositories/` | 6 pares de interface + implementação CSV (`IUsuarioRepository`/`CsvUsuarioRepository`, etc.) |
-| `Models/` (novos) | `Usuario`, `ObjetoDetectado`, `AcaoRealizada`, `AlteracaoModo`, `PreferenciasUsuario`, `ChamadoAjuda`, `Auditoria.cs` (enums) |
+| `Models/` (novos) | `Usuario`, `ObjetoDetectado`, `AcaoRealizada`, `ModoAtualTorre`, `PreferenciasUsuario`, `ChamadoAjuda`, `Auditoria.cs` (enums) |
 | `Services/` (novos) | `IPasswordHasher`/`PasswordHasher`, `IAuthService`/`AuthService`, `IPermissionService`/`PermissionService`, `ILocalizationService`/`LocalizationService`, `IThemeService`/`ThemeService`, `INavigationService`/`NavigationService` |
 | `Localization/` | `LocExtension` (markup extension XAML) |
 | `Resources/Localization/` | `pt-BR.json`, `en-US.json` |
@@ -53,7 +53,7 @@ Mais de 50 arquivos novos. Os grupos principais:
 - **`Models/SystemState.cs`**: `SystemMode` ganhou `Maintenance` e `Emergency`.
 - **`Services/IFireControlService.cs` / `FireControlService.cs`**: `TryFireAsync` ganhou o parâmetro `OrigemAcao` (Manual/Automática) e agora grava cada tentativa em `acoes_realizadas`.
 - **`ViewModels/MainViewModel.cs`**:
-  - grava `alteracoes_modo` a cada troca de modo (com confirmação e possibilidade de cancelar);
+  - grava `modo_atual_torre` a cada troca de modo (com confirmação e possibilidade de cancelar);
   - grava `objetos_detectados` na primeira detecção de cada alvo (não a cada atualização);
   - bloqueia ações (`ManualFireCommand`, troca de modo) para o perfil Visualizador.
 - **`Views/MainWindow.xaml(.cs)` → removidos**, substituídos por `Views/MonitoramentoView.xaml(.cs)` (mesmo conteúdo, hospedado pela Shell).
@@ -75,7 +75,7 @@ avisos confirmado) e rodar `RadarTorres.App.exe`.
 | Barra lateral | Clique no ☰ recolhe/expande (texto vira tooltip). Itens navegam para a tela correspondente; item ativo fica destacado. "Usuários" só aparece para Administrador. |
 | Painel principal | Cards de objetos detectados, ações realizadas, modo atual, última alteração de modo, usuário responsável, estado da comunicação e última atualização — todos com dado real (ou "—"/contagem 0 quando não há histórico ainda). |
 | Monitoramento | Idêntico ao app anterior (radar, conexão serial, modos) — agora dentro da Shell. Visualizador vê aviso "não permite executar ações" e os botões ficam bloqueados. |
-| Auditoria de modo | Trocar o modo pede confirmação; aceitar ou cancelar grava uma linha em `alteracoes_modo.csv` (`Resultado=Sucesso` ou `Erro`). |
+| Auditoria de modo | Trocar o modo pede confirmação; aceitar ou cancelar grava uma linha em `modo_atual_torre.csv` (`Resultado=Sucesso` ou `Erro`). |
 | Auditoria de objetos | A primeira detecção de cada alvo grava uma linha em `objetos_detectados.csv`. |
 | Auditoria de ações | "Acionamento manual demonstrativo" (ou automático, no modo 4) grava uma linha em `acoes_realizadas.csv`, incluindo bloqueios de segurança (`Resultado=Cancelada`). |
 | Formulário de ajuda | Botão "Ajuda" abre o formulário; enviar sem título/descrição mostra erro de validação; enviar com dados grava em `chamados_ajuda.csv` com usuário e data preenchidos automaticamente. |

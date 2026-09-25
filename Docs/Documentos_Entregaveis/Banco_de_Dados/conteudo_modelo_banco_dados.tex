@@ -45,7 +45,7 @@ arquivo por instalação para zonas mortas e para configurações do Arduino, e 
 por usuário para o layout dos painéis (nome com o padrão
 \texttt{dashboard-}\allowbreak\texttt{layout-\{tela\}-\{usuário\}.json}). Cada entidade é
 acessada exclusivamente por uma interface de repositório dedicada (ex.:
-\texttt{IUsuario}\allowbreak\texttt{Repository}, \texttt{IDeadZone}\allowbreak\texttt{Repository}),
+\texttt{IUsuario}\allowbreak\texttt{Repository}, \texttt{IZonaMorta}\allowbreak\texttt{Repository}),
 isolando ViewModels e Services do formato de armazenamento.
 
 \textbf{Implementação futura proposta:} existe um plano documentado de migração para um banco
@@ -98,9 +98,9 @@ a evolução do projeto exigir um SGBD relacional.
     PreferenciasUsuario & Preferências de interface por usuário \\
     ObjetoDetectado & Histórico de detecções do radar \\
     AcaoRealizada & Auditoria de acionamentos (só inserção) \\
-    AlteracaoModo & Auditoria de troca de modo de operação \\
+    ModoAtualTorre & Auditoria de troca de modo de operação \\
     ChamadoAjuda & Chamados de suporte dos usuários \\
-    DeadZone & Áreas onde alvos são ignorados pelo sistema \\
+    ZonaMorta & Áreas onde alvos são ignorados pelo sistema \\
     Dashboard\allowbreak CardLayout & Layout dos cards do painel, por tela/usuário \\
     ArduinoSettings & Configurações de ambiente do Arduino \\
     \hline
@@ -114,7 +114,7 @@ A Figura~\ref{fig:atual} reproduz o Diagrama Entidade-Relacionamento já levanta
 entidades em CSV (arquivo \texttt{Modelo\_Banco\_de\_Dados.md}, nesta mesma pasta).
 
 \texttt{Usuario} se relaciona 1:1 com \texttt{PreferenciasUsuario} (chave \texttt{UsuarioId},
-igual a \texttt{Usuario.Id}) e 1:N com \texttt{AcaoRealizada} e \texttt{AlteracaoModo} — nesses
+igual a \texttt{Usuario.Id}) e 1:N com \texttt{AcaoRealizada} e \texttt{ModoAtualTorre} — nesses
 dois últimos casos por \textbf{Login} (texto), sem chave estrangeira real — e com
 \texttt{ChamadoAjuda}, por \texttt{Id} numérico. \texttt{ObjetoDetectado} \textbf{não possui
 nenhum vínculo persistido} com \texttt{AcaoRealizada}, \texttt{Usuario} ou qualquer outra
@@ -132,8 +132,8 @@ relacionamento).
 {\sloppy
 Três entidades adicionais usam arquivos JSON e não aparecem no diagrama acima, por não
 fazerem parte do levantamento original de CSV (ver Tabela~\ref{tab:entidades}):
-\texttt{DeadZone}, \texttt{Dash\-board\-Card\-Layout} e \texttt{ArduinoSettings}. Nenhuma delas tem
-relacionamento persistido com \texttt{Usuario} ou entre si: \texttt{DeadZone} e
+\texttt{ZonaMorta}, \texttt{Dash\-board\-Card\-Layout} e \texttt{ArduinoSettings}. Nenhuma delas tem
+relacionamento persistido com \texttt{Usuario} ou entre si: \texttt{ZonaMorta} e
 \texttt{ArduinoSettings} são configurações únicas por instalação, e \texttt{Dash\-board\-Card\-Layout}
 se associa a um usuário apenas pelo \emph{nome do arquivo} (\texttt{tela-idUsuario}) — uma
 convenção de nomenclatura, não uma chave estrangeira — por isso não são representadas em um
