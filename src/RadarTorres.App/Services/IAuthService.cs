@@ -30,4 +30,10 @@ public interface IAuthService
 
     /// <summary>Altera a senha do usuário atualmente logado, validando a senha atual antes.</summary>
     Task<AuthResult> AlterarSenhaAsync(string senhaAtual, string novaSenha);
+
+    /// <summary>
+    /// Redefine a senha de qualquer usuário sem exigir a senha atual — só o Administrador pode
+    /// chamar isto (checado aqui também, não só na tela, como defesa em profundidade).
+    /// </summary>
+    Task<AuthResult> RedefinirSenhaAsync(int usuarioId, string novaSenha);
 }

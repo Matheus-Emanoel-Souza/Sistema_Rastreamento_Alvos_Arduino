@@ -84,4 +84,31 @@ public sealed class AuthService : IAuthService
         _logger.Success("Senha alterada com sucesso.");
         return Task.FromResult(AuthResult.Ok(CurrentUser));
     }
+
+    public Task<AuthResult> RedefinirSenhaAsync(int usuarioId, string novaSenha)
+    {
+        if (CurrentUser is null || CurrentUser.Perfil != PerfilUsuario.Administrador)
+        {
+            return Task.FromResult(AuthResult.Fail("Apenas o Administrador pode redefinir a senha de outro usuário."));
+        }
+
+        Usuario? usuario = _usuarioRepository.GetById(usuarioId);
+        if (usuario is null)
+        {
+            return Task.FromResult(AuthResult.Fail("Usuário não encontrado."));
+        }
+
+        if (string.IsNullOrWhiteSpace(novaSenha) || novaSenha.Length < 6)
+        {
+            return Task.FromResult(AuthResult.Fail("A nova senha deve ter pelo menos 6 caracteres."));
+        }
+
+        (string hash, string salt) = _passwordHasher.Hash(novaSenha);
+        usuario.SenhaHash = hash;
+        usuario.SenhaSalt = salt;
+        _usuarioRepository.Update(usuario);
+
+        _logger.Success($"Senha redefinida pelo Administrador para o usuário '{usuario.Login}'.");
+        return Task.FromResult(AuthResult.Ok(usuario));
+    }
 }
