@@ -20,16 +20,8 @@ public sealed class ObjetoDetectadoExportService : IObjetoDetectadoExportService
 
     public void ExportCsv(IEnumerable<ObjetoDetectado> itens, string filePath)
     {
-        // Reaproveita o mesmo mapeamento de colunas da persistência real (CsvObjetoDetectadoRepository)
-        // — um arquivo exportado aqui é lido de volta por ImportCsv com o formato garantido idêntico.
         var store = new CsvTableStore<ObjetoDetectado>(filePath, CsvObjetoDetectadoRepository.BuildColumns());
         store.WriteAll(itens);
-    }
-
-    public List<ObjetoDetectado> ImportCsv(string filePath)
-    {
-        var store = new CsvTableStore<ObjetoDetectado>(filePath, CsvObjetoDetectadoRepository.BuildColumns());
-        return store.ReadAll();
     }
 
     public void ExportXml(IEnumerable<ObjetoDetectado> itens, string filePath)
@@ -38,13 +30,7 @@ public sealed class ObjetoDetectadoExportService : IObjetoDetectadoExportService
         XmlSerializer.Serialize(writer, itens.ToList());
     }
 
-    public List<ObjetoDetectado> ImportXml(string filePath)
-    {
-        using var reader = new StreamReader(filePath, Encoding.UTF8);
-        return XmlSerializer.Deserialize(reader) as List<ObjetoDetectado> ?? [];
-    }
-
-    // ---------------------------------------------------------------- PDF (só exportação)
+    // ---------------------------------------------------------------- PDF
 
     private const double MarginLeft = 30;
     private const double MarginTop = 30;

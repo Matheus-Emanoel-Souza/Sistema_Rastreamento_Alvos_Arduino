@@ -6,11 +6,12 @@
              FontFamily="Segoe UI">
     <!--
         Tela "Objetos Detectados" (Requisito 4 — histórico de detecções) + exportação em
-        CSV/XML/PDF e importação em CSV/XML (Requisito "exportar/importar a tabela de logs").
-        Substitui o PlaceholderView que existia aqui antes — ver NavigationService.
+        CSV/XML/PDF. Sem importação de propósito: as informações desta tabela só podem ser
+        geradas pelo próprio sistema rodando (detecção real ou simulada), nunca por um arquivo
+        carregado pelo usuário. Substitui o PlaceholderView que existia aqui antes — ver
+        NavigationService.
     -->
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
@@ -31,7 +32,7 @@
 
         <TextBlock Grid.Row="0" Text="OBJETOS DETECTADOS" FontSize="18" FontWeight="Bold"
                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
-        <TextBlock Grid.Row="1" Text="Histórico de detecções (Requisito 4). Exporte para arquivo ou importe registros de volta."
+        <TextBlock Grid.Row="1" Text="Histórico de detecções (Requisito 4), geradas pelo próprio sistema. Exporte para arquivo se quiser."
                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
@@ -40,16 +41,6 @@
             <Button Content="CSV" Command="{Binding ExportCommand}" CommandParameter="csv"/>
             <Button Content="XML" Command="{Binding ExportCommand}" CommandParameter="xml"/>
             <Button Content="PDF" Command="{Binding ExportCommand}" CommandParameter="pdf"/>
-
-            <Rectangle Width="1" Margin="8,2" Fill="{DynamicResource PanelBorderBrush}"/>
-
-            <TextBlock Text="Importar:" VerticalAlignment="Center" Margin="16,0,8,0"
-                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <Button Content="CSV" Command="{Binding ImportCommand}" CommandParameter="csv"/>
-            <Button Content="XML" Command="{Binding ImportCommand}" CommandParameter="xml"/>
-            <TextBlock Text="Seu perfil (Visualizador) não permite importar." VerticalAlignment="Center"
-                       Foreground="{DynamicResource WarningBrush}" FontSize="11" Margin="8,0,0,0"
-                       Visibility="{Binding NaoPodeImportar, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
             <Rectangle Width="1" Margin="8,2" Fill="{DynamicResource PanelBorderBrush}"/>
 

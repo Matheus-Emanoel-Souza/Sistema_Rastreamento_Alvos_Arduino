@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
@@ -10,29 +9,20 @@ namespace RadarTorres.App.ViewModels;
 
 /// <summary>
 /// ViewModel da tela "Objetos Detectados": lista o histórico de detecções (Requisito 4) e
-/// orquestra exportação (CSV/XML/PDF) e importação (CSV/XML, Requisito "importar também").
-/// Nenhum diálogo de arquivo aqui — a ViewModel só pede um caminho através dos eventos
-/// <see cref="ExportRequested"/>/<see cref="ImportRequested"/>; quem mostra
-/// <c>SaveFileDialog</c>/<c>OpenFileDialog</c> e devolve o caminho escolhido é
-/// <see cref="Views.ObjetosDetectadosView"/> (mesmo padrão de diálogo de arquivo já usado em
-/// <c>ArduinoSettingsViewModel</c>/<c>ArduinoSettingsView</c>).
+/// orquestra exportação (CSV/XML/PDF). Sem importação de propósito — as informações desta
+/// tabela só podem ser geradas pelo próprio sistema rodando (detecção real ou simulada), nunca
+/// por um arquivo externo carregado pelo usuário. Nenhum diálogo de arquivo aqui — a ViewModel
+/// só pede um caminho através do evento <see cref="ExportRequested"/>; quem mostra o
+/// <c>SaveFileDialog</c> e devolve o caminho escolhido é <see cref="Views.ObjetosDetectadosView"/>
+/// (mesmo padrão de diálogo de arquivo já usado em <c>ArduinoSettingsViewModel</c>/<c>ArduinoSettingsView</c>).
 /// </summary>
 public sealed class ObjetosDetectadosViewModel : ViewModelBase
 {
     private readonly IObjetoDetectadoRepository _repository;
     private readonly IObjetoDetectadoExportService _exportService;
     private readonly ILoggingService _logger;
-    private readonly IAuthService _authService;
-    private readonly IPermissionService _permissionService;
 
     public ObservableCollection<ObjetoDetectado> Itens { get; } = new();
-
-    /// <summary>Importar grava permanentemente no CSV do sistema — mesma regra de "quem pode
-    /// alterar o estado do sistema" já usada no resto do app (Visualizador é somente-consulta).
-    /// Exportar é só leitura, então fica liberado para qualquer perfil.</summary>
-    public bool PodeImportar => _permissionService.PodeExecutarAcoes(_authService.CurrentUser?.Perfil ?? PerfilUsuario.Visualizador);
-
-    public bool NaoPodeImportar => !PodeImportar;
 
     private string _statusMessage = string.Empty;
     public string StatusMessage
@@ -52,37 +42,20 @@ public sealed class ObjetosDetectadosViewModel : ViewModelBase
     /// ("csv"/"xml"/"pdf") e, se o usuário confirmar, chamar <see cref="ExportTo"/> de volta.</summary>
     public event EventHandler<string>? ExportRequested;
 
-    /// <summary>Mesma ideia de <see cref="ExportRequested"/>, mas para um <c>OpenFileDialog</c>
-    /// ("csv"/"xml" apenas — sem importação de PDF).</summary>
-    public event EventHandler<string>? ImportRequested;
-
     public RelayCommand ExportCommand { get; }
-    public RelayCommand ImportCommand { get; }
     public RelayCommand ClearCommand { get; }
 
     public ObjetosDetectadosViewModel(
         IObjetoDetectadoRepository repository,
         IObjetoDetectadoExportService exportService,
-        ILoggingService logger,
-        IAuthService authService,
-        IPermissionService permissionService)
+        ILoggingService logger)
     {
         _repository = repository;
         _exportService = exportService;
         _logger = logger;
-        _authService = authService;
-        _permissionService = permissionService;
 
         ExportCommand = new RelayCommand(formato => ExportRequested?.Invoke(this, (string)formato!));
-        ImportCommand = new RelayCommand(formato => ImportRequested?.Invoke(this, (string)formato!), _ => PodeImportar);
         ClearCommand = new RelayCommand(_ => ClearList());
-
-        _authService.SessionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(PodeImportar));
-            OnPropertyChanged(nameof(NaoPodeImportar));
-            RelayCommand.RaiseCanExecuteChangedForAll();
-        };
     }
 
     /// <summary>Recarrega a lista a partir do CSV — chamado pela View no <c>Loaded</c> (mesmo
@@ -118,43 +91,6 @@ public sealed class ObjetosDetectadosViewModel : ViewModelBase
         {
             SetStatus($"Falha ao exportar: {ex.Message}", success: false);
             _logger.Error($"Falha ao exportar Objetos Detectados ({formato.ToUpperInvariant()}): {ex.Message}");
-        }
-    }
-
-    /// <summary>Chamado pela View depois que o usuário escolheu o arquivo no diálogo aberto em
-    /// resposta a <see cref="ImportRequested"/>. As linhas lidas viram registros novos e
-    /// permanentes no CSV do sistema — cada <see cref="IObjetoDetectadoRepository.Add"/> atribui
-    /// um Id novo, o Id do arquivo importado é descartado (evita colisão com o histórico já
-    /// existente).</summary>
-    public void ImportFrom(string formato, string filePath)
-    {
-        if (!PodeImportar)
-        {
-            SetStatus("Seu perfil não permite importar registros.", success: false);
-            return;
-        }
-
-        try
-        {
-            List<ObjetoDetectado> lidos = formato switch
-            {
-                "csv" => _exportService.ImportCsv(filePath),
-                "xml" => _exportService.ImportXml(filePath),
-                _ => []
-            };
-
-            foreach (ObjetoDetectado item in lidos)
-            {
-                Itens.Add(_repository.Add(item));
-            }
-
-            SetStatus($"{lidos.Count} registro(s) importado(s) de {filePath}", success: true);
-            _logger.Success($"Objetos Detectados importado ({formato.ToUpperInvariant()}): {lidos.Count} registro(s) de {filePath}");
-        }
-        catch (Exception ex)
-        {
-            SetStatus($"Falha ao importar: {ex.Message}", success: false);
-            _logger.Error($"Falha ao importar Objetos Detectados ({formato.ToUpperInvariant()}): {ex.Message}");
         }
     }
 

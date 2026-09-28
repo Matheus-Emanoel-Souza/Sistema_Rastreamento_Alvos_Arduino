@@ -6,11 +6,10 @@ using RadarTorres.App.ViewModels;
 namespace RadarTorres.App.Views;
 
 /// <summary>
-/// Code-behind da tela "Objetos Detectados". Único conteúdo fora do MVVM: os diálogos de
-/// arquivo de exportação/importação (mesmo padrão de <see cref="ArduinoSettingsView"/>) — a
-/// ViewModel só pede um caminho através de <see cref="ObjetosDetectadosViewModel.ExportRequested"/>/
-/// <see cref="ObjetosDetectadosViewModel.ImportRequested"/> e recebe de volta o que o usuário
-/// escolheu.
+/// Code-behind da tela "Objetos Detectados". Único conteúdo fora do MVVM: o diálogo de arquivo
+/// de exportação (mesmo padrão de <see cref="ArduinoSettingsView"/>) — a ViewModel só pede um
+/// caminho através de <see cref="ObjetosDetectadosViewModel.ExportRequested"/> e recebe de
+/// volta o que o usuário escolheu. Sem importação de propósito — ver comentário na ViewModel.
 /// </summary>
 public partial class ObjetosDetectadosView : UserControl
 {
@@ -24,7 +23,6 @@ public partial class ObjetosDetectadosView : UserControl
         DataContext = _viewModel;
 
         _viewModel.ExportRequested += OnExportRequested;
-        _viewModel.ImportRequested += OnImportRequested;
 
         // View é Singleton (ver App.xaml.cs) — Loaded refaz a cada navegação pela barra
         // lateral, mesmo padrão de recarregamento já usado em MonitoramentoView/PainelPrincipalView.
@@ -43,21 +41,6 @@ public partial class ObjetosDetectadosView : UserControl
         if (dialog.ShowDialog() == true)
         {
             _viewModel.ExportTo(formato, dialog.FileName);
-        }
-    }
-
-    private void OnImportRequested(object? sender, string formato)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = $"Importar Objetos Detectados ({formato.ToUpperInvariant()})",
-            Filter = FilterFor(formato),
-            CheckFileExists = true,
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            _viewModel.ImportFrom(formato, dialog.FileName);
         }
     }
 
