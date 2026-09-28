@@ -36,4 +36,9 @@ public static class CsvConvert
         Enum.TryParse(value, true, out TEnum result) ? result : fallback;
 
     public static int ToInt(string value) => string.IsNullOrEmpty(value) ? 0 : int.Parse(value, CultureInfo.InvariantCulture);
+
+    public static string From(int? value) => value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
+
+    public static int? ToNullableInt(string value) =>
+        string.IsNullOrEmpty(value) ? null : int.Parse(value, CultureInfo.InvariantCulture);
 }

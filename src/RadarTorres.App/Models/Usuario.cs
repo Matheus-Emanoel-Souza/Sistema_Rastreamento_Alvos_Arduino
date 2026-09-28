@@ -13,6 +13,10 @@ public class Usuario
 
     public string Nome { get; set; } = string.Empty;
 
+    public string Email { get; set; } = string.Empty;
+
+    public int? Idade { get; set; }
+
     /// <summary>Login único usado para autenticação (não confundir com <see cref="Nome"/>).</summary>
     public string Login { get; set; } = string.Empty;
 

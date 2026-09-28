@@ -23,6 +23,10 @@ public sealed class CsvUsuarioRepository : IUsuarioRepository
             new CsvColumn<Usuario>("Ativo", u => CsvConvert.From(u.Ativo), (u, v) => u.Ativo = CsvConvert.ToBool(v)),
             new CsvColumn<Usuario>("DataCriacao", u => CsvConvert.From(u.DataCriacao), (u, v) => u.DataCriacao = CsvConvert.ToDateTime(v)),
             new CsvColumn<Usuario>("UltimoAcesso", u => CsvConvert.From(u.UltimoAcesso), (u, v) => u.UltimoAcesso = CsvConvert.ToNullableDateTime(v)),
+            // Adicionadas ao final (não no meio) para não quebrar a leitura posicional de
+            // usuarios.csv já existentes (CsvTableStore lê por índice de coluna, não por nome).
+            new CsvColumn<Usuario>("Email", u => u.Email, (u, v) => u.Email = v),
+            new CsvColumn<Usuario>("Idade", u => CsvConvert.From(u.Idade), (u, v) => u.Idade = CsvConvert.ToNullableInt(v)),
         ]);
     }
 
