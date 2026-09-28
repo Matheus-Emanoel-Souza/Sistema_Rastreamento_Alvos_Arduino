@@ -1,0 +1,185 @@
+<UserControl x:Class="RadarTorres.App.Views.UsuariosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
+             Background="{DynamicResource BackgroundBrush}"
+             Foreground="{DynamicResource TextPrimaryBrush}"
+             FontFamily="Segoe UI">
+    <!--
+        Tela "Usuários" — gerenciamento de contas (nome, e-mail, idade, função/perfil). Somente
+        o Administrador enxerga este item de menu (ver ShellViewModel.RebuildMenu +
+        PermissionService.PodeVerMenu), então o painel de cadastro/edição/redefinição de senha
+        fica sempre habilitado aqui; edição dos próprios dados por um usuário comum é feita na
+        janela de Perfil (ProfileWindow), não nesta tela.
+    -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="USUÁRIOS" FontSize="18" FontWeight="Bold"
+                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="1" Text="Contas cadastradas no sistema. Apenas o Administrador pode criar, editar ou redefinir senha de outros usuários."
+                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="320"/>
+            </Grid.ColumnDefinitions>
+
+            <DataGrid Grid.Column="0" Margin="0,0,16,0" ItemsSource="{Binding Itens}" SelectedItem="{Binding SelectedUsuario}"
+                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                      CanUserReorderColumns="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                      Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                      BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                      RowBackground="{DynamicResource PanelBrush}" AlternatingRowBackground="{DynamicResource InputBackgroundBrush}"
+                      HorizontalGridLinesBrush="{DynamicResource PanelBorderBrush}" VerticalGridLinesBrush="{DynamicResource PanelBorderBrush}">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                        <Setter Property="Padding" Value="8,6"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="160"/>
+                    <DataGridTextColumn Header="E-mail" Binding="{Binding Email}" Width="180"/>
+                    <DataGridTextColumn Header="Idade" Binding="{Binding Idade, TargetNullValue=—}" Width="60"/>
+                    <DataGridTextColumn Header="Função" Binding="{Binding Perfil}" Width="110"/>
+                    <DataGridTextColumn Header="Login" Binding="{Binding Login}" Width="110"/>
+                    <DataGridCheckBoxColumn Header="Ativo" Binding="{Binding Ativo}" Width="60"/>
+                    <DataGridTextColumn Header="Último acesso" Binding="{Binding UltimoAcesso, StringFormat={}{0:dd/MM/yyyy HH:mm}, TargetNullValue=—}" Width="140"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <StackPanel Grid.Column="1">
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Novo usuário" FontWeight="Bold" Margin="0,0,0,10"
+                                   Visibility="{Binding IsNovoUsuario, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="Editar usuário" FontWeight="Bold" Margin="0,0,0,10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsNovoUsuario}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <Button Content="+ Novo usuário" Command="{Binding NovoCommand}" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Nome" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding FormNome, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="E-mail" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding FormEmail, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Idade" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding FormIdade, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Login" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding FormLogin, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Função" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox ItemsSource="{Binding PerfisDisponiveis}" SelectedItem="{Binding FormPerfil}"/>
+
+                        <CheckBox Content="Ativo" IsChecked="{Binding FormAtivo}"/>
+
+                        <StackPanel Visibility="{Binding IsNovoUsuario, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="Senha" Style="{StaticResource FieldLabel}"/>
+                            <shared:PasswordRevealBox Password="{Binding FormSenha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="Confirmar senha" Style="{StaticResource FieldLabel}"/>
+                            <shared:PasswordRevealBox Password="{Binding FormConfirmarSenha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding MensagemFormulario}" TextWrapping="Wrap" Margin="0,0,0,10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SucessoFormulario}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <Button Content="Salvar" Command="{Binding SalvarCommand}" Margin="0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="Redefinir senha" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBlock Text="Define uma nova senha para o usuário selecionado na lista, sem precisar da senha atual."
+                                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Nova senha" Style="{StaticResource FieldLabel}"/>
+                        <shared:PasswordRevealBox Password="{Binding NovaSenhaRedefinir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Confirmar nova senha" Style="{StaticResource FieldLabel}"/>
+                        <shared:PasswordRevealBox Password="{Binding ConfirmarSenhaRedefinir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="{Binding MensagemRedefinir}" TextWrapping="Wrap" Margin="0,0,0,10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SucessoRedefinir}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <Button Content="Redefinir senha" Command="{Binding RedefinirSenhaCommand}" Margin="0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

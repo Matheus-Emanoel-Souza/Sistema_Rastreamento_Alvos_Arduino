@@ -138,6 +138,11 @@ public partial class App : Application
         services.AddTransient<ObjetosDetectadosViewModel>();
         services.AddSingleton<ObjetosDetectadosView>();
 
+        // Tela "Usuários" (exclusiva do Administrador): mesmo padrão de recarregamento no
+        // Loaded que ObjetosDetectadosView.
+        services.AddTransient<UsuariosViewModel>();
+        services.AddSingleton<UsuariosView>();
+
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginWindow>();
 
