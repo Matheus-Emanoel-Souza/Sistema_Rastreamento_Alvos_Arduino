@@ -32,7 +32,7 @@ public sealed class NavigationService : INavigationService
             [MenuItem.PainelPrincipal] = () => _serviceProvider.GetRequiredService<PainelPrincipalView>(),
             [MenuItem.Monitoramento] = () => _serviceProvider.GetRequiredService<MonitoramentoView>(),
             [MenuItem.ObjetosDetectados] = () => _serviceProvider.GetRequiredService<ObjetosDetectadosView>(),
-            [MenuItem.AcoesRealizadas] = () => new PlaceholderView("Sidebar.AcoesRealizadas"),
+            [MenuItem.AcoesRealizadas] = () => _serviceProvider.GetRequiredService<AcoesRealizadasView>(),
             [MenuItem.HistoricoModos] = () => new PlaceholderView("Sidebar.HistoricoModos"),
             [MenuItem.Usuarios] = () => _serviceProvider.GetRequiredService<UsuariosView>(),
             [MenuItem.Cameras] = () => _serviceProvider.GetRequiredService<CamerasView>(),
