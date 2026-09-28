@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:RadarTorres.App.Localization"
         xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
-        Title="{loc:Loc Profile.Title}" Height="460" Width="380"
+        Title="{loc:Loc Profile.Title}" Height="620" Width="380"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="{DynamicResource BackgroundBrush}"
         Foreground="{DynamicResource TextPrimaryBrush}"
@@ -31,18 +31,40 @@
         </Style>
     </Window.Resources>
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24">
         <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
                 BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,20">
             <StackPanel>
                 <TextBlock Text="{loc:Loc Profile.Name}" Style="{StaticResource FieldLabel}"/>
-                <TextBlock Text="{Binding Usuario.Nome}" FontWeight="Bold" Margin="0,0,0,10"/>
+                <TextBox Text="{Binding Nome, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="{loc:Loc Profile.Email}" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="{loc:Loc Profile.Idade}" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding Idade, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <TextBlock Text="{loc:Loc Profile.Login}" Style="{StaticResource FieldLabel}"/>
                 <TextBlock Text="{Binding Usuario.Login}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="{loc:Loc Profile.Perfil}" Style="{StaticResource FieldLabel}"/>
-                <TextBlock Text="{Binding Usuario.Perfil}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding Usuario.Perfil}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                <TextBlock Text="{Binding MensagemDados}" TextWrapping="Wrap" Margin="0,0,0,10">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SucessoDados}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <Button Content="{loc:Loc Common.Salvar}" Command="{Binding SalvarDadosCommand}"/>
             </StackPanel>
         </Border>
 
@@ -72,4 +94,5 @@
 
         <Button Content="{loc:Loc Profile.Save}" Command="{Binding AlterarSenhaCommand}"/>
     </StackPanel>
+    </ScrollViewer>
 </Window>

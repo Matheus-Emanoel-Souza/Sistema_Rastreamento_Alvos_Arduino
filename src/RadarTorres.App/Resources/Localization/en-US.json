@@ -111,6 +111,8 @@
 
   "Profile.Title": "My profile",
   "Profile.Name": "Name",
+  "Profile.Email": "Email",
+  "Profile.Idade": "Age",
   "Profile.Login": "Username",
   "Profile.Perfil": "Access role",
   "Profile.MemberSince": "Member since",
