@@ -93,6 +93,15 @@ public class Target : INotifyPropertyChanged
         set => SetField(ref _isSelected, value);
     }
 
+    /// <summary>
+    /// Id do <see cref="ObjetoDetectado"/> persistido para este alvo na primeira detecção (ver
+    /// <see cref="ViewModels.MainViewModel.RegistrarObjetoDetectado"/>) — é o que
+    /// <see cref="Services.FireControlService"/> grava em <see cref="AcaoRealizada.ObjetoDetectadoId"/>
+    /// em vez de duplicar X/Y/Z a cada ação. <c>null</c> antes da primeira detecção ser gravada
+    /// (ou se a gravação falhou).
+    /// </summary>
+    public int? ObjetoDetectadoId { get; set; }
+
     /// <summary>Torre demonstrativa escolhida pelo <see cref="Services.TowerSelectionService"/> para este alvo (se houver).</summary>
     public Tower? SelectedTower
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -82,9 +83,10 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         RefreshPortsCommand = new RelayCommand(RefreshPorts);
         ConnectCommand = new RelayCommand(async () => await ConnectAsync(), () => !IsConnected);
         DisconnectCommand = new RelayCommand(() => _serialService.Disconnect(), () => IsConnected);
-        ManualFireCommand = new RelayCommand(async () => await ManualFireAsync(), () => SelectedTarget is not null && CurrentMode != SystemMode.Off && PodeExecutarAcoes);
+        ManualFireCommand = new RelayCommand(async () => await ManualFireAsync(), () => SelectedTarget is not null && PodeExecutarAcoes);
         ClearRadarCommand = new RelayCommand(ClearRadar);
         TogglePauseCommand = new RelayCommand(() => IsPaused = !IsPaused);
+        SetModeCommand = new RelayCommand(modo => CurrentMode = (SystemMode)modo!, _ => PodeExecutarAcoes);
 
         RemoveZonaMortaCommand = new RelayCommand(zone => { if (zone is ZonaMorta dz) _zonaMortaService.Remove(dz); }, _ => PodeGerenciarZonasMortas);
         ToggleZonaMortaCommand = new RelayCommand(zone => { if (zone is ZonaMorta dz) _zonaMortaService.SetEnabled(dz, !dz.Enabled); }, _ => PodeGerenciarZonasMortas);
@@ -264,7 +266,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     // ---------------------------------------------------------------- Modo / simulação / pausa
 
-    private SystemMode _currentMode = SystemMode.Off;
+    private SystemMode _currentMode = SystemMode.LigadoApenas;
     public SystemMode CurrentMode
     {
         get => _currentMode;
@@ -295,11 +297,20 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
             if (SetProperty(ref _currentMode, value))
             {
                 OnPropertyChanged(nameof(SystemStatusText));
+                OnPropertyChanged(nameof(OutrosModos));
                 OnModeChanged(old, value);
                 RegistrarModoAtualTorre(old, value, ResultadoModoAtualTorre.Sucesso, null);
             }
         }
     }
+
+    /// <summary>Modos que não são o atual — só estes aparecem como opção de troca na tela de
+    /// Monitoramento (Requisito "só mostrar as opções de modo que não é o modo atual").</summary>
+    public IEnumerable<SystemMode> OutrosModos => Enum.GetValues<SystemMode>().Where(m => m != CurrentMode);
+
+    /// <summary>Solicita a troca para o modo informado (mesmo caminho de confirmação/auditoria
+    /// do setter de <see cref="CurrentMode"/>) — usado pelos botões de "Mudar para" na tela.</summary>
+    public RelayCommand SetModeCommand { get; }
 
     private bool _isSimulationMode;
     public bool IsSimulationMode
@@ -428,7 +439,6 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     {
         get
         {
-            if (CurrentMode == SystemMode.Off) return "OFFLINE";
             return IsConnected || IsSimulationMode ? "ONLINE" : "AGUARDANDO CONEXÃO";
         }
     }
@@ -487,7 +497,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private async Task ManualFireAsync()
     {
         if (SelectedTarget is null) return;
-        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Manual);
+        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Manual, _authService.CurrentUser?.Login);
     }
 
     private void ClearRadar()
@@ -501,19 +511,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     private void OnModeChanged(SystemMode oldMode, SystemMode newMode)
     {
-        if (newMode == SystemMode.Off)
-        {
-            _logger.Warning("Sistema desligado");
-            _ = SendCommandSafeAsync(SerialProtocolParser.BuildSystemOff());
-            return;
-        }
-
-        if (oldMode == SystemMode.Off)
-        {
-            _ = SendCommandSafeAsync(SerialProtocolParser.BuildSystemOn());
-        }
-
-        string modeCommand = newMode == SystemMode.LocationOnly
+        string modeCommand = newMode == SystemMode.LigadoApenas
             ? SerialProtocolParser.BuildModeDetection()
             : SerialProtocolParser.BuildModeAuto();
 
@@ -523,12 +521,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     private static string DescribeMode(SystemMode mode) => mode switch
     {
-        SystemMode.Off => "SISTEMA DESLIGADO",
-        SystemMode.LocationOnly => "SOMENTE LOCALIZAÇÃO",
-        SystemMode.LocationAutoTower => "LOCALIZAÇÃO + SELEÇÃO AUTOMÁTICA DE TORRE",
-        SystemMode.LocationAutoFire => "LOCALIZAÇÃO + ACIONAMENTO DEMONSTRATIVO AUTOMÁTICO",
-        SystemMode.Maintenance => "MANUTENÇÃO",
-        SystemMode.Emergency => "EMERGÊNCIA (SISTEMA PAUSADO)",
+        SystemMode.LigadoApenas => "VERDE — LIGADO APENAS",
+        SystemMode.AcompanharAlvos => "AMARELO — ACOMPANHAR ALVOS",
+        SystemMode.Disparar => "VERMELHO — DISPARAR",
         _ => mode.ToString()
     };
 
@@ -544,7 +539,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 DataHoraSolicitacao = agora,
                 DataHoraExecucao = resultado == ResultadoModoAtualTorre.Sucesso ? agora : null,
                 Resultado = resultado,
-                Observacao = observacao
+                Observacao = observacao,
+                UsuarioResponsavel = _authService.CurrentUser?.Login
             });
         }
         catch (Exception ex)
@@ -553,11 +549,16 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         }
     }
 
+    /// <summary>
+    /// Grava a primeira detecção do alvo em <c>objetos_detectados</c> e guarda o Id gerado em
+    /// <see cref="Target.ObjetoDetectadoId"/> — é por esse Id que <see cref="FireControlService"/>
+    /// referencia as coordenadas do alvo em <c>acoes_realizadas</c> depois, sem duplicá-las.
+    /// </summary>
     private void RegistrarObjetoDetectado(Target target)
     {
         try
         {
-            _objetoRepository.Add(new ObjetoDetectado
+            ObjetoDetectado objeto = _objetoRepository.Add(new ObjetoDetectado
             {
                 Tipo = "Alvo genérico",
                 X = target.X,
@@ -570,6 +571,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 Observacao = null,
                 ReferenciaImagem = null
             });
+            target.ObjetoDetectadoId = objeto.Id;
         }
         catch (Exception ex)
         {
@@ -643,7 +645,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     private void OnTargetCreatedOrUpdated(object? sender, Target target)
     {
-        if (CurrentMode == SystemMode.LocationAutoTower || CurrentMode == SystemMode.LocationAutoFire)
+        if (CurrentMode == SystemMode.AcompanharAlvos || CurrentMode == SystemMode.Disparar)
         {
             TowerSelectionResult result = _towerService.SelectTowerFor(target);
             _towerService.RecomputeTowerStates(Targets.Where(t => t.IsActive));
@@ -653,7 +655,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 _logger.Info($"Torre {result.SelectedTower!.Name} selecionada para o alvo #{target.Id:D2}");
             }
 
-            if (CurrentMode == SystemMode.LocationAutoFire && result.Success)
+            if (CurrentMode == SystemMode.Disparar && result.Success)
             {
                 FireAuthorizationResult auth = _fireControlService.Authorize(target, MinDistance);
                 if (auth.Authorized)
@@ -697,6 +699,15 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         else _dispatcher.BeginInvoke(action);
     }
 
+    /// <summary>
+    /// Só desinscreve deste MainViewModel dos serviços de hardware (Singleton, compartilhados
+    /// por todas as janelas/sessões) — NÃO descarta <c>_serialService</c> nem os demais. Este
+    /// ViewModel agora é Scoped (uma instância por janela — ver <c>App.ConfigureServices</c>),
+    /// então <see cref="Dispose"/> roda a cada janela fechada; descartar a conexão serial aqui
+    /// derrubaria a comunicação com o Arduino para as demais janelas ainda abertas. A
+    /// disposição real dos serviços Singleton só acontece no encerramento do processo
+    /// (<c>App.OnExit</c> → <c>ServiceProvider.Dispose()</c>).
+    /// </summary>
     public void Dispose()
     {
         _serialService.ConnectionStateChanged -= OnConnectionStateChanged;
@@ -707,6 +718,5 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _trackingService.TargetRemoved -= OnTargetRemoved;
         _simulationService.ReadingGenerated -= OnSimulationReadingGenerated;
         _authService.SessionChanged -= OnAuthSessionChanged;
-        _serialService.Dispose();
     }
 }

@@ -119,10 +119,6 @@ public static class SerialProtocolParser
 
     // ---------- Construção de comandos PC -> Arduino ----------
 
-    public static string BuildSystemOn() => "SYSTEM;ON";
-
-    public static string BuildSystemOff() => "SYSTEM;OFF";
-
     public static string BuildModeDetection() => "MODE;DETECTION";
 
     public static string BuildModeAuto() => "MODE;AUTO";

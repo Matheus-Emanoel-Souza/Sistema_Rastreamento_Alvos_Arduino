@@ -19,7 +19,6 @@
 
     <UserControl.Resources>
         <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
-        <conv:ConnectionStateToBrushConverter x:Key="ConnectionStateToBrushConverter"/>
         <conv:QuadrantToLabelConverter x:Key="QuadrantToLabelConverter"/>
         <conv:SystemModeToLabelConverter x:Key="SystemModeToLabelConverter"/>
         <conv:LogLevelToBrushConverter x:Key="LogLevelToBrushConverter"/>
@@ -119,7 +118,13 @@
                 <ColumnDefinition x:Name="PinnedLogColumn" Width="0"/>
             </Grid.ColumnDefinitions>
 
-        <shared:DashboardCanvas x:Name="LayoutCanvas" Grid.Column="0" ClipToBounds="True">
+        <!-- Scroll vertical modesto: o canvas de cards (radar + painéis) passa de ~1000px de
+             altura no arranjo padrão, mais do que cabe em telas menores — em vez de comprimir os
+             cards verticalmente a cada redimensionamento (como antes), o canvas agora tem uma
+             altura mínima fixa e o ScrollViewer deixa rolar até o fim quando a janela for mais
+             baixa que isso. Sem scroll horizontal — a largura continua acompanhando a janela. -->
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <shared:DashboardCanvas x:Name="LayoutCanvas" MinHeight="1020" ClipToBounds="True">
 
             <!-- ==================== RADAR ==================== -->
             <shared:DashboardCard x:Name="CardRadar" CardId="Radar" Title="RADAR DE DETECÇÃO"
@@ -135,54 +140,64 @@
                                      ZonaMortaRangeSelected="Radar_ZonaMortaRangeSelected"/>
             </shared:DashboardCard>
 
-            <!-- ==================== CONTROLE DO SISTEMA ==================== -->
-            <shared:DashboardCard x:Name="CardControleSistema" CardId="ControleSistema" Title="CONTROLE DO SISTEMA"
-                                   DefaultWidth="320" DefaultHeight="230"
-                                   Canvas.Left="572" Canvas.Top="0" Width="320" Height="230">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Text="Porta COM" Style="{StaticResource LabelText}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ComboBox Grid.Column="0" ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SelectedPort}"/>
-                            <Button Grid.Column="1" Content="⟳" Command="{Binding RefreshPortsCommand}" ToolTip="Atualizar lista de portas"/>
-                        </Grid>
-
-                        <TextBlock Text="Baud Rate" Style="{StaticResource LabelText}"/>
-                        <ComboBox ItemsSource="{Binding AvailableBaudRates}" SelectedItem="{Binding SelectedBaudRate}"/>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <Button Content="CONECTAR" Command="{Binding ConnectCommand}" Background="{DynamicResource AccentBrush}"/>
-                            <Button Content="DESCONECTAR" Command="{Binding DisconnectCommand}"/>
-                            <Ellipse Width="12" Height="12" Margin="10,0,4,0" VerticalAlignment="Center"
-                                     Fill="{Binding ConnectionStatus, Converter={StaticResource ConnectionStateToBrushConverter}}"/>
-                            <TextBlock Text="{Binding ConnectionStatus}" VerticalAlignment="Center" FontSize="11"/>
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
-            </shared:DashboardCard>
-
             <!-- ==================== MODO DE OPERAÇÃO ==================== -->
+            <!-- Só 3 modos, estilo semáforo (Requisito): Verde=Ligado apenas, Amarelo=Acompanhar
+                 alvos, Vermelho=Disparar (ver Models/SystemState.cs). Só lista como opção de
+                 troca os modos que NÃO são o atual — MainViewModel.OutrosModos recalcula a lista
+                 toda vez que CurrentMode muda. Cada botão passa o SystemMode clicado como
+                 CommandParameter para SetModeCommand, que reaproveita a mesma confirmação e
+                 auditoria (modo_atual_torre) já existentes no setter de CurrentMode. As cores
+                 (AccentBrush/WarningBrush/DangerBrush) são as mesmas já usadas no resto do app
+                 para verde/amarelo/vermelho — trocam automaticamente com o tema. -->
             <shared:DashboardCard x:Name="CardModoOperacao" CardId="ModoOperacao" Title="MODO DE OPERAÇÃO"
                                    DefaultWidth="320" DefaultHeight="260"
                                    Canvas.Left="904" Canvas.Top="0" Width="320" Height="260">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <RadioButton GroupName="Mode" Content="1. Sistema desligado"
-                                     IsChecked="{Binding CurrentMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Off}"/>
-                        <RadioButton GroupName="Mode" Content="2. Somente localização"
-                                     IsChecked="{Binding CurrentMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=LocationOnly}"/>
-                        <RadioButton GroupName="Mode" Content="3. Localização + seleção automática de torre"
-                                     IsChecked="{Binding CurrentMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=LocationAutoTower}"/>
-                        <RadioButton GroupName="Mode" Content="4. Localização + acionamento demonstrativo automático"
-                                     IsChecked="{Binding CurrentMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=LocationAutoFire}"/>
-                        <RadioButton GroupName="Mode" Content="5. Manutenção"
-                                     IsChecked="{Binding CurrentMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Maintenance}"/>
-                        <RadioButton GroupName="Mode" Content="6. Emergência (sistema pausado)"
-                                     IsChecked="{Binding CurrentMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Emergency}"/>
+                        <TextBlock Text="MODO ATUAL" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="{Binding CurrentMode, Converter={StaticResource SystemModeToLabelConverter}}"
+                                   Margin="0,0,0,10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource ValueText}">
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentMode}" Value="{x:Static models:SystemMode.AcompanharAlvos}">
+                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding CurrentMode}" Value="{x:Static models:SystemMode.Disparar}">
+                                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <TextBlock Text="MUDAR PARA" Style="{StaticResource LabelText}"/>
+                        <ItemsControl ItemsSource="{Binding OutrosModos}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Converter={StaticResource SystemModeToLabelConverter}}"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                            Foreground="White"
+                                            Command="{Binding DataContext.SetModeCommand, RelativeSource={RelativeSource AncestorType=shared:DashboardCard}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding}" Value="{x:Static models:SystemMode.AcompanharAlvos}">
+                                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding}" Value="{x:Static models:SystemMode.Disparar}">
+                                                        <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </shared:DashboardCard>
@@ -190,7 +205,7 @@
             <!-- ==================== AÇÕES ==================== -->
             <shared:DashboardCard x:Name="CardAcoes" CardId="Acoes" Title="AÇÕES"
                                    DefaultWidth="320" DefaultHeight="180"
-                                   Canvas.Left="572" Canvas.Top="242" Width="320" Height="180">
+                                   Canvas.Left="572" Canvas.Top="0" Width="320" Height="180">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <Button Content="ACIONAMENTO MANUAL DEMONSTRATIVO" Command="{Binding ManualFireCommand}" Background="{DynamicResource WarningBrush}"/>
@@ -224,13 +239,6 @@
                         <TextBox Text="{Binding MaxDistance, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"/>
                     </StackPanel>
                 </Grid>
-            </shared:DashboardCard>
-
-            <!-- ==================== SELECIONAR ALVO ==================== -->
-            <shared:DashboardCard x:Name="CardSelecionarAlvo" CardId="SelecionarAlvo" Title="SELECIONAR ALVO"
-                                   DefaultWidth="320" DefaultHeight="130"
-                                   Canvas.Left="572" Canvas.Top="434" Width="320" Height="130">
-                <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}" VerticalAlignment="Top"/>
             </shared:DashboardCard>
 
             <!-- ==================== MONITORAMENTO (STATUS) ==================== -->
@@ -375,6 +383,7 @@
                 </Grid>
             </shared:DashboardCard>
         </shared:DashboardCanvas>
+        </ScrollViewer>
 
             <!-- Faixa encaixada na borda direita — só existe/aparece enquanto PinLogToggle
                  estiver marcado; o conteúdo (ListBox de LogEntries) é o mesmo controle

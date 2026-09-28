@@ -4,7 +4,7 @@ namespace RadarTorres.App.Models;
 
 /// <summary>
 /// Registro de auditoria de uma ação de acionamento demonstrativo (ex.: "Torre 1 —
-/// acionamento — coordenadas (X, Y, Z)"). Gravado por <see cref="Services.FireControlService"/>
+/// Acionamento demonstrativo"). Gravado por <see cref="Services.FireControlService"/>
 /// a cada tentativa (autorizada e executada, bloqueada ou com erro) — nunca editável ou
 /// removível por usuários comuns (ver <see cref="Repositories.IAcaoRealizadaRepository"/>,
 /// que propositalmente não expõe Update/Delete).
@@ -13,18 +13,17 @@ public class AcaoRealizada
 {
     public int Id { get; set; }
 
-    /// <summary>Nome da torre/dispositivo responsável (ex.: "Torre 1").</summary>
-    public string Dispositivo { get; set; } = string.Empty;
+    /// <summary>Torre + ação combinadas num único campo (ex.: "Torre 1 — Acionamento demonstrativo").</summary>
+    public string TorreAcao { get; set; } = string.Empty;
 
-    /// <summary>Tipo da ação (hoje sempre "Acionamento demonstrativo").</summary>
-    public string TipoAcao { get; set; } = string.Empty;
-
-    public double X { get; set; }
-
-    public double Y { get; set; }
-
-    /// <summary>Ver <see cref="ObjetoDetectado.Z"/> — nulo enquanto não houver sensor 3D.</summary>
-    public double? Z { get; set; }
+    /// <summary>
+    /// Referência ao <see cref="ObjetoDetectado"/> que originou esta ação — é a chave para as
+    /// coordenadas do alvo (X/Y/Z), que não são duplicadas aqui; quem precisa da posição
+    /// consulta <see cref="Repositories.IObjetoDetectadoRepository"/> por este Id (ver
+    /// <see cref="ViewModels.AcoesRealizadasViewModel"/>, que já resolve isso para exibição).
+    /// <c>null</c> se o alvo não tinha objeto detectado persistido no momento da ação.
+    /// </summary>
+    public int? ObjetoDetectadoId { get; set; }
 
     public DateTime DataHora { get; set; }
 

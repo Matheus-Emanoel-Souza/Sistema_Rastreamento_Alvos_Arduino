@@ -20,6 +20,9 @@ public sealed class CsvModoAtualTorreRepository : IModoAtualTorreRepository
             new CsvColumn<ModoAtualTorre>("DataHoraExecucao", a => CsvConvert.From(a.DataHoraExecucao), (a, v) => a.DataHoraExecucao = CsvConvert.ToNullableDateTime(v)),
             new CsvColumn<ModoAtualTorre>("Resultado", a => CsvConvert.From(a.Resultado), (a, v) => a.Resultado = CsvConvert.ToEnum(v, ResultadoModoAtualTorre.Erro)),
             new CsvColumn<ModoAtualTorre>("Observacao", a => a.Observacao ?? "", (a, v) => a.Observacao = v),
+            // Adicionada ao final (não no meio) para não quebrar a leitura posicional de
+            // modo_atual_torre.csv já existentes (CsvTableStore lê por índice de coluna, não por nome).
+            new CsvColumn<ModoAtualTorre>("UsuarioResponsavel", a => a.UsuarioResponsavel ?? "", (a, v) => a.UsuarioResponsavel = string.IsNullOrEmpty(v) ? null : v),
         ]);
     }
 

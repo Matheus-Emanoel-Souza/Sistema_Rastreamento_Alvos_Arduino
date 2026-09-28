@@ -28,4 +28,8 @@ public class ModoAtualTorre
     public ResultadoModoAtualTorre Resultado { get; set; }
 
     public string? Observacao { get; set; }
+
+    /// <summary>Login do usuário que solicitou a troca — quem estava logado ao confirmar (ou
+    /// cancelar) a alteração no diálogo de confirmação.</summary>
+    public string? UsuarioResponsavel { get; set; }
 }

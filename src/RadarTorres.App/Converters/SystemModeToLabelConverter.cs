@@ -10,10 +10,9 @@ public sealed class SystemModeToLabelConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
     {
-        SystemMode.Off => "DESLIGADO",
-        SystemMode.LocationOnly => "LOCALIZAÇÃO",
-        SystemMode.LocationAutoTower => "LOCALIZAÇÃO + TORRE AUTO",
-        SystemMode.LocationAutoFire => "LOCALIZAÇÃO + AUTO",
+        SystemMode.LigadoApenas => "VERDE — LIGADO APENAS",
+        SystemMode.AcompanharAlvos => "AMARELO — ACOMPANHAR ALVOS",
+        SystemMode.Disparar => "VERMELHO — DISPARAR",
         _ => "—"
     };
 

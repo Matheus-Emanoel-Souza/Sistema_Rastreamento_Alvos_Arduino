@@ -1,36 +1,22 @@
 namespace RadarTorres.App.Models;
 
 /// <summary>
-/// Modo de operação do sistema, conforme selecionado pelo usuário no painel de controle.
-/// Cada modo habilita um subconjunto de comportamentos automáticos.
+/// Modo de operação do sistema, conforme selecionado pelo usuário no painel de controle —
+/// modelo tipo semáforo (Requisito "3 modos: vermelho/amarelo/verde"). Cada modo habilita um
+/// subconjunto de comportamentos automáticos; a cor de cada um é decidida pela View (ver
+/// <c>Converters/SystemModeToLabelConverter</c> e <c>MonitoramentoView.xaml</c>), não faz parte
+/// do domínio.
 /// </summary>
 public enum SystemMode
 {
-    /// <summary>Sistema desligado. Nenhum processamento de alvos ocorre.</summary>
-    Off = 0,
+    /// <summary>Verde — Ligado apenas: alvos são detectados e exibidos, sem seleção de torre nem acionamento.</summary>
+    LigadoApenas = 0,
 
-    /// <summary>Apenas localização: alvos são detectados e exibidos, sem seleção de torre.</summary>
-    LocationOnly = 1,
+    /// <summary>Amarelo — Acompanhar alvos: localização + seleção automática da torre mais próxima/adequada, sem acionamento.</summary>
+    AcompanharAlvos = 1,
 
-    /// <summary>Localização + seleção automática da torre mais próxima/adequada, sem acionamento.</summary>
-    LocationAutoTower = 2,
-
-    /// <summary>Localização + seleção automática + acionamento demonstrativo automático (laser/indicador).</summary>
-    LocationAutoFire = 3,
-
-    /// <summary>
-    /// Manutenção: sistema propositalmente fora de operação normal para inspeção/ajustes.
-    /// Equivalente ao "Manutenção" administrativo auditado em <c>modo_atual_torre</c>
-    /// (ver <see cref="Services.ModeAuditService"/>). Não processa alvos.
-    /// </summary>
-    Maintenance = 4,
-
-    /// <summary>
-    /// Emergência: sistema pausado por segurança (equivalente ao "Emergência/sistema
-    /// pausado" administrativo). Bloqueia qualquer acionamento até retorno explícito a
-    /// outro modo. Não processa alvos.
-    /// </summary>
-    Emergency = 5
+    /// <summary>Vermelho — Disparar: localização + seleção automática + acionamento demonstrativo automático (laser/indicador).</summary>
+    Disparar = 2
 }
 
 /// <summary>Estado da conexão serial com o Arduino (ou com o simulador).</summary>

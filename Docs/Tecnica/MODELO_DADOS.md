@@ -55,6 +55,7 @@ ponto de troca (ver `src/RadarTorres.App/Data/AppDataPaths.cs` e
 ```mermaid
 erDiagram
     USUARIOS ||--o{ ACOES_REALIZADAS : "solicita (quando manual)"
+    OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (coordenadas)"
     USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
     USUARIOS ||--o{ CHAMADOS_AJUDA : "abre"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
@@ -87,11 +88,8 @@ erDiagram
 
     ACOES_REALIZADAS {
         int Id PK
-        string Dispositivo
-        string TipoAcao
-        double X
-        double Y
-        double Z "nullable"
+        string TorreAcao "ex.: 'Torre 1 — Acionamento demonstrativo'"
+        int ObjetoDetectadoId FK "nullable — chave para as coordenadas em OBJETOS_DETECTADOS"
         datetime DataHora
         string UsuarioResponsavel FK "nullable, Login"
         string Origem "Manual | Automatica"
