@@ -45,6 +45,11 @@
          (ver comentário original em Configuration/AppConfig.cs, que já previa esta migração). -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
 
+    <!-- Módulo "Ações Realizadas": primeira tabela do projeto a sair do CSV puro e gravar em
+         banco relacional de verdade (ver ResilientAcaoRealizadaRepository) — as demais tabelas
+         continuam em CSV por ora (ver Docs/Tecnica/MODELO_DADOS.md). -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+
     <!-- Módulo "Câmeras" (visualização em tempo real de webcams via DirectShow). Escolhida em
          vez de OpenCvSharp4/Emgu.CV por ser uma dependência ordens de grandeza menor — não traz
          um runtime nativo de visão computacional inteiro só para exibir uma prévia ao vivo — e

@@ -108,7 +108,9 @@ public partial class App : Application
         services.AddSingleton<IUsuarioRepository, CsvUsuarioRepository>();
         services.AddSingleton<IObjetoDetectadoRepository, CsvObjetoDetectadoRepository>();
         services.AddTransient<IObjetoDetectadoExportService, ObjetoDetectadoExportService>();
-        services.AddSingleton<IAcaoRealizadaRepository, CsvAcaoRealizadaRepository>();
+        // Ações Realizadas grava em SQLite de verdade (radartorres.db), com fallback
+        // automático para CSV se o banco estiver indisponível — ver ResilientAcaoRealizadaRepository.
+        services.AddSingleton<IAcaoRealizadaRepository, ResilientAcaoRealizadaRepository>();
         services.AddSingleton<IModoAtualTorreRepository, CsvModoAtualTorreRepository>();
         services.AddSingleton<IPreferenciasUsuarioRepository, CsvPreferenciasUsuarioRepository>();
 
@@ -142,6 +144,10 @@ public partial class App : Application
         // Loaded que ObjetosDetectadosView.
         services.AddTransient<UsuariosViewModel>();
         services.AddSingleton<UsuariosView>();
+
+        // Tela "Ações Realizadas": mesmo padrão de recarregamento no Loaded.
+        services.AddTransient<AcoesRealizadasViewModel>();
+        services.AddSingleton<AcoesRealizadasView>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginWindow>();

@@ -164,6 +164,18 @@ Auditoria de acionamentos (Requisito 5) — **somente inserção**: o repositór
 `FireControlService.TryFireAsync`, o único ponto do sistema por onde todo acionamento passa,
 para cada tentativa (autorizada e executada, bloqueada por segurança, ou com erro de envio).
 
+**Exceção ao padrão CSV desta etapa**: esta é a primeira tabela a gravar em banco relacional de
+verdade — SQLite (`radartorres.db`, tabela `AcoesRealizadas`,
+`src/RadarTorres.App/Repositories/SqliteAcaoRealizadaRepository.cs`), por pedido explícito do
+usuário. `ResilientAcaoRealizadaRepository` é quem fica registrado no DI
+(`IAcaoRealizadaRepository`): tenta o SQLite em toda leitura/escrita e, se a operação falhar
+(arquivo de banco bloqueado, disco cheio, permissão negada etc.), cai automaticamente para o CSV
+(`acoes_realizadas.csv`, mesmo mecanismo das outras tabelas) — o sistema continua funcionando e
+nenhum acionamento deixa de ser registrado, só muda onde fica gravado. Cada chamada tenta o
+banco de novo primeiro, então uma reconexão é detectada sozinha na próxima ação; não há
+reconciliação automática entre os registros gravados em cada um dos dois armazenamentos durante
+uma indisponibilidade — fica para uma etapa futura, quando o projeto migrar totalmente para SQL.
+
 ### `modo_atual_torre`
 Auditoria de troca de modo (Requisito 6) — também somente inserção. Toda troca de
 `SystemMode` (agora incluindo `Manutenção` e `Emergência`, adicionados nesta etapa) passa por
