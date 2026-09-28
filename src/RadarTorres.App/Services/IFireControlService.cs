@@ -23,5 +23,13 @@ public interface IFireControlService
     /// Se a ação foi disparada manualmente por um usuário ou automaticamente pelo sistema —
     /// gravado no histórico de auditoria (<c>acoes_realizadas</c>, Requisito 5).
     /// </param>
-    Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters, OrigemAcao origem);
+    /// <param name="usuarioResponsavel">
+    /// Login de quem solicitou (só faz sentido quando <paramref name="origem"/> é
+    /// <see cref="OrigemAcao.Manual"/>). Recebido como parâmetro em vez de lido de
+    /// <c>IAuthService.CurrentUser</c> aqui dentro porque este serviço é Singleton (uma única
+    /// conexão física com o Arduino, compartilhada por todas as janelas/sessões) enquanto a
+    /// sessão de login é por janela — quem sabe qual usuário disparou é o chamador (<c>MainViewModel</c>,
+    /// que é Scoped por janela).
+    /// </param>
+    Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters, OrigemAcao origem, string? usuarioResponsavel = null);
 }

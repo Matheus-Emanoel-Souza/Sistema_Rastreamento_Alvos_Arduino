@@ -6,9 +6,10 @@ namespace RadarTorres.App.Views.Shell;
 
 /// <summary>
 /// Janela principal pós-login: barra superior + barra lateral + área de conteúdo navegável
-/// (Requisitos 1 e 2). Fica viva durante toda a sessão (Singleton via DI) — logout apenas
-/// oculta a janela e devolve o controle para a tela de login, sem recriar o estado do
-/// monitoramento (conexão serial, alvos ativos) a cada troca de usuário.
+/// (Requisitos 1 e 2). Uma instância por sessão/"aba" (Scoped via DI — ver
+/// <c>App.OpenNewSession</c>), não mais uma só para o app inteiro: cada janela tem seu próprio
+/// login e pode ser fechada independentemente das demais (quem decide se isso encerra o app é
+/// <c>App.CloseSession</c>, ligado ao evento <see cref="Window.Closed"/>).
 /// </summary>
 public partial class ShellWindow : Window
 {
@@ -25,20 +26,20 @@ public partial class ShellWindow : Window
         _viewModel.NavigateToDefault();
 
         _viewModel.LoggedOut += OnLoggedOut;
+        _viewModel.NovaJanelaSolicitada += OnNovaJanelaSolicitada;
 
-        // Fechar a Shell pelo X/Alt+F4 deve encerrar o app inteiro (é a janela principal);
-        // ShutdownMode=OnExplicitShutdown (definido em App.xaml.cs) evita que o app suma sem
-        // sair de verdade quando ela só é ocultada (Hide) num logout normal.
-        Closing += (_, _) =>
-        {
-            _viewModel.Dispose();
-            Application.Current.Shutdown();
-        };
+        Closing += (_, _) => _viewModel.Dispose();
     }
 
+    /// <summary>Logout nesta janela: abre uma sessão nova (login em branco) antes de fechar esta
+    /// — garante que sempre sobra pelo menos uma janela aberta enquanto o usuário decide se
+    /// entra com outra conta, mesmo se esta fosse a única aberta no momento.</summary>
     private void OnLoggedOut(object? sender, System.EventArgs e)
     {
-        Hide();
-        ((App)Application.Current).ReturnToLogin();
+        ((App)Application.Current).OpenNewSession();
+        Close();
     }
+
+    private void OnNovaJanelaSolicitada(object? sender, System.EventArgs e) =>
+        ((App)Application.Current).OpenNewSession();
 }

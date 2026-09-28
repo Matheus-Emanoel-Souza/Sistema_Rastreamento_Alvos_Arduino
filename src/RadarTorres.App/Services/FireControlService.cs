@@ -23,20 +23,17 @@ public sealed class FireControlService : IFireControlService
 
     private readonly ILoggingService _logger;
     private readonly IAcaoRealizadaRepository _acaoRepository;
-    private readonly IAuthService _authService;
     private readonly IZonaMortaService _zonaMortaService;
     private readonly Dispatcher _dispatcher;
 
     public FireControlService(
         ILoggingService logger,
         IAcaoRealizadaRepository acaoRepository,
-        IAuthService authService,
         IZonaMortaService zonaMortaService,
         Dispatcher? dispatcher = null)
     {
         _logger = logger;
         _acaoRepository = acaoRepository;
-        _authService = authService;
         _zonaMortaService = zonaMortaService;
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
     }
@@ -70,14 +67,14 @@ public sealed class FireControlService : IFireControlService
         return new FireAuthorizationResult(true, "AUTORIZADO");
     }
 
-    public async Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters, OrigemAcao origem)
+    public async Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters, OrigemAcao origem, string? usuarioResponsavel = null)
     {
         FireAuthorizationResult authorization = Authorize(target, minSafetyDistanceMeters);
 
         if (!authorization.Authorized)
         {
             _logger.Warning(authorization.Reason);
-            RegistrarAcao(target, origem, ResultadoAcao.Cancelada, authorization.Reason);
+            RegistrarAcao(target, origem, ResultadoAcao.Cancelada, authorization.Reason, usuarioResponsavel);
             return false;
         }
 
@@ -98,14 +95,14 @@ public sealed class FireControlService : IFireControlService
             if (!sent)
             {
                 tower.State = TowerState.Selected;
-                RegistrarAcao(target, origem, ResultadoAcao.Erro, "Falha ao enviar comando pela porta serial.");
+                RegistrarAcao(target, origem, ResultadoAcao.Erro, "Falha ao enviar comando pela porta serial.", usuarioResponsavel);
                 return false;
             }
             // A confirmação real (ACK) chega de forma assíncrona via MessageReceived e é
             // tratada pela MainViewModel; aqui apenas registramos o envio do comando.
         }
 
-        RegistrarAcao(target, origem, ResultadoAcao.Executada, null);
+        RegistrarAcao(target, origem, ResultadoAcao.Executada, null, usuarioResponsavel);
 
         // Mantém o feedback visual de "disparando" por um curto período antes de voltar a "selecionada".
         _ = ResetFiringStateAfterDelay(tower);
@@ -113,19 +110,16 @@ public sealed class FireControlService : IFireControlService
         return true;
     }
 
-    private void RegistrarAcao(Target target, OrigemAcao origem, ResultadoAcao resultado, string? observacao)
+    private void RegistrarAcao(Target target, OrigemAcao origem, ResultadoAcao resultado, string? observacao, string? usuarioResponsavel)
     {
         try
         {
             _acaoRepository.Add(new AcaoRealizada
             {
-                Dispositivo = target.SelectedTower?.Name ?? "—",
-                TipoAcao = "Acionamento demonstrativo",
-                X = target.X,
-                Y = target.Y,
-                Z = null,
+                TorreAcao = $"{target.SelectedTower?.Name ?? "—"} — Acionamento demonstrativo",
+                ObjetoDetectadoId = target.ObjetoDetectadoId,
                 DataHora = DateTime.Now,
-                UsuarioResponsavel = origem == OrigemAcao.Manual ? _authService.CurrentUser?.Login : null,
+                UsuarioResponsavel = usuarioResponsavel,
                 Origem = origem,
                 Resultado = resultado,
                 Observacao = observacao

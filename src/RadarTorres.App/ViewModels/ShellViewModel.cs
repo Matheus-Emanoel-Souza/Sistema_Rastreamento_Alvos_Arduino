@@ -47,6 +47,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         NavigateCommand = new RelayCommand(item => Navigate((MenuItem)item!));
         LogoutCommand = new RelayCommand(Logout);
         RestaurarPadraoCommand = new RelayCommand(RestaurarPadrao);
+        NovaJanelaCommand = new RelayCommand(() => NovaJanelaSolicitada?.Invoke(this, EventArgs.Empty));
 
         MenuItems = new ObservableCollection<SidebarMenuEntry>();
         RebuildMenu();
@@ -74,6 +75,13 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     public RelayCommand SetThemeCommand { get; }
 
     public RelayCommand RestaurarPadraoCommand { get; }
+
+    /// <summary>Abre uma nova janela/aba com sua própria tela de login — permite logar com um
+    /// usuário diferente sem afetar a sessão atual. A abertura em si (novo IServiceScope) é
+    /// responsabilidade da ShellWindow/App (fora do escopo desta ViewModel), que ouve este evento.</summary>
+    public event EventHandler? NovaJanelaSolicitada;
+
+    public RelayCommand NovaJanelaCommand { get; }
 
     private void SetLanguage(string languageCode)
     {

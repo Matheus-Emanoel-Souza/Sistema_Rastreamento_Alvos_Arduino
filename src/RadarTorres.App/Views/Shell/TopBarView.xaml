@@ -5,6 +5,14 @@
              xmlns:models="clr-namespace:RadarTorres.App.Models">
 
     <UserControl.Resources>
+        <!-- MenuItem não herda Foreground do Menu pai por padrão (o estilo nativo do Windows
+             fixa a cor do texto independente do tema) — sem isto, "Opções" ficava com texto
+             escuro fixo e sumia sobre o fundo escuro. Aplica-se a este MenuItem e a todos os
+             filhos (Idioma, Tema, Restaurar padrão etc.), que também não definiam Foreground. -->
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
         <Style x:Key="TopBarButton" TargetType="Button">
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Margin" Value="4,0,0,0"/>
@@ -32,6 +40,9 @@
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="{loc:Loc Common.RestaurarPadrao}" Command="{Binding RestaurarPadraoCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="{loc:Loc TopBar.NovaJanela}" Command="{Binding NovaJanelaCommand}"
+                              ToolTip="{loc:Loc TopBar.NovaJanelaDica}"/>
                 </MenuItem>
             </Menu>
 

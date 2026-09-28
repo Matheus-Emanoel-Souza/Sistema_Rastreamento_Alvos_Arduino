@@ -11,6 +11,8 @@
   "TopBar.Theme.System": "Seguir tema do sistema",
   "TopBar.Profile": "Perfil",
   "TopBar.Logout": "Sair",
+  "TopBar.NovaJanela": "Nova janela (outro login)",
+  "TopBar.NovaJanelaDica": "Abre uma nova janela com uma tela de login própria — permite ficar conectado com outro usuário ao mesmo tempo.",
   "TopBar.LoggedInAs": "Conectado como",
 
   "Sidebar.Collapse": "Recolher menu",

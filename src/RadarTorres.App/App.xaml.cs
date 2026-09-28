@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -23,7 +24,8 @@ namespace RadarTorres.App;
 ///    wiring manual que existia em <c>MainWindow.xaml.cs</c> (ver comentário original em
 ///    <see cref="Configuration.AppConfig"/>, que já previa esta migração);
 /// 3) garantir que exista um usuário Administrador padrão no primeiro uso;
-/// 4) controlar o fluxo login -&gt; shell (sem <c>StartupUri</c>, porque depende de autenticação).
+/// 4) controlar o fluxo login -&gt; shell, agora com suporte a múltiplas "abas" (janelas)
+///    simultâneas, cada uma com seu próprio login/sessão — ver <see cref="OpenNewSession"/>.
 /// </summary>
 public partial class App : Application
 {
@@ -33,6 +35,17 @@ public partial class App : Application
     /// este campo diretamente (evita o anti-padrão de Service Locator espalhado pelo código).
     /// </summary>
     public static ServiceProvider ServiceProvider { get; private set; } = null!;
+
+    /// <summary>
+    /// Uma "aba" (janela) = um <see cref="IServiceScope"/> próprio, com sua própria instância de
+    /// <c>IAuthService</c>/<c>ShellViewModel</c>/<c>MainViewModel</c>/telas de navegação —
+    /// permite logins diferentes em janelas diferentes ao mesmo tempo. Serviços de hardware
+    /// (conexão serial, rastreamento de alvos, seleção de torre, acionamento, simulação, zonas
+    /// mortas) continuam Singleton no <see cref="ServiceProvider"/> raiz, fora de qualquer
+    /// escopo — é o mesmo sistema físico, compartilhado por todas as janelas. O app encerra
+    /// quando a última sessão fecha (nenhuma janela sozinha derruba as demais).
+    /// </summary>
+    private readonly List<IServiceScope> _openSessions = new();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -59,14 +72,16 @@ public partial class App : Application
             ServiceProvider.GetRequiredService<IPasswordHasher>());
 
         // Tema padrão antes de qualquer janela aparecer (evita "flash" sem estilo na tela de
-        // login); a preferência real do usuário é aplicada depois de autenticar.
+        // login); a preferência real do usuário é aplicada depois de autenticar. Tema/idioma
+        // são compartilhados por todas as janelas (recursos globais da Application no WPF).
         ServiceProvider.GetRequiredService<IThemeService>().ApplyTheme(TemaPreferido.Escuro);
 
-        // Fecha/ocultar uma janela (ex.: logout) não deve encerrar o app sozinho — controlamos
-        // o encerramento explicitamente (login cancelado) via Shutdown().
+        // Cada sessão (janela) fecha independentemente — o app só encerra quando a última
+        // fecha (ver CloseSession). Controlamos isso manualmente em vez de deixar o WPF decidir
+        // sozinho pelo fechamento de uma janela específica.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        ShowLogin();
+        OpenNewSession();
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -119,98 +134,123 @@ public partial class App : Application
 
         // --- Infraestrutura nova (autenticação, permissões, idioma, tema, navegação)
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddSingleton<IAuthService, AuthService>();
+        // Scoped (uma instância por janela/sessão — ver OpenNewSession): é o que torna possível
+        // logins diferentes em janelas diferentes ao mesmo tempo. IPermissionService é stateless,
+        // Singleton só por não precisar ser recriado; Localização/Tema continuam Singleton de
+        // propósito — são recursos globais da Application no WPF, compartilhados por todas as
+        // janelas (não daria pra ter um idioma/tema por janela sem reescrever os DynamicResource).
+        services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IThemeService, ThemeService>();
-        services.AddSingleton<INavigationService, NavigationService>();
+        services.AddScoped<INavigationService, NavigationService>();
 
         // --- Telas / ViewModels
-        // MainViewModel + MonitoramentoView são Singleton: representam a sessão de
-        // monitoramento em si (conexão serial, alvos ativos) e devem manter estado entre
-        // navegações pela barra lateral, exatamente como antes (janela única).
-        services.AddSingleton<MainViewModel>();
-        services.AddSingleton<MonitoramentoView>();
+        // Scoped (uma instância por janela/sessão, não mais uma só pro app inteiro): cada
+        // aba/janela precisa da sua própria View (um UserControl não pode estar em duas árvores
+        // visuais/janelas ao mesmo tempo) e do seu próprio ViewModel quando ele depende de
+        // IAuthService (permissões variam por janela). MainViewModel/MonitoramentoView mantêm
+        // estado entre navegações pela barra lateral DENTRO da mesma janela, exatamente como
+        // antes — só deixam de ser compartilhados ENTRE janelas. Os serviços de hardware que
+        // MainViewModel usa (serial, rastreamento, seleção de torre, acionamento, simulação)
+        // continuam Singleton acima — é a mesma conexão física vista por todas as janelas.
+        services.AddScoped<MainViewModel>();
+        services.AddScoped<MonitoramentoView>();
 
         services.AddTransient<PainelPrincipalViewModel>();
-        services.AddSingleton<PainelPrincipalView>();
+        services.AddScoped<PainelPrincipalView>();
 
-        // Singleton igual às demais telas de navegação (PainelPrincipalView, MonitoramentoView):
-        // recarrega a lista sozinha no Loaded a cada navegação (ver ObjetosDetectadosView.Loaded).
         services.AddTransient<ObjetosDetectadosViewModel>();
-        services.AddSingleton<ObjetosDetectadosView>();
+        services.AddScoped<ObjetosDetectadosView>();
 
         // Tela "Usuários" (exclusiva do Administrador): mesmo padrão de recarregamento no
         // Loaded que ObjetosDetectadosView.
         services.AddTransient<UsuariosViewModel>();
-        services.AddSingleton<UsuariosView>();
+        services.AddScoped<UsuariosView>();
 
         // Tela "Ações Realizadas": mesmo padrão de recarregamento no Loaded.
         services.AddTransient<AcoesRealizadasViewModel>();
-        services.AddSingleton<AcoesRealizadasView>();
+        services.AddScoped<AcoesRealizadasView>();
+
+        // Tela "Histórico de Modos": mesmo padrão de recarregamento no Loaded.
+        services.AddTransient<HistoricoModosViewModel>();
+        services.AddScoped<HistoricoModosView>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginWindow>();
 
-        services.AddSingleton<ShellViewModel>();
-        services.AddSingleton<ShellWindow>();
+        services.AddScoped<ShellViewModel>();
+        services.AddScoped<ShellWindow>();
 
         services.AddTransient<ProfileViewModel>();
         services.AddTransient<ProfileWindow>();
 
-        // Singleton igual a MainViewModel/MonitoramentoView: mantém a conexão serial e o
-        // estado da compilação entre navegações pela barra lateral.
-        services.AddSingleton<ArduinoSettingsViewModel>();
-        services.AddSingleton<ArduinoSettingsView>();
+        services.AddScoped<ArduinoSettingsViewModel>();
+        services.AddScoped<ArduinoSettingsView>();
 
-        // Singleton igual às demais telas de navegação: a view libera as câmeras de todos os
-        // painéis sozinha ao sair da tela (ver CamerasView.Unloaded), então não precisa ser
-        // recriada a cada navegação.
-        services.AddSingleton<CamerasViewModel>();
-        services.AddSingleton<CamerasView>();
+        services.AddScoped<CamerasViewModel>();
+        services.AddScoped<CamerasView>();
     }
 
     /// <summary>
-    /// Mostra a tela de login (não-modal — <see cref="LoginWindow"/> é Transient, uma nova
-    /// instância a cada chamada). Ao fechar, decide entre mostrar a Shell (login OK) ou
-    /// encerrar o aplicativo (login cancelado/janela fechada sem autenticar).
+    /// Abre uma nova "aba" (janela de login, não-modal) numa sessão própria
+    /// (<see cref="IServiceScope"/>) independente de qualquer outra já aberta — é o que permite
+    /// logar com usuários diferentes ao mesmo tempo em janelas diferentes. Chamado no início do
+    /// app e sempre que o usuário pede "Nova janela" ou faz logout (ver
+    /// <c>ShellViewModel.NovaJanelaCommand</c>/<c>LoggedOut</c>).
     /// </summary>
-    private void ShowLogin()
+    public void OpenNewSession()
     {
-        var loginWindow = ServiceProvider.GetRequiredService<LoginWindow>();
+        IServiceScope session = ServiceProvider.CreateScope();
+        _openSessions.Add(session);
+
+        var loginWindow = session.ServiceProvider.GetRequiredService<LoginWindow>();
         loginWindow.Closed += (_, _) =>
         {
-            var authService = ServiceProvider.GetRequiredService<IAuthService>();
+            var authService = session.ServiceProvider.GetRequiredService<IAuthService>();
             if (authService.CurrentUser is null)
             {
-                Shutdown();
+                CloseSession(session);
                 return;
             }
 
-            AplicarPreferenciasDoUsuario(authService.CurrentUser.Id);
-            ShowShell();
+            AplicarPreferenciasDoUsuario(session, authService.CurrentUser.Id);
+            ShowShell(session);
         };
 
-        MainWindow = loginWindow;
         loginWindow.Show();
     }
 
-    private void ShowShell()
+    private void ShowShell(IServiceScope session)
     {
-        var shellWindow = ServiceProvider.GetRequiredService<ShellWindow>();
-        MainWindow = shellWindow;
+        var shellWindow = session.ServiceProvider.GetRequiredService<ShellWindow>();
+        shellWindow.Closed += (_, _) => CloseSession(session);
         shellWindow.Show();
     }
 
-    /// <summary>Chamado pela ShellWindow ao fazer logout — volta para a tela de login sem reiniciar o processo.</summary>
-    public void ReturnToLogin() => ShowLogin();
+    /// <summary>
+    /// Encerra uma sessão/janela: libera tudo que foi resolvido dentro do escopo (AuthService,
+    /// ShellViewModel/MainViewModel dessa janela etc. — ver <see cref="IServiceScope.Dispose"/>)
+    /// e só derruba o aplicativo quando essa era a última sessão aberta; as demais janelas
+    /// continuam funcionando normalmente.
+    /// </summary>
+    private void CloseSession(IServiceScope session)
+    {
+        _openSessions.Remove(session);
+        session.Dispose();
+
+        if (_openSessions.Count == 0)
+        {
+            Shutdown();
+        }
+    }
 
     /// <summary>Carrega tema/idioma salvos do usuário (Requisito 8) ou os padrões de fábrica no primeiro login.</summary>
-    private void AplicarPreferenciasDoUsuario(int usuarioId)
+    private void AplicarPreferenciasDoUsuario(IServiceScope session, int usuarioId)
     {
-        var preferenciasRepo = ServiceProvider.GetRequiredService<IPreferenciasUsuarioRepository>();
-        var themeService = ServiceProvider.GetRequiredService<IThemeService>();
-        var localizationService = ServiceProvider.GetRequiredService<ILocalizationService>();
+        var preferenciasRepo = session.ServiceProvider.GetRequiredService<IPreferenciasUsuarioRepository>();
+        var themeService = session.ServiceProvider.GetRequiredService<IThemeService>();
+        var localizationService = session.ServiceProvider.GetRequiredService<ILocalizationService>();
 
         PreferenciasUsuario preferencias = preferenciasRepo.GetByUsuarioId(usuarioId) ?? PreferenciasUsuario.PadraoPara(usuarioId);
 
