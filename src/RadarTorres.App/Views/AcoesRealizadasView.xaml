@@ -6,9 +6,8 @@
              FontFamily="Segoe UI">
     <!--
         Tela "Ações Realizadas" (Requisito 5 — auditoria de acionamentos). Os registros vêm de
-        ResilientAcaoRealizadaRepository: gravados em SQLite (radartorres.db) e, se o banco
-        estiver indisponível, automaticamente em CSV local — a tela não sabe nem precisa saber
-        qual dos dois foi usado, só lê a interface IAcaoRealizadaRepository.
+        SqliteAcaoRealizadaRepository (radartorres.db) — a tela só lê a interface
+        IAcaoRealizadaRepository.
     -->
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -19,7 +18,7 @@
 
         <TextBlock Grid.Row="0" Text="AÇÕES REALIZADAS" FontSize="18" FontWeight="Bold"
                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
-        <TextBlock Grid.Row="1" Text="Histórico de acionamentos (Requisito 5) — toda tentativa autorizada, bloqueada ou com erro fica registrada aqui."
+        <TextBlock Grid.Row="1" Text="Histórico de acionamentos (Requisito 5) — todo acionamento efetivamente executado fica registrado aqui."
                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
 
         <DataGrid Grid.Row="2" ItemsSource="{Binding Itens}" AutoGenerateColumns="False" IsReadOnly="True"
@@ -39,14 +38,11 @@
             </DataGrid.ColumnHeaderStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="50"/>
-                <DataGridTextColumn Header="Torre_Ação" Binding="{Binding TorreAcao}" Width="220"/>
+                <DataGridTextColumn Header="Torre" Binding="{Binding TorreNome}" Width="150"/>
                 <DataGridTextColumn Header="Objeto Id" Binding="{Binding ObjetoDetectadoId, TargetNullValue=—}" Width="70"/>
                 <DataGridTextColumn Header="X (m)" Binding="{Binding X, StringFormat={}{0:0.00}, TargetNullValue=—}" Width="70"/>
                 <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, StringFormat={}{0:0.00}, TargetNullValue=—}" Width="70"/>
                 <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="150"/>
-                <DataGridTextColumn Header="Usuário" Binding="{Binding UsuarioResponsavel, TargetNullValue=—}" Width="110"/>
-                <DataGridTextColumn Header="Origem" Binding="{Binding Origem}" Width="90"/>
-                <DataGridTextColumn Header="Resultado" Binding="{Binding Resultado}" Width="90"/>
                 <DataGridTextColumn Header="Observação" Binding="{Binding Observacao, TargetNullValue=—}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>

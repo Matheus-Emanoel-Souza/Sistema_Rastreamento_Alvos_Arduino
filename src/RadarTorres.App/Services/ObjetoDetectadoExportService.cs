@@ -20,7 +20,7 @@ public sealed class ObjetoDetectadoExportService : IObjetoDetectadoExportService
 
     public void ExportCsv(IEnumerable<ObjetoDetectado> itens, string filePath)
     {
-        var store = new CsvTableStore<ObjetoDetectado>(filePath, CsvObjetoDetectadoRepository.BuildColumns());
+        var store = new CsvTableStore<ObjetoDetectado>(filePath, CsvObjetoDetectadoColumns.BuildColumns());
         store.WriteAll(itens);
     }
 

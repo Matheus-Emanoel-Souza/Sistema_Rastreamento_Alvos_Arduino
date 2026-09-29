@@ -45,9 +45,8 @@
          (ver comentário original em Configuration/AppConfig.cs, que já previa esta migração). -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
 
-    <!-- Módulo "Ações Realizadas": primeira tabela do projeto a sair do CSV puro e gravar em
-         banco relacional de verdade (ver ResilientAcaoRealizadaRepository) — as demais tabelas
-         continuam em CSV por ora (ver Docs/Tecnica/MODELO_DADOS.md). -->
+    <!-- Persistência: todo registro do sistema grava exclusivamente em SQLite (radartorres.db)
+         — ver os Sqlite*Repository em Repositories/. -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
 
     <!-- Módulo "Câmeras" (visualização em tempo real de webcams via DirectShow). Escolhida em

@@ -6,8 +6,8 @@
              FontFamily="Segoe UI">
     <!--
         Tela "Histórico de Modos" (Requisito 6 — auditoria de troca de modo). Registros vêm de
-        IModoAtualTorreRepository, gravados por MainViewModel toda vez que o usuário confirma ou
-        cancela uma troca de modo na tela de Monitoramento.
+        IModoAtualTorreRepository, gravados por MainViewModel toda vez que o usuário confirma
+        uma troca de modo na tela de Monitoramento (cancelamentos só geram log).
     -->
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -18,7 +18,7 @@
 
         <TextBlock Grid.Row="0" Text="HISTÓRICO DE MODOS" FontSize="18" FontWeight="Bold"
                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
-        <TextBlock Grid.Row="1" Text="Toda troca de modo do sistema (Requisito 6) — confirmada ou cancelada, com quem solicitou."
+        <TextBlock Grid.Row="1" Text="Toda troca de modo confirmada pelo sistema (Requisito 6), com quem confirmou."
                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
 
         <DataGrid Grid.Row="2" ItemsSource="{Binding Itens}" AutoGenerateColumns="False" IsReadOnly="True"
@@ -40,11 +40,8 @@
                 <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="50"/>
                 <DataGridTextColumn Header="Modo anterior" Binding="{Binding ModoAnterior}" Width="220"/>
                 <DataGridTextColumn Header="Novo modo" Binding="{Binding NovoModo}" Width="220"/>
-                <DataGridTextColumn Header="Solicitado em" Binding="{Binding DataHoraSolicitacao, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="150"/>
-                <DataGridTextColumn Header="Executado em" Binding="{Binding DataHoraExecucao, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}, TargetNullValue=—}" Width="150"/>
-                <DataGridTextColumn Header="Usuário" Binding="{Binding UsuarioResponsavel, TargetNullValue=—}" Width="110"/>
-                <DataGridTextColumn Header="Resultado" Binding="{Binding Resultado}" Width="90"/>
-                <DataGridTextColumn Header="Observação" Binding="{Binding Observacao, TargetNullValue=—}" Width="*"/>
+                <DataGridTextColumn Header="Usuário" Binding="{Binding UsuarioLogin, TargetNullValue=—}" Width="110"/>
+                <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

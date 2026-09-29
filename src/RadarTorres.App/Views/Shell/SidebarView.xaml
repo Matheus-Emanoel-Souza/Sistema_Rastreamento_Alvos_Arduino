@@ -5,20 +5,55 @@
 
     <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,1,0">
         <Border.Style>
+            <!--
+                Largura animada (não só trocada instantaneamente) ao expandir/recolher — Duration
+                de 200ms com EaseOut nos dois sentidos. EnterActions dispara quando o trigger fica
+                verdadeiro (recolhendo: 210->52); ExitActions quando volta a falso (expandindo:
+                52->210). O Setter continua definindo o valor final "de destino", a animação só
+                cobre a transição visual até lá.
+            -->
             <Style TargetType="Border">
                 <Setter Property="Width" Value="210"/>
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
                         <Setter Property="Width" Value="52"/>
+                        <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="Width" To="52" Duration="0:0:0.2">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuadraticEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </DataTrigger.EnterActions>
+                        <DataTrigger.ExitActions>
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="Width" To="210" Duration="0:0:0.2">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuadraticEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </DataTrigger.ExitActions>
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
         </Border.Style>
 
-        <DockPanel>
+        <DockPanel ClipToBounds="True">
+            <!-- HorizontalContentAlignment="Center" (era "Left"): o ícone das 3 barras fica
+                 sempre centralizado na largura atual do botão — como o botão ocupa a largura
+                 inteira da barra lateral (DockPanel.Dock="Top", sem HorizontalAlignment
+                 restringindo), ele acompanha sozinho a animação de largura acima: desliza da
+                 posição "quase à esquerda" (52px) até o centro real da barra (210px) conforme
+                 ela cresce, sem precisar de nenhuma transformação/animação própria no ícone. -->
             <Button DockPanel.Dock="Top" Command="{Binding ToggleSidebarCommand}"
                     Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}"
-                    FontSize="16" Padding="14,12" HorizontalContentAlignment="Left" Cursor="Hand">
+                    FontSize="16" Padding="14,12" HorizontalContentAlignment="Center" Cursor="Hand">
                 <Button.Content>
                     <TextBlock Text="&#9776;"/>
                 </Button.Content>
