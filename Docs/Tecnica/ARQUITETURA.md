@@ -92,6 +92,17 @@ thread de UI (captura o `Dispatcher` no construtor e usa `CheckAccess()`/`Invoke
 Isso evita que o `MainViewModel` — ou qualquer código futuro — precise lembrar de fazer esse
 despacho manualmente em todo lugar.
 
+## 4.1 Múltiplas sessões/abas (login independente por aba)
+
+Desde a refatoração de janelas, o app roda numa única `MainWindow` que hospeda abas
+(`SessionTabViewModel`), cada uma com seu próprio `IServiceScope` (DI). `App.xaml.cs`
+(`OpenNewSession`) cria a sessão, mostra `LoginView` como conteúdo da aba e, após login bem-
+sucedido, troca o conteúdo da mesma aba para `ShellView` (`ShowShellInTab`) — isso permite
+usuários diferentes autenticados simultaneamente em abas diferentes da mesma janela. Logout
+não fecha a aba: ela volta para `LoginView` com uma sessão/escopo novos (mesma ideia de uma
+aba de navegador voltando para uma página anterior); fechar a aba pelo "✕" é que encerra a
+sessão de fato (`CloseSession`).
+
 ## 5.1 Aba "Configurações do Arduino" (ambiente, compilação, monitor serial)
 
 ```mermaid
@@ -137,8 +148,9 @@ Decisões relevantes desta funcionalidade:
   (caminho do CLI, último sketch, FQBN, porta/baud, preferências do console) são de
   máquina/instalação, não por usuário do RadarTorres — por isso vivem em um arquivo JSON
   próprio em `%LocalAppData%\RadarTorres\arduino-settings.json`
-  (`IArduinoSettingsRepository`), separado do CSV `preferencias_usuario` (tema/idioma) e do
-  `appsettings.json` somente-leitura da instalação.
+  (`IArduinoSettingsRepository`), separado das preferências de usuário (tema/idioma,
+  persistidas em SQLite via `SqlitePreferenciasUsuarioRepository`) e do `appsettings.json`
+  somente-leitura da instalação.
 * **Consoles com limite de linhas.** Tanto o console de compilação quanto o do monitor serial
   descartam as linhas mais antigas acima de um limite fixo (4000), seguindo o mesmo padrão já
   usado por `LoggingService` (limite de 500 no console de eventos da tela de Monitoramento).
@@ -244,38 +256,36 @@ Decisões relevantes desta funcionalidade:
   (`IDashboardLayoutRepository`) — `IsPinnedRight` é só mais um campo do
   `DashboardCardLayout` daquele card.
 
-## 5.5 Exportar/importar "Objetos Detectados" (CSV, XML, PDF)
+## 5.5 Exportar "Objetos Detectados" (CSV, XML, PDF)
 
 ```mermaid
 flowchart LR
     VM["ObjetosDetectadosViewModel"]
     SVC["IObjetoDetectadoExportService"]
-    REPO["IObjetoDetectadoRepository\n(objetos_detectados.csv)"]
-    VIEW["ObjetosDetectadosView\n(SaveFileDialog / OpenFileDialog)"]
+    REPO["IObjetoDetectadoRepository\n(SqliteObjetoDetectadoRepository)"]
+    VIEW["ObjetosDetectadosView\n(SaveFileDialog)"]
 
-    VIEW -- "ExportRequested/ImportRequested" --> VM
-    VM -- "caminho escolhido" --> SVC
-    SVC -- "ImportCsv/ImportXml" --> VM
-    VM -- "Add (Id novo)" --> REPO
+    REPO -- "GetAll (Reload)" --> VM
+    VIEW -- "ExportRequested" --> VM
+    VM -- "caminho escolhido + Itens" --> SVC
 ```
 
-* **Mesmo mapeamento de colunas para persistir e para exportar/importar CSV.**
-  `CsvObjetoDetectadoRepository.BuildColumns()` é estático e reaproveitado por
-  `ObjetoDetectadoExportService` (que só aponta um `CsvTableStore` novo para o arquivo
-  escolhido pelo usuário) — exportar e depois reimportar o mesmo arquivo é garantidamente
-  simétrico, sem duas fontes de verdade para o formato.
+* **Persistência é 100% SQLite, exportação CSV é uma trilha à parte.**
+  `IObjetoDetectadoRepository` é implementado por `SqliteObjetoDetectadoRepository` — nenhuma
+  leitura/escrita em CSV acontece na persistência do histórico. O mapeamento de colunas CSV
+  (`CsvObjetoDetectadoColumns.BuildColumns()`, em `Repositories/CsvObjetoDetectadoColumns.cs`)
+  é usado exclusivamente por `ObjetoDetectadoExportService.ExportCsv` (que aponta um
+  `CsvTableStore` novo para o arquivo escolhido pelo usuário) — uma ação explícita de
+  exportação manual, não parte do mecanismo de persistência do sistema.
 * **XML via `XmlSerializer` puro** (`List<ObjetoDetectado>`, sem biblioteca externa).
-  **PDF via PdfSharp** (única dependência nova do projeto para isso) — só exportação: um PDF
-  não guarda estrutura de dados confiável para reler de volta, então não existe "importar PDF".
-* **Importar é mutação real, exportar é só leitura.** Cada linha lida do CSV/XML vira um
-  `IObjetoDetectadoRepository.Add` de verdade (Id do arquivo é descartado, o repositório
-  atribui um novo — evita colidir com o histórico já existente) — por isso só perfis com
-  `PodeExecutarAcoes` (Visualizador não) podem importar; exportar fica liberado pra qualquer
-  perfil autenticado.
+  **PDF via PdfSharp** (única dependência nova do projeto para isso).
+* **Sem importação.** `IObjetoDetectadoExportService` só expõe `ExportCsv`/`ExportXml`/`ExportPdf`
+  — as informações desta tabela só podem ser geradas pelo próprio sistema rodando (detecção
+  real ou simulada), nunca por um arquivo externo carregado pelo usuário.
 * **Nenhum diálogo de arquivo na ViewModel.** `ObjetosDetectadosViewModel` só dispara
-  `ExportRequested`/`ImportRequested`; quem mostra `SaveFileDialog`/`OpenFileDialog` e devolve
-  o caminho escolhido é `ObjetosDetectadosView`, mesmo padrão já usado em
-  `ArduinoSettingsView` para os diálogos de arquivo do CLI/sketch.
+  `ExportRequested`; quem mostra o `SaveFileDialog` e devolve o caminho escolhido é
+  `ObjetosDetectadosView`, mesmo padrão já usado em `ArduinoSettingsView` para os diálogos de
+  arquivo do CLI/sketch.
 
 ## 5. Extensibilidade
 

@@ -11,10 +11,10 @@
 | Computador do Usuário (Windows 10/11, 64-bit) | `RadarTorres.App` (.exe) | Único processo, self-contained, instalado por `installer/RadarTorres.iss` |
 | ↳ dentro do processo | Apresentação (`Views` + `ViewModels`) | Captura interação do operador, binding declarativo (`ViewModelBase`, `RelayCommand`) |
 | ↳ dentro do processo | Serviços (regra de negócio) | `ISerialCommunicationService`, `ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`, `IZonaMortaService`, `IAuthService`, `IPermissionService` |
-| ↳ dentro do processo | Persistência local | Leitura/escrita dos arquivos CSV/JSON de dados e preferências |
+| ↳ dentro do processo | Persistência local | Leitura/escrita do banco SQLite (`RadarTorres.db`) via `SqliteConnectionFactory`/`Sqlite*Repository` |
 | ↳ dentro do processo | .NET 9 Desktop Runtime | Embutido pelo instalador — sem dependência externa a instalar |
 | Arduino (microcontrolador) | Firmware | Lê sensores, envia leituras de alvo, recebe comandos, aciona torres demonstrativas |
-| Armazenamento local (disco do usuário) | `%AppData%\RadarTorres\Data\*.csv` / `%LocalAppData%\RadarTorres\*.json` | Usuários, auditoria, objetos detectados, layout, zonas mortas, preferências |
+| Armazenamento local (disco do usuário) | `RadarTorres.db` (SQLite) | Usuários, auditoria, objetos detectados, preferências e demais dados cadastrais; CSV permanece apenas como exportação manual da tela de Objetos Detectados |
 | Sensores de detecção | — | Ângulo + distância, alimentam o Arduino |
 | Torres demonstrativas / indicador | — | Laser de baixa potência ou LED, nunca armamento real |
 
@@ -37,7 +37,7 @@ processo `.exe`, com destaque em azul) para deixar explícito que Apresentação
 Persistência local e o .NET 9 Runtime são apenas **quatro blocos lógicos do mesmo processo**
 `RadarTorres.App.exe` — não componentes distribuídos em máquinas ou processos separados. Os dois
 acoplamentos mais relevantes desse processo saem da caixa para fora: Serviços comunica-se com o
-Arduino pela porta serial, e a camada de Persistência lê/grava o armazenamento local em disco.
+Arduino pela porta serial, e a camada de Persistência lê/grava o banco SQLite local em disco.
 
 Do lado do Arduino, o Firmware concentra as quatro responsabilidades físicas do dispositivo:
 ler os sensores de ângulo/distância, enviar leituras de alvo ao computador, receber comandos e

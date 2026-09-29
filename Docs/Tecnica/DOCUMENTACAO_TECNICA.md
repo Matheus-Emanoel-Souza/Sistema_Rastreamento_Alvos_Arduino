@@ -278,7 +278,9 @@ passo natural caso o projeto cresça (ver seção de próximos passos no README)
 
 > **Nota:** desde a introdução da Shell multiusuário (barra lateral + navegação), o conteúdo
 > descrito acima em `MainWindow` vive em `Views/MonitoramentoView.xaml`, hospedada pela
-> `Views/Shell/ShellWindow.xaml`; a composição de serviços descrita passou para `App.xaml.cs`
+> `Views/Shell/ShellView.xaml` — que por sua vez é exibida como conteúdo de uma aba de
+> `Views/Shell/MainWindow.xaml` (ver seção 4.1 de `ARQUITETURA.md`); a composição de serviços
+> descrita passou para `App.xaml.cs`
 > (ver `Docs/Projeto/ETAPA1_FUNDACAO.md`). A `ArduinoSettingsView.xaml` segue exatamente o mesmo
 > padrão — code-behind mínimo (diálogos de arquivo, rolagem automática do console), tudo o
 > mais em `ArduinoSettingsViewModel`.

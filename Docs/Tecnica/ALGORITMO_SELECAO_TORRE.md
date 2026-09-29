@@ -75,13 +75,13 @@ Implementada em `Helpers/DistanceCalculator.Euclidean`.
 
 ### Exemplo numérico
 
-Alvo em `(1.98, 1.98)`, Torre 1 em `(3.0, 3.0)` (configuração padrão):
+Alvo em `(1.98, 1.98)`, Torre 1 em `(1.75, 1.75)` (configuração padrão):
 
 ```
-d = √( (1.98−3.0)² + (1.98−3.0)² )
-  = √( (−1.02)² + (−1.02)² )
-  = √( 1.0404 + 1.0404 )
-  = √2.0808 ≈ 1.44 m
+d = √( (1.98−1.75)² + (1.98−1.75)² )
+  = √( (0.23)² + (0.23)² )
+  = √( 0.0529 + 0.0529 )
+  = √0.1058 ≈ 0.33 m
 ```
 
 ## 4. Algoritmo de seleção de torre (visão geral)
@@ -140,14 +140,14 @@ Torres (configuração padrão):
 
 | Torre | Posição | Quadrante próprio | Distância até o alvo |
 |---|---|---|---|
-| Torre 1 | (3.0, 3.0) | Q1 | √((1.98−3)²+(1.98−3)²) ≈ **1.44 m** |
-| Torre 2 | (−3.0, 3.0) | Q2 | √((1.98+3)²+(1.98−3)²) ≈ 5.16 m |
-| Torre 3 | (−3.0, −3.0) | Q3 | √((1.98+3)²+(1.98+3)²) ≈ 7.04 m |
-| Torre 4 | (3.0, −3.0) | Q4 | √((1.98−3)²+(1.98+3)²) ≈ 5.16 m |
+| Torre 1 | (1.75, 1.75) | Q1 | √((1.98−1.75)²+(1.98−1.75)²) ≈ **0.33 m** |
+| Torre 2 | (−1.75, 1.75) | Q2 | √((1.98+1.75)²+(1.98−1.75)²) ≈ 3.74 m |
+| Torre 3 | (−1.75, −1.75) | Q3 | √((1.98+1.75)²+(1.98+1.75)²) ≈ 5.28 m |
+| Torre 4 | (1.75, −1.75) | Q4 | √((1.98−1.75)²+(1.98+1.75)²) ≈ 3.74 m |
 
 Como a Torre 1 pertence ao mesmo quadrante do alvo (Q1) e está disponível, ela já seria a
 única candidata do passo 4 — e, coincidentemente, também é a de menor distância entre todas.
-Resultado: **Torre 1 selecionada**, distância registrada = 1.44 m.
+Resultado: **Torre 1 selecionada**, distância registrada = 0.33 m.
 
 ## 5. Regra de segurança de acionamento
 

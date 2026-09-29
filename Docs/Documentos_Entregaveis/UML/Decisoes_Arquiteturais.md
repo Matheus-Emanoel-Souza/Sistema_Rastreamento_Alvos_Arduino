@@ -7,11 +7,12 @@ ID original preservado como referência cruzada (ver `Requisitos_de_Sistema/Requ
 
 | ID | Decisão | Categoria | Descrição | Evidência |
 |---|---|---|---|---|
-| DA01 *(ex-RNF20)* | Persistência substituível sem alterar camadas superiores | Manutenibilidade / Escalabilidade | Cada tabela CSV tem uma interface de repositório dedicada, preparada para troca futura por banco relacional sem tocar ViewModels/Services | `Repositories/I*Repository.cs`, comentários `TODO(SQL)`, `Docs/Tecnica/MODELO_DADOS.md`, seção 1 |
+| DA01 *(ex-RNF20)* | Persistência substituível sem alterar camadas superiores | Manutenibilidade / Escalabilidade | Cada entidade tem uma interface de repositório dedicada (`I*Repository`), independente da tecnologia de armazenamento. Essa abstração foi o que permitiu migrar a implementação original em CSV para SQLite (`Sqlite*Repository`, via `SqliteConnectionFactory`) sem alterar nenhuma linha de ViewModels/Services — a migração já foi concluída, não é mais um plano futuro. O motor de CSV (`CsvTableStore`) permanece no projeto só para a exportação manual da tela de Objetos Detectados, um recurso de UI, não de persistência | `Repositories/I*Repository.cs`, `Repositories/Sqlite*Repository.cs`, `Data/SqliteConnectionFactory.cs`, `App.xaml.cs` (registro de DI), `Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_de_Dados.md` |
 | DA02 *(ex-RNF21)* | Protocolo serial centralizado em um único componente | Manutenibilidade | Toda a interpretação/montagem de mensagens Arduino↔PC passa por `SerialProtocolParser`, nunca strings soltas em outras classes | `SerialProtocolParser.cs`, `Docs/Tecnica/COMUNICACAO_ARDUINO.md`, seção 3 |
 | DA03 *(ex-RNF22)* | MVVM implementado manualmente, sem framework externo | Manutenibilidade | `ViewModelBase`/`RelayCommand` implementados à mão (~60 linhas) em vez de Prism/CommunityToolkit.Mvvm — decisão didática, mantém o mecanismo de binding 100% explicável na defesa do TCC | `ViewModelBase.cs`, `RelayCommand.cs`, `Docs/Tecnica/ARQUITETURA.md`, seção 2 |
 | DA04 *(ex-RNF23)* | Nenhuma classe de Services/Models depende de WPF | Manutenibilidade / Testabilidade | Interfaces `I*Service` permitem trocar implementação (ex.: dublê de teste) sem tocar a camada de UI | `Docs/Tecnica/ARQUITETURA.md`, seção 1 |
 | DA05 *(ex-RNF30)* | Anticolisão de cards do painel por rejeição, não por reposicionamento em cascata | Interação / UX | `DashboardCanvas` recusa o gesto de arraste/redimensionamento que colidiria com outro card, em vez de empurrar os demais — comportamento mais previsível, mas é uma escolha de interação, sem requisito de negócio explícito exigindo especificamente esse comportamento em vez de outro | `DashboardCanvas.cs`, `Docs/Tecnica/ARQUITETURA.md`, seção 5.2 |
+| DA06 | Mutação de coleções da UI (`ObservableCollection`) sempre na thread de UI | Manutenibilidade / Robustez | ViewModels que recebem atualizações de fora da thread de UI (ex.: leituras seriais) marshalam a mutação de coleções via um `Dispatcher` obtido de `Application.Current.Dispatcher`, evitando exceções de acesso concorrente do WPF | `ViewModels/MainViewModel.cs` (`RunOnUi`, campo `_dispatcher`), mesmo padrão em `PainelPrincipalViewModel.cs`, `CameraSlotViewModel.cs`, `ArduinoSettingsViewModel.cs` |
 
 ## Por que estes itens não são requisitos
 
@@ -24,5 +25,6 @@ preocupação de engenharia, não do produto entregue. Por isso ficam documentad
 poluir a rastreabilidade de requisitos com decisões de implementação.
 
 Quando uma decisão arquitetural também sustenta diretamente um requisito não funcional real
-(por exemplo, DA01 sustenta a futura evolução do sistema, mas não é em si um RNF), a referência
-cruzada é feita pelo ID `DA0x`, não pela duplicação do texto.
+(por exemplo, DA01 sustentou a migração de CSV para SQLite sem impacto em camadas superiores,
+mas não é em si um RNF), a referência cruzada é feita pelo ID `DA0x`, não pela duplicação do
+texto.

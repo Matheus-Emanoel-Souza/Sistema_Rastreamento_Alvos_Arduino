@@ -19,9 +19,9 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RF05 | Implementado | `Services/TowerSelectionService.cs` | `TowerSelectionService` (`ITowerSelectionService`) | Algoritmo de seleção de torre |
 | RF05 | Implementado | `Helpers/DistanceCalculator.cs` | `DistanceCalculator` | Cálculo de distância euclidiana |
 | RF06 | Implementado (ver D1) | `Services/FireControlService.cs` | `FireControlService.TryFireAsync`/`Authorize` | Autorização e execução do acionamento |
-| RF06 | Implementado (ver D1) | `Models/AcaoRealizada.cs`, `Repositories/CsvAcaoRealizadaRepository.cs` | — | Registro de auditoria de acionamento |
-| RF07 | Parcial (ver D1) | `Models/SystemState.cs` | `SystemMode` (enum — ainda 6 valores, não Verde/Amarelo/Vermelho) | Modos de operação do sistema |
-| RF07 | Parcial (ver D1) | `Models/ModoAtualTorre.cs`, `Repositories/CsvModoAtualTorreRepository.cs` | — | Registro de auditoria de troca de modo |
+| RF06 | Implementado (ver D1) | `Models/AcaoRealizada.cs`, `Repositories/SqliteAcaoRealizadaRepository.cs` | — | Registro de auditoria de acionamento |
+| RF07 | Implementado (ver D1) | `Models/SystemState.cs` | `SystemMode` (enum — 3 valores: `LigadoApenas`, `AcompanharAlvos`, `Disparar`, já equivalentes a Verde/Amarelo/Vermelho) | Modos de operação do sistema |
+| RF07 | Implementado (ver D1) | `Models/ModoAtualTorre.cs`, `Repositories/SqliteModoAtualTorreRepository.cs` | — | Registro de auditoria de troca de modo |
 | RF08 | Implementado | `Services/AuthService.cs` | `AuthService` (`IAuthService`) | Login/logout/sessão |
 | RF08 | Implementado | `Services/PasswordHasher.cs` | `PasswordHasher` (`IPasswordHasher`) | Hash PBKDF2-HMACSHA256 |
 | RF08 | Implementado | `Data/DataSeeder.cs` | `DataSeeder` | Semeia usuário `admin` padrão |
@@ -29,24 +29,26 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RF10 | Implementado | `Services/IAuthService.cs` | `IAuthService.AlterarSenhaAsync` | Troca de senha com validação da atual |
 | RF10 | Implementado | `ViewModels/ProfileViewModel.cs` | `ProfileViewModel` | Orquestra a troca de senha na tela de Perfil |
 | RF11 | Implementado | `Models/ObjetoDetectado.cs` | `ObjetoDetectado` | Entidade de registro histórico |
-| RF11 | Implementado | `Repositories/CsvObjetoDetectadoRepository.cs` | `CsvObjetoDetectadoRepository` | Persistência em `objetos_detectados.csv` |
+| RF11 | Implementado | `Repositories/SqliteObjetoDetectadoRepository.cs` | `SqliteObjetoDetectadoRepository` | Persistência na tabela `ObjetosDetectados` (SQLite) |
 | RF12 | Implementado | `ViewModels/ObjetosDetectadosViewModel.cs` | `ObjetosDetectadosViewModel` | Lista o histórico (`Itens`) |
 | RF12 | Implementado | `Views/ObjetosDetectadosView.xaml.cs` | `ObjetosDetectadosView` | Tela de tabela |
 | RF13 | Implementado | `Services/ObjetoDetectadoExportService.cs` | `ObjetoDetectadoExportService.ExportCsv/Xml/Pdf` | Exportação nos 3 formatos |
 | RF14 | Implementado | `Services/ObjetoDetectadoExportService.cs` | `ObjetoDetectadoExportService.ImportCsv/Xml` | Leitura de arquivo CSV/XML |
 | RF14 | Implementado | `ViewModels/ObjetosDetectadosViewModel.cs` | `ObjetosDetectadosViewModel.PodeImportar` | Restrição de perfil na importação |
-| RF15 | Parcial — registro ok, tela pendente | `Repositories/IAcaoRealizadaRepository.cs` | `IAcaoRealizadaRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `FireControlService` |
-| RF16 | Parcial — registro ok, tela pendente | `Repositories/IModoAtualTorreRepository.cs` | `IModoAtualTorreRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `MainViewModel` |
-| RF17 | Planejado — sem UI | `Repositories/IUsuarioRepository.cs` | `IUsuarioRepository` | Contrato CRUD de usuários (nenhum ViewModel/View o consome hoje) |
-| RF17 | Planejado — sem UI | `Services/IPermissionService.cs` | `IPermissionService.PodeGerenciarUsuarios` | Restrição a Administrador (pronta, mas sem tela para aplicar) |
+| RF15 | Implementado | `Repositories/IAcaoRealizadaRepository.cs` | `IAcaoRealizadaRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `FireControlService` |
+| RF15 | Implementado | `Views/AcoesRealizadasView.xaml.cs`, `ViewModels/AcoesRealizadasViewModel.cs` | `AcoesRealizadasView`/`ViewModel` | Tela de consulta do histórico de ações, roteada em `NavigationService` |
+| RF16 | Implementado | `Repositories/IModoAtualTorreRepository.cs` | `IModoAtualTorreRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `MainViewModel` |
+| RF16 | Implementado | `Views/HistoricoModosView.xaml.cs`, `ViewModels/HistoricoModosViewModel.cs` | `HistoricoModosView`/`ViewModel` | Tela de consulta do histórico de modos, roteada em `NavigationService` |
+| RF17 | Implementado | `Repositories/IUsuarioRepository.cs` | `IUsuarioRepository` | Contrato CRUD de usuários |
+| RF17 | Implementado | `Services/IPermissionService.cs` | `IPermissionService.PodeGerenciarUsuarios` | Restrição a Administrador |
+| RF17 | Implementado | `Views/UsuariosView.xaml.cs`, `ViewModels/UsuariosViewModel.cs` | `UsuariosView`/`ViewModel` | Tela de gestão de usuários, roteada em `NavigationService` |
 | RF18 | Implementado | `Models/PreferenciasUsuario.cs` | `PreferenciasUsuario` | Entidade de preferências |
-| RF18 | Implementado | `Repositories/CsvPreferenciasUsuarioRepository.cs` | `CsvPreferenciasUsuarioRepository` | Persistência 1:1 por usuário |
+| RF18 | Implementado | `Repositories/SqlitePreferenciasUsuarioRepository.cs` | `SqlitePreferenciasUsuarioRepository` | Persistência 1:1 por usuário |
 | RF18 | Implementado | `Services/LocalizationService.cs` | `LocalizationService` (`ILocalizationService`) | Troca de cultura pt-BR/en-US |
 | RF18 | Implementado | `Localization/LocExtension.cs` | `LocExtension` | Extensão XAML de texto localizado |
 | RF18 | Implementado | `Services/ThemeService.cs` | `ThemeService` (`IThemeService`) | Aplicação de tema |
-| RF19 | Implementado | `ViewModels/HelpDeskFormViewModel.cs` | `HelpDeskFormViewModel` | Orquestra envio do chamado |
-| RF19 | Implementado | `Models/ChamadoAjuda.cs` | `ChamadoAjuda` | Entidade do chamado |
-| RF20 | Planejado — sem UI | `Repositories/IChamadoAjudaRepository.cs` | `IChamadoAjudaRepository` | Único repositório com `Update` (situação/resposta), sem tela que o consuma |
+| RF19 | Removido | — | — | O módulo de Chamados de Ajuda (formulário, entidade `ChamadoAjuda`, ViewModel) foi removido por completo do código-fonte; não há mais nenhuma classe ou arquivo associado |
+| RF20 | Removido | — | — | Consequência da remoção do módulo de Chamados de Ajuda: `IChamadoAjudaRepository` e qualquer tela de gestão de chamados não existem mais no código-fonte |
 | RF21 | Implementado | `Views/Shared/DashboardCanvas.cs` | `DashboardCanvas` | Anticolisão, limites, reescala |
 | RF21 | Implementado | `Views/Shared/DashboardCard.xaml.cs` | `DashboardCard` | Card arrastável/redimensionável |
 | RF21 | Implementado | `Services/DashboardLayoutRepository.cs` | `DashboardLayoutRepository` (`IDashboardLayoutRepository`) | Persistência do layout por usuário |
@@ -68,7 +70,7 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RNF11 | `Services/LocalizationService.cs` | `LocalizationService` | Descreve só a troca em runtime, sem duplicar RF18 |
 | RNF12 | `Services/ThemeService.cs`, `Themes/Light.xaml`, `Themes/Dark.xaml` | `ThemeService` | Descreve só a consistência visual, sem duplicar RF18 |
 | RNF14 | `Services/ArduinoCompilerService.cs` | `CompileAsync` (`CancellationToken`) | Não bloqueio/cancelamento, sem duplicar RF24 |
-| RNF18 | `tests/RadarTorres.Tests/*.cs` | — | Cobertura de componentes críticos; status Parcial (só a aba Arduino CLI tem teste hoje) |
+| RNF18 | — | — | Não há projeto de testes automatizados no repositório no momento (`tests/RadarTorres.Tests` foi removido); status Pendente |
 
 ## Decisões Arquiteturais → implementação (ver `Decisoes_Arquiteturais.md`)
 
@@ -86,9 +88,9 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | ID | Arquivo/Módulo | Observação |
 |---|---|---|
 | L01 | `appsettings.json` (`SerialSettings.ReconnectAttempts`) | Configuração existe, retry automático não implementado |
-| L02 | `Services/NavigationService.cs` | Telas ainda em `PlaceholderView`: Ações realizadas, Histórico de modos, Usuários, Chamados/Ajuda, Configurações |
+| L02 | `Services/NavigationService.cs`, `Services/IPermissionService.cs` | *(Resolvida)* Nenhuma tela está mais em `PlaceholderView` — Ações realizadas, Histórico de modos e Usuários estão implementadas e roteadas; o item de menu "Configurações" e o módulo de Chamados de Ajuda foram removidos do sistema |
 | L03 | `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` | Bugs conhecidos não corrigidos (referência, sem duplicar o texto) |
-| D1 | `Models/SystemState.cs` (`SystemMode`), `ViewModels/MainViewModel.cs` (`ManualFireCommand`) | Enum ainda com 6 valores antigos; acionamento manual ainda existe e não é restrito por modo |
+| D1 | `Models/SystemState.cs` (`SystemMode`), `ViewModels/MainViewModel.cs` (`ManualFireCommand`) | Enum já com os 3 valores corretos (`LigadoApenas`/`AcompanharAlvos`/`Disparar`); acionamento manual ainda existe e não é restrito por `SystemMode` |
 
 ## Rastreabilidade requisito → caso de uso
 

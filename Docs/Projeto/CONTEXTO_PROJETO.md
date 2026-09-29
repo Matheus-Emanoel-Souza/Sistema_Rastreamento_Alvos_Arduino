@@ -42,7 +42,7 @@ Repositório: `Matheus-Emanoel-Souza/Sistema_Rastreamento_Alvos_Arduino` (GitHub
 | Comunicação serial | `System.IO.Ports` | — |
 | Configuração | `Microsoft.Extensions.Configuration` + `appsettings.json` | Torres, portas, distâncias configuráveis sem recompilar |
 | Injeção de dependência | `Microsoft.Extensions.DependencyInjection`, composition root em `App.xaml.cs` | — |
-| Persistência | **CSV** (`%AppData%\RadarTorres\Data\*.csv`) | Decisão explícita do usuário: por ora CSV, sinalizado (`TODO(SQL)`) para futura migração a banco relacional (SQLite/EF Core) sem alterar ViewModels/Services — cada tabela já tem uma interface de repositório dedicada |
+| Persistência | **SQLite** (`%AppData%\RadarTorres\Data\radartorres.db`) | Migrada de CSV para SQLite — DI em `App.xaml.cs:141-146` registra `Sqlite*Repository` para as 5 tabelas; falhas de escrita são enfileiradas em `pending-writes.sql` e reaplicadas no próximo start. Único uso de CSV remanescente é o botão manual "Exportar CSV" da tela de Objetos Detectados |
 | Empacotamento | Inno Setup 6 (`installer/RadarTorres.iss`) | Instalador `Setup.exe`, self-contained (embute o .NET 9 Desktop Runtime — usuário final não precisa instalar nada) |
 
 ### 2.2 Arquitetura (camadas)
@@ -103,8 +103,8 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
    exportação/importação em CSV, XML e PDF.
 9. **Formulário de Chamado de Ajuda**: `ChamadoAjuda` (model), `CsvChamadoAjudaRepository`,
    `HelpDeskFormViewModel`/`HelpDeskFormWindow`, acionado pela TopBar — permite abrir um
-   ticket. É só o lado de *criação*; ainda não existe tela de listagem/gestão dos chamados
-   (ver placeholders na seção 3).
+   ticket. Era só o lado de *criação*; nunca ganhou tela de listagem/gestão — o módulo inteiro
+   foi **removido** do projeto em etapa posterior (ver seção 3, "Módulo removido").
 10. **Levantamento de engenharia de software (2026-08-20)**: `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/`
     adicionado por análise do código-fonte e da documentação existente — diagrama de classes,
     diagrama de pacotes, DER atual (CSV) e proposto (SQL), Requisitos Funcionais (RF01–RF32),
@@ -119,32 +119,39 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
 - Radar em tempo real, seleção automática de torre, modo de acionamento demonstrativo —
   funcionalidade original, validada.
 - Login multiusuário, 3 perfis, troca de senha, auditoria de ações/modos/detecções gravada em
-  CSV.
+  SQLite.
 - Internacionalização (pt-BR/en-US) e tema (claro/escuro/sistema) trocáveis em runtime.
 - Painel principal com cards de indicadores, arrastáveis/redimensionáveis, layout persistido
   por usuário e responsivo a mudanças de tamanho de janela.
 - Aba de Configurações do Arduino: detectar `arduino-cli`, compilar sketch, monitor serial.
 - Instalador Windows completo (`Setup.exe`), self-contained, com upgrade preservando
   configurações do usuário.
-- 21 testes automatizados (xUnit) cobrindo a aba do Arduino CLI (`dotnet test`: 21/21 aprovados
-  em 2026-08-30; `dotnet build`: 0 erros/avisos).
+- `dotnet build`: 0 erros/avisos. O projeto `tests/RadarTorres.Tests` (xUnit, cobria a aba do
+  Arduino CLI) foi removido do repositório — atualmente **não há projeto de testes
+  automatizados**.
 - **Todas as branches de trabalho consolidadas na `main`** — é o branch canônico agora.
 - Zonas mortas: criação por clique/arraste no radar, bloqueio de torre/disparo, restrito a
   Administrador (ver item 7 da linha do tempo).
 - Objetos detectados: tela de tabela real, com exportar/importar (CSV/XML/PDF).
-- Formulário de abertura de Chamado de Ajuda, acessível pela TopBar.
+- Ações realizadas: tela de tabela real (auditoria, somente leitura) — `AcoesRealizadasView`/
+  `AcoesRealizadasViewModel` implementados e roteados.
+- Histórico de modos: tela de tabela real (auditoria, somente leitura) — `HistoricoModosView`/
+  `HistoricoModosViewModel` implementados e roteados.
+- Usuários: CRUD completo (criar/editar/inativar/resetar senha), restrito a Administrador —
+  `UsuariosView`/`UsuariosViewModel` implementados e roteados.
+
+### Módulo removido
+
+O módulo `ChamadoAjuda` (model, ViewModel, repositório, tela de formulário e entrada de menu na
+TopBar) foi **removido inteiramente** do projeto — não existe mais nenhuma referência a ele em
+`src/`.
 
 ### Telas ainda "em construção" (placeholder, navegação já funciona)
 
-Confirmado lendo `NavigationService.cs` em 2026-08-30:
-
-- Ações realizadas (tabela de auditoria, somente leitura) — **pendente**.
-- Histórico de modos (tabela de auditoria, somente leitura) — **pendente**.
-- Usuários (CRUD completo, restrito a Administrador) — **pendente**.
-- Chamados/Ajuda — **listagem/gestão pendente** (o *formulário de criação* de ticket já existe
-  e funciona; falta a tela de consultar/responder chamados, embora `IChamadoAjudaRepository`
-  já esteja pronto).
-- Configurações — **pendente**, ainda não escopado.
+- Configurações — ainda não há um item de menu genérico "Configurações" planejado; o único
+  módulo de configuração implementado hoje é a aba "Configurações do Arduino"
+  (`MenuItem.ConfiguracoesArduino`, já concluída — ver linha "Aba de Configurações do Arduino"
+  acima).
 
 ### Bugs conhecidos (documentados em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, seção "Bugs conhecidos")
 
@@ -159,21 +166,22 @@ Confirmado lendo `NavigationService.cs` em 2026-08-30:
 
 Conforme plano em `Docs/Projeto/ETAPA1_FUNDACAO.md`, seção 6:
 
-- **Fechar a Etapa 1**: implementar as telas de dados completas listadas acima (Ações
-  realizadas, Histórico de modos, Usuários, listagem/gestão de Chamados de Ajuda),
-  reaproveitando a fundação já pronta (repositórios, permissões, i18n, tema, navegação).
+- ~~Fechar a Etapa 1: implementar as 4 telas de dados completas~~ — **concluído**: Ações
+  realizadas, Histórico de modos e Usuários já estão implementadas (ver seção 3); o módulo de
+  Chamados de Ajuda foi removido do projeto em vez de ganhar tela de listagem.
 - **Etapa 2**: indicadores gráficos avançados, personalização completa de layout, filtros
-  avançados, exportação CSV, notificações.
-- **Etapa 3 ("Qualidade")**: testes automatizados mais amplos, revisão de segurança, ajustes
-  de desempenho.
-- **Migração de persistência**: CSV → banco relacional (SQLite/EF Core) quando fizer sentido —
-  interfaces de repositório já preparadas para isso (`TODO(SQL)` marcado no código).
+  avançados, notificações.
+- **Etapa 3 ("Qualidade")**: recriar um projeto de testes automatizados (o anterior,
+  `tests/RadarTorres.Tests`, foi removido), revisão de segurança, ajustes de desempenho.
+- ~~Migração de persistência: CSV → banco relacional~~ — **concluído**: persistência é SQLite
+  (ver seção 2.1, item "Persistência").
 - **Upload/gravação de firmware** pelo Arduino CLI (hoje só compila) — próximo passo natural
   da aba de Configurações do Arduino, mas só deve ser implementado mediante nova consulta ao
   usuário.
 - Corrigir os dois bugs conhecidos listados acima.
 - Validação manual (interativa, em desktop real) do arraste/redimensionamento dos cards do
-  painel principal — só foi validada por build + testes automatizados, não por clique manual.
+  painel principal — só foi validada por build, não por clique manual (não há mais testes
+  automatizados no projeto).
 
 ---
 
@@ -216,4 +224,4 @@ Relevante para qualquer IA/assistente que for continuar o trabalho:
 | [`Docs/Projeto/ETAPA1_FUNDACAO.md`](ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação, roadmap |
 | [`Docs/Tecnica/MODELO_DADOS.md`](../Tecnica/MODELO_DADOS.md) | Schema das tabelas CSV, relacionamentos, plano de migração SQL |
 | [`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/`](../Documentos_Entregaveis/Diagramas_e_requisitos/README.md) | RF01–RF32, RNF01–RNF30, diagrama de classes, de pacotes, DER atual/proposto, matriz de rastreabilidade |
-| [`Docs/Projeto/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) | Histórico cronológico completo de todos os pedidos feitos à IA |
+| [`Docs/Projeto/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) | Histórico cronológico dos pedidos feitos à IA (pode não refletir ainda as sessões mais recentes, ex.: migração SQLite, remoção do `ChamadoAjuda`, remoção dos testes) |
