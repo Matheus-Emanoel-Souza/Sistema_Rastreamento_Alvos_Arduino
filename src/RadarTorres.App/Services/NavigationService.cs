@@ -36,7 +36,6 @@ public sealed class NavigationService : INavigationService
             [MenuItem.HistoricoModos] = () => _serviceProvider.GetRequiredService<HistoricoModosView>(),
             [MenuItem.Usuarios] = () => _serviceProvider.GetRequiredService<UsuariosView>(),
             [MenuItem.Cameras] = () => _serviceProvider.GetRequiredService<CamerasView>(),
-            [MenuItem.Configuracoes] = () => new PlaceholderView("Sidebar.Configuracoes"),
             [MenuItem.ConfiguracoesArduino] = () => _serviceProvider.GetRequiredService<ArduinoSettingsView>(),
         };
     }
