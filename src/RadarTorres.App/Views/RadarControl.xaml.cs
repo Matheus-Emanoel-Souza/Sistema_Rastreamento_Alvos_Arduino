@@ -116,9 +116,15 @@ public partial class RadarControl : UserControl
     private const double MaxZoom = 3.0;
     private const double ZoomStep = 0.25;
 
+    // Alcance efetivo = MaxDetectionDistanceMeters (appsettings.json, hoje 2.5m) * multiplicador.
+    // Limite máximo travado em 1.6x propositalmente: com o alcance real dos sensores (2.5m),
+    // isso trava o "zoom out" em 4.0m no total — não faz sentido "ver mais longe" que uma
+    // distância que o hardware nunca vai detectar. Step bem mais fino (era 0.5, equivalente a
+    // 1.25m por clique) para fracionar mais a faixa entre mínima e máxima, já que a escala
+    // geral encolheu.
     private const double MinRangeMultiplier = 0.5;
-    private const double MaxRangeMultiplier = 5.0;
-    private const double RangeStep = 0.5;
+    private const double MaxRangeMultiplier = 1.6;
+    private const double RangeStep = 0.1;
 
     private readonly DispatcherTimer _renderTimer;
     private readonly Dictionary<int, TargetVisual> _targetVisuals = new();
@@ -153,7 +159,9 @@ public partial class RadarControl : UserControl
     /// o raio do radar, como se quisesse ver coisas mais longe"): acima de 1.0, o círculo
     /// externo passa a representar uma distância maior — alvos/torres mais distantes da base
     /// ficam visíveis dentro do mesmo círculo (mais "encolhidos" em relação ao centro); abaixo
-    /// de 1.0, o círculo mostra só as proximidades da base, em mais detalhe.</summary>
+    /// de 1.0, o círculo mostra só as proximidades da base, em mais detalhe. Travado entre
+    /// <see cref="MinRangeMultiplier"/> e <see cref="MaxRangeMultiplier"/> — este último limita
+    /// o "zoom out" a 4.0m de alcance total (ver comentário nas constantes).</summary>
     private double _rangeMultiplier = 1.0;
 
     /// <summary>Distância (em metros) representada pela borda externa do radar agora —

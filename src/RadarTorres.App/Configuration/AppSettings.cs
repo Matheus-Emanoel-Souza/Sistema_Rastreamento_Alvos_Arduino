@@ -40,7 +40,7 @@ public sealed class RadarSettings
     public double MinSafetyDistanceMeters { get; set; } = 1.5;
     public int TargetTimeoutMs { get; set; } = 5000;
     public int RefreshRateMs { get; set; } = 150;
-    public int DistanceRingCount { get; set; } = 4;
+    public int DistanceRingCount { get; set; } = 8;
 }
 
 /// <summary>Configuração declarativa de uma torre, lida do JSON e usada para instanciar <see cref="Models.Tower"/>.</summary>
