@@ -36,7 +36,7 @@ public sealed class SerialSettings
 
 public sealed class RadarSettings
 {
-    public double MaxDetectionDistanceMeters { get; set; } = 6.0;
+    public double MaxDetectionDistanceMeters { get; set; } = 2.5;
     public double MinSafetyDistanceMeters { get; set; } = 1.5;
     public int TargetTimeoutMs { get; set; } = 5000;
     public int RefreshRateMs { get; set; } = 150;
