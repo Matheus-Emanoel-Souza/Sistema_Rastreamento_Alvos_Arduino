@@ -58,10 +58,10 @@ real — isso é resolvido automaticamente ao migrar para SQL.
 
 ```mermaid
 erDiagram
-    USUARIOS ||--o{ ACOES_REALIZADAS : "solicita (quando manual)"
     USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
     USUARIOS ||--o{ CHAMADOS_AJUDA : "abre"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
+    OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
 
     USUARIOS {
         int Id PK
@@ -90,17 +90,11 @@ erDiagram
     }
 
     ACOES_REALIZADAS {
-        int Id PK
-        string Dispositivo
-        string TipoAcao
-        double X
-        double Y
-        double Z "nullable"
-        datetime DataHora
-        string UsuarioResponsavel FK "nullable, Login"
-        string Origem "Manual | Automatica"
-        string Resultado "Executada | Cancelada | Erro"
-        string Observacao "nullable"
+        int ID_ACAO PK
+        int ID_TORRE
+        int ID_OBJETO FK "nullable"
+        datetime DH_ACAO
+        string OBSERVACAO "nullable"
     }
 
     MODO_ATUAL_TORRE {
@@ -166,10 +160,10 @@ já implementado.
 
 ```mermaid
 erDiagram
-    USUARIOS ||--o{ ACOES_REALIZADAS : "solicita (quando manual)"
     USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
     USUARIOS ||--o{ CHAMADOS_AJUDA : "abre"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
+    OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
 
     USUARIOS {
         int Id PK
@@ -193,15 +187,11 @@ erDiagram
         string Dispositivo
     }
     ACOES_REALIZADAS {
-        int Id PK
-        string Dispositivo
-        string TipoAcao
-        double X
-        double Y
-        datetime DataHora
-        int UsuarioResponsavelId FK "nullable — antes era Login (texto)"
-        string Origem
-        string Resultado
+        int ID_ACAO PK
+        int ID_TORRE
+        int ID_OBJETO FK "nullable"
+        datetime DH_ACAO
+        string OBSERVACAO "nullable"
     }
     MODO_ATUAL_TORRE {
         int Id PK

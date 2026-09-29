@@ -53,16 +53,10 @@ Table objetos_detectados {
 }
 
 Table acoes_realizadas {
-  id integer [primary key]
-  dispositivo varchar [note: 'ex.: "Torre 1"']
-  tipo_acao varchar [note: 'hoje sempre "Acionamento demonstrativo"']
-  x float
-  y float
-  z float
-  data_hora timestamp
-  usuario_responsavel varchar [note: 'Login (texto), NULL se automática — sem FK real hoje']
-  origem varchar [note: 'Manual | Automatica']
-  resultado varchar [note: 'Executada | Cancelada | Erro']
+  id_acao integer [primary key]
+  id_torre integer [note: 'identifica a torre que executou a ação (1..4)']
+  id_objeto integer [note: 'FK para objetos_detectados.id — NULL se não houver objeto detectado associado']
+  dh_acao timestamp
   observacao varchar
 
   Note: 'acoes_realizadas.csv — CsvAcaoRealizadaRepository. Só inserção (auditoria).'
@@ -126,8 +120,7 @@ Ref: preferencias_usuario.usuario_id - usuarios.id // one-to-one
 
 Ref: dashboard_card_layout.usuario_id > usuarios.id // many-to-one
 
-// Sem Ref formal (FK "por texto", não por id — ver Note de cada tabela acima):
-//   acoes_realizadas.usuario_responsavel  -> usuarios.login
+Ref: acoes_realizadas.id_objeto > objetos_detectados.id // many-to-one, opcional
 
 // Fora deste espelho — objetos só em memória, nunca persistidos em disco:
 //   Target, Tower, SensorReading, LogEntry, CameraDevice,
