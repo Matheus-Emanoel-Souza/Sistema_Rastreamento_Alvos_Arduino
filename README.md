@@ -365,6 +365,7 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── RadarTorres.sln
 ├── build.bat                          (compila a solução em Release — dotnet restore + build)
 ├── run.bat                            (abre o RadarTorres.App.exe já compilado em Release)
+├── instalar.bat                       (atalho para build\publish.ps1 — gera dist\Setup.exe)
 ├── Arduino/
 │   └── ArduinoSimulation.ino          (firmware de teste, sem sensores reais)
 ├── build/
@@ -374,8 +375,9 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── dist/                              (gerado pelo build — Setup.exe; não versionado)
 ├── site/                              (site oficial de documentação/TCC/portfólio — React + TypeScript)
 ├── Docs/
+│   ├── README.md                       (guia de onde procurar cada tipo de documento)
 │   ├── Tecnica/                        (arquitetura, protocolo Arduino, modelo de dados, algoritmo, referência de classes)
-│   ├── Projeto/                        (contexto do TCC, etapas, instalador, log de solicitações)
+│   ├── Projeto/                        (contexto do TCC, etapas, notas de apoio, log de solicitações)
 │   ├── Embasamento_Teorico/            (conceitos teóricos de apoio ao artigo — ex.: UML)
 │   └── Documentos_Entregaveis/         (documentos acadêmicos entregáveis do TCC)
 │       ├── Requisitos_de_Sistema/      (requisitos funcionais/não funcionais, matriz de rastreabilidade)
@@ -383,9 +385,8 @@ Sistema_Rastreamento_Alvos_Arduino/
 │       ├── Diagrama_de_Classes/        (diagrama de classes)
 │       ├── Banco_de_Dados/             (modelo de dados lógico/proposto)
 │       ├── Diagrama_Eletrico/          (diagrama elétrico conceitual do protótipo)
+│       ├── Controle_de_Sessoes/        (atas/anexos de acompanhamento de orientação do TCC)
 │       └── Artigo/                     (artigo acadêmico do TCC)
-├── tests/
-│   └── RadarTorres.Tests/             (xUnit — Arduino CLI, compilação, persistência, portas)
 └── src/
     ├── RadarTorres.App/
     │   ├── RadarTorres.App.csproj

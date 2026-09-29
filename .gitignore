@@ -19,7 +19,9 @@ Thumbs.db
 ## Claude Code (config local, não do projeto)
 .claude
 .claude/
-CLAUDE.md
+
+## Obsidian (vault pessoal, não do projeto)
+.obsidian/
 
 ## LaTeX (artefatos de build - só os .tex/.pdf finais são versionados)
 *.aux
