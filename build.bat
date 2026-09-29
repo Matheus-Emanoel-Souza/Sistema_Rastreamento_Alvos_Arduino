@@ -1,11 +1,10 @@
 @echo off
 REM ============================================================
-REM Compila o RadarTorres (Release) automaticamente.
+REM Compila o RadarTorres (Release) e abre o aplicativo em seguida.
 REM
 REM Uso:
 REM   build.bat            compila em Release (dotnet restore + build)
-REM
-REM Depois de compilar, rode run.bat para abrir o aplicativo.
+REM                         e ja roda o app compilado (via run.bat)
 REM
 REM Para publicar um instalador distribuivel (self-contained +
 REM Inno Setup), use build\publish.ps1 em vez deste script:
@@ -39,5 +38,6 @@ if errorlevel 1 (
 
 echo.
 echo ==^> Build concluido com sucesso.
-echo     Para rodar o aplicativo, use: run.bat
+echo ==^> Abrindo o aplicativo...
+call "%~dp0run.bat"
 exit /b 0
