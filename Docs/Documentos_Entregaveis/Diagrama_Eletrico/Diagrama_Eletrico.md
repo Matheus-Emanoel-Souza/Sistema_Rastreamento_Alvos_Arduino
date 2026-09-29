@@ -34,23 +34,65 @@
 ## 3. Diagrama
 
 ```mermaid
-flowchart LR
-    PC["PC\n(RadarTorres.App)"] -- "USB\n(5V + serial)" --> UNO["Arduino Uno"]
+flowchart TB
+    PC["PC\n(RadarTorres.App)"] -- "USB\n(5V + serial)" --> UNO
 
-    UNO -- "5V / GND" --> SERVO["Servo motor\n(varredura de ângulo)"]
-    UNO -- "D9 (PWM)" --> SERVO
+    subgraph UNO["Arduino Uno"]
+        direction LR
+        P5V["5V"]
+        PGND["GND"]
+        PD2["D2"]
+        PD3["D3"]
+        PD4["D4"]
+        PD5["D5"]
+        PD7["D7 (Trig)"]
+        PD8["D8 (Echo)"]
+        PD9["D9 (PWM)"]
+    end
 
-    UNO -- "5V / GND" --> HC["HC-SR04\n(mede distância)"]
-    UNO -- "D7 (Trig)" --> HC
-    HC -- "D8 (Echo)" --> UNO
+    PD7 -- "Trig" --> HC_TRIG
+    HC_ECHO -- "Echo" --> PD8
+    P5V -- "5V" --> HC_VCC
+    PGND -- "GND" --> HC_GND
 
-    UNO -- "D2 → R 220Ω" --> LED1["LED Torre Q1"]
-    UNO -- "D3 → R 220Ω" --> LED2["LED Torre Q2"]
-    UNO -- "D4 → R 220Ω" --> LED3["LED Torre Q3"]
-    UNO -- "D5 → R 220Ω" --> LED4["LED Torre Q4"]
+    subgraph HC["Sensor ultrassônico HC-SR04"]
+        direction LR
+        HC_TRIG["Trig"]
+        HC_ECHO["Echo"]
+        HC_VCC["VCC"]
+        HC_GND["GND"]
+    end
 
-    LED1 & LED2 & LED3 & LED4 -- "GND" --> UNO
+    PD9 -- "PWM (ângulo)" --> SERVO_SIG
+    P5V -- "5V" --> SERVO_VCC
+    PGND -- "GND" --> SERVO_GND
+
+    subgraph SERVO["Servo motor (varredura de ângulo)"]
+        direction LR
+        SERVO_SIG["Sinal"]
+        SERVO_VCC["VCC"]
+        SERVO_GND["GND"]
+    end
+
+    PD2 --> R1["Resistor 220Ω (Q1)"] -- "anodo" --> LED1["LED Torre Q1"]
+    PD3 --> R2["Resistor 220Ω (Q2)"] -- "anodo" --> LED2["LED Torre Q2"]
+    PD4 --> R3["Resistor 220Ω (Q3)"] -- "anodo" --> LED3["LED Torre Q3"]
+    PD5 --> R4["Resistor 220Ω (Q4)"] -- "anodo" --> LED4["LED Torre Q4"]
+
+    LED1 & LED2 & LED3 & LED4 -- "catodo" --> GNDRAIL["GND comum\n(catodos dos 4 LEDs)"]
+    GNDRAIL -- "GND" --> PGND
+
+    classDef power fill:#ffe0e0,stroke:#cc0000
+    classDef ground fill:#e0e0e0,stroke:#444444
+    class P5V,HC_VCC,SERVO_VCC power
+    class PGND,HC_GND,SERVO_GND,GNDRAIL ground
+
+    linkStyle default stroke:#0000aa
 ```
+
+Legenda de cores: vermelho = alimentação 5V · cinza = GND · azul = sinal/dados.
+Todos os catodos dos LEDs convergem em um nó de GND comum antes de retornar ao Arduino,
+evitando quatro fios cruzando o diagrama de volta ao pino GND.
 
 Fonte PlantUML equivalente: `Diagrama_Eletrico_RadarTorres.puml` (mesma pasta).
 
