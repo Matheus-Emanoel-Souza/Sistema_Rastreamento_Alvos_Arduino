@@ -39,13 +39,11 @@ CREATE TABLE acoes_realizadas (
 );
 
 CREATE TABLE modo_atual_torre (
-    Id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-    ModoAnterior          TEXT    NOT NULL,
-    NovoModo              TEXT    NOT NULL,
-    DataHoraSolicitacao   TEXT    NOT NULL,
-    DataHoraExecucao      TEXT,
-    Resultado             TEXT    NOT NULL CHECK (Resultado IN ('Sucesso', 'Erro')),
-    Observacao            TEXT
+    ID_MODO       INTEGER PRIMARY KEY AUTOINCREMENT,
+    MODOATUAL     TEXT    NOT NULL,
+    MODOANTERIOR  TEXT    NOT NULL,
+    ID_USER       INTEGER REFERENCES usuarios (Id),
+    DHALTERACAO   TEXT    NOT NULL
 );
 
 CREATE TABLE preferencias_usuario (
@@ -60,6 +58,7 @@ CREATE TABLE preferencias_usuario (
 CREATE INDEX idx_acoes_realizadas_torre ON acoes_realizadas (ID_TORRE);
 CREATE INDEX idx_objetos_detectados_datahora ON objetos_detectados (DataHora);
 CREATE INDEX idx_acoes_realizadas_datahora ON acoes_realizadas (DH_ACAO);
+CREATE INDEX idx_modo_atual_torre_usuario ON modo_atual_torre (ID_USER);
 
 -- Usuário admin semeado da mesma forma que DataSeeder.cs (login "admin"), só como referência
 -- visual das relações — sem senha real (hash/salt fictícios, não usar para login).
