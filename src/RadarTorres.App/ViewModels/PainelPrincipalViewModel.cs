@@ -76,14 +76,13 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
         TotalAcoesRealizadas = _acaoRepository.GetAll().Count;
 
         ModoAtualTorre? ultima = _modoAtualTorreRepository.GetAll()
-            .Where(a => a.Resultado == ResultadoModoAtualTorre.Sucesso)
-            .OrderByDescending(a => a.DataHoraExecucao ?? a.DataHoraSolicitacao)
+            .OrderByDescending(a => a.DataHora)
             .FirstOrDefault();
 
         if (ultima is not null)
         {
             ModoAtual = ultima.NovoModo;
-            UltimaModoAtualTorreTexto = (ultima.DataHoraExecucao ?? ultima.DataHoraSolicitacao).ToString("dd/MM/yyyy HH:mm:ss");
+            UltimaModoAtualTorreTexto = ultima.DataHora.ToString("dd/MM/yyyy HH:mm:ss");
         }
         else
         {

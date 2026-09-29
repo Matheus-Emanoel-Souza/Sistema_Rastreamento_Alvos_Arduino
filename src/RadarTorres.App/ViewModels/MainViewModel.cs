@@ -283,13 +283,14 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
             }
 
             // Requisito "Histórico de alteração dos modos": confirma com o usuário antes de
-            // aplicar qualquer troca de modo, e audita tanto sucesso quanto cancelamento.
+            // aplicar qualquer troca de modo. Cancelamento na confirmação só gera log — sem
+            // coluna de resultado no schema acadêmico para distingui-lo de uma troca real.
             string pergunta = $"Confirma a troca do modo \"{DescribeMode(old)}\" para \"{DescribeMode(value)}\"?";
             bool confirmado = MessageBox.Show(pergunta, "Confirmar alteração de modo", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
             if (!confirmado)
             {
-                RegistrarModoAtualTorre(old, value, ResultadoModoAtualTorre.Erro, "Alteração cancelada pelo usuário na confirmação.");
+                _logger.Info("Alteração de modo cancelada pelo usuário na confirmação.");
                 OnPropertyChanged(nameof(CurrentMode)); // garante que o RadioButton volte ao valor anterior na UI
                 return;
             }
@@ -299,7 +300,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 OnPropertyChanged(nameof(SystemStatusText));
                 OnPropertyChanged(nameof(OutrosModos));
                 OnModeChanged(old, value);
-                RegistrarModoAtualTorre(old, value, ResultadoModoAtualTorre.Sucesso, null);
+                RegistrarModoAtualTorre(old, value);
             }
         }
     }
@@ -497,7 +498,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private async Task ManualFireAsync()
     {
         if (SelectedTarget is null) return;
-        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Manual, _authService.CurrentUser?.Login);
+        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
     }
 
     private void ClearRadar()
@@ -527,20 +528,16 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _ => mode.ToString()
     };
 
-    private void RegistrarModoAtualTorre(SystemMode anterior, SystemMode novo, ResultadoModoAtualTorre resultado, string? observacao)
+    private void RegistrarModoAtualTorre(SystemMode anterior, SystemMode novo)
     {
         try
         {
-            DateTime agora = DateTime.Now;
             _modoAtualTorreRepository.Add(new ModoAtualTorre
             {
                 ModoAnterior = DescribeMode(anterior),
                 NovoModo = DescribeMode(novo),
-                DataHoraSolicitacao = agora,
-                DataHoraExecucao = resultado == ResultadoModoAtualTorre.Sucesso ? agora : null,
-                Resultado = resultado,
-                Observacao = observacao,
-                UsuarioResponsavel = _authService.CurrentUser?.Login
+                UsuarioId = _authService.CurrentUser?.Id,
+                DataHora = DateTime.Now,
             });
         }
         catch (Exception ex)
@@ -660,7 +657,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 FireAuthorizationResult auth = _fireControlService.Authorize(target, MinDistance);
                 if (auth.Authorized)
                 {
-                    _ = _fireControlService.TryFireAsync(target, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Automatica);
+                    _ = _fireControlService.TryFireAsync(target, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
                 }
                 else
                 {

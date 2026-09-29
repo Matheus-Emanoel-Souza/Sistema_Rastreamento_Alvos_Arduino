@@ -4,23 +4,14 @@ using RadarTorres.App.Models;
 
 namespace RadarTorres.App.Repositories;
 
-/// <summary>Implementação em CSV (<c>objetos_detectados.csv</c>) de <see cref="IObjetoDetectadoRepository"/>.</summary>
-public sealed class CsvObjetoDetectadoRepository : IObjetoDetectadoRepository
+/// <summary>
+/// Mapeamento de colunas de <see cref="ObjetoDetectado"/> para CSV, usado exclusivamente pela
+/// exportação manual da tela "Objetos Detectados" (<see cref="Services.ObjetoDetectadoExportService.ExportCsv"/>)
+/// — uma ação explícita do usuário, não persistência do sistema (que grava só em SQLite, ver
+/// <see cref="SqliteObjetoDetectadoRepository"/>).
+/// </summary>
+public static class CsvObjetoDetectadoColumns
 {
-    private readonly CsvTableStore<ObjetoDetectado> _store;
-
-    public CsvObjetoDetectadoRepository()
-    {
-        _store = new CsvTableStore<ObjetoDetectado>(AppDataPaths.GetCsvPath("objetos_detectados"), BuildColumns());
-    }
-
-    /// <summary>
-    /// Mapeamento de colunas usado tanto pela persistência acima quanto pela exportação/
-    /// importação em CSV da tela "Objetos Detectados" (ver
-    /// <see cref="Services.ObjetoDetectadoExportService"/>) — evita duas fontes de verdade para
-    /// o mesmo formato de arquivo (exportar e depois reimportar precisa ler exatamente o que foi
-    /// escrito).
-    /// </summary>
     public static IReadOnlyList<CsvColumn<ObjetoDetectado>> BuildColumns() =>
     [
         new CsvColumn<ObjetoDetectado>("Id", o => o.Id.ToString(), (o, v) => o.Id = CsvConvert.ToInt(v)),
@@ -35,13 +26,4 @@ public sealed class CsvObjetoDetectadoRepository : IObjetoDetectadoRepository
         new CsvColumn<ObjetoDetectado>("Observacao", o => o.Observacao ?? "", (o, v) => o.Observacao = v),
         new CsvColumn<ObjetoDetectado>("ReferenciaImagem", o => o.ReferenciaImagem ?? "", (o, v) => o.ReferenciaImagem = v),
     ];
-
-    public IReadOnlyList<ObjetoDetectado> GetAll() => _store.ReadAll();
-
-    public ObjetoDetectado Add(ObjetoDetectado objeto)
-    {
-        objeto.Id = _store.GetNextId(o => o.Id);
-        _store.Append(objeto);
-        return objeto;
-    }
 }

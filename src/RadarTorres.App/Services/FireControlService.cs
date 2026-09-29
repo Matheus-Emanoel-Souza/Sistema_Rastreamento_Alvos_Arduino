@@ -14,8 +14,9 @@ namespace RadarTorres.App.Services;
 /// </summary>
 /// <remarks>
 /// Também é o único ponto do sistema por onde toda tentativa de acionamento passa — por isso
-/// é aqui, e não na ViewModel, que cada tentativa (autorizada/bloqueada, executada ou com
-/// erro) é gravada no histórico de auditoria <c>acoes_realizadas</c> (Requisito 5).
+/// é aqui, e não na ViewModel, que uma tentativa efetivamente executada é gravada no histórico
+/// de auditoria <c>acoes_realizadas</c> (Requisito 5); tentativas bloqueadas ou com erro de
+/// envio só geram log.
 /// </remarks>
 public sealed class FireControlService : IFireControlService
 {
@@ -67,14 +68,13 @@ public sealed class FireControlService : IFireControlService
         return new FireAuthorizationResult(true, "AUTORIZADO");
     }
 
-    public async Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters, OrigemAcao origem, string? usuarioResponsavel = null)
+    public async Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters)
     {
         FireAuthorizationResult authorization = Authorize(target, minSafetyDistanceMeters);
 
         if (!authorization.Authorized)
         {
             _logger.Warning(authorization.Reason);
-            RegistrarAcao(target, origem, ResultadoAcao.Cancelada, authorization.Reason, usuarioResponsavel);
             return false;
         }
 
@@ -95,14 +95,14 @@ public sealed class FireControlService : IFireControlService
             if (!sent)
             {
                 tower.State = TowerState.Selected;
-                RegistrarAcao(target, origem, ResultadoAcao.Erro, "Falha ao enviar comando pela porta serial.", usuarioResponsavel);
+                _logger.Error("Falha ao enviar comando pela porta serial.");
                 return false;
             }
             // A confirmação real (ACK) chega de forma assíncrona via MessageReceived e é
             // tratada pela MainViewModel; aqui apenas registramos o envio do comando.
         }
 
-        RegistrarAcao(target, origem, ResultadoAcao.Executada, null, usuarioResponsavel);
+        RegistrarAcao(tower, target.ObjetoDetectadoId);
 
         // Mantém o feedback visual de "disparando" por um curto período antes de voltar a "selecionada".
         _ = ResetFiringStateAfterDelay(tower);
@@ -110,19 +110,15 @@ public sealed class FireControlService : IFireControlService
         return true;
     }
 
-    private void RegistrarAcao(Target target, OrigemAcao origem, ResultadoAcao resultado, string? observacao, string? usuarioResponsavel)
+    private void RegistrarAcao(Tower tower, int? objetoDetectadoId)
     {
         try
         {
             _acaoRepository.Add(new AcaoRealizada
             {
-                TorreAcao = $"{target.SelectedTower?.Name ?? "—"} — Acionamento demonstrativo",
-                ObjetoDetectadoId = target.ObjetoDetectadoId,
+                TorreId = tower.Id,
+                ObjetoDetectadoId = objetoDetectadoId,
                 DataHora = DateTime.Now,
-                UsuarioResponsavel = usuarioResponsavel,
-                Origem = origem,
-                Resultado = resultado,
-                Observacao = observacao
             });
         }
         catch (Exception ex)

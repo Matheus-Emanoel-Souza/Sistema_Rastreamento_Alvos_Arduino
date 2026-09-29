@@ -131,39 +131,51 @@
 
     <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
             BorderThickness="0,0,0,1" Padding="12,6">
-        <DockPanel LastChildFill="False">
-            <Menu DockPanel.Dock="Left" Background="Transparent" VerticalAlignment="Center">
-                <MenuItem Header="{loc:Loc TopBar.Options}" Style="{StaticResource OptionsMenuItem}">
-                    <MenuItem Header="{loc:Loc TopBar.Language}">
-                        <MenuItem Header="{loc:Loc TopBar.Language.Portuguese}" Command="{Binding SetLanguageCommand}" CommandParameter="pt-BR"/>
-                        <MenuItem Header="{loc:Loc TopBar.Language.English}" Command="{Binding SetLanguageCommand}" CommandParameter="en-US"/>
-                    </MenuItem>
-                    <MenuItem Header="{loc:Loc TopBar.Theme}">
-                        <MenuItem Header="{loc:Loc TopBar.Theme.Light}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Claro}"/>
-                        <MenuItem Header="{loc:Loc TopBar.Theme.Dark}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Escuro}"/>
-                        <MenuItem Header="{loc:Loc TopBar.Theme.System}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Sistema}"/>
-                    </MenuItem>
-                    <Separator/>
-                    <MenuItem Header="{loc:Loc Common.RestaurarPadrao}" Command="{Binding RestaurarPadraoCommand}"/>
-                </MenuItem>
-            </Menu>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <!-- Fora do menu "Opções" de propósito — cria login/sessão paralela, não é uma
-                 preferência de configuração, então merece um botão próprio e visível. -->
-            <Button DockPanel.Dock="Left" Content="{loc:Loc TopBar.NovaJanela}" Command="{Binding NovaJanelaCommand}"
-                    ToolTip="{loc:Loc TopBar.NovaJanelaDica}" Style="{StaticResource TopBarButton}"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Menu Background="Transparent" VerticalAlignment="Center">
+                    <MenuItem Header="{loc:Loc TopBar.Options}" Style="{StaticResource OptionsMenuItem}">
+                        <MenuItem Header="{loc:Loc TopBar.Language}">
+                            <MenuItem Header="{loc:Loc TopBar.Language.Portuguese}" Command="{Binding SetLanguageCommand}" CommandParameter="pt-BR"/>
+                            <MenuItem Header="{loc:Loc TopBar.Language.English}" Command="{Binding SetLanguageCommand}" CommandParameter="en-US"/>
+                        </MenuItem>
+                        <MenuItem Header="{loc:Loc TopBar.Theme}">
+                            <MenuItem Header="{loc:Loc TopBar.Theme.Light}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Claro}"/>
+                            <MenuItem Header="{loc:Loc TopBar.Theme.Dark}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Escuro}"/>
+                            <MenuItem Header="{loc:Loc TopBar.Theme.System}" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static models:TemaPreferido.Sistema}"/>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="{loc:Loc Common.RestaurarPadrao}" Command="{Binding RestaurarPadraoCommand}"/>
+                    </MenuItem>
+                </Menu>
 
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="{loc:Loc TopBar.LoggedInAs}" Foreground="{DynamicResource TextSecondaryBrush}"
-                           VerticalAlignment="Center" Margin="0,0,4,0" FontSize="12"/>
-                <TextBlock Text="{Binding NomeUsuario}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="8,2" Margin="0,0,16,0" VerticalAlignment="Center">
+                <!-- Fora do menu "Opções" de propósito — cria login/sessão paralela, não é uma
+                     preferência de configuração, então merece um botão próprio e visível. -->
+                <Button Content="{loc:Loc TopBar.NovaJanela}" Command="{Binding NovaJanelaCommand}"
+                        ToolTip="{loc:Loc TopBar.NovaJanelaDica}" Style="{StaticResource TopBarButton}"/>
+            </StackPanel>
+
+            <!-- Nome + perfil do usuário logado, centralizados na barra (antes ficavam à
+                 direita, precedidos do texto "Conectado como" — removido: o destaque visual do
+                 nome maior + a pill de perfil já deixam isso implícito, sem precisar de rótulo). -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="{Binding NomeUsuario}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="9,3" Margin="10,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding PerfilUsuario}" Foreground="White" FontSize="10" FontWeight="Bold"/>
                 </Border>
+            </StackPanel>
 
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button x:Name="ProfileButton" Content="{loc:Loc TopBar.Profile}" Click="ProfileButton_Click" Style="{StaticResource TopBarButton}"/>
                 <Button Content="{loc:Loc TopBar.Logout}" Command="{Binding LogoutCommand}" Style="{StaticResource TopBarButton}"/>
             </StackPanel>
-        </DockPanel>
+        </Grid>
     </Border>
 </UserControl>

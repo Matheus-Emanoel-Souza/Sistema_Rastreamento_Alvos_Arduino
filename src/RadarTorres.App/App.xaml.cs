@@ -67,6 +67,12 @@ public partial class App : Application
         LocalizationService.Current = ServiceProvider.GetRequiredService<ILocalizationService>();
 
         AppDataPaths.EnsureDataFolderExists();
+
+        // Reaplica no banco qualquer escrita que ficou pendente de uma sessão anterior sem
+        // conexão (ver PendingWriteQueue) — antes de qualquer outra leitura/escrita, inclusive
+        // o seed do admin padrão abaixo.
+        PendingWriteQueue.TryReplayPendingWrites();
+
         DataSeeder.EnsureDefaultAdmin(
             ServiceProvider.GetRequiredService<IUsuarioRepository>(),
             ServiceProvider.GetRequiredService<IPasswordHasher>());
@@ -119,15 +125,16 @@ public partial class App : Application
         services.AddTransient<IArduinoCompilerService, ArduinoCompilerService>();
         services.AddSingleton<IArduinoSettingsRepository, ArduinoSettingsRepository>();
 
-        // --- Dados (CSV hoje — ver TODO(SQL) em AppDataPaths)
-        services.AddSingleton<IUsuarioRepository, CsvUsuarioRepository>();
-        services.AddSingleton<IObjetoDetectadoRepository, CsvObjetoDetectadoRepository>();
+        // --- Dados: todo registro do sistema grava direto em SQLite (radartorres.db) — sem
+        //     fallback para CSV (ver Data/SqliteConnectionFactory.cs). O único CSV que a
+        //     aplicação ainda produz é o export manual de "Objetos Detectados" (ação explícita
+        //     do usuário, ver IObjetoDetectadoExportService), que não é persistência.
+        services.AddSingleton<IUsuarioRepository, SqliteUsuarioRepository>();
+        services.AddSingleton<IObjetoDetectadoRepository, SqliteObjetoDetectadoRepository>();
         services.AddTransient<IObjetoDetectadoExportService, ObjetoDetectadoExportService>();
-        // Ações Realizadas grava em SQLite de verdade (radartorres.db), com fallback
-        // automático para CSV se o banco estiver indisponível — ver ResilientAcaoRealizadaRepository.
-        services.AddSingleton<IAcaoRealizadaRepository, ResilientAcaoRealizadaRepository>();
-        services.AddSingleton<IModoAtualTorreRepository, CsvModoAtualTorreRepository>();
-        services.AddSingleton<IPreferenciasUsuarioRepository, CsvPreferenciasUsuarioRepository>();
+        services.AddSingleton<IAcaoRealizadaRepository, SqliteAcaoRealizadaRepository>();
+        services.AddSingleton<IModoAtualTorreRepository, SqliteModoAtualTorreRepository>();
+        services.AddSingleton<IPreferenciasUsuarioRepository, SqlitePreferenciasUsuarioRepository>();
 
         // --- Layout do painel principal (posição/tamanho dos cards definidos pelo usuário)
         services.AddSingleton<IDashboardLayoutRepository, DashboardLayoutRepository>();

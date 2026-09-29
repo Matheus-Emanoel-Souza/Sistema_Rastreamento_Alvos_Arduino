@@ -7,15 +7,17 @@ using System.Text;
 namespace RadarTorres.App.Data;
 
 /// <summary>
-/// Armazenamento genérico de uma "tabela" em um arquivo CSV (RFC 4180 simplificado), usado
-/// por todos os repositórios em <c>Repositories/</c>.
+/// Armazenamento genérico de uma "tabela" em um arquivo CSV (RFC 4180 simplificado).
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>TODO(SQL)</b>: esta é uma solução deliberadamente simples, escolhida para a etapa atual
-/// do projeto (ver <c>Docs/Tecnica/MODELO_DADOS.md</c>). Quando o projeto migrar para um
-/// banco relacional (SQLite/SQL Server), esta classe é substituída por um `DbContext`/ADO.NET
-/// por trás da mesma interface de repositório — nenhum ViewModel ou Service precisa mudar.
+/// Origem: solução deliberadamente simples, escolhida para a etapa inicial do projeto (ver
+/// <c>Docs/Tecnica/MODELO_DADOS.md</c>), usada à época por todos os repositórios. Todo
+/// registro do sistema grava hoje exclusivamente em SQLite (<c>radartorres.db</c>, ver
+/// <c>Sqlite*Repository</c> em <c>Repositories/</c>) — o único uso restante desta classe é a
+/// exportação manual de "Objetos Detectados" para arquivo CSV
+/// (<see cref="RadarTorres.App.Services.ObjetoDetectadoExportService.ExportCsv"/>), uma ação
+/// explícita do usuário, não persistência.
 /// </para>
 /// <para>
 /// Escapes: campos com vírgula ou aspas são colocados entre aspas (aspas internas duplicadas,
