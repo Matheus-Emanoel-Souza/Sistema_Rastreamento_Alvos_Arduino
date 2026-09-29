@@ -202,25 +202,6 @@
                 </ScrollViewer>
             </shared:DashboardCard>
 
-            <!-- ==================== AÇÕES ==================== -->
-            <shared:DashboardCard x:Name="CardAcoes" CardId="Acoes" Title="AÇÕES"
-                                   DefaultWidth="320" DefaultHeight="180"
-                                   Canvas.Left="572" Canvas.Top="0" Width="320" Height="180">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <Button Content="ACIONAMENTO MANUAL DEMONSTRATIVO" Command="{Binding ManualFireCommand}" Background="{DynamicResource WarningBrush}"/>
-                        <StackPanel Orientation="Horizontal">
-                            <CheckBox Content="Pausar monitoramento" IsChecked="{Binding IsPaused}" VerticalAlignment="Center" Margin="0,4,16,4"/>
-                            <CheckBox Content="Modo de simulação" IsChecked="{Binding IsSimulationMode}" VerticalAlignment="Center" Margin="0,4,0,4"/>
-                        </StackPanel>
-                        <Button Content="LIMPAR RADAR" Command="{Binding ClearRadarCommand}"/>
-                        <TextBlock Text="Seu perfil (Visualizador) não permite executar ações."
-                                   Foreground="{DynamicResource WarningBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
-                                   Visibility="{Binding NaoPodeExecutarAcoes, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </shared:DashboardCard>
-
             <!-- ==================== DISTÂNCIAS ==================== -->
             <shared:DashboardCard x:Name="CardDistancias" CardId="Distancias" Title="DISTÂNCIAS"
                                    DefaultWidth="320" DefaultHeight="130"
