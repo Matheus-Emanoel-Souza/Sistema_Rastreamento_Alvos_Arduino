@@ -11,8 +11,8 @@
   "TopBar.Theme.System": "Follow system theme",
   "TopBar.Profile": "Profile",
   "TopBar.Logout": "Log out",
-  "TopBar.NovaJanela": "New window (different login)",
-  "TopBar.NovaJanelaDica": "Opens a new window with its own login screen — stay signed in as another user at the same time.",
+  "TopBar.NovaJanela": "New page",
+  "TopBar.NovaJanelaDica": "Opens a new page with its own login screen — stay signed in as another user at the same time.",
   "TopBar.LoggedInAs": "Signed in as",
 
   "Sidebar.Collapse": "Collapse menu",
