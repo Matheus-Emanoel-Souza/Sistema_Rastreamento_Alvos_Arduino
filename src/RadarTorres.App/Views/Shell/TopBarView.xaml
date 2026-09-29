@@ -5,12 +5,57 @@
              xmlns:models="clr-namespace:RadarTorres.App.Models">
 
     <UserControl.Resources>
-        <!-- MenuItem não herda Foreground do Menu pai por padrão (o estilo nativo do Windows
-             fixa a cor do texto independente do tema) — sem isto, "Opções" ficava com texto
-             escuro fixo e sumia sobre o fundo escuro. Aplica-se a este MenuItem e a todos os
-             filhos (Idioma, Tema, Restaurar padrão etc.), que também não definiam Foreground. -->
+        <!--
+            Estilo padrão (implícito) para todo MenuItem dentro deste UserControl que NÃO tenha
+            um Style explícito — ou seja, "Idioma", "Tema", os itens-folha (Português/Inglês,
+            Claro/Escuro/Sistema) e "Restaurar padrão". Substitui o template nativo do Windows
+            por um próprio: o template padrão pinta o fundo do popup de submenu e o destaque de
+            hover com cores fixas do sistema operacional (SystemColors), que não acompanham o
+            tema do app — por isso "Idioma"/"Tema" continuavam com popup branco fixo no tema
+            escuro mesmo depois de ajustar só o Foreground. Aqui o fundo do popup usa
+            DynamicResource (PanelBrush/PanelBorderBrush/AccentBrush), então segue o tema.
+        -->
         <Style TargetType="MenuItem">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Grid>
+                            <Border x:Name="RowBorder" Background="Transparent" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
+                                                       TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                    <Path x:Name="SubmenuArrow" Margin="16,0,0,0" VerticalAlignment="Center"
+                                          Data="M0,0 L4,4 L0,8" Stroke="{TemplateBinding Foreground}"
+                                          StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Visibility="Collapsed" HorizontalAlignment="Right"/>
+                                </StackPanel>
+                            </Border>
+                            <Popup x:Name="PART_Popup" Placement="Right" PlacementTarget="{Binding ElementName=RowBorder}"
+                                   IsOpen="{TemplateBinding IsSubmenuOpen}" AllowsTransparency="True"
+                                   Focusable="False" PopupAnimation="Fade">
+                                <Border Background="{DynamicResource PanelBrush}"
+                                        BorderBrush="{DynamicResource PanelBorderBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="4" Margin="4,0,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.35"/>
+                                    </Border.Effect>
+                                    <StackPanel IsItemsHost="True" Margin="2"/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="True">
+                                <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="TopBarButton" TargetType="Button">
