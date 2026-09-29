@@ -423,18 +423,11 @@ Sistema_Rastreamento_Alvos_Arduino/
 | Empacotamento/instalador | [Inno Setup 6](https://jrsoftware.org/isinfo.php) |
 | Firmware de teste | Arduino (C/C++, Arduino IDE) |
 
-### ✅ Testes automatizados
+### ⚠️ Testes automatizados
 
-```powershell
-dotnet restore
-dotnet build RadarTorres.sln
-dotnet test RadarTorres.sln
-```
-
-O projeto `tests/RadarTorres.Tests` (xUnit) cobre hoje a aba **Configurações do Arduino**:
-localização do Arduino CLI, montagem segura dos argumentos de compilação, interpretação do
-código de saída, cancelamento, persistência das preferências e limite de linhas dos consoles,
-além da disputa pelo uso da porta serial compartilhada com a tela de Monitoramento.
+O projeto ainda **não possui** um projeto de testes (xUnit ou outro) na solução — item
+pendente no roteiro de melhorias. Validação hoje é manual (modo de simulação, ver seção
+[Modo de simulação](#modo-de-simulação)).
 
 **Por que WPF em vez de WinForms?** WPF foi escolhido por oferecer data-binding real, gráficos
 vetoriais 2D de alta qualidade (essenciais para o radar circular), separação MVVM natural e
