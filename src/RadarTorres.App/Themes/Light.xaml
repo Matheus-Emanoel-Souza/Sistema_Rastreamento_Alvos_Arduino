@@ -22,4 +22,17 @@
     <SolidColorBrush x:Key="TargetSelectedBrush" Color="#B7791F"/>
     <SolidColorBrush x:Key="TowerBrush" Color="#8E44AD"/>
     <SolidColorBrush x:Key="TowerSelectedBrush" Color="#219150"/>
+
+    <!-- Ver comentário equivalente em Themes/Dark.xaml sobre por que essas SystemColors
+         precisam ser sobrescritas (popup/hover do menu "Opções"). -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#16202A"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#219150"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
+
+    <!-- Ver comentário equivalente em Themes/Dark.xaml sobre o popup de dropdown do ComboBox. -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#16202A"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#16202A"/>
 </ResourceDictionary>

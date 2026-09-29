@@ -31,4 +31,27 @@
     <SolidColorBrush x:Key="TargetSelectedBrush" Color="#F1C40F"/>
     <SolidColorBrush x:Key="TowerBrush" Color="#9B59B6"/>
     <SolidColorBrush x:Key="TowerSelectedBrush" Color="#2ECC71"/>
+
+    <!--
+        O template nativo do MenuItem (usado pelo menu "Opções") não pinta o popup de
+        submenu nem o destaque de hover a partir de PanelBrush/AccentBrush — ele usa as
+        cores de sistema do Windows (SystemColors), fixas independente do tema do app.
+        Sem isto, o popup ficava sempre com fundo branco do Windows; combinado com o texto
+        forçado para TextPrimaryBrush (quase branco aqui no tema escuro), o menu inteiro
+        ficava invisível (texto branco sobre fundo branco).
+    -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#121821"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#E6EDF3"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#2ECC71"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#0B0F14"/>
+
+    <!--
+        Mesmo problema do MenuItem acima, mas para o popup de dropdown do ComboBox (e outros
+        controles nativos que usam o "fundo de janela" padrão do Windows) — sem isto, abrir
+        qualquer ComboBox no tema escuro mostrava a lista com fundo branco fixo.
+    -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#121821"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#E6EDF3"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#1C2530"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#E6EDF3"/>
 </ResourceDictionary>
