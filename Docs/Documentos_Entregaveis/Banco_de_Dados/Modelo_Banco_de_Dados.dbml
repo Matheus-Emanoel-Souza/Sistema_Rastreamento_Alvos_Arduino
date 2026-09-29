@@ -63,13 +63,11 @@ Table acoes_realizadas {
 }
 
 Table modo_atual_torre {
-  id integer [primary key]
-  modo_anterior varchar
-  novo_modo varchar
-  data_hora_solicitacao timestamp
-  data_hora_execucao timestamp [note: 'hoje igual à solicitação (troca síncrona)']
-  resultado varchar [note: 'Sucesso | Erro']
-  observacao varchar
+  id_modo integer [primary key]
+  modoatual varchar
+  modoanterior varchar
+  id_user integer [note: 'FK para usuarios.id — usuário que fez a alteração deste modo']
+  dhalteracao timestamp
 
   Note: 'modo_atual_torre.csv — CsvModoAtualTorreRepository. Só inserção (auditoria).'
 }
@@ -121,6 +119,8 @@ Ref: preferencias_usuario.usuario_id - usuarios.id // one-to-one
 Ref: dashboard_card_layout.usuario_id > usuarios.id // many-to-one
 
 Ref: acoes_realizadas.id_objeto > objetos_detectados.id // many-to-one, opcional
+
+Ref: modo_atual_torre.id_user > usuarios.id // many-to-one, opcional
 
 // Fora deste espelho — objetos só em memória, nunca persistidos em disco:
 //   Target, Tower, SensorReading, LogEntry, CameraDevice,

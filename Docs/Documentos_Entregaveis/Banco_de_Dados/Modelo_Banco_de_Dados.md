@@ -98,13 +98,11 @@ erDiagram
     }
 
     MODO_ATUAL_TORRE {
-        int Id PK
-        string ModoAnterior
-        string NovoModo
-        datetime DataHoraSolicitacao
-        datetime DataHoraExecucao "nullable"
-        string Resultado "Sucesso | Erro"
-        string Observacao "nullable"
+        int ID_MODO PK
+        string MODOATUAL
+        string MODOANTERIOR
+        int ID_USER FK "nullable"
+        datetime DHALTERACAO
     }
 
     PREFERENCIAS_USUARIO {
@@ -194,11 +192,11 @@ erDiagram
         string OBSERVACAO "nullable"
     }
     MODO_ATUAL_TORRE {
-        int Id PK
-        string ModoAnterior
-        string NovoModo
-        datetime DataHoraSolicitacao
-        string Resultado
+        int ID_MODO PK
+        string MODOATUAL
+        string MODOANTERIOR
+        int ID_USER FK "nullable"
+        datetime DHALTERACAO
     }
     PREFERENCIAS_USUARIO {
         int UsuarioId PK-FK
