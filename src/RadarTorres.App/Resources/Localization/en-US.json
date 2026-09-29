@@ -80,6 +80,7 @@
   "Arduino.Monitor.MensagensRecebidas": "Messages received",
 
   "Login.Title": "Sign in to RadarTorres",
+  "Login.TabHeader": "Login",
   "Login.Subtitle": "Target Detection and Tower Selection System — Capstone Project",
   "Login.Username": "Username",
   "Login.Password": "Password",

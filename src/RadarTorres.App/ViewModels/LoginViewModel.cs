@@ -51,7 +51,8 @@ public sealed class LoginViewModel : ViewModelBase
 
     public RelayCommand LoginCommand { get; }
 
-    /// <summary>Disparado quando o login é bem-sucedido — o code-behind fecha a janela ao ouvir este evento.</summary>
+    /// <summary>Disparado quando o login é bem-sucedido — App.xaml.cs troca o conteúdo da aba
+    /// (LoginView -&gt; ShellView) ao ouvir este evento (ver App.StartLoginFlow).</summary>
     public event EventHandler? LoginSucceeded;
 
     private async Task LoginAsync()
