@@ -3,12 +3,17 @@
     <!--
         Tema claro. Mesmas chaves de recurso do tema escuro (Themes/Dark.xaml) — nenhuma
         tela precisa saber qual tema está ativo, todas já usam DynamicResource.
+
+        Paleta redesenhada para um verde bem claro (mesmo matiz do AccentBrush já usado em
+        todo o app, só que bem mais claro/dessaturado) com detalhes em preto — em vez do
+        branco/cinza-azulado neutro anterior. TextPrimaryBrush passa a ser preto quase puro
+        (não mais o azul petróleo #16202A) para reforçar o "detalhes pretos" pedido.
     -->
-    <SolidColorBrush x:Key="BackgroundBrush" Color="#F2F4F7"/>
-    <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="PanelBorderBrush" Color="#D7DDE3"/>
-    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#16202A"/>
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5B6B7A"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#E8F5EC"/>
+    <SolidColorBrush x:Key="PanelBrush" Color="#F5FBF7"/>
+    <SolidColorBrush x:Key="PanelBorderBrush" Color="#BFE0CC"/>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0B0F0C"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#3F4A44"/>
     <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FFFFFF"/>
 
     <!-- Ver comentário em Themes/Dark.xaml: cores de radar/status ficam iguais nos dois temas. -->
@@ -25,14 +30,14 @@
 
     <!-- Ver comentário equivalente em Themes/Dark.xaml sobre por que essas SystemColors
          precisam ser sobrescritas (popup/hover do menu "Opções"). -->
-    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#16202A"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#F5FBF7"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#0B0F0C"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#219150"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
 
     <!-- Ver comentário equivalente em Themes/Dark.xaml sobre o popup de dropdown do ComboBox. -->
-    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#16202A"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#F5FBF7"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#0B0F0C"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#16202A"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#0B0F0C"/>
 </ResourceDictionary>
