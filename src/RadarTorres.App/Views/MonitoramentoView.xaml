@@ -202,26 +202,6 @@
                 </ScrollViewer>
             </shared:DashboardCard>
 
-            <!-- ==================== DISTÂNCIAS ==================== -->
-            <shared:DashboardCard x:Name="CardDistancias" CardId="Distancias" Title="DISTÂNCIAS"
-                                   DefaultWidth="320" DefaultHeight="130"
-                                   Canvas.Left="904" Canvas.Top="272" Width="320" Height="130">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Margin="0,0,4,0">
-                        <TextBlock Text="Distância mínima (m)" Style="{StaticResource LabelText}"/>
-                        <TextBox Text="{Binding MinDistance, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Margin="4,0,0,0">
-                        <TextBlock Text="Distância máxima (m)" Style="{StaticResource LabelText}"/>
-                        <TextBox Text="{Binding MaxDistance, StringFormat={}{0:0.00}, UpdateSourceTrigger=LostFocus}"/>
-                    </StackPanel>
-                </Grid>
-            </shared:DashboardCard>
-
             <!-- ==================== MONITORAMENTO (STATUS) ==================== -->
             <shared:DashboardCard x:Name="CardMonitoramento" CardId="Monitoramento" Title="MONITORAMENTO"
                                    DefaultWidth="520" DefaultHeight="280"
