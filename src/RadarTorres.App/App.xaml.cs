@@ -37,15 +37,19 @@ public partial class App : Application
     public static ServiceProvider ServiceProvider { get; private set; } = null!;
 
     /// <summary>
-    /// Uma "aba" (janela) = um <see cref="IServiceScope"/> próprio, com sua própria instância de
+    /// Uma "aba" = um <see cref="IServiceScope"/> próprio, com sua própria instância de
     /// <c>IAuthService</c>/<c>ShellViewModel</c>/<c>MainViewModel</c>/telas de navegação —
-    /// permite logins diferentes em janelas diferentes ao mesmo tempo. Serviços de hardware
-    /// (conexão serial, rastreamento de alvos, seleção de torre, acionamento, simulação, zonas
-    /// mortas) continuam Singleton no <see cref="ServiceProvider"/> raiz, fora de qualquer
-    /// escopo — é o mesmo sistema físico, compartilhado por todas as janelas. O app encerra
-    /// quando a última sessão fecha (nenhuma janela sozinha derruba as demais).
+    /// permite logins diferentes em abas diferentes ao mesmo tempo, todas dentro da mesma
+    /// janela do Windows (<see cref="_mainWindow"/>, Requisito "abas como em navegador"; antes
+    /// cada sessão abria em uma janela própria). Serviços de hardware (conexão serial,
+    /// rastreamento de alvos, seleção de torre, acionamento, simulação, zonas mortas) continuam
+    /// Singleton no <see cref="ServiceProvider"/> raiz, fora de qualquer escopo — é o mesmo
+    /// sistema físico, compartilhado por todas as abas. O app encerra quando a última sessão
+    /// fecha (nenhuma aba sozinha derruba as demais).
     /// </summary>
     private readonly List<IServiceScope> _openSessions = new();
+
+    private MainWindow _mainWindow = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -82,10 +86,15 @@ public partial class App : Application
         // são compartilhados por todas as janelas (recursos globais da Application no WPF).
         ServiceProvider.GetRequiredService<IThemeService>().ApplyTheme(TemaPreferido.Escuro);
 
-        // Cada sessão (janela) fecha independentemente — o app só encerra quando a última
-        // fecha (ver CloseSession). Controlamos isso manualmente em vez de deixar o WPF decidir
-        // sozinho pelo fechamento de uma janela específica.
+        // Cada sessão (aba) fecha independentemente — o app só encerra quando a última fecha
+        // (ver CloseSession). Controlamos isso manualmente em vez de deixar o WPF decidir
+        // sozinho pelo fechamento da única janela (_mainWindow).
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        _mainWindow = new MainWindow();
+        _mainWindow.NovaAbaSolicitada += (_, _) => OpenNewSession();
+        _mainWindow.AbaFechada += (_, tab) => FecharAba(tab);
+        _mainWindow.Show();
 
         OpenNewSession();
     }
@@ -184,10 +193,10 @@ public partial class App : Application
         services.AddScoped<HistoricoModosView>();
 
         services.AddTransient<LoginViewModel>();
-        services.AddTransient<LoginWindow>();
+        services.AddTransient<LoginView>();
 
         services.AddScoped<ShellViewModel>();
-        services.AddScoped<ShellWindow>();
+        services.AddScoped<ShellView>();
 
         services.AddTransient<ProfileViewModel>();
         services.AddTransient<ProfileWindow>();
@@ -200,46 +209,84 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Abre uma nova "aba" (janela de login, não-modal) numa sessão própria
-    /// (<see cref="IServiceScope"/>) independente de qualquer outra já aberta — é o que permite
-    /// logar com usuários diferentes ao mesmo tempo em janelas diferentes. Chamado no início do
-    /// app e sempre que o usuário pede "Nova janela" ou faz logout (ver
-    /// <c>ShellViewModel.NovaJanelaCommand</c>/<c>LoggedOut</c>).
+    /// Abre uma nova aba numa sessão própria (<see cref="IServiceScope"/>) independente de
+    /// qualquer outra já aberta — é o que permite logar com usuários diferentes ao mesmo tempo
+    /// em abas diferentes, todas na mesma janela (<see cref="_mainWindow"/>). Chamado no início
+    /// do app, ao clicar em "+"/"Nova página" (ver <c>MainWindow.NovaAbaSolicitada</c> e
+    /// <c>ShellViewModel.NovaJanelaCommand</c>) e — indiretamente, via <see cref="StartLoginFlow"/>
+    /// reaproveitando a MESMA aba — depois de um logout.
     /// </summary>
     public void OpenNewSession()
     {
         IServiceScope session = ServiceProvider.CreateScope();
         _openSessions.Add(session);
 
-        var loginWindow = session.ServiceProvider.GetRequiredService<LoginWindow>();
-        loginWindow.Closed += (_, _) =>
-        {
-            var authService = session.ServiceProvider.GetRequiredService<IAuthService>();
-            if (authService.CurrentUser is null)
-            {
-                CloseSession(session);
-                return;
-            }
+        var tab = new SessionTabViewModel(session);
+        _mainWindow.Tabs.Add(tab);
+        _mainWindow.SelectedTab = tab;
 
-            AplicarPreferenciasDoUsuario(session, authService.CurrentUser.Id);
-            ShowShell(session);
-        };
-
-        loginWindow.Show();
+        StartLoginFlow(session, tab);
     }
 
-    private void ShowShell(IServiceScope session)
+    /// <summary>Mostra a tela de login como conteúdo da aba informada; ao autenticar com
+    /// sucesso, troca o conteúdo da mesma aba para o shell pós-login (ver
+    /// <see cref="ShowShellInTab"/>). Reaproveitado tanto para abrir uma aba nova quanto para
+    /// voltar uma aba existente à tela de login depois de um logout.</summary>
+    private void StartLoginFlow(IServiceScope session, SessionTabViewModel tab)
     {
-        var shellWindow = session.ServiceProvider.GetRequiredService<ShellWindow>();
-        shellWindow.Closed += (_, _) => CloseSession(session);
-        shellWindow.Show();
+        var loginView = session.ServiceProvider.GetRequiredService<LoginView>();
+        tab.Header = session.ServiceProvider.GetRequiredService<ILocalizationService>()["Login.TabHeader"];
+        tab.Content = loginView;
+
+        loginView.ViewModel.LoginSucceeded += (_, _) =>
+        {
+            var authService = session.ServiceProvider.GetRequiredService<IAuthService>();
+            AplicarPreferenciasDoUsuario(session, authService.CurrentUser!.Id);
+            ShowShellInTab(session, tab);
+        };
+    }
+
+    private void ShowShellInTab(IServiceScope session, SessionTabViewModel tab)
+    {
+        var shellView = session.ServiceProvider.GetRequiredService<ShellView>();
+        tab.Content = shellView;
+        tab.Header = shellView.ViewModel.NomeUsuario;
+
+        // Logout: a mesma aba volta para a tela de login (com uma sessão/escopo novos) em vez de
+        // fechar — igual a um navegador voltando uma aba para uma página anterior, não fechando
+        // a aba. A sessão antiga é encerrada normalmente (ver CloseSession).
+        shellView.ViewModel.LoggedOut += (_, _) =>
+        {
+            CloseSession(session);
+
+            IServiceScope novaSessao = ServiceProvider.CreateScope();
+            _openSessions.Add(novaSessao);
+            tab.Session = novaSessao;
+            StartLoginFlow(novaSessao, tab);
+        };
+
+        shellView.ViewModel.NovaJanelaSolicitada += (_, _) => OpenNewSession();
+    }
+
+    /// <summary>Fecha uma aba pelo "✕" (ver <c>MainWindow.AbaFechada</c>): diferente de um
+    /// logout, aqui a aba em si desaparece — encerra a sessão correspondente e, se essa era a
+    /// aba selecionada, seleciona outra (ou nenhuma, se não sobrar mais nenhuma).</summary>
+    private void FecharAba(SessionTabViewModel tab)
+    {
+        _mainWindow.Tabs.Remove(tab);
+        if (ReferenceEquals(_mainWindow.SelectedTab, tab))
+        {
+            _mainWindow.SelectedTab = _mainWindow.Tabs.Count > 0 ? _mainWindow.Tabs[^1] : null;
+        }
+
+        CloseSession(tab.Session);
     }
 
     /// <summary>
-    /// Encerra uma sessão/janela: libera tudo que foi resolvido dentro do escopo (AuthService,
-    /// ShellViewModel/MainViewModel dessa janela etc. — ver <see cref="IServiceScope.Dispose"/>)
-    /// e só derruba o aplicativo quando essa era a última sessão aberta; as demais janelas
-    /// continuam funcionando normalmente.
+    /// Encerra uma sessão: libera tudo que foi resolvido dentro do escopo (AuthService,
+    /// ShellViewModel/MainViewModel dessa aba etc. — ver <see cref="IServiceScope.Dispose"/>) e
+    /// só derruba o aplicativo quando essa era a última sessão aberta; as demais abas continuam
+    /// funcionando normalmente.
     /// </summary>
     private void CloseSession(IServiceScope session)
     {

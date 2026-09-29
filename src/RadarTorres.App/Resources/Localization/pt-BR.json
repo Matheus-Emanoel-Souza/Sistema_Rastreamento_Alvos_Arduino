@@ -80,6 +80,7 @@
   "Arduino.Monitor.MensagensRecebidas": "Mensagens recebidas",
 
   "Login.Title": "Entrar no RadarTorres",
+  "Login.TabHeader": "Login",
   "Login.Subtitle": "Sistema de Detecção e Seleção de Torres — TCC",
   "Login.Username": "Usuário",
   "Login.Password": "Senha",
