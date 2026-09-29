@@ -18,12 +18,17 @@ expressando a intenção do requisito, mas nenhuma lógica de retry automático 
 ainda. **Evidência:** `appsettings.json`, `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` (seção "Limitações e
 próximos passos").
 
-**L02 — Telas de consulta/gestão ainda pendentes**
-Cinco itens de menu navegam para uma tela "em construção" (`PlaceholderView`) hoje: **Ações
-realizadas** e **Histórico de modos** (o registro já é gravado — RF16/RF17 — só falta a tela de
-consulta), **Usuários** e **Gestão/listagem de chamados de ajuda** (nem o registro tem
-interface de gestão — RF18/RF23), e **Configurações** (nunca chegou a ser escopado).
-**Evidência:** `Services/NavigationService.cs`, `Docs/Projeto/CONTEXTO_PROJETO.md`, seção 3.
+**L02 — (Resolvida) Telas de consulta/gestão que estavam pendentes**
+Não há mais nenhuma tela em `PlaceholderView` no sistema — essa classe não existe mais no
+código-fonte. **Ações realizadas**, **Histórico de modos** e **Usuários** (RF15–RF17) são telas
+implementadas e roteadas normalmente em `Services/NavigationService.cs`
+(`AcoesRealizadasView`/`ViewModel`, `HistoricoModosView`/`ViewModel`, `UsuariosView`/`ViewModel`).
+O item de menu "Configurações" (genérico, distinto da aba "Configurações do Arduino") foi
+removido do sistema — não existe mais nem como entrada de menu (`Services/IPermissionService.cs`,
+enum `MenuItem`, não tem esse valor), nem como placeholder. O módulo de Chamados de Ajuda também
+foi removido por completo, então não há mais item de menu associado a ele. Não há, no momento,
+nenhuma limitação conhecida desse tipo. **Evidência:** `Services/NavigationService.cs`,
+`Services/IPermissionService.cs`.
 
 **L03 — Bugs conhecidos não corrigidos**
 Já catalogados em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md` (seção "Limitações e próximos passos"), não
@@ -33,27 +38,24 @@ em ambiente de automação sem desktop interativo real, não confirmada em uso n
 
 ## Divergências entre especificação revisada e implementação atual
 
-**D1 — RF06/RF08: modelo de 3 estados (Verde/Amarelo/Vermelho) ainda não implementado no código**
+**D1 — RF06/RF08: comando de acionamento manual ainda não restrito por modo de operação**
 
 A especificação revisada (RF06, RF08) define acionamento **exclusivamente automático** no modo
-Vermelho, e três estados de operação (Verde/Amarelo/Vermelho). O código hoje:
+Vermelho, e três estados de operação (Verde/Amarelo/Vermelho). O enum `SystemMode`
+(`Models/SystemState.cs`) já reflete corretamente esses três estados — `LigadoApenas` (Verde),
+`AcompanharAlvos` (Amarelo) e `Disparar` (Vermelho) —, então esse ponto específico já está
+resolvido. A divergência que permanece é outra:
 
-* Usa um enum `SystemMode` com **6 valores** (`Off`, `LocationOnly`, `LocationAutoTower`,
-  `LocationAutoFire`, `Maintenance`, `Emergency`) — não os 3 estados conceituais da
-  especificação. `LocationAutoTower` é o mais próximo de "Amarelo" e `LocationAutoFire` o mais
-  próximo de "Vermelho", mas não há um valor único claramente equivalente a "Verde" (ligado,
-  porém sem operação funcional) — o candidato mais próximo seria `LocationOnly`, que na
-  descrição atual já mostra alvos no radar (portanto tem alguma operação funcional visível,
-  diferente do "Verde" da especificação).
-* Expõe um comando de **acionamento manual** (`MainViewModel.ManualFireCommand` →
-  `ManualFireAsync` → `FireControlService.TryFireAsync(..., OrigemAcao.Manual)`), disponível
-  sempre que `CurrentMode != SystemMode.Off`, **incluindo modos onde a especificação revisada
-  não permite acionamento algum** (o equivalente a "Amarelo"). `FireControlService.Authorize`
-  também não verifica `SystemMode` — só checa alvo ativo, zona morta, torre selecionada e
-  distância mínima. Ou seja, hoje é tecnicamente possível disparar manualmente mesmo em um modo
-  que só deveria acompanhar o alvo.
+* O código ainda expõe um comando de **acionamento manual**
+  (`MainViewModel.ManualFireCommand` → `ManualFireAsync` →
+  `FireControlService.TryFireAsync(..., OrigemAcao.Manual)`), habilitado sempre que há um alvo
+  selecionado e o perfil satisfaz `PodeExecutarAcoes` — **sem checagem do `SystemMode` atual**,
+  incluindo modos onde a especificação revisada não permite acionamento algum (o equivalente a
+  "Amarelo"/`AcompanharAlvos`). `FireControlService.Authorize` também não verifica `SystemMode`
+  — só checa alvo ativo, zona morta, torre selecionada e distância mínima. Ou seja, hoje é
+  tecnicamente possível disparar manualmente mesmo em um modo que só deveria acompanhar o alvo.
 
 **Nenhum código foi alterado nesta revisão.** Esta divergência é só documentada, conforme
-solicitado — o ajuste do enum `SystemMode`, a remoção do caminho de acionamento manual e a
-adição da checagem de modo em `Authorize` ficam para uma tarefa de implementação separada, a
+solicitado — a remoção do caminho de acionamento manual (ou sua restrição ao modo `Disparar`) e
+a adição da checagem de modo em `Authorize` ficam para uma tarefa de implementação separada, a
 ser autorizada explicitamente.

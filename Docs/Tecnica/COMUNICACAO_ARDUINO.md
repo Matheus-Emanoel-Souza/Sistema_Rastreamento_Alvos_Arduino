@@ -195,6 +195,7 @@ Caminho do Arduino CLI, último sketch usado, FQBN selecionado, última porta CO
 preferências do console (rolagem automática, exibir horário) são persistidos em
 `%LocalAppData%\RadarTorres\arduino-settings.json` (`IArduinoSettingsRepository` /
 `ArduinoSettingsRepository`) — uma pasta gravável pelo usuário comum, nunca dentro de
-`C:\Program Files\...`. É um arquivo separado das preferências de usuário (tema/idioma, em CSV
-via `PreferenciasUsuario`) porque representa configuração de máquina/instalação de uma
+`C:\Program Files\...`. É um arquivo separado das preferências de usuário (tema/idioma,
+persistidas em SQLite via `SqlitePreferenciasUsuarioRepository`) porque representa configuração
+de máquina/instalação de uma
 ferramenta externa, não uma preferência por conta de usuário do RadarTorres.

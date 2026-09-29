@@ -19,10 +19,10 @@ requisito funcional válido.
 
 | Ator | Descrição | Responsabilidades |
 |---|---|---|
-| **Usuário** *(genérico)* | Ator abstrato que representa qualquer perfil autenticado no sistema. Usado no diagrama por generalização (`Administrador`, `Operador` e `Visualizador` herdam dele) para não repetir, em cada caso de uso comum aos três perfis, três associações idênticas. Nenhuma pessoa é literalmente "Usuário genérico" — todo login exige um dos três perfis concretos. | Autenticar-se, alterar a própria senha, visualizar painel e radar, consultar/exportar histórico de objetos detectados e de auditoria, ajustar idioma/tema/layout pessoal, abrir chamado de ajuda, usar a aba de configuração do Arduino. |
-| **Administrador** | Perfil com acesso administrativo completo, além de tudo que `Usuário` já cobre. | Gerenciar usuários (RF17), gerenciar zonas mortas (RF23), gerenciar chamados de ajuda (RF20), e — por também satisfazer `PodeExecutarAcoes` — alterar modo de operação (RF07) e importar objetos detectados (RF14), no mesmo nível do Operador. |
+| **Usuário** *(genérico)* | Ator abstrato que representa qualquer perfil autenticado no sistema. Usado no diagrama por generalização (`Administrador`, `Operador` e `Visualizador` herdam dele) para não repetir, em cada caso de uso comum aos três perfis, três associações idênticas. Nenhuma pessoa é literalmente "Usuário genérico" — todo login exige um dos três perfis concretos. | Autenticar-se, alterar a própria senha, visualizar painel e radar, consultar/exportar histórico de objetos detectados e de auditoria, ajustar idioma/tema/layout pessoal, usar a aba de configuração do Arduino. |
+| **Administrador** | Perfil com acesso administrativo completo, além de tudo que `Usuário` já cobre. | Gerenciar usuários (RF17), gerenciar zonas mortas (RF23), e — por também satisfazer `PodeExecutarAcoes` — alterar modo de operação (RF07) e importar objetos detectados (RF14), no mesmo nível do Operador. |
 | **Operador** | Perfil operacional, sem acesso às telas administrativas. | Tudo que `Usuário` cobre, mais alterar modo de operação (RF07) e importar objetos detectados (RF14) — ambos liberados por `PermissionService.PodeExecutarAcoes`, que retorna verdadeiro para Administrador **e** Operador. |
-| **Visualizador** | Perfil somente-consulta. | Restrito ao conjunto herdado de `Usuário` (visualização, exportação, preferências pessoais, abertura de chamado, aba do Arduino — ver observação de inconsistência abaixo). **Não** pode alterar modo de operação nem importar dados (`PodeExecutarAcoes` retorna falso), nem gerenciar usuários/zonas mortas/chamados. |
+| **Visualizador** | Perfil somente-consulta. | Restrito ao conjunto herdado de `Usuário` (visualização, exportação, preferências pessoais, aba do Arduino — ver observação de inconsistência abaixo). **Não** pode alterar modo de operação nem importar dados (`PodeExecutarAcoes` retorna falso), nem gerenciar usuários/zonas mortas. |
 | **Arduino** | Ator externo (hardware), não um usuário do sistema. Representado só nas duas interações reais via porta serial: envio de leituras de sensores e tráfego observado no monitor serial da aba de configuração. | Enviar leituras de ângulo/distância pelo protocolo serial (RF01/RF02); ser a origem das mensagens exibidas em "Monitorar comunicação serial" (RF25). |
 
 **Observação de inconsistência encontrada:** a descrição de RF09 define o Visualizador como
@@ -41,7 +41,8 @@ Fonte: [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml) (PlantUML), re
 ![Diagrama de Casos de Uso do RadarTorres](Diagrama_Casos_de_Uso.png)
 
 O diagrama representa o sistema como uma única fronteira "Sistema RadarTorres", subdividida em
-6 agrupamentos visuais para manter a legibilidade (28 casos de uso ao todo): **Conta e Acesso**,
+6 agrupamentos visuais para manter a legibilidade (26 casos de uso ativos; UC23 e UC24, do extinto
+módulo de Chamados de Ajuda, foram descontinuados — ver Seção 4): **Conta e Acesso**,
 **Monitoramento e Operação**, **Histórico e Dados**, **Administração**, **Preferências** e
 **Arduino e Comunicação**. Casos de uso puramente automáticos (reação do sistema, sem ator
 humano nem Arduino diretamente ligados) — Rastrear alvos, Selecionar torre automaticamente,
@@ -396,31 +397,18 @@ do canvas arrastável.
 **Pós-condições:** estado fixado/não fixado persistido para o usuário.
 **Requisitos relacionados:** RF22.
 
-### UC23 — Abrir chamado de ajuda
+### UC23 — Abrir chamado de ajuda *(removido)*
 
-**Objetivo:** registrar um chamado de suporte descrevendo um problema ou dúvida.
-**Atores:** Usuário.
-**Pré-condições:** sessão autenticada ativa.
-**Fluxo principal:**
-1. O usuário abre o formulário de chamado (acessível pela barra superior).
-2. Preenche título, descrição, categoria, módulo relacionado e, opcionalmente, mensagem de erro.
-3. O sistema preenche usuário e data automaticamente e grava o chamado.
-**Fluxos alternativos/exceções:**
-1. Campos obrigatórios não preenchidos — o sistema impede o envio até completá-los.
-**Pós-condições:** chamado registrado, disponível para tratamento administrativo (UC24).
-**Requisitos relacionados:** RF19.
+O módulo de Chamados de Ajuda (formulário de abertura de chamado, entidade `ChamadoAjuda` e
+respectiva tela administrativa) foi removido por completo do código-fonte — não há mais entrada
+de menu, ViewModel, model nem repositório associados. Este caso de uso não corresponde mais a
+nenhuma funcionalidade do sistema e é mantido aqui apenas como registro histórico do ID, para não
+quebrar referências cruzadas de RF19 em documentos anteriores.
 
-### UC24 — Gerenciar chamados
+### UC24 — Gerenciar chamados *(removido)*
 
-**Objetivo:** consultar os chamados abertos e definir situação e resposta para cada um.
-**Atores:** Administrador.
-**Pré-condições:** perfil Administrador.
-**Fluxo principal:**
-1. O Administrador acessa a lista de chamados abertos.
-2. Seleciona um chamado e define situação/resposta.
-**Fluxos alternativos/exceções:** nenhum relevante.
-**Pós-condições:** chamado atualizado com a situação e a resposta definidas.
-**Requisitos relacionados:** RF20.
+Consequência direta da remoção de UC23/do módulo de Chamados de Ajuda: não existe mais tela de
+gestão de chamados no sistema. Mantido apenas como registro histórico do ID (RF20).
 
 ### UC25 — Configurar Arduino
 
@@ -516,16 +504,19 @@ parâmetros diferentes, o sistema pede confirmação antes de reconectar.
 | UC20 – Alterar tema | RF18 | Usuário |
 | UC21 – Personalizar painel | RF21 | Usuário |
 | UC22 – Fixar/desafixar console | RF22 | Usuário |
-| UC23 – Abrir chamado de ajuda | RF19 | Usuário |
-| UC24 – Gerenciar chamados | RF20 | Administrador |
+| ~~UC23 – Abrir chamado de ajuda~~ *(removido)* | RF19 | — |
+| ~~UC24 – Gerenciar chamados~~ *(removido)* | RF20 | — |
 | UC25 – Configurar Arduino | RF25 | Usuário |
 | UC26 – Detectar Arduino CLI | RF24 | Usuário |
 | UC27 – Compilar sketch | RF24 | Usuário |
 | UC28 – Monitorar comunicação serial | RF25 | Usuário, Arduino |
 
-Todos os 28 casos de uso têm ao menos um requisito funcional válido associado; nenhum caso de
-uso foi criado sem essa ligação. UC06, UC07, UC09, UC10 e UC11 não têm um ator humano/Arduino
-associado por serem reações internas do sistema, mas continuam ligados a requisitos reais.
+Dos 28 casos de uso originalmente especificados, 26 estão ativos e têm ao menos um requisito
+funcional válido associado; nenhum caso de uso ativo foi criado sem essa ligação. UC23 e UC24
+foram descontinuados junto com a remoção do módulo de Chamados de Ajuda (ver Seção 4) e são
+mantidos na numeração apenas como registro histórico. UC06, UC07, UC09, UC10 e UC11 não têm um
+ator humano/Arduino associado por serem reações internas do sistema, mas continuam ligados a
+requisitos reais.
 
 **RF09 (Controle de acesso por perfil) é o único requisito funcional válido sem um caso de uso
 próprio** — deliberadamente: RF09 não é uma ação que um ator realiza, é a regra que decide

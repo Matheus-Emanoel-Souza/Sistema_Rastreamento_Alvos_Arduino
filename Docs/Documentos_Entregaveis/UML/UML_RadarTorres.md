@@ -57,7 +57,7 @@ rastreamento, seleção de torre, controle de acionamento, autenticação, permi
 da camada gráfica; e os `Models` são entidades de domínio simples. O mecanismo de binding MVVM
 do RadarTorres (`ViewModelBase`, `RelayCommand`) foi implementado manualmente, sem um framework
 externo como Prism ou CommunityToolkit.Mvvm — decisão documentada como restrição arquitetural em
-`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Decisoes_Arquiteturais.md`, tomada para manter o mecanismo de
+`Docs/Documentos_Entregaveis/UML/Decisoes_Arquiteturais.md`, tomada para manter o mecanismo de
 binding inteiramente explicável na defesa do trabalho. Qualquer menção à arquitetura do
 RadarTorres neste documento e nos diagramas associados refere-se exclusivamente a essa
 organização MVVM, nunca a MVC.
@@ -105,10 +105,10 @@ alcançados apenas por `<<include>>`/`<<extend>>` a partir de quem efetivamente 
 o Usuário observando o radar, ou o Arduino enviando uma leitura — reforçando visualmente que não
 existe, no sistema, um caso de uso de "acionar manualmente".
 
-Diagrama fonte: [`Diagramas/Casos_de_Uso_RadarTorres.puml`](Diagramas/Casos_de_Uso_RadarTorres.puml).
+Diagrama fonte: [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml).
 A especificação textual completa de cada um dos 28 casos de uso (objetivo, atores, fluxos,
 requisito relacionado e status de implementação) está em
-`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Casos_de_Uso.md`.
+`Docs/Documentos_Entregaveis/UML/Casos_de_Uso.md`.
 
 ## 4. Modos de operação
 
@@ -125,14 +125,15 @@ RF08) define exatamente três estados:
   regras de segurança (distância mínima, ausência de zona morta ativa e existência de torre
   selecionada). Não existe, em nenhum modo, um caminho de acionamento manual.
 
-Todos os diagramas deste documento adotam exclusivamente essa nomenclatura de três estados. É
-importante registrar, por rigor acadêmico, que o código-fonte hoje ainda implementa esse
-comportamento por meio de um enumerador (`SystemMode`, em `Models/SystemState.cs`) com seis
-valores herdados de uma versão anterior do sistema (`Off`, `LocationOnly`, `LocationAutoTower`,
-`LocationAutoFire`, `Maintenance`, `Emergency`), e que o código ainda expõe um comando de
-acionamento manual (`MainViewModel.ManualFireCommand`) não gated por modo. Essa divergência entre
-a especificação revisada e a implementação atual está documentada em detalhe em
-`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/Limitacoes_Conhecidas.md` (divergência D1) e não foi corrigida no
+Todos os diagramas deste documento adotam exclusivamente essa nomenclatura de três estados. O
+código-fonte já reflete esse modelo: o enumerador `SystemMode` (`Models/SystemState.cs`) tem
+exatamente três valores — `LigadoApenas`, `AcompanharAlvos` e `Disparar` —, já nomeados e
+documentados no próprio código como equivalentes a Verde, Amarelo e Vermelho, respectivamente.
+O ponto ainda em aberto é outro: o código ainda expõe um comando de acionamento manual
+(`MainViewModel.ManualFireCommand`), habilitado sempre que há um alvo selecionado e o perfil pode
+executar ações, sem checagem do `SystemMode` atual. Essa divergência entre a especificação
+revisada e a implementação atual está documentada em detalhe em
+`Docs/Documentos_Entregaveis/UML/Limitacoes_Conhecidas.md` (divergência D1) e não foi corrigida no
 código como parte desta tarefa, que é exclusivamente documental.
 
 ## 5. Diagrama de Classes
@@ -148,16 +149,22 @@ comportamento disponível). Entre classes, a UML define diferentes tipos de rela
 **dependência** (uma classe utiliza outra, tipicamente como parâmetro ou tipo de retorno de uma
 operação, sem mantê-la como atributo permanente).
 
-O diagrama de classes do RadarTorres, disponível em
-[`Diagramas/Classes_RadarTorres.puml`](Diagramas/Classes_RadarTorres.puml), é deliberadamente
-conceitual: não representa todas as classes do projeto (haveria dezenas, incluindo Views,
-Converters e Helpers, sem ganho de compreensão para o leitor), mas concentra-se nas entidades de
-domínio e nos serviços centrais necessários para entender o funcionamento do sistema. Do lado das
-entidades de domínio estão `Target` (o alvo em rastreamento, com posição, quadrante e torre
-associada), `Tower` (torre demonstrativa configurável), `ZonaMorta` (área de exclusão),
-`SensorReading` (leitura bruta de sensor), `Usuario` (conta autenticável, com o atributo
-`Perfil` do tipo `PerfilUsuario`), e os quatro registros de auditoria — `ObjetoDetectado`,
-`AcaoRealizada`, `ModoAtualTorre` e `ChamadoAjuda`. Do lado dos serviços estão as interfaces
+**Situação do artefato.** O diagrama de classes do RadarTorres — que existiu em
+`Docs/Documentos_Entregaveis/Diagrama_de_Classes/` (`Classes_RadarTorres.puml` e arquivos
+associados) — foi removido do repositório e ainda não foi regenerado. Esta seção permanece como
+referência conceitual do que o diagrama deveria representar, mas não há, no momento, um `.puml`
+nem uma imagem renderizada para linkar; a regeneração fica pendente para uma tarefa futura.
+
+Quando regenerado, o diagrama deve continuar deliberadamente conceitual: não representar todas as
+classes do projeto (haveria dezenas, incluindo Views, Converters e Helpers, sem ganho de
+compreensão para o leitor), mas concentrar-se nas entidades de domínio e nos serviços centrais
+necessários para entender o funcionamento do sistema. Do lado das entidades de domínio estão
+`Target` (o alvo em rastreamento, com posição, quadrante e torre associada), `Tower` (torre
+demonstrativa configurável), `ZonaMorta` (área de exclusão), `SensorReading` (leitura bruta de
+sensor), `Usuario` (conta autenticável, com o atributo `Perfil` do tipo `PerfilUsuario`), e os três
+registros de auditoria — `ObjetoDetectado`, `AcaoRealizada` e `ModoAtualTorre` (o módulo
+`ChamadoAjuda`, que existia numa versão anterior do sistema, foi removido do código-fonte e não
+deve mais constar do diagrama). Do lado dos serviços estão as interfaces
 `ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`, `IZonaMortaService`,
 `ISerialCommunicationService`, `IAuthService` e `IPermissionService` — cada uma responsável por
 uma fatia específica da regra de negócio, seguindo a separação de responsabilidades já descrita
@@ -166,9 +173,9 @@ na Seção 2.
 **Nota metodológica.** Não existe, no código-fonte, uma classe chamada `SystemState`: esse é o
 nome do arquivo `Models/SystemState.cs`, que agrupa cinco enumeradores (`SystemMode`,
 `ConnectionState`, `TowerState`, `Quadrant`, `DataSource`), não uma entidade com atributos e
-identidade própria. O diagrama representa, em vez disso, o enumerador `SystemMode` diretamente,
-por ser o elemento real que expressa o modo de operação do sistema — evitando representar uma
-classe que não existe no projeto.
+identidade própria. O diagrama deve representar, em vez disso, o enumerador `SystemMode`
+diretamente, por ser o elemento real que expressa o modo de operação do sistema — evitando
+representar uma classe que não existe no projeto.
 
 ## 6. Diagrama de Implantação
 
@@ -193,9 +200,10 @@ explicitada, para tornar o diagrama legível sem multiplicar nós físicos que n
 * **Serviços** (regra de negócio) — as interfaces centrais já descritas na Seção 5
   (`ISerialCommunicationService`, `ITargetTrackingService`, `ITowerSelectionService`,
   `IFireControlService`, `IAuthService`, `IPermissionService`, entre outras).
-* **Persistência local** — os arquivos efetivamente gravados em disco:
-  `%AppData%\RadarTorres\Data\*.csv` (usuários, auditoria, objetos detectados) e
-  `%LocalAppData%\RadarTorres\*.json` (layout, zonas mortas, preferências).
+* **Persistência local** — o banco SQLite gravado em disco (`RadarTorres.db`, acessado via
+  `SqliteConnectionFactory` e os repositórios `Sqlite*Repository`): usuários, auditoria, objetos
+  detectados, preferências e demais dados cadastrais. O único uso remanescente de CSV é o botão
+  manual "Exportar CSV" da tela de Objetos Detectados — não é mecanismo de persistência.
 * **.NET 9 Desktop Runtime** — embutido pelo instalador self-contained, sem dependência externa
   a instalar separadamente na máquina do usuário.
 

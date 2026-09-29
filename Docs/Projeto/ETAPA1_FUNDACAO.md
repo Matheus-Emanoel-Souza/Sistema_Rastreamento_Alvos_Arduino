@@ -75,13 +75,20 @@ avisos confirmado) e rodar `RadarTorres.App.exe`.
 | Barra lateral | Clique no ☰ recolhe/expande (texto vira tooltip). Itens navegam para a tela correspondente; item ativo fica destacado. "Usuários" só aparece para Administrador. |
 | Painel principal | Cards de objetos detectados, ações realizadas, modo atual, última alteração de modo, usuário responsável, estado da comunicação e última atualização — todos com dado real (ou "—"/contagem 0 quando não há histórico ainda). |
 | Monitoramento | Idêntico ao app anterior (radar, conexão serial, modos) — agora dentro da Shell. Visualizador vê aviso "não permite executar ações" e os botões ficam bloqueados. |
-| Auditoria de modo | Trocar o modo pede confirmação; aceitar ou cancelar grava uma linha em `modo_atual_torre.csv` (`Resultado=Sucesso` ou `Erro`). |
+| Auditoria de modo | Trocar o modo pede confirmação; aceitar ou cancelar grava uma linha em `modo_atual_torre.csv` (`Resultado=Sucesso` ou `Erro`). *(nota: comportamento mudou depois — ver abaixo)* |
 | Auditoria de objetos | A primeira detecção de cada alvo grava uma linha em `objetos_detectados.csv`. |
-| Auditoria de ações | "Acionamento manual demonstrativo" (ou automático, no modo 4) grava uma linha em `acoes_realizadas.csv`, incluindo bloqueios de segurança (`Resultado=Cancelada`). |
-| Formulário de ajuda | Botão "Ajuda" abre o formulário; enviar sem título/descrição mostra erro de validação; enviar com dados grava em `chamados_ajuda.csv` com usuário e data preenchidos automaticamente. |
+| Auditoria de ações | "Acionamento manual demonstrativo" (ou automático, no modo 4) grava uma linha em `acoes_realizadas.csv`, incluindo bloqueios de segurança (`Resultado=Cancelada`). *(nota: comportamento mudou depois — ver abaixo)* |
+| Formulário de ajuda | Botão "Ajuda" abre o formulário; enviar sem título/descrição mostra erro de validação; enviar com dados grava em `chamados_ajuda.csv` com usuário e data preenchidos automaticamente. *(nota: módulo removido depois — ver abaixo)* |
 | Logout | Botão "Sair" volta para a tela de login sem fechar o processo; logar de novo funciona. |
 | Preferências por usuário | Trocar tema/idioma e fechar o app; no próximo login, o tema/idioma escolhido é restaurado automaticamente (gravado em `preferencias_usuario.csv`). |
 | Telas "em construção" | Objetos detectados, Ações realizadas, Histórico de modos, Usuários e Configurações mostram uma tela placeholder traduzida — a navegação já funciona, só a tela completa (tabela/filtros) chega na próxima parte. |
+
+> **Nota (atualização posterior):** o comportamento de auditoria descrito acima (coluna
+> `Resultado=Sucesso/Erro/Cancelada`, gravada mesmo em cancelamento/bloqueio) foi simplificado
+> depois — o schema atual não tem coluna `Resultado`, e tentativas bloqueadas/canceladas não
+> geram mais linha nenhuma (só log); ver `Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_de_Dados.md`.
+> O módulo de "Formulário de ajuda" (`ChamadoAjuda`) descrito acima foi removido inteiramente do
+> projeto em uma etapa posterior.
 
 ## 6. O que falta para fechar a Etapa 1 (próxima entrega)
 
@@ -99,6 +106,12 @@ i18n, tema, navegação):
 A Etapa 2 (indicadores gráficos avançados, personalização completa de layout, filtros
 avançados, exportação CSV, notificações) e a Etapa 3 (testes automatizados, revisão de
 segurança, ajustes de desempenho) seguem depois, como já planejado no pedido original.
+
+> **Nota (atualização posterior):** os itens 2, 3 e 4 acima (Ações realizadas, Histórico de
+> modos e Usuários) foram concluídos em uma etapa posterior a este documento —
+> `AcoesRealizadasView`/`ViewModel`, `HistoricoModosView`/`ViewModel` e `UsuariosView`/
+> `ViewModel` já estão implementados e roteados. Ver `Docs/Projeto/CONTEXTO_PROJETO.md`, seção
+> 3, para o estado atual.
 
 ## 7. Limitações conhecidas desta parte
 
