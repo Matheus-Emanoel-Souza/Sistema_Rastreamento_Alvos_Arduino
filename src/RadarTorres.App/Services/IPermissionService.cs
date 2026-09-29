@@ -15,8 +15,6 @@ public enum MenuItem
     /// <summary>Módulo "Câmeras" — visualização em tempo real das webcams conectadas (ver CamerasView).</summary>
     Cameras,
 
-    Configuracoes,
-
     /// <summary>Aba "Configurações do Arduino" — ambiente/compilação/monitor serial (ver ArduinoSettingsView).</summary>
     ConfiguracoesArduino
 }
