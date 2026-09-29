@@ -1,66 +1,22 @@
-% !TeX program = xelatex
 % ============================================================
 % Template de TCC (Artigo Científico) — Faculdade UCL
-% Baseado no "Manual de Normalização para Trabalhos de
-% Conclusão de Curso (TCC): Faculdade UCL" (ABNT NBR 6022/6023)
+% Versão simplificada: documentclass "article" padrão, fonte
+% Computer Modern (pdfLaTeX), sem formatação ABNT customizada
+% (sem capa separada, títulos de seção em maiúsculas simples,
+% autores centralizados com notas de rodapé numeradas, legendas
+% de figura no padrão default do LaTeX ("Figure")).
 %
-% Compile com XeLaTeX (usa a fonte Times New Roman do Windows
-% diretamente, sem depender de pacotes extras do CTAN).
-% No VS Code + LaTeX Workshop, a linha "% !TeX program = xelatex"
-% acima já faz isso automaticamente.
+% Compile com pdfLaTeX (não depende de fontspec/XeLaTeX).
 % ============================================================
 \documentclass[12pt,a4paper]{article}
 
-% ---------- Idioma e codificação (XeLaTeX já é UTF-8 nativo) ----------
-\usepackage{fontspec}
-% Observação: o pacote "babel" (hifenização em português e nomes
-% automáticos) não foi incluído porque, no momento da criação deste
-% template, a instalação local do MiKTeX não conseguiu baixar seus
-% arquivos de suporte. Para ativá-lo depois, abra o MiKTeX Console >
-% Pacotes > procure e instale "babel-portuges", depois descomente:
-% \usepackage[brazilian]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{xcolor}
 
-% ---------- Fonte: Times New Roman 12, cor preta ----------
-\setmainfont{Times New Roman}
-% Para usar Arial no lugar, comente a linha acima e use:
-% \setmainfont{Arial}
-
-% ---------- Margens: sup/esq 3 cm, inf/dir 2 cm ----------
-\usepackage[a4paper,top=3cm,left=3cm,bottom=2cm,right=2cm]{geometry}
-
-% ---------- Espaçamento 1,5 no corpo do texto (sem pacote setspace) ----------
-\newcommand{\espacosimples}{\renewcommand{\baselinestretch}{1.0}\selectfont}
-\newcommand{\espacoumemeio}{\renewcommand{\baselinestretch}{1.5}\selectfont}
-\espacoumemeio
-
-% ---------- Parágrafo: sem recuo ----------
-% Espaço entre parágrafos: o Manual não define um valor fixo pequeno — os
-% exemplos do template separam parágrafos com uma linha em branco inteira
-% (equivalente a uma linha do corpo em espaçamento 1,5). \parskip é setado
-% para \baselineskip logo após \begin{document} (ver abaixo) para reproduzir
-% exatamente isso, já com o espaçamento 1,5 aplicado.
 \setlength{\parindent}{0pt}
-
-% ---------- Citação direta longa (ABNT, >3 linhas): recuo 4cm à esquerda,
-% justificado, espaçamento SIMPLES, tamanho 11, espaço de 6pt antes/depois ----------
-\newenvironment{citacaolonga}{%
-  \begin{list}{}{\setlength{\leftmargin}{4cm}\setlength{\rightmargin}{0pt}}
-  \item[]\vspace{6pt}\espacosimples\fontsize{11}{13}\selectfont
-}{%
-  \vspace{6pt}\end{list}\espacoumemeio
-}
-
-% ---------- Legenda de figura/tabela e fonte (ABNT): tamanho 10, espaçamento
-% simples ----------
-\newcommand{\legenda}[1]{{\espacosimples\fontsize{10}{12}\selectfont #1\par}}
-
-% ---------- Notas de rodapé: tamanho 10 (já é o padrão em documentclass
-% 12pt) e espaçamento SIMPLES, mesmo com o corpo do texto em 1,5 ----------
-\makeatletter
-\long\def\@makefntext#1{%
-  \renewcommand{\baselinestretch}{1.0}\selectfont
-  \parindent 1em\noindent \hb@xt@1.8em{\hss\@makefnmark}#1}
-\makeatother
+\setlength{\parskip}{0.8em}
 
 % ---------- Numeração de página no canto superior direito ----------
 \makeatletter
@@ -73,73 +29,35 @@
 \makeatother
 \pagestyle{ucl}
 
-% ---------- Títulos das seções: Times 12, negrito, alinhados à esquerda ----------
-% (redefinidos via \@startsection do próprio kernel do LaTeX, sem titlesec)
-\makeatletter
-\renewcommand\section{\@startsection{section}{1}{0pt}%
-  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
-  {\normalfont\fontsize{12}{14}\selectfont\bfseries\MakeUppercase}}
-\renewcommand\subsection{\@startsection{subsection}{2}{0pt}%
-  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
-  {\normalfont\fontsize{12}{14}\selectfont\bfseries\MakeUppercase}}
-\renewcommand\subsubsection{\@startsection{subsubsection}{3}{0pt}%
-  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
-  {\normalfont\fontsize{12}{14}\selectfont\bfseries\itshape}}
-\renewcommand\paragraph{\@startsection{paragraph}{4}{0pt}%
-  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
-  {\normalfont\fontsize{12}{14}\selectfont}}
-\makeatother
-
-% ---------- Figuras e tabelas ----------
-\usepackage{graphicx}
-\usepackage{array}
-% \caption já existe no kernel do LaTeX (via float); formatamos
-% manualmente com \small em vez de usar o pacote "caption".
-
-% ---------- Cores ----------
-\usepackage{xcolor}
-% Observação: o pacote "hyperref" (links clicáveis) depende de outros
-% pacotes (ltxcmds, infwarerr, etexcmds) que também não puderam ser
-% baixados no momento da criação deste template. Para ativá-lo depois,
-% instale-os pelo MiKTeX Console e descomente a linha abaixo:
-% \usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black]{hyperref}
-
 \begin{document}
 
-% \baselineskip só reflete o espaçamento 1,5 (\espacoumemeio) depois do
-% primeiro \selectfont em contexto normal — por isso \parskip é setado aqui,
-% e não no preâmbulo, para reproduzir a "linha em branco" de separação de
-% parágrafos usada no template.
-\setlength{\parskip}{\baselineskip}
-
 % ============================================================
-% PÁGINA 1 — cabeçalho, título, autores, resumo/abstract
-% (conforme Figura 1 do Manual, p. 16)
+% PÁGINA 1 — cabeçalho, título, autores, resumo
 % ============================================================
 \thispagestyle{ucl}
 
 \begin{center}
     \includegraphics[width=3.6cm]{figuras/logo_ucl.png}\\[1em]
 
-    {\fontsize{12}{14}\selectfont Trabalho de Conclusão de Curso de Engenharia da Computação}\\[0.8em]
+    Trabalho de Conclusão de Curso de Engenharia da Computação\\[0.8em]
 
-    {\fontsize{12}{14}\selectfont\bfseries\MakeUppercase{Protótipo para detecção, localização e seleção automática de ação por sensoriamento}:}\\
-    {\fontsize{12}{14}\selectfont\MakeUppercase{Modelo de dados}}\\[0.8em]
+    \textbf{\MakeUppercase{Protótipo para detecção, localização e seleção automática de ação por sensoriamento}:}\\
+    \MakeUppercase{Modelo de dados}\\[0.8em]
 
-    {\fontsize{12}{14}\selectfont\bfseries\itshape Prototype for automatic action detection, localization and selection through sensing:}\\
-    {\fontsize{12}{14}\selectfont\itshape Data model}\\[1.2em]
+    \textbf{\itshape Prototype for automatic action detection, localization and selection through sensing:}\\
+    \itshape Data model\\[1.2em]
 \end{center}
 
-\begin{flushright}
+\begin{center}
     Gabriel Vasconcellos de Morais\footnote{Graduando(a) em Engenharia da Computação pela Faculdade do Centro Leste -- UCL. E-\textit{mail}: gabrielmorais@ucl.br}\\
     Matheus Emanoel Gomes Souza\footnote{Graduando(a) em Engenharia da Computação pela Faculdade do Centro Leste -- UCL. E-\textit{mail}: matheusemanoel@ucl.br}\\
     Anker Douglas Loss\footnote{Orientador(a). Mestre em xxx pela xxx. E-\textit{mail}: anker@ucl.br}
-\end{flushright}
+\end{center}
 
 \begin{center}
-    {\fontsize{12}{14}\selectfont\bfseries RESUMO}
+    \textbf{RESUMO}
 \end{center}
-{\espacosimples
+
 \noindent A construção de protótipos de sensoriamento com hardware acessível é um recurso
 didático relevante em Engenharia da Computação, por permitir explorar de forma prática conceitos
 de aquisição de dados. Integrar sensoriamento de baixo custo, processamento em tempo real e
@@ -152,18 +70,15 @@ em tempo real em um radar circular, seleciona automaticamente, entre torres cand
 ao redor da base, a mais adequada para responder a cada alvo, e registra em auditoria toda ação
 executada. O processamento e a tomada de decisão são concentrados em uma aplicação desktop, com
 arquitetura pensada para permitir evolução futura sem exigir hardware adicional. Os requisitos do sistema foram levantados por engenharia reversa diretamente
-do código-fonte já implementado, e a validação funcional foi realizada por meio de um modo de
-simulação embutido, na ausência do hardware físico montado. Discutem-se, por fim, as limitações
+do código-fonte já implementado. Discutem-se, por fim, as limitações
 inerentes à abordagem de baixo custo adotada.
 
 \noindent\textbf{Palavras-chave}: Sensoriamento de baixo custo; Detecção e rastreamento de alvos; Seleção automática de ação; Arduino; Protótipo.
-\par}
-\espacoumemeio
 
 \begin{center}
-    {\fontsize{12}{14}\selectfont\bfseries ABSTRACT}
+    \textbf{ABSTRACT}
 \end{center}
-{\espacosimples
+
 \noindent This work describes the RadarTorres prototype, a system for automatic action
 detection, localization and selection through sensing, developed as a Final Course Project in
 Computer Engineering. The prototype integrates sensors to identify objects in a monitored
@@ -181,8 +96,6 @@ interfaces. Results indicate that the interface-based architecture enables this 
 incrementally and with low risk.
 
 \noindent\textbf{Keywords}: Sensing; Data model; Persistence; SQL migration; Prototype.
-\par}
-\espacoumemeio
 
 \clearpage
 
@@ -243,5 +156,72 @@ usado para observar o comportamento do sistema durante este trabalho, o que imp�
 ao escopo dos resultados relatados: eles atestam a corretude da lógica de decisão implementada em
 software, mas não substituem uma validação de campo com sensores e torres físicas, deixada como
 trabalho futuro.
+
+\subsection{Diagrama de pacotes}
+
+A organização interna da aplicação desktop foi documentada por meio de um diagrama de pacotes,
+diagrama estrutural da UML que representa a divisão lógica do sistema em pacotes e as
+dependências existentes entre eles, sem detalhar atributos ou métodos das classes neles contidas.
+No RadarTorres, cada pacote corresponde a um \textit{namespace} do projeto
+\texttt{RadarTorres.App}, coincidente com uma pasta do código-fonte, e o diagrama foi obtido
+diretamente do código da \textit{branch} principal do repositório: cada seta representa ao menos
+uma diretiva \texttt{using RadarTorres.App.*} (ou uma referência \texttt{clr-namespace} em XAML)
+presente nos arquivos do pacote de origem, de modo que o diagrama descreve a estrutura efetivamente
+implementada, e não apenas a pretendida.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/Diagrama_de_Pacotes.png}
+  \caption{Diagrama de pacotes do RadarTorres. Setas em vermelho indicam dependências que formam
+  ciclos (dos autores).}
+\end{figure}
+
+O fluxo principal de dependências segue a organização do padrão MVVM, de cima para baixo: Views
+$\rightarrow$ ViewModels $\rightarrow$ Services $\rightarrow$ Repositories $\rightarrow$ Data
+$\rightarrow$ Models. O pacote Models ocupa a posição mais estável do sistema -- todos os demais
+dependem dele e ele não depende de nenhum outro --, o que é desejável para as entidades de
+domínio, e a separação entre as interfaces de Repositories e a implementação em CSV do pacote Data
+é o que viabiliza a futura migração para um banco relacional sem alterar ViewModels ou Services. A
+construção do diagrama a partir do código revelou, também, três dependências que formam ciclos
+entre pacotes -- destacadas em vermelho na figura --: o \texttt{NavigationService} importa
+\textit{namespaces} de Views para instanciar telas (Services $\rightarrow$ Views), e o
+\texttt{DataSeeder}, responsável pela carga inicial de dados, depende de Repositories e de
+Services, enquanto esses mesmos pacotes dependem de Data. Esses ciclos não impedem o funcionamento
+da aplicação, pois todos os pacotes pertencem ao mesmo \textit{assembly}, mas aumentam o
+acoplamento e dificultam testes isolados e futuras separações em projetos distintos.
+
+\subsection{Modelo de dados}
+
+A persistência do RadarTorres foi igualmente documentada por meio de um levantamento do modelo de
+dados diretamente a partir do código-fonte já implementado. O protótipo não utiliza, no estágio
+atual, um sistema gerenciador de banco de dados relacional: seis entidades -- usuários, objetos
+detectados, ações realizadas, trocas de modo de operação, preferências de usuário e chamados de
+suporte -- são persistidas localmente em arquivos CSV, um por tabela, cada uma acessada
+exclusivamente por uma interface de repositório dedicada, o que isola as camadas de ViewModel e
+Service do formato de armazenamento.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/DER_Atual.png}
+  \caption{Modelo de dados atual (persistência em CSV) -- diagrama entidade-relacionamento
+  levantado a partir do código-fonte do projeto (dos autores).}
+\end{figure}
+
+\texttt{Usuario} se relaciona 1:1 com \texttt{PreferenciasUsuario} e 1:N com
+\texttt{AcaoRealizada} e \texttt{ModoAtualTorre} -- nesses dois últimos casos por \textbf{login}
+(texto), sem chave estrangeira real -- e com \texttt{ChamadoAjuda}, por identificador numérico.
+\texttt{ObjetoDetectado} não possui nenhum vínculo persistido com as demais entidades, sendo
+registrado de forma independente. Como proposta de evolução, foi elaborado um modelo relacional
+equivalente, no qual as referências textuais por login seriam substituídas por chaves estrangeiras
+íntegras por identificador numérico, com integridade garantida pelo próprio SGBD, permitindo migrar
+a persistência de CSV/JSON para SQL sem exigir alterações nas camadas de ViewModel ou Service, já
+isoladas do formato de armazenamento por meio das interfaces de repositório.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/DER_Proposto.png}
+  \caption{Modelo relacional proposto para a migração futura de persistência, de CSV/JSON para SQL
+  (dos autores).}
+\end{figure}
 
 \end{document}
