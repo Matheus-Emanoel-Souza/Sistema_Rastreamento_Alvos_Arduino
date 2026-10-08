@@ -18,3 +18,8 @@ Anotações de pontos a revisar/implementar em futuras sessões. Atualizar confo
 ## Feito
 
 - [x] Instalador Arduino IDE (`instalar_arduino_ide.bat`) — winget com fallback download direto.
+
+## Ver também
+
+- [[Diagrama_Eletrico]] — ligações elétricas mencionadas no item "Usar app Wokwi".
+- [[COMUNICACAO_ARDUINO]] — contexto da configuração de ambiente Arduino.

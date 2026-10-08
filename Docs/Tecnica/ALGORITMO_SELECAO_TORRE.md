@@ -179,3 +179,9 @@ tela_y   = (tamanho_do_canvas / 2) − y_mundo · escala    // eixo Y de tela é
 
 O sinal invertido em `tela_y` existe porque, na tela, Y cresce para baixo, enquanto no
 mundo (e na convenção de bússola) Y cresce para o Norte (para cima).
+
+## Ver também
+
+- [[ARQUITETURA]] — onde `TowerSelectionService` se encaixa no fluxo de dados completo.
+- [[DOCUMENTACAO_TECNICA]] — referência de `CoordinateConverter`, `DistanceCalculator`, `QuadrantHelper`.
+- [[Matriz_de_Rastreabilidade]] — RF05 → arquivo/classe desta funcionalidade.

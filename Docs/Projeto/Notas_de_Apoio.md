@@ -18,3 +18,9 @@ Manual UML class diagram tools, good pick:
 - Visual Paradigm — heavier but full UML suite, free community edition exist.
 - Lucidchart — web-based, good UML templates, needs account.
 - PlantUML — text-based (not drag-drop), but fast if want version-controllable diagram alongside code.
+
+## Ver também
+
+- [[Modelo_Banco_de_Dados]] — documento de Modelo de Banco de Dados mencionado no item 4.
+- [[Diagrama_de_Implantacao]] — diagrama de implantação mencionado no item 5.
+- [[UML_RadarTorres]] — diagrama de classes e discussão de máquina de estados (itens 5–6).
