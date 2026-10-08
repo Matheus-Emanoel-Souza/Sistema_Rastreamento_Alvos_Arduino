@@ -524,4 +524,10 @@ próprio** — deliberadamente: RF09 não é uma ação que um ator realiza, é 
 nas associações diferenciadas por perfil (ex.: só Administrador/Operador ligados a UC08/UC14; só
 Administrador ligado a UC17/UC18/UC24) — em vez de como uma bolha própria, o que evitaria
 duplicar, como caso de uso, algo que já é a explicação de por que os outros casos de uso têm os
-atores que têm.
+atores que têm.
+
+## Ver também
+
+- [[UML_RadarTorres]] — introdução conceitual ao diagrama de casos de uso (Seção 3.1).
+- [[Matriz_de_Rastreabilidade]] — requisito → implementação, base destes casos de uso.
+- [[Diagrama_de_Pacotes]] — organização interna do código que implementa estes casos de uso.

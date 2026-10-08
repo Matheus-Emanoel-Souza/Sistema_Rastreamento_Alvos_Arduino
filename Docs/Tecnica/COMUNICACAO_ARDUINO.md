@@ -199,3 +199,9 @@ preferências do console (rolagem automática, exibir horário) são persistidos
 persistidas em SQLite via `SqlitePreferenciasUsuarioRepository`) porque representa configuração
 de máquina/instalação de uma
 ferramenta externa, não uma preferência por conta de usuário do RadarTorres.
+
+## Ver também
+
+- [[ARQUITETURA]] — fluxo de dados completo, da serial até a UI.
+- [[ALGORITMO_SELECAO_TORRE]] — o que acontece com cada leitura `TARGET` depois de interpretada.
+- [[Diagrama_Eletrico]] — pinagem física do lado Arduino deste protocolo.

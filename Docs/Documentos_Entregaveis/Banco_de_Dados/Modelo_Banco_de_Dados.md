@@ -151,3 +151,10 @@ O arquivo `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql` (nesta mesma p
 esse schema e é usado para visualização em ferramentas de modelagem (ex.: SQL Developer via
 driver JDBC SQLite — ver `README.md` desta pasta); o arquivo de dados real da aplicação é
 `radartorres.db`.
+
+## Ver também
+
+- [[MODELO_DADOS]] — versão técnica interna deste modelo (mesmo schema, enquadramento de
+  desenvolvimento em vez de entregável acadêmico).
+- [[Matriz_de_Rastreabilidade]] — requisito → tabela/coluna.
+- [[UML_RadarTorres]] — diagrama de classes conceitual relacionado às entidades aqui descritas.

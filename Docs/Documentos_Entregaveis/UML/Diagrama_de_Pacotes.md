@@ -91,3 +91,8 @@ flowchart TB
   removido).
 * **Arduino** comunica-se com `Services` (mais especificamente `SerialCommunicationService`)
   exclusivamente por porta serial/texto — não há dependência de compilação entre os dois lados.
+
+## Ver também
+
+- [[ARQUITETURA]] — mesma regra de dependência entre camadas, com diagramas de fluxo/sequência.
+- [[DOCUMENTACAO_TECNICA]] — referência classe a classe dentro de cada pacote listado aqui.

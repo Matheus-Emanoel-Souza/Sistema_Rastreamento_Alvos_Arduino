@@ -107,3 +107,11 @@ seção 5, para não duplicar aqui — ela nasce diretamente das linhas de RF ac
 | RF07, RF11, RF15–RF18, RF19, RF20 | `Docs/Tecnica/MODELO_DADOS.md` |
 | RNF15, RNF16 | `Docs/Projeto/INSTALADOR.md` |
 | Todos | `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, `Docs/Projeto/CONTEXTO_PROJETO.md` |
+
+## Ver também
+
+- [[UML_RadarTorres]] — diagramas (casos de uso, implantação) que esta matriz referencia.
+- [[MODELO_DADOS]] — schema SQLite por trás das linhas de RF11–RF18.
+- [[Casos_de_Uso]] — matriz Caso de Uso × Requisito complementar.
+- [[Decisoes_Arquiteturais]] — decisões internas (DA01–DA06) referenciadas acima.
+- [[Limitacoes_Conhecidas]] — limitações e divergências (L01–L03, D1) referenciadas acima.

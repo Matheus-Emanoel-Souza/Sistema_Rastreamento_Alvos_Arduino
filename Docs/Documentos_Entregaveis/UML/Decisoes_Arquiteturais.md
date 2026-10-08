@@ -28,3 +28,9 @@ Quando uma decisão arquitetural também sustenta diretamente um requisito não 
 (por exemplo, DA01 sustentou a migração de CSV para SQLite sem impacto em camadas superiores,
 mas não é em si um RNF), a referência cruzada é feita pelo ID `DA0x`, não pela duplicação do
 texto.
+
+## Ver também
+
+- [[ARQUITETURA]] — detalhamento técnico de cada decisão aqui listada (MVVM manual, DI, camadas).
+- [[Matriz_de_Rastreabilidade]] — seção "Decisões Arquiteturais → implementação".
+- [[Limitacoes_Conhecidas]] — divergências entre especificação e implementação (categoria distinta).

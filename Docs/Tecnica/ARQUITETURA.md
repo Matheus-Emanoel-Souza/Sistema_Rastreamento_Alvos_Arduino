@@ -298,3 +298,10 @@ flowchart LR
 * **Novo algoritmo de seleção de torre:** `ITowerSelectionService` pode ganhar uma implementação
   alternativa (ex.: considerando ângulo de cobertura, carga de trabalho por torre, etc.) sem
   tocar em nenhuma outra camada.
+
+## Ver também
+
+- [[DOCUMENTACAO_TECNICA]] — referência classe a classe de tudo citado aqui.
+- [[MODELO_DADOS]] — persistência SQLite usada pelos serviços de auditoria.
+- [[COMUNICACAO_ARDUINO]] — detalhe do protocolo serial mencionado na seção 3.
+- [[Diagrama_de_Pacotes]] — organização em pacotes/namespaces correspondente a estas camadas.

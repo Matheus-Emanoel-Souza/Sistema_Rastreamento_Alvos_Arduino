@@ -628,3 +628,9 @@ de roteamento: HashRouter escolhido).
   "Source" para "GitHub Actions" — não é possível fazer isso via Git.
 - Commits locais feitos na branch `feature/site-documentacao`; **push não realizado** sem
   autorização explícita na sessão.
+
+## Ver também
+
+- [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
+- [[INSTALADOR]] — detalhamento técnico do processo de instalação Windows.
+- [[ETAPA1_FUNDACAO]] — detalhamento técnico da fundação multiusuário.
