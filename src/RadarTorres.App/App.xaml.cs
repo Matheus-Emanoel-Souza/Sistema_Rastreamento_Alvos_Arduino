@@ -124,6 +124,20 @@ public partial class App : Application
         services.AddSingleton<IZonaMortaRepository, ZonaMortaRepository>();
         services.AddSingleton<IZonaMortaService, ZonaMortaService>();
 
+        // --- Perfis de alvo (cor/formato/tamanho que a detecção por visão computacional deve
+        //     travar). Mesmo padrão de Zonas Mortas: repositório e serviço únicos para toda a
+        //     instalação, arquivo JSON próprio.
+        services.AddSingleton<IPerfilAlvoRepository, PerfilAlvoRepository>();
+        services.AddSingleton<IPerfilAlvoService, PerfilAlvoService>();
+
+        // --- Detecção por visão computacional (card "Detecção por Câmera" em Monitoramento).
+        //     IObjectDetectionService é Singleton porque carrega o modelo ONNX uma única vez
+        //     (custoso); IAlvoVisualService/IAlertaSonoroService não guardam estado próprio,
+        //     Singleton só evita realocação a cada uso.
+        services.AddSingleton<IObjectDetectionService, OnnxYoloDetectionService>();
+        services.AddSingleton<IAlvoVisualService, AlvoVisualService>();
+        services.AddSingleton<IAlertaSonoroService, AlertaSonoroService>();
+
         // --- Aba "Configurações do Arduino" (ambiente/compilação/monitor serial). O compilador
         //     e o localizador do CLI não guardam estado entre chamadas (Transient); as
         //     preferências persistidas usam o mesmo arquivo em disco independentemente da
@@ -170,6 +184,7 @@ public partial class App : Application
         // antes — só deixam de ser compartilhados ENTRE janelas. Os serviços de hardware que
         // MainViewModel usa (serial, rastreamento, seleção de torre, acionamento, simulação)
         // continuam Singleton acima — é a mesma conexão física vista por todas as janelas.
+        services.AddScoped<DeteccaoCameraViewModel>();
         services.AddScoped<MainViewModel>();
         services.AddScoped<MonitoramentoView>();
 
@@ -206,6 +221,9 @@ public partial class App : Application
 
         services.AddScoped<CamerasViewModel>();
         services.AddScoped<CamerasView>();
+
+        services.AddScoped<PerfilAlvoViewModel>();
+        services.AddScoped<PerfilAlvoView>();
     }
 
     /// <summary>

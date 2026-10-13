@@ -229,9 +229,25 @@ public class DashboardCanvas : Canvas
             }
         }
 
-        if (missing.Count > 0)
+        // Cards sem entrada salva (ex.: adicionados numa versão mais nova do app) nunca podem
+        // ser posicionados "no vácuo" (ArrangeDefaultFlow, que ignora os cards que acabaram de
+        // ser restaurados acima) — isso causava sobreposição real: um card novo podia cair
+        // exatamente sobre um card já restaurado pela posição salva. FindFreeSlot já verifica
+        // contra TODOS os cards visíveis no estado atual do canvas, incluindo os recém-
+        // restaurados neste mesmo laço.
+        foreach (DashboardCard card in missing)
         {
-            ArrangeDefaultFlow(missing);
+            double preferredWidth = card.DefaultWidth > 0 ? card.DefaultWidth : DefaultCardWidth;
+            double preferredHeight = card.DefaultHeight > 0 ? card.DefaultHeight : DefaultCardHeight;
+
+            Rect slot = FindFreeSlot(preferredWidth, preferredHeight);
+
+            SetLeft(card, slot.X);
+            SetTop(card, slot.Y);
+            card.Width = slot.Width;
+            card.Height = slot.Height;
+            card.Visibility = Visibility.Visible;
+            SetZIndex(card, ++maxZIndex);
         }
 
         _nextZIndex = maxZIndex + 1;

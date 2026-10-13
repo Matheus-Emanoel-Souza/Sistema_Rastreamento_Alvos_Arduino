@@ -629,6 +629,193 @@ de roteamento: HashRouter escolhido).
 - Commits locais feitos na branch `feature/site-documentacao`; **push não realizado** sem
   autorização explícita na sessão.
 
+## 2026-10-12 — Planejamento do módulo de visão computacional + tela "Perfis de Alvo"
+
+**Pedido (em duas partes, mesma sessão):** (1) verificação somente-leitura do repositório
+(branches locais vs. GitHub) e plano de arquitetura para o módulo de detecção por câmera
+(YOLO) com envio de posição/distância ao Arduino — sem código, só documento de projeto; (2)
+depois de aprovado, uma tela nova para cadastrar o que a detecção deve "travar": cor (apenas
+as primárias), formato (quadrado/redondo/retangular) e tamanho, mais uma opção de tirar foto
+do objeto para tratar depois.
+
+**Antes de codar (parte 2):** 4 perguntas de esclarecimento feitas e respondidas: cores =
+RGB; tamanho = numérico em cm; vários perfis salvos, um ativo por vez; implementar agora (não
+só documentar). Módulo "Câmeras" (visualização) e modelo `tiny-yolov3-11.onnx` já existentes
+na branch `tratamento-de-imagens` foram inspecionados antes de desenhar a integração.
+
+**Entregue:**
+
+- `Docs/Projeto/ETAPA2_VISAO_COMPUTACIONAL.md`: documento de planejamento (arquitetura
+  recomendada — C# in-process com ONNX Runtime em vez de serviço Python separado —, fluxo de
+  dados, extensão aditiva do protocolo serial com `DISTANCE`/`AIM`/`AIMED`, interfaces
+  propostas e perguntas abertas). Nenhum código deste documento foi implementado ainda.
+- Tela "Perfis de Alvo" (`MenuItem.PerfilAlvo`, visível a todos os perfis exceto
+  Visualizador — `IPermissionService.PodeGerenciarPerfisAlvo`): `Models/CorAlvo.cs`,
+  `Models/FormatoAlvo.cs`, `Models/PerfilAlvo.cs`; `Services/IPerfilAlvoRepository.cs` +
+  `PerfilAlvoRepository.cs` (JSON em `%LocalAppData%\RadarTorres\perfis-alvo.json`, mesmo
+  padrão de `ZonaMortaRepository`); `Services/IPerfilAlvoService.cs` + `PerfilAlvoService.cs`
+  (só um perfil ativo por vez, sem edição de campos após criado — igual Zonas Mortas);
+  `ViewModels/PerfilAlvoViewModel.cs` + `Views/PerfilAlvoView.xaml(.cs)`.
+- Captura de "foto de referência": reaproveita `ICameraCaptureServiceFactory`/
+  `ICameraDeviceEnumerator` já existentes do módulo "Câmeras" (sessão de captura própria,
+  independente das já abertas em outras telas); salva PNG em
+  `%LocalAppData%\RadarTorres\PerfisAlvo\Fotos\` e grava o caminho no perfil. Não participa da
+  detecção automática — é só para consulta manual posterior, como pedido.
+- Chaves de localização pt-BR/en-US adicionadas (`Sidebar.PerfilAlvo`, `PerfilAlvo.*`).
+- `dotnet build`: 0 erros (avisos restantes são `NU1701` pré-existentes do pacote AForge, não
+  relacionados a esta mudança). Sem `dotnet test` — não há projeto de testes no repositório.
+- **Suposição assumida e não confirmada com o usuário:** quem pode gerenciar perfis de alvo é
+  Operador+Administrador (mesmo critério de `PodeExecutarAcoes`), não restrito só a
+  Administrador como Zonas Mortas/Usuários — sinalizar se precisar ser mais restritivo.
+- **Pendência:** validação visual/manual da tela (arraste de RadioButtons, captura de foto
+  real com webcam) não foi feita — ambiente sem display interativo nesta sessão.
+
+## 2026-10-13 — Preview ao vivo na foto de referência + detecção por câmera (YOLO) em Monitoramento
+
+**Pedido (em duas partes):** (1) na tela "Perfis de Alvo", a câmera escolhida para a foto de
+referência deveria ativar a visualização imediatamente, para centralizar o objeto antes de
+capturar (antes só tirava a foto direto, sem mostrar o quadro ao vivo); (2) na tela
+Monitoramento, abrir uma câmera e, se o modo de operação estiver Amarelo ou Vermelho e um
+objeto ativo for identificado, disparar um alarme sonoro e informar a distância do alvo.
+
+**Antes de codar (parte 2):** fiz perguntas de esclarecimento, porque a identificação "real"
+por câmera depende do pipeline de visão
+computacional inteiro (YOLO), que só tinha sido planejado (`ETAPA2_VISAO_COMPUTACIONAL.md`),
+nunca implementado. Respostas do usuário: detecção deve filtrar pelo Perfil de Alvo ativo
+(cor/formato/tamanho, não classes genéricas do YOLO); distância anunciada em texto E por voz;
+distância estimada pela imagem (tamanho da caixa × campo de visão da câmera), não pelo
+Arduino. O contrato real do modelo `tiny-yolov3-11.onnx` (entradas/saídas, shapes) foi
+confirmado carregando o arquivo com `Microsoft.ML.OnnxRuntime` num projeto console descartável
+antes de escrever o serviço — não foi suposição.
+
+**Entregue:**
+
+- Preview ao vivo em "Perfis de Alvo": `PerfilAlvoViewModel` agora liga a câmera assim que
+  selecionada (antes só ao clicar "Tirar foto"); "Tirar foto" passou a salvar o quadro atual
+  da pré-visualização em vez de iniciar uma captura nova. Bug corrigido no caminho: ao
+  voltar à tela depois de navegar para outra, o preview não religava (mesma referência de
+  câmera não disparava o `set`) — corrigido em `OnNavigatedTo`.
+- Novo card "Detecção por Câmera" em Monitoramento (`DeteccaoCameraViewModel`, exposto por
+  `MainViewModel.DeteccaoCamera`): seleção de câmera + preview ao vivo + status + distância.
+- Pipeline de visão computacional novo (primeira implementação real da Etapa 2, bem reduzida
+  em escopo — só o necessário para este alerta, não o fluxo completo de mira pan/tilt do
+  documento de planejamento): `Models/VisionDetection.cs`, `Models/AlvoVisualResultado.cs`,
+  `Services/IObjectDetectionService.cs` + `OnnxYoloDetectionService.cs` (inferência ONNX sobre
+  `tiny-yolov3-11.onnx`, ignora a classe COCO — só usa as caixas como região candidata),
+  `Services/IAlvoVisualService.cs` + `AlvoVisualService.cs` (cor por canal dominante, formato
+  por proporção da caixa + preenchimento, distância por campo de visão), `Services/
+  IAlertaSonoroService.cs` + `AlertaSonoroService.cs` (`Console.Beep` + `System.Speech`/SAPI).
+- Novos pacotes: `Microsoft.ML.OnnxRuntime` 1.20.1, `System.Speech` 9.0.0.
+- `Configuration/AppSettings.cs` + `appsettings.json`: seção nova `VisionSettings` com todos
+  os limiares (confiança mínima, intervalo de processamento, campo de visão da câmera,
+  limiares de formato/cor, debounce do alerta) — nenhum valor calibrado com hardware real.
+- `dotnet build` (Debug e Release): 0 erros (os 9 avisos restantes são `NU1701` pré-existentes
+  do AForge). App testado abrindo (processo estável, sem crash na inicialização).
+- **Limitação explícita, sem suposição de que funciona de ponta a ponta:** não há câmera nem
+  monitor neste ambiente para validar visualmente detecção real, cor/formato classificados
+  corretamente, precisão da distância estimada, ou se alguma voz pt-BR está instalada para o
+  TTS funcionar. Os limiares em `VisionSettings` são valores de partida (comentados no próprio
+  `AppSettings.cs`) e quase certamente precisarão de calibração depois de testar com a câmera
+  e o objeto físico reais — pedir para o usuário testar e reportar o comportamento antes de
+  considerar este card "pronto", só "implementado".
+
+## 2026-10-13 (continuação) — Correções reportadas em Monitoramento (binding, crash fatal, sobreposição de cards)
+
+**Pedidos, nesta ordem, reportando problemas reais ao testar:** (1) scroll em "Perfis de
+Alvo" cortava conteúdo; (2) cards sobrepostos em Monitoramento + pedido para fixar o arranjo
+como padrão do sistema; (3) erro de binding ao abrir Monitoramento; (4) aplicativo fechando
+sozinho ao abrir Monitoramento.
+
+**Diagnosticado e corrigido:**
+
+- **Scroll cortado** em `PerfilAlvoView.xaml`: coluna direita (Definição de Alvo/Perfil
+  selecionado/Foto de referência) não tinha `ScrollViewer` — adicionado.
+- **Sobreposição de cards em Monitoramento** — causa raiz real, não só o card novo: o usuário
+  tinha um layout salvo (`dashboard-layout-monitoramento-1.json`) de uma versão antiga do app
+  (cards `Acoes`/`Distancias`, que não existem mais). `DashboardCanvas.ApplyLayoutSnapshot`
+  tinha um bug genuíno: cards sem entrada no layout salvo (ex.: o card novo) eram posicionados
+  por `ArrangeDefaultFlow`, que **nunca verifica contra os cards já restaurados do layout
+  salvo** — o card novo caía "no vácuo" em cima do Radar. Corrigido para usar `FindFreeSlot`
+  (já existia, usado por `ShowCard`), que verifica contra todos os cards visíveis no estado
+  atual — corrige o bug para qualquer card adicionado no futuro, não só este. Removido o
+  arquivo de layout pessoal obsoleto do usuário de teste, para ele voltar a usar o arranjo
+  padrão do sistema (recalculado automaticamente, sempre sem sobreposição por construção).
+- **Erro de binding** ("TwoWay/OneWayToSource não pode funcionar em propriedade somente
+  leitura `UltimaDistanciaMetros`"): `Run.Text` tem `BindingMode` padrão **TwoWay** (diferente
+  de `TextBlock.Text`, que é OneWay) — armadilha clássica do WPF; o resto do projeto já
+  conhecia e sempre especificava `Mode=OneWay`/`OneTime` em bindings de `Run`, só o trecho
+  novo não seguiu o padrão. Trocado por um único `TextBlock.Text` com `StringFormat`.
+- **Crash fatal (fechava o app sozinho)** — o mais sério: `0x80131506` (erro fatal da CLR,
+  acesso de memória inválido, não uma exceção .NET normal) dentro de
+  `AlvoVisualService.CalcularFracaoCor`. Causa: `Bitmap.LockBits` com um retângulo recortado
+  (a caixa detectada) sobre um `Bitmap` cujo `PixelFormat` já bate com o pedido não copia
+  dados — `Scan0`/`Stride` continuam sendo os da imagem INTEIRA, só com `Scan0` deslocado até
+  o canto do recorte. O código copiava `data.Stride` (largura da imagem inteira) por linha em
+  vez de só `area.Width * 3` (largura do recorte) — perto da última linha da imagem, isso lia
+  além do fim do buffer alocado. Corrigido para copiar só os bytes de cada linha do recorte.
+  Verificado que os outros 2 lugares do projeto (novo e pré-existente) que fazem
+  `LockBits`/`Marshal.Copy` sempre travam a imagem INTEIRA (nunca um recorte), então não têm
+  esse problema.
+- `dotnet build` (Release): 0 erros em cada correção. App reaberto depois de cada mudança e
+  confirmado que o processo permanece de pé (sem crash) — ainda sem câmera/objeto real para
+  validar visualmente a detecção em si.
+
+## 2026-10-13 (continuação 2) — Diagnóstico granular: alarme não disparava ao passar o alvo
+
+**Pedido:** "o sistema não está apitando quando o alvo passa em frente a câmera" — pediu para
+corrigir.
+
+**Investigado, sem conseguir reproduzir (sem câmera/objeto físico neste ambiente):** a cadeia
+`DeteccaoCameraViewModel → AlvoVisualService → IObjectDetectionService` tem vários pontos que
+podem silenciosamente não disparar o alarme por design (sem ser bug): nenhum perfil de alvo
+selecionado como ativo; modo de operação em Verde (alarme só dispara em Amarelo/Vermelho,
+por pedido original); YOLO não propor nenhuma caixa candidata para o objeto usado no teste
+(o modelo é treinado nas 80 classes do COCO — um objeto de demonstração arbitrário pode não
+ser reconhecido); ou caixa candidata encontrada mas sem bater o limiar de cor/formato do
+perfil. Antes dessa mudança, `StatusDeteccao` colapsava todos esses casos na mesma mensagem
+genérica ("nenhum alvo identificado"), tornando impossível diferenciar causa sem acesso à
+máquina/depurador.
+
+**Entregue:** `IAlvoVisualService.AvaliarFrame` passou a devolver `AlvoVisualAvaliacao`
+(`Models/AlvoVisualAvaliacao.cs`) — não só se bateu, mas quantas caixas o YOLO propôs no
+quadro e a melhor fração de pixels na cor esperada entre elas, mesmo quando nada bate.
+`DeteccaoCameraViewModel.AplicarResultado` agora mostra, na própria tela de Monitoramento,
+qual das 4 causas está ocorrendo: sem perfil ativo / YOLO sem candidatos / candidatos sem
+bater cor-formato (com o "quão perto" chegou) / alvo identificado mas modo Verde suprime o
+alarme / alarme disparado normalmente. `dotnet build` (Release): 0 erros.
+
+**Pendência que depende do usuário:** preciso que ele teste de novo e me diga **exatamente o
+texto** que aparece no card "Detecção por Câmera" ao passar o objeto na frente da câmera —
+isso aponta com certeza qual limiar ajustar (ou confirma se é a troca de modo que falta) em
+vez de eu continuar tentando adivinhar sem poder reproduzir.
+
+## 2026-10-13 (continuação 3) — Reconhecimento por comparação com a foto de referência
+
+**Esclarecimento que motivou a mudança:** o usuário esperava que a foto de referência tirada
+em "Perfis de Alvo" fosse usada para RECONHECER o objeto (não só um registro manual, como
+implementado antes) — confirmado objetivamente por pergunta antes de codar: "comparar com a
+foto tirada" (não "continuar só por Cor+Formato+Tamanho").
+
+**Entregue:** `AlvoVisualService` agora, quando o perfil ativo tem foto de referência, compara
+cada caixa candidata do YOLO diretamente com a foto — não mais só cor dominante + proporção da
+caixa. Comparação: reduz tanto a foto quanto cada candidata a uma grade 8×8 de cor média
+(`ExtrairAssinatura`) e mede a diferença média por canal (`CalcularSimilaridade`, 0–1, limiar
+`VisionSettings.LimiarSimilaridadeFoto`, padrão 0,65 — valor de partida, não calibrado). Antes
+de comparar, roda a mesma detecção do YOLO **na própria foto de referência** para recortar só
+o objeto (não a foto inteira com fundo); sem detecção na foto, assume que o usuário centralizou
+o objeto ao tirar a foto (preview ao vivo já existente) e usa um recorte central como
+aproximação. **Perfis sem foto continuam funcionando pelo método anterior (cor/formato)** —
+mudança aditiva, sem regressão para quem não tirou foto ainda.
+`Models/AlvoVisualAvaliacao.cs` ganhou `UsouFotoReferencia`/`MelhorPontuacao` (renomeado de
+`MelhorFracaoCor`) para a mensagem de diagnóstico no card dizer "melhor similaridade: X%"
+(comparação por foto) em vez de "melhor correspondência de cor" quando for o caso.
+`dotnet build` (Release): 0 erros. App reaberto, processo estável.
+
+**Pendência, mesma de sempre nesta frente:** limiar de similaridade (0,65) é chute inicial —
+iluminação/ângulo diferentes entre a foto de cadastro e a cena ao vivo tendem a derrubar a
+similaridade bastante; se continuar não reconhecendo, o texto do card agora informa a melhor
+similaridade encontrada, o que diz exatamente quanto abaixar o limiar.
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).

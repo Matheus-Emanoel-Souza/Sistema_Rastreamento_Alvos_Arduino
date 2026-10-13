@@ -145,6 +145,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
             (MenuItem.HistoricoModos, "Sidebar.HistoricoModos"),
             (MenuItem.Usuarios, "Sidebar.Usuarios"),
             (MenuItem.Cameras, "Sidebar.Cameras"),
+            (MenuItem.PerfilAlvo, "Sidebar.PerfilAlvo"),
             (MenuItem.ConfiguracoesArduino, "Sidebar.ConfiguracoesArduino"),
         ];
 
