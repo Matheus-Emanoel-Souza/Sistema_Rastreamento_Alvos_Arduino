@@ -60,6 +60,14 @@
     <PackageReference Include="AForge.Video" Version="2.2.5" />
     <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+
+    <!-- Detecção por visão computacional (card "Detecção por Câmera" em Monitoramento):
+         roda o modelo tiny-yolov3-11.onnx já presente em ComputerVision/Models/YoloModel/
+         dentro do próprio processo (ver OnnxYoloDetectionService) — mesma lógica de "sem
+         processo externo" já adotada para o módulo Câmeras. System.Speech dá o anúncio por
+         voz da distância (SAPI do Windows, builtin, sem modelo/arquivo extra). -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+    <PackageReference Include="System.Speech" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -75,6 +83,11 @@
     </None>
     <!-- Arquivos de tradução (Requisito 1) — nunca strings hardcoded no código/XAML. -->
     <None Update="Resources\Localization\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Modelo ONNX usado por OnnxYoloDetectionService — precisa ser copiado para o output
+         (arquivos binários fora de Compile não são incluídos automaticamente pelo SDK). -->
+    <None Update="ComputerVision\Models\YoloModel\*.onnx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

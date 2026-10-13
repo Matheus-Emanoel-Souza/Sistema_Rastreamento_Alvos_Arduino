@@ -68,6 +68,7 @@ public partial class MonitoramentoView : UserControl
         // lateral, então o carregamento inicial precisa do Loaded (primeiro momento em que o
         // LayoutCanvas tem um tamanho real para converter frações em pixels).
         Loaded += (_, _) => LoadLayoutForCurrentUser();
+        Unloaded += (_, _) => _viewModel.DeteccaoCamera.PararCamera();
     }
 
     /// <summary>Chave de persistência do layout — por tela e por usuário logado (Requisito

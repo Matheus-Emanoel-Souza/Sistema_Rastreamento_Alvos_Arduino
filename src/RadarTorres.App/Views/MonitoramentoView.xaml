@@ -202,6 +202,34 @@
                 </ScrollViewer>
             </shared:DashboardCard>
 
+            <!-- ==================== DETECÇÃO POR CÂMERA ==================== -->
+            <!-- Vídeo em tempo real de uma câmera com detecção por visão computacional (YOLO)
+                 sobre o perfil de alvo ativo (Services/AlvoVisualService) — enquanto o modo de
+                 operação é Amarelo/Vermelho, um alvo identificado dispara alerta sonoro/por voz
+                 com a distância estimada (ver DeteccaoCameraViewModel). DataContext próprio
+                 (DeteccaoCameraViewModel, não MainViewModel) porque é um componente
+                 autocontido, mesmo padrão de CameraSlotViewModel dentro de CamerasViewModel. -->
+            <shared:DashboardCard x:Name="CardDeteccaoCamera" CardId="DeteccaoCamera" Title="DETECÇÃO POR CÂMERA"
+                                   DefaultWidth="320" DefaultHeight="300"
+                                   Canvas.Left="904" Canvas.Top="272" Width="320" Height="300">
+                <StackPanel DataContext="{Binding DeteccaoCamera}">
+                    <ComboBox ItemsSource="{Binding AvailableCameras}" SelectedItem="{Binding SelectedCamera}"
+                              DisplayMemberPath="Name" Margin="0,0,0,8"/>
+
+                    <Border Background="{DynamicResource RadarBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                            BorderThickness="1" CornerRadius="4" Height="130" Margin="0,0,0,8">
+                        <Image Source="{Binding CurrentFrame}" Stretch="Uniform"
+                               Visibility="{Binding IsStreaming, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    </Border>
+
+                    <TextBlock Text="{Binding StatusDeteccao}" Style="{StaticResource LabelText}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+
+                    <TextBlock Text="{Binding UltimaDistanciaMetros, StringFormat='Distância: {0:0.0} m'}"
+                               FontWeight="Bold" FontSize="14" Foreground="{DynamicResource DangerBrush}"
+                               Visibility="{Binding UltimaDistanciaMetros, Converter={StaticResource NullToVisibilityConverter}}"/>
+                </StackPanel>
+            </shared:DashboardCard>
+
             <!-- ==================== MONITORAMENTO (STATUS) ==================== -->
             <shared:DashboardCard x:Name="CardMonitoramento" CardId="Monitoramento" Title="MONITORAMENTO"
                                    DefaultWidth="520" DefaultHeight="280"

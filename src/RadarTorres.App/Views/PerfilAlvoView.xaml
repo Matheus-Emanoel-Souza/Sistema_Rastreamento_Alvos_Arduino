@@ -1,0 +1,227 @@
+<UserControl x:Class="RadarTorres.App.Views.PerfilAlvoView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization"
+             xmlns:conv="clr-namespace:RadarTorres.App.Converters"
+             Background="{DynamicResource BackgroundBrush}"
+             Foreground="{DynamicResource TextPrimaryBrush}"
+             FontFamily="Segoe UI">
+    <!--
+        Tela "Perfis de Alvo" — cadastra o que a detecção por visão computacional deve travar
+        (cor, formato, tamanho) e permite escolher qual perfil está ativo. Sem edição de campos
+        após criado (mesmo padrão de Zonas Mortas): trocar cor/formato/tamanho é remover e criar
+        outro perfil. A seção "Foto de referência" captura uma imagem da câmera escolhida para
+        tratar o objeto manualmente depois — não faz parte da detecção automática.
+    -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,14,10"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{loc:Loc PerfilAlvo.Titulo}" FontSize="18" FontWeight="Bold"
+                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="1" Text="{loc:Loc PerfilAlvo.Descricao}"
+                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="340"/>
+            </Grid.ColumnDefinitions>
+
+            <DataGrid Grid.Column="0" Margin="0,0,16,0" ItemsSource="{Binding Perfis}" SelectedItem="{Binding SelectedPerfil}"
+                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                      CanUserReorderColumns="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                      Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                      BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                      RowBackground="{DynamicResource PanelBrush}" AlternatingRowBackground="{DynamicResource InputBackgroundBrush}"
+                      HorizontalGridLinesBrush="{DynamicResource PanelBorderBrush}" VerticalGridLinesBrush="{DynamicResource PanelBorderBrush}">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                        <Setter Property="Padding" Value="8,6"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="160"/>
+                    <DataGridTextColumn Header="Cor" Binding="{Binding Cor}" Width="80"/>
+                    <DataGridTextColumn Header="Formato" Binding="{Binding Formato}" Width="100"/>
+                    <DataGridTextColumn Header="Tamanho (cm)" Binding="{Binding TamanhoCm, StringFormat={}{0:0.0}}" Width="110"/>
+                    <DataGridCheckBoxColumn Header="Ativo" Binding="{Binding Selecionado}" Width="60"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,4,0">
+                <Border Style="{StaticResource SectionCard}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Form.DefinicaoAlvo}" FontSize="15" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Form.Nome}" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding FormNome, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Form.Cor}" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <RadioButton Content="{loc:Loc PerfilAlvo.Cor.Vermelho}" GroupName="Cor"
+                                         IsChecked="{Binding FormCor, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Vermelho}"/>
+                            <RadioButton Content="{loc:Loc PerfilAlvo.Cor.Verde}" GroupName="Cor"
+                                         IsChecked="{Binding FormCor, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Verde}"/>
+                            <RadioButton Content="{loc:Loc PerfilAlvo.Cor.Azul}" GroupName="Cor"
+                                         IsChecked="{Binding FormCor, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Azul}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Form.Formato}" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <RadioButton Content="{loc:Loc PerfilAlvo.Formato.Quadrado}" GroupName="Formato"
+                                         IsChecked="{Binding FormFormato, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Quadrado}"/>
+                            <RadioButton Content="{loc:Loc PerfilAlvo.Formato.Redondo}" GroupName="Formato"
+                                         IsChecked="{Binding FormFormato, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Redondo}"/>
+                            <RadioButton Content="{loc:Loc PerfilAlvo.Formato.Retangular}" GroupName="Formato"
+                                         IsChecked="{Binding FormFormato, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Retangular}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Form.TamanhoCm}" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding FormTamanhoCm, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="{Binding MensagemFormulario}" TextWrapping="Wrap" Margin="0,0,0,10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SucessoFormulario}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <Button Content="{loc:Loc PerfilAlvo.Form.Salvar}" Command="{Binding SalvarCommand}" Margin="0,0,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Selecionado.Titulo}" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding SelectedPerfil}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                        <Button Content="{loc:Loc PerfilAlvo.Selecionado.SelecionarAtivo}" Command="{Binding SelecionarAtivoCommand}"/>
+                        <Button Content="{loc:Loc PerfilAlvo.Selecionado.Remover}" Style="{StaticResource SecondaryButton}" Command="{Binding RemoverCommand}" Margin="0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SectionCard}" Margin="0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.Titulo}" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.Descricao}" FontSize="11" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" ItemsSource="{Binding AvailableCameras}" SelectedItem="{Binding SelectedCamera}"
+                                      DisplayMemberPath="Name" Margin="0,0,6,10"/>
+                            <Button Grid.Column="1" Content="{loc:Loc PerfilAlvo.Foto.Atualizar}" Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding AtualizarCamerasCommand}" Margin="0,0,0,10"/>
+                        </Grid>
+
+                        <TextBlock Text="{Binding StatusFoto}" TextWrapping="Wrap" FontSize="11" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.PreviewTempoReal}" Style="{StaticResource FieldLabel}"/>
+                        <Border Background="{DynamicResource RadarBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                                BorderThickness="1" CornerRadius="4" Height="180" Margin="0,0,0,10">
+                            <Grid>
+                                <Image Source="{Binding CurrentFrame}" Stretch="Uniform"
+                                       Visibility="{Binding IsStreaming, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <TextBlock Text="{loc:Loc PerfilAlvo.Foto.SemPreview}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240" FontSize="12"
+                                           Foreground="{DynamicResource TextSecondaryBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreaming}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </Border>
+
+                        <Button Content="{loc:Loc PerfilAlvo.Foto.Tirar}" Command="{Binding TirarFotoCommand}"/>
+
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.UltimaSalva}" Style="{StaticResource FieldLabel}"/>
+                        <Border Background="{DynamicResource RadarBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                                BorderThickness="1" CornerRadius="4" Height="140">
+                            <Grid>
+                                <Image Source="{Binding FotoReferenciaPreview}" Stretch="Uniform"
+                                       Visibility="{Binding FotoReferenciaPreview, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                <TextBlock Text="{loc:Loc PerfilAlvo.Foto.SemFoto}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240" FontSize="12"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Visibility="{Binding FotoReferenciaPreview, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
