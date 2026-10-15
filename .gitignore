@@ -19,6 +19,7 @@ Thumbs.db
 ## Claude Code (config local, não do projeto)
 .claude
 .claude/
+CLAUDE.md
 
 ## Obsidian (vault pessoal, não do projeto)
 .obsidian/
