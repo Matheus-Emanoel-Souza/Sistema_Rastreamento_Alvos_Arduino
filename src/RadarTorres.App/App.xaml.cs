@@ -94,6 +94,14 @@ public partial class App : Application
         _mainWindow = new MainWindow();
         _mainWindow.NovaAbaSolicitada += (_, _) => OpenNewSession();
         _mainWindow.AbaFechada += (_, tab) => FecharAba(tab);
+
+        // Fechar a janela pelo "X" precisa encerrar o aplicativo EXPLICITAMENTE: com
+        // ShutdownMode.OnExplicitShutdown o WPF não encerra sozinho ao fechar a última janela,
+        // e sem este encerramento o processo continuava vivo e invisível no Gerenciador de
+        // Tarefas — segurando a câmera e o arquivo do executável (impedindo até recompilar),
+        // até alguém notar e matá-lo à mão. Também é o que garante que OnExit rode.
+        _mainWindow.Closed += (_, _) => Shutdown();
+
         _mainWindow.Show();
 
         OpenNewSession();
