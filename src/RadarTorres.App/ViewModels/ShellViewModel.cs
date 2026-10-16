@@ -147,6 +147,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
             (MenuItem.Cameras, "Sidebar.Cameras"),
             (MenuItem.PerfilAlvo, "Sidebar.PerfilAlvo"),
             (MenuItem.ConfiguracoesArduino, "Sidebar.ConfiguracoesArduino"),
+            (MenuItem.Configuracoes, "Sidebar.Configuracoes"),
         ];
 
         foreach ((MenuItem item, string labelKey) in todos)

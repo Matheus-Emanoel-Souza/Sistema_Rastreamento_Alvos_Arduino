@@ -1,0 +1,205 @@
+<UserControl x:Class="RadarTorres.App.Views.ConfiguracoesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:RadarTorres.App.Converters">
+    <!--
+        Tela "Configurações": preferências desta MÁQUINA (tamanho da janela, idioma, tema e
+        comportamentos), gravadas em JSON local e aplicadas na próxima abertura — ver
+        ConfiguracoesViewModel/ConfiguracoesAplicativoRepository. Segue o padrão visual de
+        ArduinoSettingsView.xaml (mesmos estilos de cartão, título e tipografia).
+
+        Não confundir com "Configurações do Arduino" (ambiente/compilação do sketch) nem com as
+        preferências POR USUÁRIO do banco: estas aqui valem antes de qualquer login, porque a
+        janela precisa estar dimensionada antes mesmo da tela de login aparecer.
+    -->
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="LabelText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,6,0,2"/>
+        </Style>
+        <Style x:Key="HintText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,2,0,8"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="CONFIGURAÇÕES" FontSize="20" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Style="{StaticResource HintText}"
+                       Text="Preferências salvas neste computador. Idioma e tema valem imediatamente; o tamanho da janela é aplicado na próxima vez que o aplicativo abrir."/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+            <StackPanel>
+
+                <!-- ============================ JANELA ============================ -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Janela principal" Style="{StaticResource SectionTitle}"/>
+
+                        <TextBlock Text="COMO O APLICATIVO DEVE ABRIR" Style="{StaticResource LabelText}"/>
+                        <ComboBox ItemsSource="{Binding ModosAbertura}" SelectedItem="{Binding ModoAbertura}" Width="320"
+                                  HorizontalAlignment="Left"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="TamanhoPersonalizado: sempre nas medidas abaixo. Maximizada: ocupa a tela toda. LembrarUltimoTamanho: reabre do jeito que você deixou ao fechar."/>
+
+                        <StackPanel IsEnabled="{Binding TamanhoPersonalizadoHabilitado}">
+                            <TextBlock Text="TAMANHO PRONTO" Style="{StaticResource LabelText}"/>
+                            <ComboBox ItemsSource="{Binding TamanhosPredefinidos}" SelectedItem="{Binding TamanhoSelecionado}"
+                                      Width="320" HorizontalAlignment="Left"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="LARGURA (px)" Style="{StaticResource LabelText}"/>
+                                    <TextBox Text="{Binding LarguraJanela, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}" Width="120"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="ALTURA (px)" Style="{StaticResource LabelText}"/>
+                                    <TextBox Text="{Binding AlturaJanela, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}" Width="120"/>
+                                </StackPanel>
+                                <Button Content="Usar o tamanho atual da janela" Command="{Binding UsarTamanhoAtualCommand}"
+                                        VerticalAlignment="Bottom" Margin="0,0,0,1"/>
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource HintText}"
+                                       Text="Mínimo aceito: 1100 x 650. Valores menores são ajustados automaticamente, porque abaixo disso os painéis não cabem na tela."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ========================== APARÊNCIA =========================== -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Aparência e idioma" Style="{StaticResource SectionTitle}"/>
+
+                        <TextBlock Text="IDIOMA" Style="{StaticResource LabelText}"/>
+                        <ComboBox ItemsSource="{Binding IdiomasDisponiveis}" SelectedItem="{Binding Idioma}"
+                                  Width="320" HorizontalAlignment="Left"/>
+
+                        <TextBlock Text="TEMA" Style="{StaticResource LabelText}"/>
+                        <ComboBox ItemsSource="{Binding TemasDisponiveis}" SelectedItem="{Binding Tema}"
+                                  Width="320" HorizontalAlignment="Left"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Sistema: acompanha o tema claro/escuro configurado no Windows."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ======================= DETECÇÃO / CÂMERA ====================== -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Câmera e detecção" Style="{StaticResource SectionTitle}"/>
+
+                        <CheckBox IsChecked="{Binding IniciarCameraAutomaticamente}"
+                                  Content="Ligar a câmera automaticamente ao abrir o Monitoramento"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Desligue se a webcam for compartilhada com outro programa (reunião, gravação) — assim o RadarTorres não ocupa a câmera sem você pedir."/>
+
+                        <CheckBox IsChecked="{Binding MostrarCaixasDeteccao}"
+                                  Content="Marcar sobre o vídeo as regiões avaliadas pela detecção"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Verde: alvo identificado. Vermelho: objeto recusado. Amarelo: mancha de cor recusada."/>
+
+                        <CheckBox IsChecked="{Binding AlertaSonoroHabilitado}"
+                                  Content="Emitir alerta sonoro ao identificar um alvo"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ========================= DIAGNÓSTICO ========================== -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Diagnóstico" Style="{StaticResource SectionTitle}"/>
+
+                        <CheckBox IsChecked="{Binding GerarRelatorioDesempenho}"
+                                  Content="Gerar relatório de desempenho a cada execução"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Cria um arquivo .log por execução com dados da máquina, parâmetros em vigor, erros e estatísticas da detecção. Útil para calibrar o sistema e investigar problemas."/>
+
+                        <Button Content="Abrir pasta dos relatórios" Command="{Binding AbrirPastaDiagnosticoCommand}"
+                                HorizontalAlignment="Left" Margin="0,4,0,8"/>
+
+                        <TextBlock Text="ARQUIVO DE CONFIGURAÇÕES" Style="{StaticResource LabelText}"/>
+                        <TextBox Text="{Binding CaminhoArquivoConfiguracoes, Mode=OneWay}" IsReadOnly="True"
+                                 FontSize="10" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============================== AÇÕES ============================== -->
+        <StackPanel Grid.Row="2" Margin="0,12,0,0">
+            <TextBlock Text="{Binding MensagemStatus}" Foreground="{DynamicResource AccentBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,8"
+                       Visibility="{Binding MensagemStatus, Converter={StaticResource NullToVisibilityConverter}}"/>
+
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Salvar" Command="{Binding SalvarCommand}"
+                        Background="{DynamicResource AccentBrush}" FontWeight="Bold"/>
+                <Button Content="Cancelar" Command="{Binding CancelarCommand}"/>
+                <Button Content="Restaurar padrões" Command="{Binding RestaurarPadroesCommand}"/>
+
+                <TextBlock Text="• alterações não salvas" Foreground="{DynamicResource DangerBrush}"
+                           VerticalAlignment="Center" Margin="8,0,0,0" FontSize="11"
+                           Visibility="{Binding TemAlteracoesNaoSalvas, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

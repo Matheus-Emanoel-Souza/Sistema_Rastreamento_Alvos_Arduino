@@ -1,6 +1,5 @@
 {
   "App.Title": "RadarTorres — Target Detection and Tower Selection System",
-
   "TopBar.Options": "Options",
   "TopBar.Language": "Language",
   "TopBar.Language.Portuguese": "Portuguese",
@@ -13,7 +12,6 @@
   "TopBar.Logout": "Log out",
   "TopBar.NovaJanela": "New page",
   "TopBar.NovaJanelaDica": "Opens a new page with its own login screen — stay signed in as another user at the same time.",
-
   "Sidebar.Collapse": "Collapse menu",
   "Sidebar.Expand": "Expand menu",
   "Sidebar.PainelPrincipal": "Dashboard",
@@ -25,7 +23,7 @@
   "Sidebar.Cameras": "Cameras",
   "Sidebar.PerfilAlvo": "Target profiles",
   "Sidebar.ConfiguracoesArduino": "Arduino settings",
-
+  "Sidebar.Configuracoes": "Settings",
   "Cameras.Title": "Cameras",
   "Cameras.Painel.Titulo": "Camera",
   "Cameras.Selecao.Titulo": "Camera selection",
@@ -43,7 +41,6 @@
   "Cameras.Erro.Ocupada": "The camera is being used by another application or could not be accessed.",
   "Cameras.Erro.AcessoNegado": "Windows denied access to the camera. Check the system's camera permissions.",
   "Cameras.Erro.Desconhecido": "The selected camera could not be displayed. Please try again.",
-
   "PerfilAlvo.Titulo": "Target profiles",
   "PerfilAlvo.Descricao": "Color, shape and size that the vision-based detection should lock onto. Only one profile can be active at a time.",
   "PerfilAlvo.Form.DefinicaoAlvo": "Target Definition",
@@ -69,9 +66,7 @@
   "PerfilAlvo.Foto.Tirar": "Take photo",
   "PerfilAlvo.Foto.UltimaSalva": "Last saved photo",
   "PerfilAlvo.Foto.SemFoto": "No reference photo yet for this profile.",
-
   "Arduino.Title": "Arduino settings",
-
   "Arduino.Ambiente.Titulo": "Arduino environment",
   "Arduino.Ambiente.CliPath": "Path to arduino-cli.exe",
   "Arduino.Ambiente.Procurar": "Browse…",
@@ -84,7 +79,6 @@
   "Arduino.Ambiente.BaudRate": "Baud rate",
   "Arduino.Ambiente.Atualizar": "Refresh boards and ports",
   "Arduino.Ambiente.NaoEncontradoAjuda": "The Arduino CLI is required to compile sketches and is not bundled with RadarTorres. Download it from arduino.cc/en/software (Arduino CLI section) and set the path to 'arduino-cli.exe' above, or use 'Auto-detect' after installing it.",
-
   "Arduino.Compilacao.Titulo": "Firmware compilation",
   "Arduino.Compilacao.Sketch": "Sketch (.ino)",
   "Arduino.Compilacao.Selecionar": "Select .ino file…",
@@ -97,7 +91,6 @@
   "Arduino.Compilacao.StatusSucesso": "Compilation succeeded",
   "Arduino.Compilacao.StatusFalha": "Compilation failed",
   "Arduino.Compilacao.StatusCancelada": "Compilation cancelled",
-
   "Arduino.Monitor.Titulo": "Serial monitor",
   "Arduino.Monitor.Conectar": "Connect",
   "Arduino.Monitor.Desconectar": "Disconnect",
@@ -105,7 +98,6 @@
   "Arduino.Monitor.ExibirHorario": "Show timestamps",
   "Arduino.Monitor.LimparConsole": "Clear console",
   "Arduino.Monitor.MensagensRecebidas": "Messages received",
-
   "Login.Title": "Sign in to RadarTorres",
   "Login.TabHeader": "Login",
   "Login.Subtitle": "Target Detection and Tower Selection System — Capstone Project",
@@ -115,7 +107,6 @@
   "Login.Error.InvalidCredentials": "Invalid username or password.",
   "Login.Error.FillFields": "Enter your username and password.",
   "Login.DefaultAdminHint": "First time here? Default user: admin / admin123",
-
   "Dashboard.Title": "Dashboard",
   "Dashboard.ObjetosDetectados": "Detected objects",
   "Dashboard.AcoesRealizadas": "Actions performed",
@@ -136,7 +127,6 @@
   "Dashboard.LayoutSistemaRestaurado": "System default layout restored. Your saved personal layout is still available in \"Restore my layout\".",
   "Dashboard.MeuLayoutRestaurado": "Your personal layout was restored.",
   "Dashboard.SemLayoutPessoalSalvo": "You haven't saved a personal layout on this screen yet.",
-
   "Profile.Title": "My profile",
   "Profile.Name": "Name",
   "Profile.Email": "Email",
@@ -149,7 +139,6 @@
   "Profile.NewPassword": "New password",
   "Profile.ConfirmPassword": "Confirm new password",
   "Profile.Save": "Save new password",
-
   "Common.EmConstrucao": "Under construction — this screen is coming in a future stage.",
   "Common.MostrarSenha": "Show password",
   "Common.OcultarSenha": "Hide password",

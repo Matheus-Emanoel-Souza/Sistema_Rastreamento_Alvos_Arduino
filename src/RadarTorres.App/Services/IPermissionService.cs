@@ -19,7 +19,10 @@ public enum MenuItem
     ConfiguracoesArduino,
 
     /// <summary>Tela "Perfis de Alvo" — cor/formato/tamanho que a detecção deve travar (ver PerfilAlvoView).</summary>
-    PerfilAlvo
+    PerfilAlvo,
+
+    /// <summary>Tela "Configurações" — preferências desta máquina: janela, idioma, tema, comportamento (ver ConfiguracoesView).</summary>
+    Configuracoes
 }
 
 /// <summary>
