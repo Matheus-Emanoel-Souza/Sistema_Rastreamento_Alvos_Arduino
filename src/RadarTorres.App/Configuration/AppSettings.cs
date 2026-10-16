@@ -63,16 +63,42 @@ public sealed class SimulationSettings
 /// <summary>
 /// Parâmetros do card "Detecção por Câmera" (Monitoramento) — ver
 /// <see cref="Services.IObjectDetectionService"/>/<see cref="Services.IAlvoVisualService"/>.
-/// Todos os limiares abaixo são valores de partida (não calibrados com câmera/objeto reais) —
-/// ajuste aqui depois de testar com o hardware físico, sem precisar recompilar.
+/// Todos os limiares abaixo são valores de partida — ajuste em <c>appsettings.json</c> depois
+/// de testar com o hardware físico, sem precisar recompilar.
 /// </summary>
+/// <remarks>
+/// ATENÇÃO: os valores inicializados aqui são apenas o fallback para chaves AUSENTES do
+/// <c>appsettings.json</c> — toda chave presente no arquivo VENCE o valor do código
+/// (<c>configuration.Bind</c> em <c>App.LoadAppSettings</c>). Já aconteceu de uma recalibração
+/// feita só aqui não ter nenhum efeito em execução, porque o arquivo continuava com os números
+/// antigos. Ao mudar um limiar, mude nos DOIS lugares — e confira o cabeçalho do relatório de
+/// desempenho (<see cref="Services.IPerformanceMonitor"/>), que imprime os valores realmente
+/// em vigor justamente para esse engano não passar despercebido de novo.
+/// </remarks>
 public sealed class VisionSettings
 {
-    /// <summary>Confiança mínima (0–1) de uma caixa do YOLO para ser considerada candidata a alvo.</summary>
-    public double ConfiancaMinima { get; set; } = 0.5;
+    /// <summary>
+    /// Confiança mínima (0–1) de uma caixa do YOLO para ser considerada candidata a alvo.
+    /// Baixo de propósito: o tiny-YOLOv3 é um modelo pequeno e raramente passa de 0,5 em
+    /// objetos do dia a dia fora de cena ideal, e aqui a caixa é só uma *proposta de região* —
+    /// quem decide se é o alvo é a comparação com o perfil em <see cref="Services.AlvoVisualService"/>,
+    /// então vale deixar entrar candidato fraco e filtrar depois, em vez de perder o alvo aqui.
+    /// </summary>
+    public double ConfiancaMinima { get; set; } = 0.25;
 
-    /// <summary>Intervalo mínimo (ms) entre duas rodadas de detecção — a inferência roda bem mais lenta que a taxa de quadros da câmera.</summary>
-    public int IntervaloProcessamentoMs { get; set; } = 500;
+    /// <summary>
+    /// Intervalo mínimo (ms) entre duas rodadas de detecção. É um piso, não um alvo: uma rodada
+    /// nunca começa enquanto a anterior não terminou (ver DeteccaoCameraViewModel), então o
+    /// ritmo real é o maior entre este valor e o custo da rodada.
+    /// </summary>
+    /// <remarks>
+    /// 120 ms só passou a fazer sentido depois de a rodada que resolve pela cor cair para ~27 ms
+    /// (ver <see cref="Services.AlvoVisualService"/>) — com os ~700 ms que uma rodada custava
+    /// antes, qualquer valor abaixo disso era ficção e o sistema respondia em torno de 1,5 s.
+    /// Quando o detector ONNX precisa rodar, a rodada volta a custar ~480 ms e este piso deixa
+    /// de ser o limitante, como deve ser.
+    /// </remarks>
+    public int IntervaloProcessamentoMs { get; set; } = 120;
 
     /// <summary>
     /// Campo de visão horizontal da câmera, em graus — usado para estimar a distância do alvo
@@ -98,10 +124,57 @@ public sealed class VisionSettings
     /// Similaridade mínima (0–1) entre a foto de referência de um perfil e uma caixa candidata
     /// do quadro ao vivo para considerar que é o mesmo objeto (ver
     /// <see cref="Services.AlvoVisualService"/>). Só usado quando o perfil ativo tem foto de
-    /// referência — sem foto, a detecção cai de volta para cor/formato. Comparação é por cor/
-    /// textura média numa grade 8×8 da região, bem sensível a diferença de iluminação entre a
-    /// foto de cadastro e a cena ao vivo — um valor de partida, quase certamente precisa ser
-    /// calibrado para baixo (mais tolerante) depois de testar com o objeto físico real.
+    /// referência — sem foto, a detecção cai de volta para cor/formato.
     /// </summary>
-    public double LimiarSimilaridadeFoto { get; set; } = 0.65;
+    /// <remarks>
+    /// <para>
+    /// Calibrado medindo a métrica atual (interseção de histograma matiz/saturação + grade
+    /// espacial — ver <see cref="Services.AlvoVisualService"/>) sobre as fotos de referência
+    /// reais do projeto: o mesmo caderno verde fotografado duas vezes, em ângulos e
+    /// enquadramentos diferentes, pontuou <b>0,56</b>; o pior falso positivo da mesma cena
+    /// (o rosto de quem segurava o caderno) ficou em <b>0,32</b>, seguido de cama 0,26,
+    /// camiseta 0,22 e parede 0,14. 0,45 fica no meio dessa faixa livre, deixando folga dos
+    /// dois lados para variação de iluminação ao vivo.
+    /// </para>
+    /// <para>
+    /// A métrica anterior (diferença média de cor dividida por 255) comprimia qualquer par de
+    /// imagens reais na faixa 0,57–0,86 — nos mesmos pares acima, rosto dava 0,80, cama 0,78 e
+    /// camiseta 0,71, todos ACIMA do limiar de 0,65 que estava configurado. Era aprovação
+    /// quase universal, não reconhecimento. Se mexer na métrica, recalibre este número junto.
+    /// </para>
+    /// </remarks>
+    public double LimiarSimilaridadeFoto { get; set; } = 0.45;
+
+    /// <summary>
+    /// Peso (0–1) da interseção de histograma matiz/saturação na similaridade final; o restante
+    /// vai para a grade espacial 8×8. Pesa mais no histograma porque ele não depende de onde o
+    /// objeto está na caixa nem de estar girado — a grade 8×8 sozinha desalinha assim que o
+    /// objeto é segurado num ângulo diferente do da foto de cadastro.
+    /// </summary>
+    public double PesoHistogramaCor { get; set; } = 0.7;
+
+    /// <summary>
+    /// Fração mínima de pixels de uma caixa candidata que precisam ter a cor cadastrada no
+    /// perfil para ela ser aceita como alvo, mesmo quando a comparação com a foto passa. Serve
+    /// de segunda prova barata contra falso positivo — e aproveita a cor do perfil, que antes
+    /// era simplesmente ignorada sempre que o perfil tinha foto.
+    /// </summary>
+    public double LimiarCorCandidato { get; set; } = 0.25;
+
+    /// <summary>
+    /// Saturação mínima (0–1) para um pixel ter cor considerada "definida". Abaixo disso o
+    /// pixel é cinza/branco/preto e não conta para nenhuma <see cref="Models.CorAlvo"/> —
+    /// sem esse corte, parede clara e pele contavam como "Vermelho" e inflavam a fração de cor.
+    /// </summary>
+    public double SaturacaoMinimaCor { get; set; } = 0.25;
+
+    /// <summary>Brilho mínimo (0–1) para um pixel ter cor considerada "definida" (descarta sombra/preto).</summary>
+    public double BrilhoMinimoCor { get; set; } = 0.15;
+
+    /// <summary>
+    /// Área mínima, como fração do quadro, de uma região proposta por segmentação de cor
+    /// (usada quando o YOLO não propõe nenhuma caixa com a cor do perfil — ver
+    /// <see cref="Services.AlvoVisualService"/>). Evita propor respingos de cor do fundo.
+    /// </summary>
+    public double AreaMinimaRegiaoCor { get; set; } = 0.005;
 }

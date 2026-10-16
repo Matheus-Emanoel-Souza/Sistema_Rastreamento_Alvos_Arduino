@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace RadarTorres.App.Models;
 
 /// <summary>
@@ -9,4 +11,15 @@ namespace RadarTorres.App.Models;
 /// caso contrário), mesmo quando nada bate — é o que permite a tela "Detecção por Câmera"
 /// mostrar exatamente em qual etapa a detecção está parando, em vez de só "não identificado".
 /// </summary>
-public sealed record AlvoVisualAvaliacao(int TotalDeteccoes, double MelhorPontuacao, bool UsouFotoReferencia, AlvoVisualResultado? Resultado);
+/// <param name="Candidatos">
+/// TODAS as regiões avaliadas no quadro, aceitas ou não — é o que a tela desenha sobre o vídeo
+/// para o operador enxergar o que o sistema está considerando além do alvo pretendido.
+/// </param>
+/// <param name="Tempos">Custo de cada etapa desta rodada, para o relatório de desempenho.</param>
+public sealed record AlvoVisualAvaliacao(
+    int TotalDeteccoes,
+    double MelhorPontuacao,
+    bool UsouFotoReferencia,
+    AlvoVisualResultado? Resultado,
+    IReadOnlyList<AlvoVisualCandidato> Candidatos,
+    TemposRodada Tempos);

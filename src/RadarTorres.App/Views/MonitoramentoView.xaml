@@ -222,6 +222,17 @@
                                Visibility="{Binding IsStreaming, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     </Border>
 
+                    <!-- Contorno das regiões avaliadas desenhado sobre o vídeo: deixa visível o
+                         que o sistema está considerando além do alvo pretendido (ver
+                         DeteccaoCameraViewModel.DesenharCaixas). -->
+                    <CheckBox IsChecked="{Binding MostrarCaixasDeteccao}" Content="Marcar o que foi detectado"
+                              Foreground="{DynamicResource ForegroundBrush}" FontSize="11" Margin="0,0,0,2"/>
+
+                    <TextBlock Style="{StaticResource LabelText}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,4"
+                               Visibility="{Binding MostrarCaixasDeteccao, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Run Text="■" Foreground="Lime"/><Run Text=" alvo  "/><Run Text="■" Foreground="#FF3C3C"/><Run Text=" objeto recusado  "/><Run Text="■" Foreground="#FFD200"/><Run Text=" cor recusada"/>
+                    </TextBlock>
+
                     <TextBlock Text="{Binding StatusDeteccao}" Style="{StaticResource LabelText}" TextWrapping="Wrap" Margin="0,0,0,4"/>
 
                     <TextBlock Text="{Binding UltimaDistanciaMetros, StringFormat='Distância: {0:0.0} m'}"
