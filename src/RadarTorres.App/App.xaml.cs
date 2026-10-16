@@ -81,10 +81,15 @@ public partial class App : Application
             ServiceProvider.GetRequiredService<IUsuarioRepository>(),
             ServiceProvider.GetRequiredService<IPasswordHasher>());
 
-        // Tema padrão antes de qualquer janela aparecer (evita "flash" sem estilo na tela de
-        // login); a preferência real do usuário é aplicada depois de autenticar. Tema/idioma
-        // são compartilhados por todas as janelas (recursos globais da Application no WPF).
-        ServiceProvider.GetRequiredService<IThemeService>().ApplyTheme(TemaPreferido.Escuro);
+        // Tema e idioma desta MÁQUINA antes de qualquer janela aparecer (evita "flash" sem
+        // estilo na tela de login); a preferência por CONTA DE USUÁRIO é aplicada depois de
+        // autenticar e sobrepõe esta. Tema/idioma são compartilhados por todas as janelas
+        // (recursos globais da Application no WPF).
+        ConfiguracoesAplicativo configuracoes =
+            ServiceProvider.GetRequiredService<IConfiguracoesAplicativoRepository>().Atual;
+
+        ServiceProvider.GetRequiredService<IThemeService>().ApplyTheme(configuracoes.Tema);
+        ServiceProvider.GetRequiredService<ILocalizationService>().SetLanguage(configuracoes.Idioma);
 
         // Cada sessão (aba) fecha independentemente — o app só encerra quando a última fecha
         // (ver CloseSession). Controlamos isso manualmente em vez de deixar o WPF decidir
@@ -101,6 +106,8 @@ public partial class App : Application
         // Tarefas — segurando a câmera e o arquivo do executável (impedindo até recompilar),
         // até alguém notar e matá-lo à mão. Também é o que garante que OnExit rode.
         _mainWindow.Closed += (_, _) => Shutdown();
+
+        AplicarConfiguracoesDeJanela(_mainWindow, configuracoes);
 
         _mainWindow.Show();
 
@@ -145,6 +152,15 @@ public partial class App : Application
         services.AddSingleton<IObjectDetectionService, OnnxYoloDetectionService>();
         services.AddSingleton<IAlvoVisualService, AlvoVisualService>();
         services.AddSingleton<IAlertaSonoroService, AlertaSonoroService>();
+
+        // --- Configurações desta máquina (tela "Configurações"). Singleton porque são um único
+        //     arquivo local, lido na abertura da janela — antes de qualquer login — e consultado
+        //     em pontos sensíveis a latência; a View/ViewModel acompanham o ciclo da sessão,
+        //     como as demais telas.
+        services.AddSingleton<IConfiguracoesAplicativoRepository>(
+            sp => new ConfiguracoesAplicativoRepository(sp.GetRequiredService<ILoggingService>()));
+        services.AddScoped<ConfiguracoesViewModel>();
+        services.AddScoped<ConfiguracoesView>();
 
         // --- Aba "Configurações do Arduino" (ambiente/compilação/monitor serial). O compilador
         //     e o localizador do CLI não guardam estado entre chamadas (Transient); as
@@ -384,6 +400,83 @@ public partial class App : Application
                 "RadarTorres - Erro ao iniciar",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
+        }
+    }
+
+
+    /// <summary>
+    /// Dimensiona a janela principal conforme as configurações desta máquina (tela
+    /// "Configurações") e, ao fechar, guarda o tamanho para o modo "lembrar último tamanho".
+    /// </summary>
+    /// <remarks>
+    /// O tamanho é limitado à área de trabalho disponível antes de ser aplicado: uma
+    /// configuração gravada num monitor grande e aberta depois num monitor menor (ou num
+    /// notebook sem a segunda tela) deixaria a janela maior que a tela, com a barra de título e
+    /// os botões fora do alcance do mouse — sem como redimensionar de volta.
+    /// </remarks>
+    private void AplicarConfiguracoesDeJanela(Window janela, ConfiguracoesAplicativo configuracoes)
+    {
+        double larguraMaxima = SystemParameters.WorkArea.Width;
+        double alturaMaxima = SystemParameters.WorkArea.Height;
+
+        switch (configuracoes.ModoAbertura)
+        {
+            case ModoAberturaJanela.Maximizada:
+                janela.WindowState = WindowState.Maximized;
+                break;
+
+            case ModoAberturaJanela.LembrarUltimoTamanho:
+                if (configuracoes.UltimaMaximizada)
+                {
+                    janela.WindowState = WindowState.Maximized;
+                }
+                else if (configuracoes.UltimaLargura is { } largura && configuracoes.UltimaAltura is { } altura)
+                {
+                    janela.Width = Math.Min(largura, larguraMaxima);
+                    janela.Height = Math.Min(altura, alturaMaxima);
+                }
+                break;
+
+            default:
+                janela.Width = Math.Min(configuracoes.LarguraJanela, larguraMaxima);
+                janela.Height = Math.Min(configuracoes.AlturaJanela, alturaMaxima);
+                break;
+        }
+
+        janela.Closing += (_, _) => GuardarTamanhoDaJanela(janela);
+    }
+
+    /// <summary>Registra o tamanho/estado atual da janela para a próxima abertura.</summary>
+    private void GuardarTamanhoDaJanela(Window janela)
+    {
+        try
+        {
+            IConfiguracoesAplicativoRepository repositorio =
+                ServiceProvider!.GetRequiredService<IConfiguracoesAplicativoRepository>();
+
+            ConfiguracoesAplicativo atuais = repositorio.Atual;
+            atuais.UltimaMaximizada = janela.WindowState == WindowState.Maximized;
+
+            // RestoreBounds (e não ActualWidth/Height) porque, com a janela maximizada ou
+            // minimizada, as dimensões atuais são as da tela — guardá-las faria o modo
+            // "lembrar" reabrir sempre do tamanho do monitor, perdendo o tamanho real que o
+            // usuário tinha escolhido antes de maximizar.
+            if (janela.WindowState == WindowState.Normal)
+            {
+                atuais.UltimaLargura = janela.ActualWidth;
+                atuais.UltimaAltura = janela.ActualHeight;
+            }
+            else if (!janela.RestoreBounds.IsEmpty)
+            {
+                atuais.UltimaLargura = janela.RestoreBounds.Width;
+                atuais.UltimaAltura = janela.RestoreBounds.Height;
+            }
+
+            repositorio.Salvar(atuais);
+        }
+        catch (Exception)
+        {
+            // Encerrando: não vale impedir o fechamento por não conseguir lembrar o tamanho.
         }
     }
 

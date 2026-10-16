@@ -1,6 +1,5 @@
 {
   "App.Title": "RadarTorres — Sistema de Detecção e Seleção de Torres",
-
   "TopBar.Options": "Opções",
   "TopBar.Language": "Idioma",
   "TopBar.Language.Portuguese": "Português",
@@ -13,7 +12,6 @@
   "TopBar.Logout": "Sair",
   "TopBar.NovaJanela": "Nova página",
   "TopBar.NovaJanelaDica": "Abre uma nova página com uma tela de login própria — permite ficar conectado com outro usuário ao mesmo tempo.",
-
   "Sidebar.Collapse": "Recolher menu",
   "Sidebar.Expand": "Expandir menu",
   "Sidebar.PainelPrincipal": "Painel principal",
@@ -25,7 +23,7 @@
   "Sidebar.Cameras": "Câmeras",
   "Sidebar.PerfilAlvo": "Perfis de Alvo",
   "Sidebar.ConfiguracoesArduino": "Configurações do Arduino",
-
+  "Sidebar.Configuracoes": "Configurações",
   "Cameras.Title": "Câmeras",
   "Cameras.Painel.Titulo": "Câmera",
   "Cameras.Selecao.Titulo": "Seleção da câmera",
@@ -43,7 +41,6 @@
   "Cameras.Erro.Ocupada": "A câmera está em uso por outro aplicativo ou não pôde ser acessada.",
   "Cameras.Erro.AcessoNegado": "O Windows negou o acesso à câmera. Verifique as permissões de câmera do sistema.",
   "Cameras.Erro.Desconhecido": "Não foi possível exibir a câmera selecionada. Tente novamente.",
-
   "PerfilAlvo.Titulo": "Perfis de Alvo",
   "PerfilAlvo.Descricao": "Cor, formato e tamanho que a detecção por visão computacional deve travar ao identificar um alvo. Só um perfil fica ativo por vez.",
   "PerfilAlvo.Form.DefinicaoAlvo": "Definição de Alvo",
@@ -69,9 +66,7 @@
   "PerfilAlvo.Foto.Tirar": "Tirar foto",
   "PerfilAlvo.Foto.UltimaSalva": "Última foto salva",
   "PerfilAlvo.Foto.SemFoto": "Nenhuma foto de referência tirada ainda para este perfil.",
-
   "Arduino.Title": "Configurações do Arduino",
-
   "Arduino.Ambiente.Titulo": "Ambiente Arduino",
   "Arduino.Ambiente.CliPath": "Caminho do arduino-cli.exe",
   "Arduino.Ambiente.Procurar": "Procurar…",
@@ -84,7 +79,6 @@
   "Arduino.Ambiente.BaudRate": "Baud Rate",
   "Arduino.Ambiente.Atualizar": "Atualizar placas e portas",
   "Arduino.Ambiente.NaoEncontradoAjuda": "O Arduino CLI é necessário para compilar sketches e não faz parte do RadarTorres. Baixe-o em arduino.cc/pt/software (seção Arduino CLI) e informe o caminho de 'arduino-cli.exe' acima, ou use 'Detectar automaticamente' após instalá-lo.",
-
   "Arduino.Compilacao.Titulo": "Compilação do firmware",
   "Arduino.Compilacao.Sketch": "Sketch (.ino)",
   "Arduino.Compilacao.Selecionar": "Selecionar código .ino…",
@@ -97,7 +91,6 @@
   "Arduino.Compilacao.StatusSucesso": "Compilação concluída com sucesso",
   "Arduino.Compilacao.StatusFalha": "Falha na compilação",
   "Arduino.Compilacao.StatusCancelada": "Compilação cancelada",
-
   "Arduino.Monitor.Titulo": "Monitor serial",
   "Arduino.Monitor.Conectar": "Conectar",
   "Arduino.Monitor.Desconectar": "Desconectar",
@@ -105,7 +98,6 @@
   "Arduino.Monitor.ExibirHorario": "Exibir horário",
   "Arduino.Monitor.LimparConsole": "Limpar console",
   "Arduino.Monitor.MensagensRecebidas": "Mensagens recebidas",
-
   "Login.Title": "Entrar no RadarTorres",
   "Login.TabHeader": "Login",
   "Login.Subtitle": "Sistema de Detecção e Seleção de Torres — TCC",
@@ -115,7 +107,6 @@
   "Login.Error.InvalidCredentials": "Usuário ou senha inválidos.",
   "Login.Error.FillFields": "Informe usuário e senha.",
   "Login.DefaultAdminHint": "Primeiro acesso? Usuário padrão: admin / admin123",
-
   "Dashboard.Title": "Painel principal",
   "Dashboard.ObjetosDetectados": "Objetos detectados",
   "Dashboard.AcoesRealizadas": "Ações realizadas",
@@ -136,7 +127,6 @@
   "Dashboard.LayoutSistemaRestaurado": "Layout padrão do sistema restaurado. Seu layout pessoal salvo continua disponível em \"Retornar ao meu layout\".",
   "Dashboard.MeuLayoutRestaurado": "Seu layout pessoal foi restaurado.",
   "Dashboard.SemLayoutPessoalSalvo": "Você ainda não salvou um layout pessoal nesta tela.",
-
   "Profile.Title": "Meu perfil",
   "Profile.Name": "Nome",
   "Profile.Email": "E-mail",
@@ -149,7 +139,6 @@
   "Profile.NewPassword": "Nova senha",
   "Profile.ConfirmPassword": "Confirmar nova senha",
   "Profile.Save": "Salvar nova senha",
-
   "Common.EmConstrucao": "Em construção — esta tela chega em uma próxima etapa.",
   "Common.MostrarSenha": "Mostrar senha",
   "Common.OcultarSenha": "Ocultar senha",
