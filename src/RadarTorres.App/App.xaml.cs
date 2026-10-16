@@ -72,6 +72,12 @@ public partial class App : Application
 
         AppDataPaths.EnsureDataFolderExists();
 
+        // Resolve o monitor já aqui para o relatório desta execução existir desde o início,
+        // mesmo que a tela de Monitoramento nunca seja aberta. Sem isso o Singleton só seria
+        // construído ao abrir o card de detecção, e uma execução sem câmera não deixaria
+        // arquivo nenhum — inclusive o cabeçalho com os limiares em vigor, que é útil por si só.
+        ServiceProvider.GetRequiredService<IPerformanceMonitor>();
+
         // Reaplica no banco qualquer escrita que ficou pendente de uma sessão anterior sem
         // conexão (ver PendingWriteQueue) — antes de qualquer outra leitura/escrita, inclusive
         // o seed do admin padrão abaixo.
@@ -104,7 +110,8 @@ public partial class App : Application
         // ShutdownMode.OnExplicitShutdown o WPF não encerra sozinho ao fechar a última janela,
         // e sem este encerramento o processo continuava vivo e invisível no Gerenciador de
         // Tarefas — segurando a câmera e o arquivo do executável (impedindo até recompilar),
-        // até alguém notar e matá-lo à mão. Também é o que garante que OnExit rode.
+        // até alguém notar e matá-lo à mão. Também é o que garante que OnExit rode e o
+        // relatório de desempenho desta execução seja fechado com as estatísticas.
         _mainWindow.Closed += (_, _) => Shutdown();
 
         AplicarConfiguracoesDeJanela(_mainWindow, configuracoes);
@@ -152,6 +159,12 @@ public partial class App : Application
         services.AddSingleton<IObjectDetectionService, OnnxYoloDetectionService>();
         services.AddSingleton<IAlvoVisualService, AlvoVisualService>();
         services.AddSingleton<IAlertaSonoroService, AlertaSonoroService>();
+
+        //     Relatório de desempenho: Singleton porque é UM arquivo por execução do aplicativo.
+        //     O resumo estatístico é escrito no Dispose, disparado pelo ServiceProvider.Dispose()
+        //     em OnExit — por isso não pode ser Transient/Scoped, ou cada instância abriria e
+        //     fecharia um arquivo diferente e nenhum teria a sessão inteira.
+        services.AddSingleton<IPerformanceMonitor, PerformanceMonitorService>();
 
         // --- Configurações desta máquina (tela "Configurações"). Singleton porque são um único
         //     arquivo local, lido na abertura da janela — antes de qualquer login — e consultado
@@ -403,7 +416,6 @@ public partial class App : Application
         }
     }
 
-
     /// <summary>
     /// Dimensiona a janela principal conforme as configurações desta máquina (tela
     /// "Configurações") e, ao fechar, guarda o tamanho para o modo "lembrar último tamanho".
@@ -480,9 +492,30 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Anota uma exceção não tratada no relatório de desempenho desta execução. Melhor esforço:
+    /// o relatório pode nem ter sido criado (falha de disco) e o contêiner pode já estar
+    /// descartado se o erro acontecer durante o encerramento — em nenhum desses casos faz
+    /// sentido uma segunda exceção vinda do próprio tratamento de erro.
+    /// </summary>
+    private static void RegistrarErroNoRelatorio(string contexto, Exception? exception)
+    {
+        try
+        {
+            ServiceProvider?.GetService<IPerformanceMonitor>()?
+                .RegistrarErro(contexto, $"{exception?.GetType().Name}: {exception?.Message}");
+        }
+        catch (Exception)
+        {
+            // Ignorado de propósito — ver resumo acima.
+        }
+    }
+
     /// <summary>Exceções não tratadas geradas na thread de UI (bindings, comandos, eventos).</summary>
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        RegistrarErroNoRelatorio("thread de UI", e.Exception);
+
         MessageBox.Show(
             $"Ocorreu um erro inesperado e o RadarTorres pode não continuar funcionando corretamente.\n\n" +
             $"Detalhes: {e.Exception.Message}",
@@ -499,6 +532,8 @@ public partial class App : Application
     private void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         var exception = e.ExceptionObject as Exception;
+        RegistrarErroNoRelatorio("thread de fundo", exception);
+
         MessageBox.Show(
             $"Ocorreu um erro crítico no RadarTorres e o aplicativo será encerrado.\n\n" +
             $"Detalhes: {exception?.Message ?? "Erro desconhecido."}",
