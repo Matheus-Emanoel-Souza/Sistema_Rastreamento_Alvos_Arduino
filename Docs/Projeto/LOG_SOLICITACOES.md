@@ -1093,8 +1093,72 @@ texto jurídico além do necessário. Fica para decisão do usuário.
 **Pendência que depende do usuário:** conferência visual das telas novas (janela dos termos, PDF
 aberto, modal em resoluções menores) e do fluxo de quadrantes com as duas webcams reais.
 
+## 2026-10-17 — Nova identidade visual (tokens de cor, tipografia, Shell, Painel Principal, Monitoramento)
+
+**Pedido (resumo):** aplicar uma nova identidade visual ao RadarTorres — tokens de cor
+semânticos (claro/escuro), 3 fontes (Chakra Petch/IBM Plex Sans/JetBrains Mono, OFL,
+embutidas), ícones de traço próprios, Shell reconstruída (Sidebar agrupada com ícones,
+248px/76px, cabeçalho com título+chip de comunicação), cards do Painel Principal redesenhados
++ card novo "Radar ao vivo (prévia)", Monitoramento redesenhado (3 botões de modo sempre
+visíveis com selos ATIVO/pede confirmação, radar com quadrantes Q1/Q3 translúcidos permanentes,
+torres quadradas vazadas/preenchidas, alvos quadrados âmbar) e uma passagem de tokens/tipografia
+nas demais telas — regra explícita: **mudança puramente visual**, nenhuma regra de negócio
+alterada. Pedido feito em duas partes na mesma sessão: primeiro um plano com perguntas de
+aprovação, depois "faça tudo que ficou pendente" confirmando as decisões.
+
+**Branch:** `tratamento-de-imagens`. Commits (nesta ordem, cada um com `dotnet build`/`dotnet
+test` passando): tokens de cor → bugfix i18n do estado de comunicação → dicionário de ícones →
+fontes embutidas → Shell (sidebar/topbar) → ajuste de alinhamento da sidebar compacta → cards
+do Painel Principal + radar ao vivo → Monitoramento + radar → tipografia/tabelas nas demais
+telas → contraste (OnAccent em vez de branco fixo sobre cores de destaque).
+
+**Decisões aprovadas pelo usuário (perguntadas antes de codar):** troca direta dos tokens
+antigos (sem alias de compatibilidade); hambúrguer da Sidebar alternando 248px/76px em
+qualquer tela (era 210/52px); implementar o card "Radar ao vivo" (funcionalidade nova,
+reaproveitando `ITargetTrackingService`/`ITowerSelectionService` já existentes, sem duplicar
+lógica); fontes OFL podem ser embutidas no instalador.
+
+**Achado que simplificou o escopo:** a confirmação antes de trocar para o modo Vermelho/Disparar
+**já existia** (`MainViewModel.CurrentMode`, `MessageBox.Show` de confirmação) — o selo "pede
+confirmação" pedido é só visual, não precisou de lógica nova.
+
+**Bug corrigido:** o card "Comunicação" do Painel Principal mostrava o enum em inglês
+("Disconnected") mesmo com o app em português — faltava passar pelo dicionário de tradução.
+
+**Itens com fidelidade parcial ao mock (decisão de risco, não implementado por completo):**
+- Os controles de zoom/alcance do radar continuam como overlay interno (22x22, cantos
+  superiores), não como a barra externa de botões 44x44 descrita no mock — movê-los exigiria
+  expor estado interno do `RadarControl` como propriedade pública, risco maior para o tempo
+  disponível.
+- O rótulo "N · 0°" do radar foi reposicionado (mais à esquerda) para não colidir com o rótulo
+  de distância do anel mais externo, mas continua dentro do círculo, não fora dele — colocá-lo
+  fora exigiria somar uma margem a toda a matemática de conversão mundo→tela do radar (torres,
+  alvos, cliques), risco alto de regressão num componente que não dá para testar visualmente
+  nesta sessão.
+- Cabeçalhos de coluna das tabelas (`DataGrid`) ganharam cor/fonte/divisória do token novo, mas
+  o texto de cada coluna não foi reescrito em maiúsculas (são ~70 strings hardcoded em 5 telas).
+- A barra de abas "estilo navegador" do `MainWindow.xaml` (sessões paralelas) não foi alterada —
+  ficou pendente uma dúvida não respondida sobre uma suposta aba "Administrador" duplicando o
+  cabeçalho, que não foi localizada no código.
+
+**Testes:** 105 no total, todos passando a cada commit. O teste
+`PersistenciaSqliteTests.Insercoes_concorrentes_do_mesmo_rastreamento_resultam_numa_ocorrencia`
+é instável (falha ~1 a cada poucas execuções) — confirmado via `git stash` que já falhava assim
+antes de qualquer alteração desta frente; não foi investigado, por ser camada de persistência/
+concorrência, fora do escopo "só visual".
+
+**Pendência que depende do usuário:** validação visual completa nas duas telas, nos dois temas
+(claro/escuro) e nos dois idiomas — a sessão não pode abrir o aplicativo para conferir. Também
+ficou pendente a resposta sobre a aba "Administrador" citada acima.
+
+**Armadilha de processo encontrada e documentada:** `build.bat`/`run.bat` compilam e abrem o que
+estiver *checked out* no momento, sem indicar a branch — rodar numa branch errada (ex.: `main`,
+sem estas mudanças) parece "a mudança não funcionou". Conferir `git branch --show-current` antes
+de compilar.
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
 - [[INSTALADOR]] — detalhamento técnico do processo de instalação Windows.
 - [[ETAPA1_FUNDACAO]] — detalhamento técnico da fundação multiusuário.
+- [[IDENTIDADE_VISUAL]] — tokens de cor, tipografia e ícones da nova identidade visual.
