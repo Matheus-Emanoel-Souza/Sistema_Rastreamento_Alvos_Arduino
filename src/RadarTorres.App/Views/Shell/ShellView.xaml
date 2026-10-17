@@ -4,7 +4,7 @@
              xmlns:shell="clr-namespace:RadarTorres.App.Views.Shell"
              Background="{DynamicResource Bg.Window}"
              Foreground="{DynamicResource Text.Primary}"
-             FontFamily="Segoe UI">
+             FontFamily="{DynamicResource Font.Body}">
 
     <DockPanel>
         <shell:TopBarView DockPanel.Dock="Top"/>
