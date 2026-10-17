@@ -9,45 +9,146 @@
         para popular o menu de painéis ocultos; quem hospeda o controle (code-behind da View) é
         quem efetivamente mexe no DashboardCanvas e no IDashboardLayoutRepository, mesmo
         princípio já usado em DashboardCard.
+
+        Reagrupamento puramente visual (identidade nova): os mesmos 4 comandos de antes — nenhum
+        novo, nenhum removido — agora aparecem como "Meu layout" / "Padrão do sistema" lado a
+        lado (seletor segmentado), "Salvar como padrão" como botão secundário, e o antigo botão
+        "Painéis ocultos" virou "+ Adicionar painel" (borda tracejada), mantendo exatamente a
+        mesma função de reabrir painéis ocultados — ver DashboardToolbar.xaml.cs.
     -->
     <UserControl.Resources>
-        <Style x:Key="ToolbarButton" TargetType="Button">
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+        <Style x:Key="SegmentButton" TargetType="Button">
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="MinHeight" Value="34"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Body}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Body}"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Botão tracejado — usado só em "+ Adicionar painel" (Requisito). WPF não tem borda
+             tracejada nativa num Border simples, por isso o Rectangle com StrokeDashArray por
+             cima no lugar da BorderBrush do Border. -->
+        <Style x:Key="DashedButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
             <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Rectangle RadiusX="10" RadiusY="10" Stroke="{DynamicResource Border.Control}"
+                                       StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Text}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
     <StackPanel>
-        <WrapPanel Orientation="Horizontal">
-            <Button x:Name="SaveMyLayoutButton" Style="{StaticResource ToolbarButton}"
-                    Content="{loc:Loc Dashboard.DefinirLayoutPadrao}"
-                    ToolTip="{loc:Loc Dashboard.DefinirLayoutPadraoDica}"
-                    Click="SaveMyLayoutButton_Click"/>
-            <Button x:Name="SystemDefaultButton" Style="{StaticResource ToolbarButton}"
-                    Content="{loc:Loc Dashboard.RestaurarPadraoSistema}"
-                    ToolTip="{loc:Loc Dashboard.RestaurarPadraoSistemaDica}"
-                    Click="SystemDefaultButton_Click"/>
-            <Button x:Name="MyLayoutButton" Style="{StaticResource ToolbarButton}"
-                    Content="{loc:Loc Dashboard.RetornarMeuLayout}"
-                    ToolTip="{loc:Loc Dashboard.RetornarMeuLayoutDica}"
-                    Click="MyLayoutButton_Click"/>
-            <Button x:Name="HiddenPanelsButton" Style="{StaticResource ToolbarButton}"
-                    Click="HiddenPanelsButton_Click"/>
-        </WrapPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <TextBlock x:Name="StatusText" Margin="0,6,0,0" TextWrapping="Wrap"
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <!-- Seletor segmentado: mesma função de MyLayoutButton/SystemDefaultButton de
+                     antes, só reagrupados numa pílula em vez de 2 botões soltos. -->
+                <Border Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
+                        BorderThickness="1" CornerRadius="10" Padding="2">
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="MyLayoutButton" Style="{StaticResource SegmentButton}"
+                                Content="{loc:Loc Dashboard.RetornarMeuLayout}"
+                                ToolTip="{loc:Loc Dashboard.RetornarMeuLayoutDica}"
+                                Click="MyLayoutButton_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{DynamicResource Selection.Solid}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           TextElement.Foreground="{DynamicResource Text.Primary}"
+                                                           TextElement.FontWeight="SemiBold"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <Button x:Name="SystemDefaultButton" Style="{StaticResource SegmentButton}"
+                                Content="{loc:Loc Dashboard.RestaurarPadraoSistema}"
+                                ToolTip="{loc:Loc Dashboard.RestaurarPadraoSistemaDica}"
+                                Click="SystemDefaultButton_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="SaveMyLayoutButton" Style="{StaticResource SecondaryButton}"
+                        Content="{loc:Loc Dashboard.DefinirLayoutPadrao}"
+                        ToolTip="{loc:Loc Dashboard.DefinirLayoutPadraoDica}"
+                        Click="SaveMyLayoutButton_Click"/>
+            </StackPanel>
+
+            <Button x:Name="HiddenPanelsButton" Grid.Column="1" Style="{StaticResource DashedButton}"
+                    Click="HiddenPanelsButton_Click"/>
+        </Grid>
+
+        <TextBlock x:Name="StatusText" Margin="0,8,0,0" TextWrapping="Wrap"
+                   FontFamily="{DynamicResource Font.Body}" FontSize="13"
                    Visibility="Collapsed">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">
-                    <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Danger.Text}"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding StatusIsSuccess, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Accent.Text}"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>

@@ -3,36 +3,61 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="clr-namespace:RadarTorres.App.Localization"
              xmlns:conv="clr-namespace:RadarTorres.App.Converters"
-             xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared">
+             xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
+             xmlns:local="clr-namespace:RadarTorres.App.Views">
 
     <UserControl.Resources>
         <conv:ConnectionStateToBrushConverter x:Key="ConnectionStateToBrushConverter"/>
+        <conv:ModoAtualToBrushConverter x:Key="ModoAtualToBrushConverter"/>
 
+        <!-- Rótulo no topo de cada card (Requisito "rótulo no topo"). -->
         <Style x:Key="CardLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Body}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
-        <Style x:Key="CardValue" TargetType="TextBlock">
+
+        <!-- Valor grande dos cards (Requisito "valor grande 48px"). -->
+        <Style x:Key="CardValueBig" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="FontSize" Value="22"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+            <Setter Property="FontSize" Value="48"/>
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- Legenda/ação embaixo do card. -->
+        <Style x:Key="CardCaption" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Body}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
+        </Style>
+
+        <!-- Link discreto (ex.: "Conectar à porta serial", "Abrir Monitoramento"). -->
+        <Style x:Key="CardLink" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource Accent.Text}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Body}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="TextDecorations" Value="Underline"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
         </Style>
     </UserControl.Resources>
 
     <Grid Margin="4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="{loc:Loc Dashboard.Title}" FontSize="20" FontWeight="Bold"
-                   Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,10"/>
+        <!-- Título da página agora vive no cabeçalho da Shell (Chakra Petch 28px) — ver
+             TopBarView.xaml / ShellViewModel.CurrentPageTitle. -->
 
         <!-- Ações de layout (Requisito 3) — mesmo controle reutilizado no Monitoramento. -->
-        <shared:DashboardToolbar x:Name="Toolbar" Grid.Row="1" Margin="0,0,0,12"/>
+        <shared:DashboardToolbar x:Name="Toolbar" Grid.Row="0" Margin="0,0,0,16"/>
 
         <!--
             Cada card é arrastável (cabeçalho), redimensionável (alça no canto inferior
@@ -40,47 +65,155 @@
             sobreposição e mantém o layout proporcional ao redimensionar a janela. Posição/
             tamanho iniciais (Canvas.Left/Top/Width/Height) abaixo são só um estado inicial
             válido — assim que a tela carrega, o code-behind aplica o layout pessoal salvo do
-            usuário logado (ou a grade padrão, se ele nunca salvou um).
+            usuário logado (ou a grade padrão, se ele nunca salvou um). SÓ a aparência interna
+            de cada card mudou nesta frente — a lógica de arrastar/redimensionar/ocultar/layout
+            por usuário é a mesma de sempre (DashboardCanvas/DashboardCard inalterados).
         -->
-        <shared:DashboardCanvas x:Name="LayoutCanvas" Grid.Row="2" ClipToBounds="True">
+        <shared:DashboardCanvas x:Name="LayoutCanvas" Grid.Row="1" ClipToBounds="True">
             <shared:DashboardCard x:Name="CardObjetosDetectados" CardId="ObjetosDetectados"
                                    Title="{loc:Loc Dashboard.ObjetosDetectados}"
-                                   Canvas.Left="0" Canvas.Top="0" Width="260" Height="150">
-                <TextBlock Text="{Binding TotalObjetosDetectados}" Style="{StaticResource CardValue}" Foreground="{DynamicResource Accent.Fill}"/>
+                                   Canvas.Left="0" Canvas.Top="0" Width="260" Height="162">
+                <StackPanel>
+                    <TextBlock Text="{loc:Loc Dashboard.ObjetosDetectados}" Style="{StaticResource CardLabel}"/>
+                    <TextBlock Text="{Binding TotalObjetosDetectados}" Style="{StaticResource CardValueBig}" Foreground="{DynamicResource Target.Fill}"/>
+                    <TextBlock Text="{loc:Loc Dashboard.Hoje}" Style="{StaticResource CardCaption}"/>
+                </StackPanel>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardAcoesRealizadas" CardId="AcoesRealizadas"
                                    Title="{loc:Loc Dashboard.AcoesRealizadas}"
-                                   Canvas.Left="272" Canvas.Top="0" Width="260" Height="150">
-                <TextBlock Text="{Binding TotalAcoesRealizadas}" Style="{StaticResource CardValue}" Foreground="{DynamicResource Target.Fill}"/>
+                                   Canvas.Left="272" Canvas.Top="0" Width="260" Height="162">
+                <StackPanel>
+                    <TextBlock Text="{loc:Loc Dashboard.AcoesRealizadas}" Style="{StaticResource CardLabel}"/>
+                    <TextBlock Text="{Binding TotalAcoesRealizadas}" Style="{StaticResource CardValueBig}"/>
+                    <TextBlock Text="{loc:Loc Dashboard.Hoje}" Style="{StaticResource CardCaption}"/>
+                </StackPanel>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardModoAtual" CardId="ModoAtual"
                                    Title="{loc:Loc Dashboard.ModoAtual}"
-                                   Canvas.Left="544" Canvas.Top="0" Width="260" Height="150">
-                <TextBlock Text="{Binding ModoAtual}" Style="{StaticResource CardValue}" FontSize="16"/>
+                                   Canvas.Left="544" Canvas.Top="0" Width="260" Height="162">
+                <StackPanel>
+                    <TextBlock Text="{loc:Loc Dashboard.ModoAtual}" Style="{StaticResource CardLabel}"/>
+                    <Border CornerRadius="8" Padding="10,6" HorizontalAlignment="Left">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource Bg.Sidebar}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding TemModoDefinido}" Value="True">
+                                        <Setter Property="Background" Value="{Binding ModoAtual, Converter={StaticResource ModoAtualToBrushConverter}}"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock FontFamily="{DynamicResource Font.Body}" FontSize="13" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{loc:Loc Dashboard.SemModoDefinido}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TemModoDefinido}" Value="True">
+                                            <Setter Property="Text" Value="{Binding ModoAtual}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                    <TextBlock Text="{loc:Loc Dashboard.AguardandoConexao}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource CardCaption}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding TemModoDefinido}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardEstadoComunicacao" CardId="EstadoComunicacao"
                                    Title="{loc:Loc Dashboard.EstadoComunicacao}"
-                                   Canvas.Left="0" Canvas.Top="162" Width="260" Height="150">
-                <StackPanel Orientation="Horizontal">
-                    <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center"
-                             Fill="{Binding EstadoComunicacao, Converter={StaticResource ConnectionStateToBrushConverter}}"/>
-                    <TextBlock Text="{Binding EstadoComunicacaoTexto}" Style="{StaticResource CardValue}" FontSize="16" VerticalAlignment="Center"/>
+                                   Canvas.Left="0" Canvas.Top="174" Width="260" Height="162">
+                <StackPanel>
+                    <TextBlock Text="{loc:Loc Dashboard.EstadoComunicacao}" Style="{StaticResource CardLabel}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center"
+                                 Fill="{Binding EstadoComunicacao, Converter={StaticResource ConnectionStateToBrushConverter}}"/>
+                        <TextBlock Text="{Binding EstadoComunicacaoTexto}" FontFamily="{DynamicResource Font.Body}"
+                                   FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource Text.Primary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{loc:Loc Dashboard.ConectarPortaSerial}" Style="{StaticResource CardLink}"
+                               MouseLeftButtonUp="ConectarLink_MouseLeftButtonUp"/>
                 </StackPanel>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardUltimaModoAtualTorre" CardId="UltimaModoAtualTorre"
                                    Title="{loc:Loc Dashboard.UltimaModoAtualTorre}"
-                                   Canvas.Left="272" Canvas.Top="162" Width="260" Height="150">
-                <TextBlock Text="{Binding UltimaModoAtualTorreTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
+                                   Canvas.Left="272" Canvas.Top="174" Width="260" Height="162">
+                <StackPanel>
+                    <TextBlock Text="{loc:Loc Dashboard.UltimaModoAtualTorre}" Style="{StaticResource CardLabel}"/>
+                    <TextBlock Text="{Binding UltimaModoAtualTorreTexto}" FontFamily="{DynamicResource Font.Mono}"
+                               FontSize="22" Foreground="{DynamicResource Text.Secondary}"/>
+                    <TextBlock Text="{loc:Loc Dashboard.NenhumaAlteracaoRegistrada}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource CardCaption}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding UltimaModoAtualTorreTexto}" Value="—">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardUltimaAtualizacao" CardId="UltimaAtualizacao"
                                    Title="{loc:Loc Dashboard.UltimaAtualizacao}"
-                                   Canvas.Left="544" Canvas.Top="162" Width="260" Height="150">
-                <TextBlock Text="{Binding UltimaAtualizacaoTexto}" Style="{StaticResource CardValue}" FontSize="16"/>
+                                   Canvas.Left="544" Canvas.Top="174" Width="260" Height="162">
+                <StackPanel>
+                    <TextBlock Text="{loc:Loc Dashboard.UltimaAtualizacao}" Style="{StaticResource CardLabel}"/>
+                    <TextBlock Text="{Binding UltimaAtualizacaoTexto}" FontFamily="{DynamicResource Font.Mono}"
+                               FontWeight="Medium" FontSize="20" Foreground="{DynamicResource Text.Primary}"/>
+                </StackPanel>
+            </shared:DashboardCard>
+
+            <!-- ==================== RADAR AO VIVO (PRÉVIA) ==================== -->
+            <!-- Mini radar com os MESMOS dados ao vivo do Monitoramento (ITargetTrackingService/
+                 ITowerSelectionService injetados na PainelPrincipalViewModel — ver comentário da
+                 classe), reaproveitando o próprio RadarControl em escala reduzida, não uma cópia
+                 do desenho. -->
+            <shared:DashboardCard x:Name="CardRadarAoVivo" CardId="RadarAoVivo"
+                                   Title="{loc:Loc Dashboard.RadarAoVivo}"
+                                   Canvas.Left="0" Canvas.Top="348" Width="556" Height="230">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Width="190" Height="190" CornerRadius="14" ClipToBounds="True">
+                        <local:RadarControl Targets="{Binding Targets}" Towers="{Binding Towers}" IsHitTestVisible="False"/>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding AlvosNoRaioTexto}"
+                                   FontFamily="{DynamicResource Font.Display}" FontWeight="Bold" FontSize="24"
+                                   Foreground="{DynamicResource Text.Primary}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{loc:Loc Dashboard.AbrirMonitoramento}" Style="{StaticResource CardLink}"
+                                   MouseLeftButtonUp="AbrirMonitoramentoLink_MouseLeftButtonUp"/>
+                    </StackPanel>
+                </Grid>
             </shared:DashboardCard>
         </shared:DashboardCanvas>
     </Grid>
