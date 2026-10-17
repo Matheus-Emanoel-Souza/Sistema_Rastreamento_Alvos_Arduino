@@ -2,7 +2,7 @@
                   TERMOS DE USO DO SOFTWARE "RADARTORRES"
 ================================================================================
 
-Versão 1.0 — vigente a partir de 15 de outubro de 2026.
+Versão 1.1 — vigente a partir de 16 de outubro de 2026.
 
 LEIA ATENTAMENTE ANTES DE INSTALAR OU UTILIZAR.
 
@@ -18,8 +18,9 @@ a instalação e não utilize o SOFTWARE.
 --------------------------------------------------------------------------------
 
 1.1. O SOFTWARE denomina-se "RadarTorres — Sistema de Detecção e Seleção de
-Torres" e foi desenvolvido por Matheus Emanoel de Souza, estudante do curso de
-Engenharia da Computação da UCL, como Trabalho de Conclusão de Curso (TCC).
+Torres" e foi desenvolvido por Matheus Emanoel de Souza e Gabriel Vasconcellos
+de Morais, estudantes do curso de Engenharia da Computação da UCL, como
+Trabalho de Conclusão de Curso (TCC), sob orientação de Anker Loss.
 
 1.2. O SOFTWARE é um ARTEFATO ACADÊMICO EXPERIMENTAL, produzido com finalidade
 exclusivamente didática, científica e demonstrativa, no contexto de avaliação

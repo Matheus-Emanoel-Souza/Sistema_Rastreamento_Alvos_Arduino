@@ -14,18 +14,36 @@ using RadarTorres.App.Services;
 namespace RadarTorres.App.ViewModels;
 
 /// <summary>
+/// Etapas do cadastro de alvo dentro do modal. A ordem é a do fluxo real: identificar o alvo,
+/// fotografá-lo (o que exige a câmera ligada), medir e conferir antes de gravar.
+/// </summary>
+public enum EtapaCadastroAlvo
+{
+    Informacoes,
+    Fotografias,
+    Dimensoes,
+    Revisao
+}
+
+/// <summary>
 /// ViewModel da tela "Perfis de Alvo": cadastra, edita e remove os perfis (cor + formato +
 /// dimensões + fotografias) que a detecção por visão computacional deve travar, e escolhe qual
 /// está ativo.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Formulário único para criar e editar.</b> O painel direito trabalha sempre sobre um
+/// <b>Cadastro e edição acontecem num modal com etapas</b> (<see cref="EtapaAtual"/>), aberto
+/// sob demanda: a tela principal mostra só a lista dos alvos. O modal trabalha sempre sobre um
 /// rascunho (nome, cor, formato, dimensões e a lista <see cref="FormFotos"/>), que é uma CÓPIA
-/// das fotos do perfil quando se está editando — nada é gravado até <see cref="SalvarCommand"/>.
+/// das fotos do perfil quando se está editando — nada é gravado até <see cref="ConcluirCommand"/>.
 /// É o que permite trocar fotos e marcações e desistir no meio sem deixar o perfil num estado
 /// intermediário. Editar nunca cria registro novo: o serviço atualiza o perfil pelo
 /// <see cref="PerfilAlvo.Id"/>, preservando o vínculo com o histórico de detecções.
+/// </para>
+/// <para>
+/// A câmera só é ligada enquanto o modal está aberto: fora do cadastro não há motivo para
+/// manter o dispositivo ocupado, e o módulo "Câmeras" e o card de detecção disputam as mesmas
+/// webcams.
 /// </para>
 /// <para>
 /// <b>Mínimo de fotografias.</b> O botão de cadastrar fica desabilitado enquanto não houver
@@ -57,10 +75,19 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
 
     public bool PodeGerenciar => _permissionService.PodeGerenciarPerfisAlvo(_authService.CurrentUser?.Perfil ?? PerfilUsuario.Visualizador);
 
-    public RelayCommand NovoCommand { get; }
-    public RelayCommand SalvarCommand { get; }
+    /// <summary>Abre o modal em branco ("Cadastrar novo alvo").</summary>
+    public RelayCommand AbrirCadastroCommand { get; }
+
+    /// <summary>Fecha o modal descartando o rascunho (a View confirma antes, se houver dados).</summary>
+    public RelayCommand FecharModalCommand { get; }
+
+    public RelayCommand AvancarCommand { get; }
+    public RelayCommand VoltarCommand { get; }
+
+    /// <summary>Conclui o cadastro/edição na última etapa.</summary>
+    public RelayCommand ConcluirCommand { get; }
+
     public RelayCommand EditarCommand { get; }
-    public RelayCommand CancelarEdicaoCommand { get; }
     public RelayCommand SelecionarAtivoCommand { get; }
     public RelayCommand RemoverCommand { get; }
     public RelayCommand AtualizarCamerasCommand { get; }
@@ -83,10 +110,12 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
         _cameraCaptureServiceFactory = cameraCaptureServiceFactory;
         _logger = logger;
 
-        NovoCommand = new RelayCommand(_ => IniciarNovo(), _ => PodeGerenciar);
-        SalvarCommand = new RelayCommand(_ => Salvar(), _ => PodeGerenciar && PodeSalvar);
-        EditarCommand = new RelayCommand(_ => IniciarEdicao(), _ => PodeGerenciar && SelectedPerfil is not null);
-        CancelarEdicaoCommand = new RelayCommand(_ => IniciarNovo(), _ => PodeGerenciar && EmEdicao);
+        AbrirCadastroCommand = new RelayCommand(_ => AbrirCadastro(), _ => PodeGerenciar && !ModalAberto);
+        FecharModalCommand = new RelayCommand(_ => FecharModal());
+        AvancarCommand = new RelayCommand(_ => Avancar(), _ => PodeAvancar);
+        VoltarCommand = new RelayCommand(_ => Voltar(), _ => EtapaAtual != EtapaCadastroAlvo.Informacoes);
+        ConcluirCommand = new RelayCommand(_ => Salvar(), _ => PodeGerenciar && PodeSalvar && !EstaSalvando);
+        EditarCommand = new RelayCommand(_ => IniciarEdicao(), _ => PodeGerenciar && SelectedPerfil is not null && !ModalAberto);
         SelecionarAtivoCommand = new RelayCommand(_ => SelecionarAtivo(), _ => PodeGerenciar && SelectedPerfil is { Selecionado: false });
         RemoverCommand = new RelayCommand(_ => Remover(), _ => PodeGerenciar && SelectedPerfil is not null);
         AtualizarCamerasCommand = new RelayCommand(_ => AtualizarCameras());
@@ -98,18 +127,13 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
         AtualizarCameras();
     }
 
-    public void OnNavigatedTo()
-    {
-        AtualizarCameras();
-
-        // AtualizarCameras só reinicia o preview se a câmera selecionada mudar de referência
-        // (ver SelectedCamera.set) — ao voltar de outra tela (Dispose já parou a captura
-        // anterior), a câmera escolhida continua a mesma, então é preciso religar aqui.
-        if (!IsStreaming)
-        {
-            IniciarPreview(SelectedCamera);
-        }
-    }
+    /// <summary>
+    /// Ao entrar na tela, só atualiza a lista de dispositivos. A câmera é ligada apenas quando o
+    /// modal de cadastro abre (ver <see cref="AbrirCadastro"/>) — manter a webcam ocupada só
+    /// para exibir a lista de alvos tiraria o dispositivo do módulo "Câmeras" e do card de
+    /// detecção sem necessidade.
+    /// </summary>
+    public void OnNavigatedTo() => AtualizarCameras();
 
     // ---------------------------------------------------------------- Seleção na lista
 
@@ -124,6 +148,141 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
                 RelayCommand.RaiseCanExecuteChangedForAll();
             }
         }
+    }
+
+    // ---------------------------------------------------------------- Modal e etapas
+
+    private bool _modalAberto;
+
+    /// <summary>Se o modal de cadastro/edição está aberto sobre a tela.</summary>
+    public bool ModalAberto
+    {
+        get => _modalAberto;
+        private set
+        {
+            if (!SetProperty(ref _modalAberto, value)) return;
+            RelayCommand.RaiseCanExecuteChangedForAll();
+        }
+    }
+
+    private EtapaCadastroAlvo _etapaAtual = EtapaCadastroAlvo.Informacoes;
+
+    /// <summary>Etapa exibida no momento dentro do modal.</summary>
+    public EtapaCadastroAlvo EtapaAtual
+    {
+        get => _etapaAtual;
+        private set
+        {
+            if (!SetProperty(ref _etapaAtual, value)) return;
+
+            OnPropertyChanged(nameof(RotuloEtapa));
+            OnPropertyChanged(nameof(EhUltimaEtapa));
+            OnPropertyChanged(nameof(PodeAvancar));
+            RelayCommand.RaiseCanExecuteChangedForAll();
+        }
+    }
+
+    public bool EhUltimaEtapa => EtapaAtual == EtapaCadastroAlvo.Revisao;
+
+    /// <summary>Texto do progresso ("Etapa 2 de 4 — Fotografias").</summary>
+    public string RotuloEtapa => EtapaAtual switch
+    {
+        EtapaCadastroAlvo.Informacoes => "Etapa 1 de 4 — Informações do alvo",
+        EtapaCadastroAlvo.Fotografias => "Etapa 2 de 4 — Fotografias",
+        EtapaCadastroAlvo.Dimensoes => "Etapa 3 de 4 — Dimensões",
+        _ => "Etapa 4 de 4 — Revisão e confirmação"
+    };
+
+    /// <summary>
+    /// Se a etapa atual está completa o bastante para avançar. É o que mantém o usuário dentro
+    /// da etapa até resolver o que falta, em vez de descobrir tudo só no fim.
+    /// </summary>
+    public bool PodeAvancar => EtapaAtual switch
+    {
+        EtapaCadastroAlvo.Informacoes => !string.IsNullOrWhiteSpace(FormNome),
+        EtapaCadastroAlvo.Fotografias => EmEdicao || FotosFaltantes == 0,
+        EtapaCadastroAlvo.Dimensoes => DimensoesPreenchidas,
+        _ => false
+    };
+
+    /// <summary>Mensagem dizendo o que falta na etapa atual (vazia quando ela está completa).</summary>
+    public string? PendenciaEtapa => EtapaAtual switch
+    {
+        EtapaCadastroAlvo.Informacoes when string.IsNullOrWhiteSpace(FormNome) => "Informe um nome para o alvo.",
+        EtapaCadastroAlvo.Fotografias when !EmEdicao && FotosFaltantes > 0 =>
+            $"Faltam {FotosFaltantes} fotografia(s) para o mínimo de {PerfilAlvo.MinimoFotos}.",
+        EtapaCadastroAlvo.Dimensoes when !DimensoesPreenchidas => EhRetangular
+            ? "Informe largura e altura em centímetros (maiores que zero)."
+            : $"Informe {(FormFormato == FormatoAlvo.Redondo ? "o diâmetro" : "o lado")} em centímetros (maior que zero).",
+        _ => null
+    };
+
+    private bool DimensoesPreenchidas => EhRetangular
+        ? TentarLer(FormLarguraCm, out _) && TentarLer(FormAlturaCm, out _)
+        : TentarLer(FormTamanhoCm, out _);
+
+    private bool _estaSalvando;
+
+    /// <summary>Verdadeiro durante a gravação — impede concluir duas vezes por cliques repetidos.</summary>
+    public bool EstaSalvando
+    {
+        get => _estaSalvando;
+        private set
+        {
+            if (!SetProperty(ref _estaSalvando, value)) return;
+            RelayCommand.RaiseCanExecuteChangedForAll();
+        }
+    }
+
+    /// <summary>
+    /// Se há algo digitado ou fotografado no rascunho — a View pergunta antes de descartar.
+    /// </summary>
+    public bool TemDadosPreenchidos =>
+        !string.IsNullOrWhiteSpace(FormNome)
+        || FormFotos.Count > 0
+        || !string.IsNullOrWhiteSpace(FormTamanhoCm)
+        || !string.IsNullOrWhiteSpace(FormLarguraCm)
+        || !string.IsNullOrWhiteSpace(FormAlturaCm);
+
+    private void AbrirCadastro()
+    {
+        IniciarNovo();
+        ModalAberto = true;
+        EtapaAtual = EtapaCadastroAlvo.Informacoes;
+
+        // A câmera só roda com o modal aberto; ligar aqui também garante o preview pronto
+        // quando o usuário chegar na etapa das fotografias.
+        IniciarPreview(SelectedCamera);
+    }
+
+    /// <summary>Fecha o modal e descarta o rascunho. A confirmação, quando há dados, é da View.</summary>
+    private void FecharModal()
+    {
+        ModalAberto = false;
+        PararPreview();
+        IniciarNovo();
+    }
+
+    private void Avancar()
+    {
+        if (!PodeAvancar) return;
+
+        EtapaAtual = EtapaAtual switch
+        {
+            EtapaCadastroAlvo.Informacoes => EtapaCadastroAlvo.Fotografias,
+            EtapaCadastroAlvo.Fotografias => EtapaCadastroAlvo.Dimensoes,
+            _ => EtapaCadastroAlvo.Revisao
+        };
+    }
+
+    private void Voltar()
+    {
+        EtapaAtual = EtapaAtual switch
+        {
+            EtapaCadastroAlvo.Revisao => EtapaCadastroAlvo.Dimensoes,
+            EtapaCadastroAlvo.Dimensoes => EtapaCadastroAlvo.Fotografias,
+            _ => EtapaCadastroAlvo.Informacoes
+        };
     }
 
     // ---------------------------------------------------------------- Formulário (criar/editar)
@@ -252,7 +411,30 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
         OnPropertyChanged(nameof(PodeSalvar));
         OnPropertyChanged(nameof(FotosFaltantes));
         OnPropertyChanged(nameof(MensagemFotos));
+        OnPropertyChanged(nameof(PodeAvancar));
+        OnPropertyChanged(nameof(PendenciaEtapa));
+        OnPropertyChanged(nameof(TemDadosPreenchidos));
+        OnPropertyChanged(nameof(ResumoRevisao));
         RelayCommand.RaiseCanExecuteChangedForAll();
+    }
+
+    /// <summary>Resumo mostrado na etapa de revisão, com o que será gravado.</summary>
+    public string ResumoRevisao
+    {
+        get
+        {
+            string dimensoes = EhRetangular
+                ? $"{(string.IsNullOrWhiteSpace(FormLarguraCm) ? "—" : FormLarguraCm)} × {(string.IsNullOrWhiteSpace(FormAlturaCm) ? "—" : FormAlturaCm)} cm (largura × altura)"
+                : $"{(string.IsNullOrWhiteSpace(FormTamanhoCm) ? "—" : FormTamanhoCm)} cm ({(FormFormato == FormatoAlvo.Redondo ? "diâmetro" : "lado")})";
+
+            int marcadas = FormFotos.Count(f => f.TemRecorte);
+
+            return $"Nome: {(string.IsNullOrWhiteSpace(FormNome) ? "—" : FormNome)}\n" +
+                   $"Cor: {FormCor}\n" +
+                   $"Formato: {FormFormato}\n" +
+                   $"Dimensões: {dimensoes}\n" +
+                   $"Fotografias: {FormFotos.Count} ({marcadas} com o objeto marcado)";
+        }
     }
 
     private void IniciarNovo()
@@ -269,6 +451,7 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
 
         FormFotos.Clear();
         FotoSelecionada = null;
+        EtapaAtual = EtapaCadastroAlvo.Informacoes;
 
         OnPropertyChanged(nameof(EmEdicao));
         OnPropertyChanged(nameof(TituloFormulario));
@@ -276,7 +459,10 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
         AtualizarValidacao();
     }
 
-    /// <summary>Carrega o perfil selecionado no formulário para alteração (ver <see cref="EmEdicao"/>).</summary>
+    /// <summary>
+    /// Carrega o perfil selecionado no modal para alteração (ver <see cref="EmEdicao"/>) — o
+    /// mesmo assistente do cadastro, começando pela primeira etapa.
+    /// </summary>
     private void IniciarEdicao()
     {
         if (SelectedPerfil is not { } perfil) return;
@@ -312,39 +498,61 @@ public sealed class PerfilAlvoViewModel : ViewModelBase, INavigationAware, IDisp
         OnPropertyChanged(nameof(TituloFormulario));
         OnPropertyChanged(nameof(TextoBotaoSalvar));
         AtualizarValidacao();
+
+        ModalAberto = true;
+        EtapaAtual = EtapaCadastroAlvo.Informacoes;
+        IniciarPreview(SelectedCamera);
     }
 
+    /// <remarks>
+    /// Em caso de falha, o modal continua aberto com tudo preenchido: a mensagem aparece no
+    /// rodapé e o usuário corrige o que o serviço recusou, sem redigitar nada.
+    /// </remarks>
     private void Salvar()
     {
+        if (EstaSalvando) return;
+
         SucessoFormulario = false;
+        EstaSalvando = true;
 
-        if (!MontarDimensoes(out DimensoesAlvo dimensoes, out string? erroDimensao))
+        try
         {
-            MensagemFormulario = erroDimensao;
-            return;
+            if (!MontarDimensoes(out DimensoesAlvo dimensoes, out string? erroDimensao))
+            {
+                MensagemFormulario = erroDimensao;
+                return;
+            }
+
+            List<FotoReferenciaAlvo> fotos = FormFotos.ToList();
+
+            bool eraEdicao = EmEdicao;
+
+            ResultadoPerfilAlvo resultado = eraEdicao
+                ? AtualizarPerfilEmEdicao(dimensoes, fotos)
+                : _perfilAlvoService.Add(FormNome, FormCor, FormFormato, dimensoes, fotos);
+
+            if (!resultado.Sucesso)
+            {
+                MensagemFormulario = resultado.Erro;
+                return;
+            }
+
+            PerfilAlvo? salvo = resultado.Perfil;
+
+            // Sucesso: fecha o modal, limpa o rascunho e deixa selecionado na lista o alvo que
+            // acabou de ser gravado.
+            ModalAberto = false;
+            PararPreview();
+            IniciarNovo();
+            SelectedPerfil = salvo;
+
+            MensagemFormulario = eraEdicao ? "Alterações salvas." : "Alvo cadastrado com sucesso.";
+            SucessoFormulario = true;
         }
-
-        List<FotoReferenciaAlvo> fotos = FormFotos.ToList();
-
-        bool eraEdicao = EmEdicao;
-
-        ResultadoPerfilAlvo resultado = eraEdicao
-            ? AtualizarPerfilEmEdicao(dimensoes, fotos)
-            : _perfilAlvoService.Add(FormNome, FormCor, FormFormato, dimensoes, fotos);
-
-        if (!resultado.Sucesso)
+        finally
         {
-            MensagemFormulario = resultado.Erro;
-            return;
+            EstaSalvando = false;
         }
-
-        PerfilAlvo? salvo = resultado.Perfil;
-
-        IniciarNovo();
-        SelectedPerfil = salvo;
-
-        MensagemFormulario = eraEdicao ? "Alterações salvas." : "Alvo cadastrado com sucesso.";
-        SucessoFormulario = true;
     }
 
     private ResultadoPerfilAlvo AtualizarPerfilEmEdicao(DimensoesAlvo dimensoes, List<FotoReferenciaAlvo> fotos)

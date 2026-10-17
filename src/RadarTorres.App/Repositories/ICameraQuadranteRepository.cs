@@ -13,10 +13,10 @@ public interface ICameraQuadranteRepository
     IReadOnlyList<CameraQuadrante> GetAll();
 
     /// <summary>
-    /// Cria ou atualiza a associação da câmera informada. Libera automaticamente o quadrante de
-    /// qualquer OUTRA câmera que o estivesse ocupando — a exclusividade é condição do modelo
-    /// (um quadrante, uma câmera) e precisa valer também quando duas janelas gravam ao mesmo
-    /// tempo, por isso acontece na mesma transação da gravação.
+    /// Cria ou atualiza a associação da câmera informada. <b>Falha</b> (violação do índice
+    /// único) se o quadrante já pertencer a outra câmera — a exclusividade é condição do modelo
+    /// (um quadrante, uma câmera) e precisa valer inclusive quando duas janelas gravam ao mesmo
+    /// tempo, situação em que só o banco consegue decidir quem chegou primeiro.
     /// </summary>
     CameraQuadrante Salvar(CameraQuadrante camera);
 

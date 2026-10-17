@@ -84,6 +84,15 @@
          (ver Views/LoginView.xaml). <ApplicationIcon> sozinho grava o ícone só nos
          recursos Win32 do executável, de onde o XAML não consegue ler. -->
     <Resource Include="Assets\RadarTorres.ico" />
+
+    <!-- Termos de Uso: o MESMO arquivo que o Inno Setup exibe como página de licença
+         (installer\RadarTorres.iss) é embutido no executável, para a tela de Configurações e o
+         PDF exportado lerem exatamente a redação aceita na instalação. Embutido, e não copiado
+         para a pasta de saída, para não existir a possibilidade de o app rodar com uma cópia
+         diferente da que o instalador apresentou. -->
+    <EmbeddedResource Include="..\..\installer\TERMOS_DE_USO.txt"
+                      Link="Resources\TERMOS_DE_USO.txt"
+                      LogicalName="RadarTorres.App.Resources.TERMOS_DE_USO.txt" />
   </ItemGroup>
 
   <ItemGroup>

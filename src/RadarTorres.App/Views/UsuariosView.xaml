@@ -87,7 +87,16 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <StackPanel Grid.Column="1">
+            <!--
+                A coluna da direita tem dois cartões altos (cadastro/edição e redefinição de
+                senha) e vive numa linha de altura "*": sem este ScrollViewer, numa janela mais
+                baixa o segundo cartão e o botão "Salvar" ficavam cortados na borda inferior, sem
+                nenhuma forma de alcançá-los — a grade da esquerda rola sozinha, esta coluna não
+                rolava. Mesmo arranjo já usado em PerfilAlvoView e ConfiguracoesView: rolagem só
+                na vertical, nunca na horizontal (o conteúdo acompanha a largura da coluna).
+            -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,4,0">
                 <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
                         BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
                     <StackPanel>
@@ -180,6 +189,7 @@
                     </StackPanel>
                 </Border>
             </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </UserControl>

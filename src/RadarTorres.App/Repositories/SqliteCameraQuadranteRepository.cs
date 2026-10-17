@@ -12,11 +12,19 @@ namespace RadarTorres.App.Repositories;
 /// <see cref="ICameraQuadranteRepository"/>.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Os dois índices únicos (<c>DispositivoId</c> e <c>Quadrante</c>) são a garantia de último
 /// nível da regra "uma câmera, um quadrante; um quadrante, uma câmera": o serviço já valida
 /// antes, mas duas janelas da aplicação (sessões independentes, ver <c>App.OpenNewSession</c>)
-/// podem salvar ao mesmo tempo, e aí só o banco consegue decidir. Por isso o <see cref="Salvar"/>
-/// libera o quadrante do ocupante anterior e grava DENTRO de uma transação.
+/// podem salvar ao mesmo tempo, e aí só o banco consegue decidir — a segunda gravação viola o
+/// índice e é recusada, em vez de as duas aparentarem sucesso.
+/// </para>
+/// <para>
+/// O quadrante de outra câmera NUNCA é liberado aqui: tomar o quadrante de quem já o ocupava
+/// deixaria uma câmera sem responsabilidade sem que ninguém pedisse. A atribuição em quadrante
+/// ocupado é recusada com mensagem (ver <see cref="Services.CameraQuadranteService.Atribuir"/>),
+/// e cabe ao operador liberar a outra câmera primeiro.
+/// </para>
 /// </remarks>
 public sealed class SqliteCameraQuadranteRepository : ICameraQuadranteRepository
 {
@@ -46,23 +54,16 @@ public sealed class SqliteCameraQuadranteRepository : ICameraQuadranteRepository
         return result;
     }
 
+    /// <summary>
+    /// Grava a associação. Lança <see cref="SqliteException"/> quando o quadrante já pertence a
+    /// outra câmera (violação do índice único) — quem chama traduz em mensagem para o usuário.
+    /// </summary>
     public CameraQuadrante Salvar(CameraQuadrante camera)
     {
         using SqliteConnection connection = SqliteConnectionFactory.OpenConnection();
         EnsureTable(connection);
 
         using SqliteTransaction transaction = connection.BeginTransaction();
-
-        // Libera o quadrante de quem o ocupava: sem isso, o índice único de Quadrante faria o
-        // upsert abaixo falhar em vez de simplesmente transferir a responsabilidade.
-        using (SqliteCommand libera = connection.CreateCommand())
-        {
-            libera.Transaction = transaction;
-            libera.CommandText = "DELETE FROM Cameras WHERE Quadrante = $quadrante AND DispositivoId <> $dispositivo";
-            libera.Parameters.AddWithValue("$quadrante", camera.Quadrante.ToString());
-            libera.Parameters.AddWithValue("$dispositivo", camera.DispositivoId);
-            libera.ExecuteNonQuery();
-        }
 
         using (SqliteCommand command = connection.CreateCommand())
         {

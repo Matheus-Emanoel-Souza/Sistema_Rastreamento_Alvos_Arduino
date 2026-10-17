@@ -990,6 +990,109 @@ AForge). `dotnet test` — 68/68 aprovados.
 da conversa) — cadastro com 3 fotos, edição, atribuição de quadrantes nos 4 painéis com câmeras
 reais, redimensionamento do card de detecção e o ciclo acionamento → confirmar abate.
 
+## 2026-10-17 — Termos de Uso no app (com PDF), rolagem em Usuários, quadrante como identidade da câmera e cadastro de alvo em modal
+
+**Pedido (7 frentes):** corrigir a cláusula 1.1 dos Termos de Uso; apresentá-los com hierarquia
+visual; botão para baixar o documento integral em PDF; corrigir a rolagem da tela "Usuários";
+usar o quadrante como identificação da câmera; impedir duas câmeras no mesmo quadrante; e trocar
+o formulário lateral de "Perfis de Alvo" por um modal com etapas.
+
+**Decisões do usuário (perguntadas antes de implementar):**
+
+1. **Onde os termos aparecem** — "no ato da instalação e na tela de configurações". Não houve
+   criação de item na barra lateral: a seção fica em Configurações, que abre a janela de leitura.
+2. **Página de termos do instalador** — mantida em texto puro. Converter para RTF formatado
+   criaria um segundo arquivo para manter em sincronia, exatamente o que o pedido manda evitar.
+
+**Diagnóstico que mudou o escopo:** não existia tela de Termos de Uso no aplicativo. Eles só
+apareciam na página de licença do instalador (`LicenseFile=TERMOS_DE_USO.txt`) e no atalho do
+Menu Iniciar, que abre o `.txt` no Bloco de Notas — e um botão de download não cabe no
+instalador. A tela foi criada do zero.
+
+**Entregue — Termos de Uso (frentes 1, 2 e 3):**
+- `installer/TERMOS_DE_USO.txt`: cláusula 1.1 passa a identificar Matheus Emanoel de Souza e
+  Gabriel Vasconcellos de Morais, estudantes de Engenharia da Computação da UCL, sob orientação
+  de Anker Loss. Conteúdo alterado ⇒ versão **1.0 → 1.1** (vigente a partir de 16/10/2026), para
+  a regra de aceite já existente — toda instalação reexibe a página — passar a valer sobre esta
+  redação. Nenhuma outra cláusula foi tocada.
+- **Fonte única da verdade:** o MESMO arquivo é embutido no executável
+  (`<EmbeddedResource>` no .csproj) e lido por `TermosDeUsoService`. Instalador, tela e PDF leem
+  a mesma redação; não há cópia do texto em código, XAML nem banco.
+- `Models/TermosDeUso.cs` + parser em `TermosDeUsoService`: classifica o texto puro em blocos
+  (título, versão, cláusula, parágrafo numerado, alínea, item do resumo) e desfaz a quebra em 78
+  colunas do arquivo. Os blocos alimentam tela E PDF — por construção não há como divergirem.
+- `Views/TermosDeUsoWindow`: leitura com hierarquia visual (número da cláusula em etiqueta,
+  título destacado, parágrafos com entrelinha), coluna de leitura limitada a 760px e
+  centralizada, tema claro/escuro e janela redimensionável.
+- `ConfiguracoesView`: seção "Termos de Uso" com a versão vigente, "Ler os Termos de Uso" e
+  "Baixar Termos de Uso em PDF" (atalho que dispensa abrir a janela).
+- PDF com PDFsharp (dependência que o projeto já tinha): título, hierarquia, quebra de linha
+  medida, quebra de página sem cláusula órfã, rodapé com versão e "Página X de Y", acentuação
+  preservada. Nome sugerido `RadarTorres_Termos_de_Uso.pdf`. Geração fora da thread de interface,
+  com o botão desabilitado e rotulado "Gerando o PDF…" enquanto roda.
+
+**Bug pré-existente encontrado pelos testes:** o PDFsharp 6 não acompanha fonte alguma e não
+consulta o sistema sozinho — sem um `IFontResolver` registrado, `new XFont("Verdana", …)` lança
+`InvalidOperationException`. Ou seja, **a exportação de "Objetos Detectados" em PDF nunca
+funcionou** nesta versão da biblioteca. Criado `ResolvedorFontesPdf` (lê Verdana/Segoe UI/Arial
+de `%WINDIR%\Fonts`, com fallback entre elas) e registrado nos dois geradores.
+
+**Entregue — Usuários (frente 4):** a coluna direita (cartões de cadastro/edição e de redefinição
+de senha) vivia solta numa linha de altura `*`, sem `ScrollViewer`: em janela mais baixa o
+segundo cartão e o botão "Salvar" ficavam cortados, sem como alcançá-los — a grade da esquerda
+rola sozinha, a coluna não rolava. Passou a usar o mesmo arranjo das outras telas (rolagem
+vertical, horizontal desabilitada).
+
+**Entregue — câmeras e quadrantes (frentes 5 e 6):**
+- O cabeçalho do painel passa a ser a identificação do QUADRANTE ("Quadrante 2") em vez de
+  "Câmera N", que era só a posição na grade. Sem atribuição, mostra "Painel N — defina o
+  quadrante". O nome do dispositivo continua no seletor logo abaixo: identificação técnica e
+  responsabilidade espacial são dados distintos.
+- **Quadrante ocupado passa a ser recusado**, não transferido. Antes a atribuição tomava o
+  quadrante da outra câmera (deixando-a sem responsabilidade sem ninguém pedir); agora a
+  operação é recusada com mensagem nomeando a câmera que já o ocupa, e o seletor volta para o
+  valor realmente gravado. Liberar com "Nenhum" continua permitido, e quadrante vago segue sendo
+  uma situação válida.
+- Concorrência: a checagem do serviço pode perder a corrida entre duas janelas, então a violação
+  do índice único do banco é capturada e vira mensagem ("acabou de ser atribuído a outra
+  câmera"), com recarga da lista. Os painéis assinam `AssociacoesAlteradas` e se atualizam
+  sozinhos quando outro painel muda alguma atribuição.
+- Compatibilidade verificada no banco real antes de mudar a regra: duas webcams conhecidas e uma
+  única associação (Q1). Nenhum conflito a corrigir.
+
+**Entregue — cadastro de alvo em modal (frente 7):**
+- A tela ficou só com a listagem (agora em largura total), as ações do alvo selecionado e o botão
+  **"Cadastrar novo alvo"** ao lado do título. O formulário fixo da lateral direita deixou de
+  existir.
+- Modal como overlay DENTRO da própria view (e não `Window` separada), porque o requisito pede a
+  tela de fundo visível sob um escurecimento; de quebra, o fundo fica inerte a clique e a Tab
+  sem precisar ser desabilitado (o que o deixaria cinza).
+- Assistente em 4 etapas — Informações, Fotografias, Dimensões, Revisão — com indicador de
+  progresso, validação por etapa (`PodeAvancar`/`PendenciaEtapa`), navegação que preserva tudo o
+  que já foi preenchido e conclusão só na última etapa. O mínimo de 3 fotografias continua valendo
+  na tela e no serviço.
+- Edição reaproveita o mesmo assistente, preservando o `Id` (e o vínculo com o histórico).
+- Esc e "✕" fecham com confirmação quando há dados; clique no fundo escurecido NÃO fecha; foco
+  vai para o primeiro campo ao abrir e volta ao botão ao fechar; campos com
+  `AutomationProperties.Name` para leitor de tela; `EstaSalvando` impede concluir duas vezes.
+- A câmera agora só liga enquanto o modal está aberto — antes a tela segurava a webcam só para
+  listar alvos, disputando o dispositivo com o módulo "Câmeras" e o card de detecção.
+
+**Testes:** 105 no total (eram 73). Novos: 10 de Termos de Uso (cláusula 1.1, 15 cláusulas
+preservadas, alíneas, versão, PDF com ≥5 páginas abrindo como PDF válido, parser isolado),
+6 de câmera×quadrante (recusa com mensagem, uma câmera um quadrante, liberar e reatribuir,
+persistência após reiniciar, atribuições simultâneas) e 16 do modal de cadastro (abertura,
+validação por etapa, navegação preservando dados, conclusão, duplo clique, falha que mantém o
+rascunho, edição pelo mesmo modal). `dotnet build` da solution: 0 erros, 0 avisos CS.
+
+**Observação registrada, sem alteração:** o preâmbulo dos Termos define o termo "AUTOR" no
+singular ("o autor identificado na Cláusula 1"). Com dois desenvolvedores, o rigor pediria
+"AUTORES" — mas isso propaga por todo o documento, e o pedido foi explícito em não reescrever o
+texto jurídico além do necessário. Fica para decisão do usuário.
+
+**Pendência que depende do usuário:** conferência visual das telas novas (janela dos termos, PDF
+aberto, modal em resoluções menores) e do fluxo de quadrantes com as duas webcams reais.
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).

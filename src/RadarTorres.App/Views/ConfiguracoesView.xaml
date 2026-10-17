@@ -181,6 +181,25 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ======================= TERMOS DE USO ========================= -->
+                <!-- Mesmo documento aceito durante a instalação (o instalador o exibe como
+                     página de licença). Aqui ele fica disponível para releitura e para baixar
+                     em PDF — ver ITermosDeUsoService, que é a única fonte do conteúdo. -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Termos de Uso" Style="{StaticResource SectionTitle}"/>
+
+                        <TextBlock Text="{Binding VersaoTermosDeUso}" Style="{StaticResource LabelText}" Margin="0,0,0,2"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="É o mesmo documento aceito durante a instalação do RadarTorres. Leia na tela ou baixe o arquivo em PDF para guardar."/>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Button Content="Ler os Termos de Uso" Command="{Binding AbrirTermosDeUsoCommand}"/>
+                            <Button Content="Baixar Termos de Uso em PDF" Command="{Binding BaixarTermosDeUsoCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
 
