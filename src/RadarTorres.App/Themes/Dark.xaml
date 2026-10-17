@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!--
         Tema escuro — paleta original do projeto (idêntica aos valores que estavam
         hardcoded em App.xaml antes da funcionalidade de troca de tema). É o tema padrão
@@ -54,4 +55,12 @@
     <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#E6EDF3"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#1C2530"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#E6EDF3"/>
+
+    <!-- Opacidade da marca d'água do ícone no fundo da tela de login (ver LoginView.xaml).
+         Mora no tema porque o ícone é uma imagem OPACA (quadrado verde-escuro com a torre):
+         sobre o fundo quase preto deste tema ele some se for muito apagado, enquanto no tema
+         claro o mesmo valor viraria uma mancha escura. Um valor por tema é o que mantém a
+         marca perceptível nos dois sem competir com o formulário. -->
+    <sys:Double x:Key="LoginMarcaDaguaOpacidade">0.22</sys:Double>
+
 </ResourceDictionary>

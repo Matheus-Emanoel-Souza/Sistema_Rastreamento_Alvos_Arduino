@@ -21,7 +21,20 @@ public sealed class PerfilAlvoService : IPerfilAlvoService
 
     public ObservableCollection<PerfilAlvo> Perfis { get; } = new();
 
-    public PerfilAlvo? PerfilAtivo => Perfis.FirstOrDefault(p => p.Selecionado);
+    /// <summary>
+    /// Perfil ativo guardado numa referência própria, em vez de procurado em
+    /// <see cref="Perfis"/> a cada consulta.
+    /// </summary>
+    /// <remarks>
+    /// A detecção consulta isto a cada rodada e, desde que ela roda em paralelo (card de
+    /// Monitoramento + os quatro painéis da tela "Câmeras"), são várias threads consultando
+    /// enquanto a tela "Perfis de Alvo" pode estar cadastrando ou removendo um perfil na thread
+    /// de interface — percorrer a <see cref="ObservableCollection{T}"/> nessa situação lança
+    /// "coleção modificada durante a enumeração". Ler um campo não tem esse problema.
+    /// </remarks>
+    private volatile PerfilAlvo? _perfilAtivo;
+
+    public PerfilAlvo? PerfilAtivo => _perfilAtivo;
 
     public PerfilAlvoService(IPerfilAlvoRepository repository, ILoggingService logger)
     {
@@ -34,6 +47,7 @@ public sealed class PerfilAlvoService : IPerfilAlvoService
             Perfis.Add(perfil);
         }
         _nextId = saved.Count > 0 ? saved.Max(p => p.Id) + 1 : 1;
+        _perfilAtivo = saved.FirstOrDefault(p => p.Selecionado);
     }
 
     public ResultadoPerfilAlvo Add(string nome, CorAlvo cor, FormatoAlvo formato, DimensoesAlvo dimensoes, IReadOnlyList<FotoReferenciaAlvo> fotos)
@@ -111,6 +125,10 @@ public sealed class PerfilAlvoService : IPerfilAlvoService
     {
         if (!Perfis.Remove(perfil)) return;
 
+        // Remover o perfil ativo deixa o sistema SEM alvo — a detecção precisa enxergar isso na
+        // rodada seguinte, não continuar travada num perfil que não está mais cadastrado.
+        if (ReferenceEquals(_perfilAtivo, perfil)) _perfilAtivo = null;
+
         Persist();
         _logger.Info($"Perfil de alvo \"{perfil.Nome}\" removido");
     }
@@ -125,6 +143,7 @@ public sealed class PerfilAlvoService : IPerfilAlvoService
             if (outro.Selecionado) outro.Selecionado = false;
         }
         perfil.Selecionado = true;
+        _perfilAtivo = perfil;
 
         Persist();
         _logger.Info($"Perfil de alvo \"{perfil.Nome}\" selecionado como ativo");

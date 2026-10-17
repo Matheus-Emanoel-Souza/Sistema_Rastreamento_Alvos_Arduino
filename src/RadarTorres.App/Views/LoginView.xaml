@@ -34,7 +34,31 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid>
+    <!-- ClipToBounds: a marca d'água abaixo é escalada para COBRIR a área (UniformToFill), o
+         que significa que ela sempre sobra em uma das direções — sem o recorte, esse excesso
+         vazaria para fora da aba. -->
+    <Grid ClipToBounds="True">
+        <!--
+            Marca d'água com o ícone do aplicativo (mesmo arquivo do ícone do .exe, exposto
+            como Resource no .csproj). UniformToFill, e não Uniform: o ícone é quadrado e a
+            área de login é larga, então "preencher e recortar" deixa a torre centralizada
+            ocupando o fundo inteiro, enquanto "caber inteiro" deixaria duas faixas vazias e
+            traria o wordmark do ícone para a tela — repetindo o título "RadarTorres" que o
+            cartão já exibe logo acima do formulário.
+
+            DecodePixelWidth=256 escolhe explicitamente o maior quadro do .ico (ele tem 7, de
+            16 a 256 px): sem isso o decodificador pode pegar um quadro pequeno e a ampliação
+            fica visivelmente serrilhada. A opacidade vem do tema (ver Themes/Dark.xaml), e
+            IsHitTestVisible=False garante que a imagem não roube cliques do formulário.
+        -->
+        <Image Stretch="UniformToFill" IsHitTestVisible="False"
+               Opacity="{DynamicResource LoginMarcaDaguaOpacidade}"
+               RenderOptions.BitmapScalingMode="HighQuality">
+            <Image.Source>
+                <BitmapImage UriSource="pack://application:,,,/Assets/RadarTorres.ico" DecodePixelWidth="256"/>
+            </Image.Source>
+        </Image>
+
         <Border VerticalAlignment="Center" HorizontalAlignment="Center"
                 Background="{DynamicResource PanelBrush}"
                 BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"

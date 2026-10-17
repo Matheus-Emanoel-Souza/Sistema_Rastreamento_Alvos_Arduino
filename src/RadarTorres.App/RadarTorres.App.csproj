@@ -78,6 +78,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- O mesmo arquivo usado em <ApplicationIcon> (ícone do .exe e das janelas) também
+         precisa existir como Resource para ser carregado em tempo de execução por um pack
+         URI — é assim que a tela de login o usa como marca d'água de fundo
+         (ver Views/LoginView.xaml). <ApplicationIcon> sozinho grava o ícone só nos
+         recursos Win32 do executável, de onde o XAML não consegue ler. -->
+    <Resource Include="Assets\RadarTorres.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
