@@ -1,0 +1,66 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Ícones de traço (grade 24x24, StrokeThickness 2, sem preenchimento) da nova identidade
+        visual — usados na Sidebar via <Path Data="{StaticResource Icon.X}"
+        Stroke="{DynamicResource Text.Secondary|Accent.Text}" StrokeThickness="2" Fill="Transparent"/>.
+        Cada ícone é um GeometryGroup combinando as formas primitivas descritas no pedido.
+    -->
+
+    <GeometryGroup x:Key="Icon.PainelPrincipal">
+        <RectangleGeometry Rect="3,3,8,8" RadiusX="1" RadiusY="1"/>
+        <RectangleGeometry Rect="13,3,8,5" RadiusX="1" RadiusY="1"/>
+        <RectangleGeometry Rect="13,11,8,10" RadiusX="1" RadiusY="1"/>
+        <RectangleGeometry Rect="3,14,8,7" RadiusX="1" RadiusY="1"/>
+    </GeometryGroup>
+
+    <GeometryGroup x:Key="Icon.Monitoramento">
+        <EllipseGeometry Center="12,12" RadiusX="9" RadiusY="9"/>
+        <EllipseGeometry Center="12,12" RadiusX="4" RadiusY="4"/>
+        <PathGeometry Figures="M12,12 L19,6"/>
+    </GeometryGroup>
+
+    <GeometryGroup x:Key="Icon.ObjetosDetectados">
+        <RectangleGeometry Rect="5,5,5,5"/>
+        <RectangleGeometry Rect="14,14,5,5"/>
+        <PathGeometry Figures="M12,12 L4,20"/>
+    </GeometryGroup>
+
+    <PathGeometry x:Key="Icon.AcoesRealizadas" Figures="M5,12 L10,17 L20,7"/>
+
+    <GeometryGroup x:Key="Icon.HistoricoModos">
+        <EllipseGeometry Center="12,12" RadiusX="9" RadiusY="9"/>
+        <PathGeometry Figures="M12,7 L12,12 L15,14"/>
+    </GeometryGroup>
+
+    <GeometryGroup x:Key="Icon.Cameras">
+        <RectangleGeometry Rect="3,7,13,10" RadiusX="2" RadiusY="2"/>
+        <PathGeometry Figures="M16,11 L21,8 L21,16 L16,13 Z"/>
+    </GeometryGroup>
+
+    <GeometryGroup x:Key="Icon.PerfisAlvo">
+        <EllipseGeometry Center="12,12" RadiusX="8" RadiusY="8"/>
+        <PathGeometry Figures="M12,2 L12,6 M12,18 L12,22 M2,12 L6,12 M18,12 L22,12" FillRule="Nonzero"/>
+    </GeometryGroup>
+
+    <GeometryGroup x:Key="Icon.ConfiguracoesArduino">
+        <RectangleGeometry Rect="6,6,12,12" RadiusX="1" RadiusY="1"/>
+        <PathGeometry Figures="M9,2 L9,6 M15,2 L15,6 M9,18 L9,22 M15,18 L15,22 M2,9 L6,9 M2,15 L6,15 M18,9 L22,9 M18,15 L22,15"/>
+    </GeometryGroup>
+
+    <GeometryGroup x:Key="Icon.Usuarios">
+        <EllipseGeometry Center="9,8" RadiusX="4" RadiusY="4"/>
+        <PathGeometry Figures="M2,20 C2,16 5,14 9,14 C13,14 16,16 16,20 M17,5 C19.2,5 21,6.8 21,9 C21,11.2 19.2,13 17,13"/>
+    </GeometryGroup>
+
+    <GeometryGroup x:Key="Icon.Configuracoes">
+        <EllipseGeometry Center="12,12" RadiusX="3" RadiusY="3"/>
+        <PathGeometry Figures="M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M5,5 L7,7 M17,17 L19,19 M19,5 L17,7 M7,17 L5,19"/>
+    </GeometryGroup>
+
+    <!-- Só a torre, sem círculo/fundo — usado na barra lateral compacta e no logo expandido
+         (via PathIcon preenchendo Text.Primary). Coordenadas originais do viewBox 400,300..560,540
+         convertidas de H/V do SVG para L (comandos absolutos), WPF não tem H/V na mini-linguagem. -->
+    <PathGeometry x:Key="Icon.LogoTorre"
+                  Figures="M420,312 L447,312 L447,334 L466,334 L466,312 L494,312 L494,334 L514,334 L514,312 L540,312 L540,372 L523,372 L528,480 L552,495 L552,528 L408,528 L408,495 L432,480 L437,372 L420,372 Z"/>
+</ResourceDictionary>
