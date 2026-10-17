@@ -33,7 +33,7 @@ public partial class RadarControl : UserControl
 {
     private sealed class TargetVisual
     {
-        public required Ellipse Circle;
+        public required Rectangle Square;
         public required TextBlock Label;
         public Line? TowerLink;
     }
@@ -129,6 +129,12 @@ public partial class RadarControl : UserControl
     private readonly DispatcherTimer _renderTimer;
     private readonly Dictionary<int, TargetVisual> _targetVisuals = new();
     private readonly Dictionary<int, TowerVisual> _towerVisuals = new();
+
+    /// <summary>Linha tracejada do centro (base) até o alvo ativo/selecionado (Requisito
+    /// "linha de acompanhamento") — distinta de <see cref="TargetVisual.TowerLink"/>, que liga
+    /// cada alvo à torre selecionada para ele. Uma só, reaproveitada, porque só existe um alvo
+    /// selecionado por vez.</summary>
+    private Line? _selectionTrackLine;
     private bool _staticLayerDirty = true;
     private INotifyCollectionChanged? _watchedZonaMortasCollection;
 
@@ -488,36 +494,53 @@ public partial class RadarControl : UserControl
         RadarCanvas.Height = size;
 
         var background = TryFindBrush("Bg.Sidebar", Brushes.Black);
-        var gridBrush = TryFindBrush("Accent.Fill", Brushes.DarkGreen);
-        var textBrush = TryFindBrush("Text.Secondary", Brushes.Gray);
+        var accentBrush = TryFindBrush("Accent.Fill", Brushes.DarkGreen);
+        var mutedBrush = TryFindBrush("Text.Muted", Brushes.Gray);
+        var secondaryBrush = TryFindBrush("Text.Secondary", Brushes.Gray);
+        var primaryBrush = TryFindBrush("Text.Primary", Brushes.White);
+        var monoFont = TryFindFontFamily("Font.Mono");
+        var displayFont = TryFindFontFamily("Font.Display");
 
         var baseCircle = new Ellipse
         {
             Width = size,
             Height = size,
             Fill = background,
-            Stroke = gridBrush,
-            StrokeThickness = 1.5
+            Stroke = accentBrush,
+            StrokeThickness = 3
         };
         StaticLayer.Children.Add(baseCircle);
 
         int ringCount = Math.Max(1, AppConfig.Current.RadarSettings.DistanceRingCount);
         double radius = size / 2.0;
+        int middleRingIndex = (ringCount + 1) / 2;
 
-        // Sombreamento das zonas mortas ativas, desenhado antes dos anéis/rótulos de
-        // distância para que eles continuem legíveis por cima do preenchimento translúcido.
+        // Preenchimento translúcido permanente dos quadrantes Q1/Q3 (identidade visual — ver
+        // Radar.Quadrant1Fill/Radar.Quadrant3Fill em Themes/*.xaml), desenhado ANTES do
+        // sombreamento de zonas mortas para que o aviso funcional/de segurança continue por cima
+        // da decoração.
+        DrawPermanentQuadrantFills(size, radius);
         DrawZonaMortas(size, radius, maxDistance);
+
+        // Anéis tracejados a 25% de opacidade, com o anel do meio mais marcado (1,5px/45%) —
+        // clonado do brush do tema para não mutar a instância compartilhada de Accent.Fill usada
+        // em todo o resto da UI.
+        var ringBrush = accentBrush.Clone();
+        ringBrush.Opacity = 0.25;
+        var ringBrushMid = accentBrush.Clone();
+        ringBrushMid.Opacity = 0.45;
 
         for (int i = 1; i <= ringCount; i++)
         {
+            bool isMiddle = i == middleRingIndex;
             double ringRadius = radius * i / ringCount;
             var ring = new Ellipse
             {
                 Width = ringRadius * 2,
                 Height = ringRadius * 2,
-                Stroke = gridBrush,
-                StrokeThickness = 1,
-                StrokeDashArray = new DoubleCollection { 2, 3 }
+                Stroke = isMiddle ? ringBrushMid : ringBrush,
+                StrokeThickness = isMiddle ? 1.5 : 1,
+                StrokeDashArray = new DoubleCollection { 3, 5 }
             };
             Canvas.SetLeft(ring, radius - ringRadius);
             Canvas.SetTop(ring, radius - ringRadius);
@@ -527,43 +550,76 @@ public partial class RadarControl : UserControl
             var label = new TextBlock
             {
                 Text = $"{ringDistanceMeters:0.0} m",
-                Foreground = textBrush,
-                FontSize = 10
+                Foreground = mutedBrush,
+                FontFamily = monoFont,
+                FontSize = 11
             };
-            Canvas.SetLeft(label, radius + 2);
+            Canvas.SetLeft(label, radius + 6);
             Canvas.SetTop(label, radius - ringRadius);
             StaticLayer.Children.Add(label);
         }
 
-        // Linhas dos quadrantes (eixos X/Y passando pelo centro).
-        StaticLayer.Children.Add(new Line { X1 = 0, Y1 = radius, X2 = size, Y2 = radius, Stroke = gridBrush, StrokeThickness = 1 });
-        StaticLayer.Children.Add(new Line { X1 = radius, Y1 = 0, X2 = radius, Y2 = size, Stroke = gridBrush, StrokeThickness = 1 });
+        // Eixos em cruz (passando pelo centro), 1,5px, cor cheia (sem opacidade reduzida —
+        // diferente dos anéis).
+        StaticLayer.Children.Add(new Line { X1 = 0, Y1 = radius, X2 = size, Y2 = radius, Stroke = accentBrush, StrokeThickness = 1.5 });
+        StaticLayer.Children.Add(new Line { X1 = radius, Y1 = 0, X2 = radius, Y2 = size, Stroke = accentBrush, StrokeThickness = 1.5 });
 
-        // Base (origem) ao centro.
-        var baseMarker = new Ellipse { Width = 8, Height = 8, Fill = TryFindBrush("Accent.Fill", Brushes.LimeGreen) };
-        Canvas.SetLeft(baseMarker, radius - 4);
-        Canvas.SetTop(baseMarker, radius - 4);
+        // Base (origem) ao centro — ponto de raio 5.
+        var baseMarker = new Ellipse { Width = 10, Height = 10, Fill = accentBrush };
+        Canvas.SetLeft(baseMarker, radius - 5);
+        Canvas.SetTop(baseMarker, radius - 5);
         StaticLayer.Children.Add(baseMarker);
 
-        // Indicação de Norte / 0°.
-        var northLabel = new TextBlock { Text = "N / 0°", Foreground = textBrush, FontSize = 12, FontWeight = FontWeights.Bold };
-        Canvas.SetLeft(northLabel, radius - 18);
+        // Indicação de Norte / 0°, deslocada para a esquerda do topo para não colidir com o
+        // rótulo de distância do anel mais externo (que fica à direita, na mesma altura).
+        var northLabel = new TextBlock
+        {
+            Text = "N · 0°",
+            Foreground = secondaryBrush,
+            FontFamily = monoFont,
+            FontSize = 13
+        };
+        Canvas.SetLeft(northLabel, Math.Max(2, radius - 46));
         Canvas.SetTop(northLabel, 4);
         StaticLayer.Children.Add(northLabel);
 
-        // Rótulos de quadrante.
-        AddQuadrantLabel("Q1", radius + radius * 0.45, radius - radius * 0.45, textBrush);
-        AddQuadrantLabel("Q2", radius - radius * 0.55, radius - radius * 0.45, textBrush);
-        AddQuadrantLabel("Q3", radius - radius * 0.55, radius + radius * 0.35, textBrush);
-        AddQuadrantLabel("Q4", radius + radius * 0.45, radius + radius * 0.35, textBrush);
+        // Rótulos de quadrante — Chakra Petch 700 22px, Text.Primary a 28% de opacidade.
+        AddQuadrantLabel("Q1", radius + radius * 0.45, radius - radius * 0.45, primaryBrush, displayFont);
+        AddQuadrantLabel("Q2", radius - radius * 0.55, radius - radius * 0.45, primaryBrush, displayFont);
+        AddQuadrantLabel("Q3", radius - radius * 0.55, radius + radius * 0.35, primaryBrush, displayFont);
+        AddQuadrantLabel("Q4", radius + radius * 0.45, radius + radius * 0.35, primaryBrush, displayFont);
     }
 
-    private void AddQuadrantLabel(string text, double x, double y, Brush brush)
+    private void AddQuadrantLabel(string text, double x, double y, Brush brush, FontFamily font)
     {
-        var label = new TextBlock { Text = text, Foreground = brush, FontSize = 13, FontWeight = FontWeights.SemiBold, Opacity = 0.6 };
+        var label = new TextBlock { Text = text, Foreground = brush, FontFamily = font, FontSize = 22, FontWeight = FontWeights.Bold, Opacity = 0.28 };
         Canvas.SetLeft(label, x);
         Canvas.SetTop(label, y);
         StaticLayer.Children.Add(label);
+    }
+
+    /// <summary>Preenchimento permanente de Q1 (mais forte) e Q3 (mais sutil) — convenção da
+    /// identidade visual, não relacionado a zonas mortas (ver <see cref="DrawZonaMortas"/>).
+    /// Reaproveita <see cref="QuadrantWedge"/>, o mesmo cálculo geométrico já usado ali.</summary>
+    private void DrawPermanentQuadrantFills(double size, double radius)
+    {
+        var center = new Point(radius, radius);
+        Point east = new(size, radius);
+        Point north = new(radius, 0);
+        Point west = new(0, radius);
+        Point south = new(radius, size);
+
+        Geometry? q1 = QuadrantWedge(Quadrant.Q1, center, radius, east, north, west, south);
+        if (q1 is not null)
+        {
+            StaticLayer.Children.Add(new Path { Data = q1, Fill = TryFindBrush("Radar.Quadrant1Fill", Brushes.Transparent) });
+        }
+
+        Geometry? q3 = QuadrantWedge(Quadrant.Q3, center, radius, east, north, west, south);
+        if (q3 is not null)
+        {
+            StaticLayer.Children.Add(new Path { Data = q3, Fill = TryFindBrush("Radar.Quadrant3Fill", Brushes.Transparent) });
+        }
     }
 
     /// <summary>
@@ -653,13 +709,21 @@ public partial class RadarControl : UserControl
 
             if (!_towerVisuals.TryGetValue(tower.Id, out TowerVisual? visual))
             {
+                // Quadrado 26x26 (Requisito): vazado (só traço) quando livre/indisponível,
+                // preenchido quando selecionada — ver TowerFillFor/TowerStrokeFor, que decidem a
+                // cor pelo mesmo TowerState de antes.
                 var shape = new Polygon
                 {
-                    Points = new PointCollection { new(-7, -7), new(7, -7), new(7, 7), new(-7, 7) }, // quadrado
-                    StrokeThickness = 1,
-                    Stroke = Brushes.Black
+                    Points = new PointCollection { new(-13, -13), new(13, -13), new(13, 13), new(-13, 13) },
+                    StrokeThickness = 3
                 };
-                var label = new TextBlock { FontSize = 10, FontWeight = FontWeights.SemiBold };
+                var label = new TextBlock
+                {
+                    FontFamily = TryFindFontFamily("Font.Body"),
+                    FontSize = 13,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = TryFindBrush("Text.Primary", Brushes.White)
+                };
 
                 DynamicLayer.Children.Add(shape);
                 DynamicLayer.Children.Add(label);
@@ -668,13 +732,14 @@ public partial class RadarControl : UserControl
                 _towerVisuals[tower.Id] = visual;
             }
 
-            Canvas.SetLeft(visual.Shape, p.X - 8);
-            Canvas.SetTop(visual.Shape, p.Y - 8);
-            visual.Shape.Fill = TowerVisualBrushFor(tower.State);
+            Canvas.SetLeft(visual.Shape, p.X - 13);
+            Canvas.SetTop(visual.Shape, p.Y - 13);
+            visual.Shape.Fill = TowerFillFor(tower.State);
+            visual.Shape.Stroke = TowerStrokeFor(tower.State);
 
             visual.Label.Text = tower.Name;
-            Canvas.SetLeft(visual.Label, p.X + 9);
-            Canvas.SetTop(visual.Label, p.Y - 7);
+            Canvas.SetLeft(visual.Label, p.X + 17);
+            Canvas.SetTop(visual.Label, p.Y - 9);
         }
     }
 
@@ -685,7 +750,16 @@ public partial class RadarControl : UserControl
         DynamicLayer.Children.Remove(visual.Label);
     }
 
-    private Brush TowerVisualBrushFor(TowerState state) => state switch
+    /// <summary>Preenchimento da torre: só os estados "ativos" (selecionada/disparando) ficam
+    /// preenchidos — livre/indisponível ficam vazadas (Requisito "torre vazada x selecionada").</summary>
+    private Brush TowerFillFor(TowerState state) => state switch
+    {
+        TowerState.Selected => TryFindBrush("Accent.Fill", Brushes.LimeGreen),
+        TowerState.Firing => TryFindBrush("Danger.Fill", Brushes.Red),
+        _ => Brushes.Transparent
+    };
+
+    private Brush TowerStrokeFor(TowerState state) => state switch
     {
         TowerState.Selected => TryFindBrush("Accent.Fill", Brushes.LimeGreen),
         TowerState.Firing => TryFindBrush("Danger.Fill", Brushes.Red),
@@ -705,6 +779,8 @@ public partial class RadarControl : UserControl
             RemoveTargetVisual(staleId);
         }
 
+        bool anySelected = false;
+
         foreach (Target target in targets)
         {
             Point p = CoordinateConverter.WorldToScreen(target.X, target.Y, size, maxDistance);
@@ -712,34 +788,73 @@ public partial class RadarControl : UserControl
 
             if (!_targetVisuals.TryGetValue(target.Id, out TargetVisual? visual))
             {
-                var circle = new Ellipse { Width = 14, Height = 14, StrokeThickness = 2, Stroke = Brushes.White, Cursor = System.Windows.Input.Cursors.Hand };
+                // Quadrado 12x12 preenchido com Target.Fill (Requisito) — a diferenciação visual
+                // de "selecionado" passa a ser só a linha de acompanhamento (ver abaixo), não mais
+                // um tamanho/cor diferente do quadrado em si.
+                var square = new Rectangle { Width = 12, Height = 12, Fill = TryFindBrush("Target.Fill", Brushes.Orange), Cursor = System.Windows.Input.Cursors.Hand };
                 // e.Handled = true impede que o clique "vaze" para RadarCanvas_MouseLeftButtonDown
                 // por baixo — clicar num alvo sempre seleciona o alvo, nunca também conta como
                 // clique de zona morta, mesmo com ZonaMortaEditMode ativo.
-                circle.MouseLeftButtonDown += (_, e) => { TargetClicked?.Invoke(this, target.Id); e.Handled = true; };
+                square.MouseLeftButtonDown += (_, e) => { TargetClicked?.Invoke(this, target.Id); e.Handled = true; };
 
-                var label = new TextBlock { FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
+                var label = new TextBlock
+                {
+                    FontFamily = TryFindFontFamily("Font.Mono"),
+                    FontSize = 11,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = TryFindBrush("Text.Primary", Brushes.White)
+                };
 
-                DynamicLayer.Children.Add(circle);
+                DynamicLayer.Children.Add(square);
                 DynamicLayer.Children.Add(label);
 
-                visual = new TargetVisual { Circle = circle, Label = label };
+                visual = new TargetVisual { Square = square, Label = label };
                 _targetVisuals[target.Id] = visual;
             }
 
-            Canvas.SetLeft(visual.Circle, p.X - 7);
-            Canvas.SetTop(visual.Circle, p.Y - 7);
-            visual.Circle.Fill = isSelected ? TryFindBrush("Target.Fill", Brushes.Gold) : TryFindBrush("Target.Fill", Brushes.DodgerBlue);
-            visual.Circle.Width = visual.Circle.Height = isSelected ? 18 : 14;
-            Canvas.SetLeft(visual.Circle, p.X - visual.Circle.Width / 2);
-            Canvas.SetTop(visual.Circle, p.Y - visual.Circle.Height / 2);
+            Canvas.SetLeft(visual.Square, p.X - 6);
+            Canvas.SetTop(visual.Square, p.Y - 6);
 
             visual.Label.Text = $"#{target.Id:D2}";
-            Canvas.SetLeft(visual.Label, p.X + 10);
+            Canvas.SetLeft(visual.Label, p.X + 9);
             Canvas.SetTop(visual.Label, p.Y - 8);
 
             UpdateTowerLink(visual, target, p, size, maxDistance);
+
+            if (isSelected)
+            {
+                anySelected = true;
+                UpdateSelectionTrackLine(new Point(size / 2.0, size / 2.0), p);
+            }
         }
+
+        if (!anySelected && _selectionTrackLine is not null)
+        {
+            DynamicLayer.Children.Remove(_selectionTrackLine);
+            _selectionTrackLine = null;
+        }
+    }
+
+    /// <summary>Cria/atualiza a linha tracejada do centro até o alvo ativo — ver comentário do
+    /// campo <see cref="_selectionTrackLine"/>.</summary>
+    private void UpdateSelectionTrackLine(Point centro, Point alvo)
+    {
+        if (_selectionTrackLine is null)
+        {
+            _selectionTrackLine = new Line
+            {
+                Stroke = TryFindBrush("Target.Fill", Brushes.Orange),
+                StrokeThickness = 1.5,
+                StrokeDashArray = new DoubleCollection { 5, 4 },
+                IsHitTestVisible = false
+            };
+            DynamicLayer.Children.Insert(0, _selectionTrackLine); // atrás dos marcadores
+        }
+
+        _selectionTrackLine.X1 = centro.X;
+        _selectionTrackLine.Y1 = centro.Y;
+        _selectionTrackLine.X2 = alvo.X;
+        _selectionTrackLine.Y2 = alvo.Y;
     }
 
     private void UpdateTowerLink(TargetVisual visual, Target target, Point targetScreenPos, double size, double maxDistance)
@@ -777,11 +892,14 @@ public partial class RadarControl : UserControl
     private void RemoveTargetVisual(int id)
     {
         if (!_targetVisuals.Remove(id, out TargetVisual? visual)) return;
-        DynamicLayer.Children.Remove(visual.Circle);
+        DynamicLayer.Children.Remove(visual.Square);
         DynamicLayer.Children.Remove(visual.Label);
         if (visual.TowerLink is not null) DynamicLayer.Children.Remove(visual.TowerLink);
     }
 
     private static Brush TryFindBrush(string key, Brush fallback) =>
         Application.Current.TryFindResource(key) as Brush ?? fallback;
+
+    private static FontFamily TryFindFontFamily(string key) =>
+        Application.Current.TryFindResource(key) as FontFamily ?? new FontFamily("Segoe UI");
 }
