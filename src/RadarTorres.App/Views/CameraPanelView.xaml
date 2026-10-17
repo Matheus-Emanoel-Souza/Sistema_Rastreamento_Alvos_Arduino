@@ -19,55 +19,55 @@
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
 
         <Style x:Key="SectionCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="14"/>
             <Setter Property="Margin" Value="0,0,0,0"/>
         </Style>
         <Style x:Key="LabelText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,6,0,2"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
-            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="Padding" Value="6,3"/>
         </Style>
         <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
         </Style>
 
         <Style x:Key="StatusText" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding HasError}" Value="True">
-                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsStreaming}" Value="True">
-                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="PreviewBorder" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource RadarBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Sidebar}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Height" Value="220"/>
@@ -79,7 +79,7 @@
             <!-- Identificação do painel = QUADRANTE monitorado (e não mais "Câmera N", que era
                  só a posição na grade). O nome do dispositivo continua no seletor abaixo. -->
             <TextBlock Text="{Binding TituloPainel}" FontSize="15" FontWeight="Bold"
-                       TextWrapping="Wrap" Foreground="{DynamicResource AccentBrush}"/>
+                       TextWrapping="Wrap" Foreground="{DynamicResource Accent.Fill}"/>
 
             <Grid Margin="0,8,0,0">
                 <Grid.ColumnDefinitions>
@@ -91,7 +91,7 @@
             </Grid>
 
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Content="{loc:Loc Cameras.Selecao.Iniciar}" Command="{Binding StartCommand}" Background="{DynamicResource AccentBrush}"/>
+                <Button Content="{loc:Loc Cameras.Selecao.Iniciar}" Command="{Binding StartCommand}" Background="{DynamicResource Accent.Fill}"/>
                 <Button Content="{loc:Loc Cameras.Selecao.Parar}" Command="{Binding StopCommand}"/>
             </StackPanel>
 
@@ -114,7 +114,7 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
                 <Button Grid.Column="1" Content="{loc:Loc Cameras.Quadrante.Salvar}" Margin="0"
-                        Command="{Binding DefinirQuadranteCommand}" Background="{DynamicResource AccentBrush}"
+                        Command="{Binding DefinirQuadranteCommand}" Background="{DynamicResource Accent.Fill}"
                         Foreground="White"/>
             </Grid>
             <TextBlock Text="{Binding QuadranteDescricao}" Style="{StaticResource LabelText}" TextWrapping="Wrap"/>
@@ -124,10 +124,10 @@
                        Visibility="{Binding MensagemQuadrante, Converter={StaticResource NullToVisibilityConverter}}">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
-                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding QuadranteComErro}" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -143,7 +143,7 @@
 
                     <TextBlock Text="{loc:Loc Cameras.Visualizacao.SemImagem}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240" FontSize="12"
-                               Foreground="{DynamicResource TextSecondaryBrush}">
+                               Foreground="{DynamicResource Text.Secondary}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>

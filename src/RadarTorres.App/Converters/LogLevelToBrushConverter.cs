@@ -14,10 +14,10 @@ public sealed class LogLevelToBrushConverter : IValueConverter
     {
         string resourceKey = value switch
         {
-            LogLevel.Success => "AccentBrush",
-            LogLevel.Warning => "WarningBrush",
-            LogLevel.Error => "DangerBrush",
-            _ => "TextSecondaryBrush"
+            LogLevel.Success => "Accent.Fill",
+            LogLevel.Warning => "Target.Fill",
+            LogLevel.Error => "Danger.Fill",
+            _ => "Text.Secondary"
         };
 
         return Application.Current.TryFindResource(resourceKey) as SolidColorBrush ?? Brushes.Gray;

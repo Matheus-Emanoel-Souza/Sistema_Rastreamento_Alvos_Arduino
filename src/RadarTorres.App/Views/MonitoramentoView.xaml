@@ -5,8 +5,8 @@
              xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
              xmlns:conv="clr-namespace:RadarTorres.App.Converters"
              xmlns:models="clr-namespace:RadarTorres.App.Models"
-             Background="{DynamicResource BackgroundBrush}"
-             Foreground="{DynamicResource TextPrimaryBrush}"
+             Background="{DynamicResource Bg.Window}"
+             Foreground="{DynamicResource Text.Primary}"
              FontFamily="Segoe UI">
     <!--
         Conteúdo migrado de Views/MainWindow.xaml (era a janela única do app) para um
@@ -27,52 +27,52 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
         </Style>
         <Style x:Key="LabelText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,4,0,0"/>
         </Style>
         <Style x:Key="ValueText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Margin" Value="0,0,4,4"/>
-            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Margin" Value="0,3,0,3"/>
         </Style>
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Margin" Value="0,3,0,3"/>
         </Style>
         <Style TargetType="ComboBox">
             <Setter Property="Margin" Value="0,0,0,6"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="Padding" Value="6,3"/>
         </Style>
         <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="Margin" Value="0,0,0,6"/>
             <Setter Property="Padding" Value="4,2"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}"/>
         </Style>
     </UserControl.Resources>
 
@@ -95,16 +95,16 @@
                  arrastável) — só este card, ver MonitoramentoView.SetLogPinned. -->
             <ToggleButton x:Name="PinLogToggle" Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"
                           Padding="8,4" Cursor="Hand" BorderThickness="0"
-                          Foreground="{DynamicResource TextPrimaryBrush}"
+                          Foreground="{DynamicResource Text.Primary}"
                           Checked="PinLogToggle_Checked" Unchecked="PinLogToggle_Unchecked"
                           Content="📌 Fixar logs na lateral"
                           ToolTip="Fixa o Console de Eventos numa faixa na borda direita da tela, fora do arraste">
                 <ToggleButton.Style>
                     <Style TargetType="ToggleButton">
-                        <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                        <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
                         <Style.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -147,7 +147,7 @@
                  toda vez que CurrentMode muda. Cada botão passa o SystemMode clicado como
                  CommandParameter para SetModeCommand, que reaproveita a mesma confirmação e
                  auditoria (modo_atual_torre) já existentes no setter de CurrentMode. As cores
-                 (AccentBrush/WarningBrush/DangerBrush) são as mesmas já usadas no resto do app
+                 (Accent.Fill/Target.Fill/Danger.Fill) são as mesmas já usadas no resto do app
                  para verde/amarelo/vermelho — trocam automaticamente com o tema. -->
             <shared:DashboardCard x:Name="CardModoOperacao" CardId="ModoOperacao" Title="MODO DE OPERAÇÃO"
                                    DefaultWidth="320" DefaultHeight="260"
@@ -159,13 +159,13 @@
                                    Margin="0,0,0,10">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource ValueText}">
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding CurrentMode}" Value="{x:Static models:SystemMode.AcompanharAlvos}">
-                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Target.Fill}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding CurrentMode}" Value="{x:Static models:SystemMode.Disparar}">
-                                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -183,13 +183,13 @@
                                             CommandParameter="{Binding}">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding}" Value="{x:Static models:SystemMode.AcompanharAlvos}">
-                                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                                        <Setter Property="Background" Value="{DynamicResource Target.Fill}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding}" Value="{x:Static models:SystemMode.Disparar}">
-                                                        <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                                        <Setter Property="Background" Value="{DynamicResource Danger.Fill}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -239,7 +239,7 @@
                         <Run Text="Quadrante da câmera:"/><Run Text=" "/><Run Text="{Binding QuadranteDaCamera, Mode=OneWay}" FontWeight="Bold"/>
                     </TextBlock>
 
-                    <Border Grid.Row="2" Background="{DynamicResource RadarBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                    <Border Grid.Row="2" Background="{DynamicResource Bg.Sidebar}" BorderBrush="{DynamicResource Border.Control}"
                             BorderThickness="1" CornerRadius="4" Margin="0,0,0,8" ClipToBounds="True">
                         <Image Source="{Binding CurrentFrame}" Stretch="Uniform" StretchDirection="Both"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -263,7 +263,7 @@
                             <TextBlock Text="{Binding StatusDeteccao}" Style="{StaticResource LabelText}" TextWrapping="Wrap" Margin="0,0,0,4"/>
 
                             <TextBlock Text="{Binding UltimaDistanciaMetros, StringFormat='Distância: {0:0.0} m'}"
-                                       FontWeight="Bold" FontSize="14" Foreground="{DynamicResource DangerBrush}"
+                                       FontWeight="Bold" FontSize="14" Foreground="{DynamicResource Danger.Fill}"
                                        TextWrapping="Wrap"
                                        Visibility="{Binding UltimaDistanciaMetros, Converter={StaticResource NullToVisibilityConverter}}"/>
                         </StackPanel>
@@ -279,7 +279,7 @@
                     <UniformGrid Columns="2">
                         <StackPanel Margin="0,0,8,0">
                             <TextBlock Text="STATUS DO SISTEMA" Style="{StaticResource LabelText}"/>
-                            <TextBlock Text="{Binding SystemStatusText}" Style="{StaticResource ValueText}" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="{Binding SystemStatusText}" Style="{StaticResource ValueText}" Foreground="{DynamicResource Accent.Fill}"/>
 
                             <TextBlock Text="MODO" Style="{StaticResource LabelText}"/>
                             <TextBlock Text="{Binding CurrentMode, Converter={StaticResource SystemModeToLabelConverter}}" Style="{StaticResource ValueText}"/>
@@ -314,7 +314,7 @@
                             </StackPanel>
 
                             <TextBlock Text="STATUS" Style="{StaticResource LabelText}"/>
-                            <TextBlock Text="{Binding SelectedTargetSafetyStatus}" Style="{StaticResource ValueText}" Foreground="{DynamicResource WarningBrush}"/>
+                            <TextBlock Text="{Binding SelectedTargetSafetyStatus}" Style="{StaticResource ValueText}" Foreground="{DynamicResource Target.Fill}"/>
                         </StackPanel>
                     </UniformGrid>
                 </ScrollViewer>
@@ -359,7 +359,7 @@
                         <ItemsControl ItemsSource="{Binding ZonaMortas}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:ZonaMorta}">
-                                    <Border BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="0,4">
+                                    <Border BorderBrush="{DynamicResource Border.Control}" BorderThickness="0,0,0,1" Padding="0,4">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -408,7 +408,7 @@
                     </StackPanel>
 
                     <TextBlock Grid.Row="1" Text="Seu perfil não permite criar ou remover zonas mortas — apenas o Administrador."
-                               Foreground="{DynamicResource WarningBrush}" FontSize="11" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Target.Fill}" FontSize="11" TextWrapping="Wrap"
                                Visibility="{Binding NaoPodeGerenciarZonasMortas, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </Grid>
             </shared:DashboardCard>
@@ -420,7 +420,7 @@
                  realocado de dentro de CardConsoleEventos, nunca uma cópia (ver
                  MonitoramentoView.SetLogPinned). -->
             <Border x:Name="PinnedLogPanel" Grid.Column="1" Margin="8,0,0,0" Visibility="Collapsed"
-                    Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                    Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
                     BorderThickness="1" CornerRadius="8">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -428,7 +428,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Text="CONSOLE DE EVENTOS" Margin="12,10,12,6"
-                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                               Foreground="{DynamicResource Text.Secondary}" FontSize="12" FontWeight="SemiBold"/>
                     <ContentControl x:Name="PinnedLogHost" Grid.Row="1" Margin="12,0,12,12"/>
                 </Grid>
             </Border>

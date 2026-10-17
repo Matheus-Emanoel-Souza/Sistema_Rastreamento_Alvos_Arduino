@@ -18,8 +18,8 @@
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
 
         <Style x:Key="SectionCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
@@ -28,16 +28,16 @@
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
         <Style x:Key="LabelText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,6,0,2"/>
         </Style>
         <Style x:Key="HintText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,2,0,8"/>
@@ -45,30 +45,30 @@
         <Style TargetType="Button">
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="Padding" Value="6,3"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
         <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
         </Style>
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Margin" Value="0,6,0,0"/>
         </Style>
     </UserControl.Resources>
@@ -82,7 +82,7 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,14">
             <TextBlock Text="CONFIGURAÇÕES" FontSize="20" FontWeight="Bold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                       Foreground="{DynamicResource Text.Primary}"/>
             <TextBlock Style="{StaticResource HintText}"
                        Text="Preferências salvas neste computador. Idioma e tema valem imediatamente; o tamanho da janela é aplicado na próxima vez que o aplicativo abrir."/>
         </StackPanel>
@@ -205,17 +205,17 @@
 
         <!-- ============================== AÇÕES ============================== -->
         <StackPanel Grid.Row="2" Margin="0,12,0,0">
-            <TextBlock Text="{Binding MensagemStatus}" Foreground="{DynamicResource AccentBrush}"
+            <TextBlock Text="{Binding MensagemStatus}" Foreground="{DynamicResource Accent.Fill}"
                        TextWrapping="Wrap" Margin="0,0,0,8"
                        Visibility="{Binding MensagemStatus, Converter={StaticResource NullToVisibilityConverter}}"/>
 
             <StackPanel Orientation="Horizontal">
                 <Button Content="Salvar" Command="{Binding SalvarCommand}"
-                        Background="{DynamicResource AccentBrush}" FontWeight="Bold"/>
+                        Background="{DynamicResource Accent.Fill}" FontWeight="Bold"/>
                 <Button Content="Cancelar" Command="{Binding CancelarCommand}"/>
                 <Button Content="Restaurar padrões" Command="{Binding RestaurarPadroesCommand}"/>
 
-                <TextBlock Text="• alterações não salvas" Foreground="{DynamicResource DangerBrush}"
+                <TextBlock Text="• alterações não salvas" Foreground="{DynamicResource Danger.Fill}"
                            VerticalAlignment="Center" Margin="8,0,0,0" FontSize="11"
                            Visibility="{Binding TemAlteracoesNaoSalvas, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </StackPanel>

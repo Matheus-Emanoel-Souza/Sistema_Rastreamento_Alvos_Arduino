@@ -5,26 +5,26 @@
         xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
         Title="{loc:Loc Profile.Title}" Height="620" Width="380"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="{DynamicResource BackgroundBrush}"
-        Foreground="{DynamicResource TextPrimaryBrush}"
+        Background="{DynamicResource Bg.Window}"
+        Foreground="{DynamicResource Text.Primary}"
         FontFamily="Segoe UI">
 
     <Window.Resources>
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="6,5"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
         </Style>
         <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,0,0,3"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="0,9"/>
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -33,7 +33,7 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24">
-        <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+        <Border Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
                 BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,20">
             <StackPanel>
                 <TextBlock Text="{loc:Loc Profile.Name}" Style="{StaticResource FieldLabel}"/>
@@ -49,15 +49,15 @@
                 <TextBlock Text="{Binding Usuario.Login}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="{loc:Loc Profile.Perfil}" Style="{StaticResource FieldLabel}"/>
-                <TextBlock Text="{Binding Usuario.Perfil}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <TextBlock Text="{Binding Usuario.Perfil}" Foreground="{DynamicResource Accent.Fill}" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
                 <TextBlock Text="{Binding MensagemDados}" TextWrapping="Wrap" Margin="0,0,0,10">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SucessoDados}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -82,10 +82,10 @@
         <TextBlock Text="{Binding Mensagem}" TextWrapping="Wrap" Margin="0,4,0,10">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">
-                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Sucesso}" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>

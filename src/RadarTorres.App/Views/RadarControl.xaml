@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="600"
-             Background="{DynamicResource RadarBackgroundBrush}">
+             Background="{DynamicResource Bg.Sidebar}">
     <!--
         Componente visual do radar. Duas camadas de Canvas sobrepostas:
         - StaticLayer: círculos concêntricos, linhas de quadrante, marcação de Norte/0° e rótulos
@@ -38,13 +38,13 @@
         <!-- Controles de zoom (Ctrl+roda do mouse também funciona), sobrepostos no canto
              superior direito. -->
         <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
-                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
                 BorderThickness="1" CornerRadius="4" Padding="2" Opacity="0.92">
             <StackPanel Orientation="Horizontal">
                 <Button x:Name="ZoomOutButton" Content="−" Width="22" Height="22" Padding="0"
                         Margin="1" Cursor="Hand" ToolTip="Diminuir escala do radar" Click="ZoomOutButton_Click"/>
                 <TextBlock x:Name="ZoomLabel" Text="100%" Width="40" TextAlignment="Center"
-                           VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11"/>
+                           VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}" FontSize="11"/>
                 <Button x:Name="ZoomInButton" Content="+" Width="22" Height="22" Padding="0"
                         Margin="1" Cursor="Hand" ToolTip="Aumentar escala do radar" Click="ZoomInButton_Click"/>
                 <Button x:Name="ZoomResetButton" Content="⤢" Width="22" Height="22" Padding="0"
@@ -56,13 +56,13 @@
              canto superior esquerdo — "ver mais longe" aumenta a distância representada pela
              borda externa do radar, sem mudar o tamanho em pixels. -->
         <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6"
-                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
                 BorderThickness="1" CornerRadius="4" Padding="2" Opacity="0.92">
             <StackPanel Orientation="Horizontal">
                 <Button x:Name="RangeOutButton" Content="−" Width="22" Height="22" Padding="0"
                         Margin="1" Cursor="Hand" ToolTip="Ver mais perto (diminuir o alcance do radar)" Click="RangeOutButton_Click"/>
                 <TextBlock x:Name="RangeLabel" Text="—" Width="52" TextAlignment="Center"
-                           VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11"/>
+                           VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}" FontSize="11"/>
                 <Button x:Name="RangeInButton" Content="+" Width="22" Height="22" Padding="0"
                         Margin="1" Cursor="Hand" ToolTip="Ver mais longe (aumentar o alcance do radar)" Click="RangeInButton_Click"/>
                 <Button x:Name="RangeResetButton" Content="⤢" Width="22" Height="22" Padding="0"

@@ -16,9 +16,9 @@
             <Setter Property="Margin" Value="0,0,8,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
         </Style>
     </UserControl.Resources>
 
@@ -44,10 +44,10 @@
                    Visibility="Collapsed">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">
-                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding StatusIsSuccess, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>

@@ -9,12 +9,12 @@
         <conv:ConnectionStateToBrushConverter x:Key="ConnectionStateToBrushConverter"/>
 
         <Style x:Key="CardLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
         <Style x:Key="CardValue" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="FontSize" Value="22"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
@@ -29,7 +29,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="{loc:Loc Dashboard.Title}" FontSize="20" FontWeight="Bold"
-                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+                   Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,10"/>
 
         <!-- Ações de layout (Requisito 3) — mesmo controle reutilizado no Monitoramento. -->
         <shared:DashboardToolbar x:Name="Toolbar" Grid.Row="1" Margin="0,0,0,12"/>
@@ -46,13 +46,13 @@
             <shared:DashboardCard x:Name="CardObjetosDetectados" CardId="ObjetosDetectados"
                                    Title="{loc:Loc Dashboard.ObjetosDetectados}"
                                    Canvas.Left="0" Canvas.Top="0" Width="260" Height="150">
-                <TextBlock Text="{Binding TotalObjetosDetectados}" Style="{StaticResource CardValue}" Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock Text="{Binding TotalObjetosDetectados}" Style="{StaticResource CardValue}" Foreground="{DynamicResource Accent.Fill}"/>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardAcoesRealizadas" CardId="AcoesRealizadas"
                                    Title="{loc:Loc Dashboard.AcoesRealizadas}"
                                    Canvas.Left="272" Canvas.Top="0" Width="260" Height="150">
-                <TextBlock Text="{Binding TotalAcoesRealizadas}" Style="{StaticResource CardValue}" Foreground="{DynamicResource TargetBrush}"/>
+                <TextBlock Text="{Binding TotalAcoesRealizadas}" Style="{StaticResource CardValue}" Foreground="{DynamicResource Target.Fill}"/>
             </shared:DashboardCard>
 
             <shared:DashboardCard x:Name="CardModoAtual" CardId="ModoAtual"

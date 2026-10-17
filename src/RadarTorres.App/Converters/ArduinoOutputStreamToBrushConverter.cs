@@ -14,9 +14,9 @@ public sealed class ArduinoOutputStreamToBrushConverter : IValueConverter
     {
         string resourceKey = value switch
         {
-            ArduinoCliOutputStream.StdErr => "WarningBrush",
-            ArduinoCliOutputStream.Info => "TextSecondaryBrush",
-            _ => "TextPrimaryBrush"
+            ArduinoCliOutputStream.StdErr => "Target.Fill",
+            ArduinoCliOutputStream.Info => "Text.Secondary",
+            _ => "Text.Primary"
         };
 
         return Application.Current.TryFindResource(resourceKey) as SolidColorBrush ?? Brushes.Gray;
