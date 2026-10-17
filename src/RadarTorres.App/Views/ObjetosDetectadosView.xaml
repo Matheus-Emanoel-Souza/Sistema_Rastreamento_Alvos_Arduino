@@ -58,7 +58,7 @@
             <!-- Abate só muda de estado por decisão humana: habilitados apenas quando a
                  ocorrência selecionada está em AbatePendente e o perfil pode executar ações. -->
             <Button Content="Confirmar abate" Command="{Binding ConfirmarAbateCommand}"
-                    Background="{DynamicResource Danger.Fill}" Foreground="White"
+                    Background="{DynamicResource Danger.Fill}" Foreground="{DynamicResource OnAccent}"
                     ToolTip="Confirma o abate da ocorrência selecionada (disponível quando há acionamento aguardando confirmação)."/>
             <Button Content="Descartar abate" Command="{Binding DescartarAbateCommand}"
                     ToolTip="Descarta a pendência: a ocorrência volta ao estado Detectado."/>
