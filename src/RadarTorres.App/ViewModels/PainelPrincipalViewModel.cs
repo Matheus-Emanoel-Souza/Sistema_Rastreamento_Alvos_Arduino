@@ -20,21 +20,25 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
     private readonly IAcaoRealizadaRepository _acaoRepository;
     private readonly IModoAtualTorreRepository _modoAtualTorreRepository;
     private readonly ISerialCommunicationService _serialService;
+    private readonly ILocalizationService _localizationService;
     private readonly Dispatcher _dispatcher;
 
     public PainelPrincipalViewModel(
         IObjetoDetectadoRepository objetoRepository,
         IAcaoRealizadaRepository acaoRepository,
         IModoAtualTorreRepository modoAtualTorreRepository,
-        ISerialCommunicationService serialService)
+        ISerialCommunicationService serialService,
+        ILocalizationService localizationService)
     {
         _objetoRepository = objetoRepository;
         _acaoRepository = acaoRepository;
         _modoAtualTorreRepository = modoAtualTorreRepository;
         _serialService = serialService;
+        _localizationService = localizationService;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
         _serialService.ConnectionStateChanged += OnConnectionStateChanged;
+        _localizationService.PropertyChanged += OnLocalizationChanged;
 
         Refresh();
     }
@@ -55,6 +59,10 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
     public string UltimaModoAtualTorreTexto { get; private set; } = "—";
 
     public ConnectionState EstadoComunicacao { get; private set; } = ConnectionState.Disconnected;
+
+    /// <summary>Texto traduzido de <see cref="EstadoComunicacao"/> (Requisito i18n — nunca o
+    /// nome bruto do enum, que sempre sairia em inglês independente do idioma escolhido).</summary>
+    public string EstadoComunicacaoTexto { get; private set; } = string.Empty;
 
     public string UltimaAtualizacaoTexto { get; private set; } = "—";
 
@@ -91,6 +99,7 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
         }
 
         EstadoComunicacao = _serialService.State;
+        EstadoComunicacaoTexto = _localizationService[$"ConnectionState.{EstadoComunicacao}"];
         UltimaAtualizacaoTexto = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
 
         OnPropertyChanged(nameof(TotalObjetosDetectados));
@@ -98,8 +107,16 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
         OnPropertyChanged(nameof(ModoAtual));
         OnPropertyChanged(nameof(UltimaModoAtualTorreTexto));
         OnPropertyChanged(nameof(EstadoComunicacao));
+        OnPropertyChanged(nameof(EstadoComunicacaoTexto));
         OnPropertyChanged(nameof(UltimaAtualizacaoTexto));
     }
+
+    private void OnLocalizationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) =>
+        RunOnUi(() =>
+        {
+            EstadoComunicacaoTexto = _localizationService[$"ConnectionState.{EstadoComunicacao}"];
+            OnPropertyChanged(nameof(EstadoComunicacaoTexto));
+        });
 
     private void RunOnUi(Action action)
     {
@@ -110,5 +127,6 @@ public sealed class PainelPrincipalViewModel : ViewModelBase, INavigationAware, 
     public void Dispose()
     {
         _serialService.ConnectionStateChanged -= OnConnectionStateChanged;
+        _localizationService.PropertyChanged -= OnLocalizationChanged;
     }
 }
