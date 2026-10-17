@@ -48,6 +48,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         _authService.SessionChanged += OnSessionChanged;
         _localizationService.PropertyChanged += OnLocalizationChanged;
         _serialService.ConnectionStateChanged += OnConnectionStateChanged;
+        _navigationService.Navigated += OnNavigated;
 
         SetLanguageCommand = new RelayCommand(codigo => SetLanguage((string)codigo!));
         SetThemeCommand = new RelayCommand(tema => SetTheme((TemaPreferido)tema!));
@@ -202,10 +203,10 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         {
             entry.Label = _localizationService[entry.LabelKey];
             if (entry.GroupLabelKey is not null) entry.GroupLabel = _localizationService[entry.GroupLabelKey];
+            if (entry.IsSelected) CurrentPageTitle = entry.Label;
         }
 
         OnPropertyChanged(nameof(EstadoComunicacaoTexto));
-        OnPropertyChanged(nameof(CurrentPageTitle));
     }
 
     // ---------------------------------------------------------------- Navegação
@@ -225,10 +226,14 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     /// <summary>Chamado pela ShellWindow logo após registrar o ContentControl host (ver SetHost).</summary>
     public void NavigateToDefault() => Navigate(MenuItem.PainelPrincipal);
 
-    private void Navigate(MenuItem item)
-    {
-        _navigationService.NavigateTo(item);
+    private void Navigate(MenuItem item) => _navigationService.NavigateTo(item);
 
+    /// <summary>Sincroniza seleção da Sidebar e título do cabeçalho com a navegação real —
+    /// assina <see cref="INavigationService.Navigated"/> em vez de só reagir ao próprio
+    /// <see cref="Navigate"/>, para também cobrir navegação disparada por outra tela (ex.: o
+    /// link "Conectar à porta serial" do Painel Principal, que chama NavigateTo diretamente).</summary>
+    private void OnNavigated(object? sender, MenuItem item)
+    {
         foreach (SidebarMenuEntry entry in MenuItems)
         {
             entry.IsSelected = entry.Item == item;
@@ -284,5 +289,6 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         _authService.SessionChanged -= OnSessionChanged;
         _localizationService.PropertyChanged -= OnLocalizationChanged;
         _serialService.ConnectionStateChanged -= OnConnectionStateChanged;
+        _navigationService.Navigated -= OnNavigated;
     }
 }
