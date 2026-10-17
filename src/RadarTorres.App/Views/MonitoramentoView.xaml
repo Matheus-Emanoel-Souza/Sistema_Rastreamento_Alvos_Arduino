@@ -8,7 +8,7 @@
              xmlns:loc="clr-namespace:RadarTorres.App.Localization"
              Background="{DynamicResource Bg.Window}"
              Foreground="{DynamicResource Text.Primary}"
-             FontFamily="Segoe UI">
+             FontFamily="{DynamicResource Font.Body}">
     <!--
         Conteúdo migrado de Views/MainWindow.xaml (era a janela única do app) para um
         UserControl hospedado pela ShellWindow, como parte da introdução da barra lateral de

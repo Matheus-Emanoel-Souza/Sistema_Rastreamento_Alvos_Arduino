@@ -4,7 +4,7 @@
              xmlns:conv="clr-namespace:RadarTorres.App.Converters"
              Background="{DynamicResource Bg.Window}"
              Foreground="{DynamicResource Text.Primary}"
-             FontFamily="Segoe UI">
+             FontFamily="{DynamicResource Font.Body}">
     <!--
         Tela "Objetos Detectados" (Requisito 4 — histórico de OCORRÊNCIAS de detecção) +
         exportação em CSV/XML/PDF. Cada linha é uma ocorrência: o mesmo alvo cadastrado aparece
@@ -84,13 +84,25 @@
                   Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
                   BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
                   RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
-                  HorizontalGridLinesBrush="{DynamicResource Border.Control}" VerticalGridLinesBrush="{DynamicResource Border.Control}">
+                  HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Selection.Subtle}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+                    <Setter Property="FontSize" Value="12"/>
                     <Setter Property="Padding" Value="8,6"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource Border.Divider}"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
                 </Style>
             </DataGrid.ColumnHeaderStyle>
             <DataGrid.Columns>

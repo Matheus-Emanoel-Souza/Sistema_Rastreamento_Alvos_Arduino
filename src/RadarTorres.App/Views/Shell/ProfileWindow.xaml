@@ -7,7 +7,7 @@
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="{DynamicResource Bg.Window}"
         Foreground="{DynamicResource Text.Primary}"
-        FontFamily="Segoe UI">
+        FontFamily="{DynamicResource Font.Body}">
 
     <Window.Resources>
         <Style TargetType="TextBox">

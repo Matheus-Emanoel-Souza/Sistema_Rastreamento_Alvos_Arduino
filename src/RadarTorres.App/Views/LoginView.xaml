@@ -6,7 +6,7 @@
              xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
              Background="{DynamicResource Bg.Window}"
              Foreground="{DynamicResource Text.Primary}"
-             FontFamily="Segoe UI">
+             FontFamily="{DynamicResource Font.Body}">
 
     <UserControl.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
