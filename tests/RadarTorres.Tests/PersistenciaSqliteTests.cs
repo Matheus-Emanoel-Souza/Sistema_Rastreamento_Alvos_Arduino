@@ -225,18 +225,115 @@ public sealed class PersistenciaSqliteTests : IDisposable
         Assert.Equal("cam-1", unica.DispositivoId);
     }
 
+    /// <summary>
+    /// Último nível da regra "um quadrante, uma câmera": mesmo que a validação do serviço fosse
+    /// contornada (ou perdesse a corrida com outra janela), o índice único recusa a gravação.
+    /// </summary>
     [Fact]
-    public void Atribuir_quadrante_ocupado_transfere_a_responsabilidade()
+    public void Banco_recusa_duas_cameras_no_mesmo_quadrante()
     {
         var repositorio = new SqliteCameraQuadranteRepository();
 
         repositorio.Salvar(new CameraQuadrante { DispositivoId = "cam-1", Nome = "Frontal", Quadrante = Quadrant.Q1, AtualizadoEm = DateTime.Now });
-        repositorio.Salvar(new CameraQuadrante { DispositivoId = "cam-2", Nome = "Lateral", Quadrante = Quadrant.Q1, AtualizadoEm = DateTime.Now });
+
+        Assert.Throws<SqliteException>(() =>
+            repositorio.Salvar(new CameraQuadrante { DispositivoId = "cam-2", Nome = "Lateral", Quadrante = Quadrant.Q1, AtualizadoEm = DateTime.Now }));
 
         CameraQuadrante unica = Assert.Single(repositorio.GetAll());
+        Assert.Equal("cam-1", unica.DispositivoId);
+    }
 
-        Assert.Equal("cam-2", unica.DispositivoId);
-        Assert.Equal(Quadrant.Q1, unica.Quadrante);
+    // ---------------------------------------------------------------- 6 a 9: câmera × quadrante
+
+    [Fact]
+    public void Servico_recusa_quadrante_ja_ocupado_com_mensagem_clara()
+    {
+        var servico = new CameraQuadranteService(new SqliteCameraQuadranteRepository(), new LoggerFalso());
+        var frontal = new CameraDevice("cam-1", "Webcam frontal");
+        var lateral = new CameraDevice("cam-2", "Webcam lateral");
+
+        Assert.True(servico.Atribuir(frontal, Quadrant.Q2).Sucesso);
+
+        ResultadoAtribuicaoQuadrante recusa = servico.Atribuir(lateral, Quadrant.Q2);
+
+        Assert.False(recusa.Sucesso);
+        Assert.Contains("Webcam frontal", recusa.Erro!);
+        Assert.Contains("Q2", recusa.Erro!);
+
+        // A associação original continua intacta — nada foi transferido por baixo dos panos.
+        Assert.Equal("cam-1", servico.ObterCameraDoQuadrante(Quadrant.Q2)!.DispositivoId);
+        Assert.Equal(Quadrant.None, servico.ObterQuadrante("cam-2"));
+    }
+
+    [Fact]
+    public void Uma_camera_responde_por_no_maximo_um_quadrante()
+    {
+        var servico = new CameraQuadranteService(new SqliteCameraQuadranteRepository(), new LoggerFalso());
+        var camera = new CameraDevice("cam-1", "Webcam");
+
+        Assert.True(servico.Atribuir(camera, Quadrant.Q1).Sucesso);
+        Assert.True(servico.Atribuir(camera, Quadrant.Q3).Sucesso);
+
+        // Trocar o quadrante da MESMA câmera é edição, não duplicação.
+        Assert.Single(servico.Associacoes);
+        Assert.Equal(Quadrant.Q3, servico.ObterQuadrante("cam-1"));
+        Assert.Null(servico.ObterCameraDoQuadrante(Quadrant.Q1));
+    }
+
+    [Fact]
+    public void Reatribuir_o_mesmo_quadrante_a_mesma_camera_e_aceito()
+    {
+        var servico = new CameraQuadranteService(new SqliteCameraQuadranteRepository(), new LoggerFalso());
+        var camera = new CameraDevice("cam-1", "Webcam");
+
+        Assert.True(servico.Atribuir(camera, Quadrant.Q4).Sucesso);
+        Assert.True(servico.Atribuir(camera, Quadrant.Q4).Sucesso);
+
+        Assert.Single(servico.Associacoes);
+    }
+
+    [Fact]
+    public void Liberar_o_quadrante_permite_atribui_lo_a_outra_camera()
+    {
+        var servico = new CameraQuadranteService(new SqliteCameraQuadranteRepository(), new LoggerFalso());
+        var frontal = new CameraDevice("cam-1", "Frontal");
+        var lateral = new CameraDevice("cam-2", "Lateral");
+
+        servico.Atribuir(frontal, Quadrant.Q1);
+        Assert.False(servico.Atribuir(lateral, Quadrant.Q1).Sucesso);
+
+        Assert.True(servico.Atribuir(frontal, Quadrant.None).Sucesso);
+        Assert.True(servico.Atribuir(lateral, Quadrant.Q1).Sucesso);
+
+        Assert.Equal("cam-2", servico.ObterCameraDoQuadrante(Quadrant.Q1)!.DispositivoId);
+    }
+
+    [Fact]
+    public void Associacao_sobrevive_ao_reinicio_da_aplicacao()
+    {
+        var camera = new CameraDevice("cam-1", "Webcam frontal");
+
+        var primeiraExecucao = new CameraQuadranteService(new SqliteCameraQuadranteRepository(), new LoggerFalso());
+        Assert.True(primeiraExecucao.Atribuir(camera, Quadrant.Q3).Sucesso);
+
+        // Serviço e repositório novos, lendo o mesmo banco: equivale a reabrir o aplicativo.
+        var segundaExecucao = new CameraQuadranteService(new SqliteCameraQuadranteRepository(), new LoggerFalso());
+
+        Assert.Equal(Quadrant.Q3, segundaExecucao.ObterQuadrante("cam-1"));
+        Assert.Equal("Webcam frontal", segundaExecucao.ObterCameraDoQuadrante(Quadrant.Q3)!.Nome);
+    }
+
+    [Fact]
+    public void Atribuicoes_simultaneas_ao_mesmo_quadrante_deixam_apenas_uma_camera()
+    {
+        var servico = new CameraQuadranteService(new SqliteCameraQuadranteRepository(), new LoggerFalso());
+
+        var sucessos = new System.Collections.Concurrent.ConcurrentBag<bool>();
+        Parallel.For(0, 6, i =>
+            sucessos.Add(servico.Atribuir(new CameraDevice($"cam-{i}", $"Webcam {i}"), Quadrant.Q1).Sucesso));
+
+        Assert.Single(servico.Associacoes);
+        Assert.Equal(1, sucessos.Count(s => s));
     }
 
     [Fact]

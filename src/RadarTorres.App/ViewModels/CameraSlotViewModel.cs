@@ -68,6 +68,10 @@ public sealed class CameraSlotViewModel : ViewModelBase, IDisposable
         _analisador = new AnalisadorQuadros(alvoVisualService, logger);
         _analisador.QuadroAvaliado += OnQuadroAvaliado;
 
+        // Outro painel pode liberar ou tomar um quadrante: este aqui precisa refletir isso na
+        // hora, sem o usuário ter de sair e voltar da tela.
+        _cameraQuadranteService.AssociacoesAlteradas += OnAssociacoesAlteradas;
+
         StartCommand = new RelayCommand(StartSelected, () => SelectedCamera is not null && !IsBusy);
         StopCommand = new RelayCommand(StopStreaming, () => IsBusy);
         DefinirQuadranteCommand = new RelayCommand(DefinirQuadrante, () => SelectedCamera is not null);
@@ -79,8 +83,38 @@ public sealed class CameraSlotViewModel : ViewModelBase, IDisposable
         StatusMessage = _localizationService["Cameras.NenhumaEncontrada"];
     }
 
-    /// <summary>Posição do painel na grade 2x2 (1 a 4) — usada apenas para exibição ("Câmera 1", "Câmera 2", ...).</summary>
+    /// <summary>
+    /// Posição do painel na grade 2x2 (1 a 4). É só a posição na tela — <b>não</b> é a
+    /// identificação da câmera nem a do quadrante, que são dados independentes
+    /// (<see cref="SelectedCamera"/> e <see cref="QuadranteSalvo"/>).
+    /// </summary>
     public int SlotNumber { get; }
+
+    /// <summary>
+    /// Identificação do painel exibida no cabeçalho: o QUADRANTE que a câmera deste painel
+    /// monitora ("Quadrante 2") ou, enquanto não houver atribuição, a posição na grade com o
+    /// aviso de que falta definir.
+    /// </summary>
+    /// <remarks>
+    /// Antes era sempre "Câmera N", onde N era a posição na grade — um número que não significa
+    /// nada para quem opera: o que importa é qual região do espaço aquele vídeo cobre. O nome do
+    /// dispositivo continua visível no seletor logo abaixo, então a identificação técnica da
+    /// câmera não se perde.
+    /// </remarks>
+    public string TituloPainel => QuadranteSalvo switch
+    {
+        Quadrant.None => string.Format(_localizationService["Cameras.Painel.SemQuadrante"], SlotNumber),
+        Quadrant q => string.Format(_localizationService["Cameras.Painel.Quadrante"], NumeroDoQuadrante(q))
+    };
+
+    private static int NumeroDoQuadrante(Quadrant quadrante) => quadrante switch
+    {
+        Quadrant.Q1 => 1,
+        Quadrant.Q2 => 2,
+        Quadrant.Q3 => 3,
+        Quadrant.Q4 => 4,
+        _ => 0
+    };
 
     /// <summary>Câmeras que este painel pode selecionar agora — já excluindo as em uso por outros painéis (ver <see cref="UpdateAvailableCameras"/>).</summary>
     public IReadOnlyList<CameraDevice> AvailableCameras { get; private set; } = Array.Empty<CameraDevice>();
@@ -100,9 +134,11 @@ public sealed class CameraSlotViewModel : ViewModelBase, IDisposable
                 // Mostra o quadrante JÁ salvo para a câmera recém-escolhida, em vez de manter na
                 // tela a escolha feita para a câmera anterior.
                 _quadranteSelecionado = value is null ? Quadrant.None : _cameraQuadranteService.ObterQuadrante(value.Id);
+                MensagemQuadrante = null;
+                QuadranteComErro = false;
+
                 OnPropertyChanged(nameof(QuadranteSelecionado));
-                OnPropertyChanged(nameof(TemQuadrante));
-                OnPropertyChanged(nameof(QuadranteDescricao));
+                AtualizarQuadranteNaTela();
 
                 RelayCommand.RaiseCanExecuteChangedForAll();
             }
@@ -187,8 +223,26 @@ public sealed class CameraSlotViewModel : ViewModelBase, IDisposable
     public string QuadranteDescricao => SelectedCamera is null
         ? "Escolha uma câmera para atribuir um quadrante."
         : TemQuadrante
-            ? $"Monitorando {QuadrantHelper.ToDisplayLabel(QuadranteSalvo)} — as ocorrências detectadas aqui são registradas nesse quadrante."
+            ? $"As ocorrências detectadas por esta câmera são registradas no {TituloPainelDe(QuadranteSalvo)}."
             : "Sem quadrante atribuído: a detecção deste painel fica desligada até você definir um quadrante.";
+
+    private string? _mensagemQuadrante;
+
+    /// <summary>Retorno da última tentativa de atribuir quadrante (sucesso ou recusa).</summary>
+    public string? MensagemQuadrante
+    {
+        get => _mensagemQuadrante;
+        private set => SetProperty(ref _mensagemQuadrante, value);
+    }
+
+    private bool _quadranteComErro;
+
+    /// <summary>Se <see cref="MensagemQuadrante"/> representa uma recusa (pinta em vermelho na tela).</summary>
+    public bool QuadranteComErro
+    {
+        get => _quadranteComErro;
+        private set => SetProperty(ref _quadranteComErro, value);
+    }
 
     private string? _statusDeteccao;
 
@@ -275,15 +329,36 @@ public sealed class CameraSlotViewModel : ViewModelBase, IDisposable
 
         ResultadoAtribuicaoQuadrante resultado = _cameraQuadranteService.Atribuir(SelectedCamera, QuadranteSelecionado);
 
-        StatusDeteccao = resultado.Sucesso
+        QuadranteComErro = !resultado.Sucesso;
+        MensagemQuadrante = resultado.Sucesso
             ? QuadranteSelecionado == Quadrant.None
                 ? "Quadrante removido desta câmera."
-                : $"Câmera responsável pelo quadrante {QuadrantHelper.ToDisplayLabel(QuadranteSelecionado)}."
+                : $"Esta câmera agora responde pelo {TituloPainelDe(QuadranteSelecionado)}."
             : resultado.Erro;
 
+        if (!resultado.Sucesso)
+        {
+            // Recusa: o seletor volta para o que está realmente gravado, para a tela não sugerir
+            // uma atribuição que não existe.
+            _quadranteSelecionado = QuadranteSalvo;
+            OnPropertyChanged(nameof(QuadranteSelecionado));
+        }
+
+        AtualizarQuadranteNaTela();
+    }
+
+    private string TituloPainelDe(Quadrant quadrante) =>
+        string.Format(_localizationService["Cameras.Painel.Quadrante"], NumeroDoQuadrante(quadrante));
+
+    /// <summary>Reage a uma atribuição feita em QUALQUER painel (inclusive este).</summary>
+    private void OnAssociacoesAlteradas(object? sender, EventArgs e) => RunOnUi(AtualizarQuadranteNaTela);
+
+    private void AtualizarQuadranteNaTela()
+    {
         OnPropertyChanged(nameof(QuadranteSalvo));
         OnPropertyChanged(nameof(TemQuadrante));
         OnPropertyChanged(nameof(QuadranteDescricao));
+        OnPropertyChanged(nameof(TituloPainel));
     }
 
     private void StopStreaming() => _cameraService.Stop();
@@ -428,6 +503,7 @@ public sealed class CameraSlotViewModel : ViewModelBase, IDisposable
         _cameraService.Stop();
         _cameraService.Dispose();
 
+        _cameraQuadranteService.AssociacoesAlteradas -= OnAssociacoesAlteradas;
         _analisador.QuadroAvaliado -= OnQuadroAvaliado;
         _analisador.Dispose();
     }

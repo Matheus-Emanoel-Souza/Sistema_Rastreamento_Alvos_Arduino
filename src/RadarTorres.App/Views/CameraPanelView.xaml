@@ -76,11 +76,10 @@
 
     <Border Style="{StaticResource SectionCard}">
         <StackPanel>
-            <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}">
-                <Run Text="{loc:Loc Cameras.Painel.Titulo}"/>
-                <Run Text=" "/>
-                <Run Text="{Binding SlotNumber, Mode=OneTime}"/>
-            </TextBlock>
+            <!-- Identificação do painel = QUADRANTE monitorado (e não mais "Câmera N", que era
+                 só a posição na grade). O nome do dispositivo continua no seletor abaixo. -->
+            <TextBlock Text="{Binding TituloPainel}" FontSize="15" FontWeight="Bold"
+                       TextWrapping="Wrap" Foreground="{DynamicResource AccentBrush}"/>
 
             <Grid Margin="0,8,0,0">
                 <Grid.ColumnDefinitions>
@@ -119,6 +118,21 @@
                         Foreground="White"/>
             </Grid>
             <TextBlock Text="{Binding QuadranteDescricao}" Style="{StaticResource LabelText}" TextWrapping="Wrap"/>
+
+            <!-- Retorno da atribuição: confirmação ou recusa (quadrante já ocupado). -->
+            <TextBlock Text="{Binding MensagemQuadrante}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0"
+                       Visibility="{Binding MensagemQuadrante, Converter={StaticResource NullToVisibilityConverter}}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding QuadranteComErro}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
 
             <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource StatusText}" Margin="0,8,0,8"/>
 

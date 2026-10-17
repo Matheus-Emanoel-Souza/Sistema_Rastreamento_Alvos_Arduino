@@ -54,6 +54,11 @@ public sealed class ObjetoDetectadoExportService : IObjetoDetectadoExportService
     {
         List<ObjetoDetectado> lista = itens.ToList();
 
+        // O PDFsharp 6 não traz fonte nem consulta o sistema sozinho: sem um resolvedor
+        // registrado, a criação da primeira XFont abaixo lança e a exportação nunca chegava a
+        // gerar arquivo (ver ResolvedorFontesPdf).
+        ResolvedorFontesPdf.Registrar();
+
         var document = new PdfDocument();
         document.Info.Title = "Objetos Detectados";
 

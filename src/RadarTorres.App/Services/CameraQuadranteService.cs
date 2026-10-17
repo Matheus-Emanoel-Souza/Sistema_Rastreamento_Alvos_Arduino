@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Data.Sqlite;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.Repositories;
@@ -19,6 +20,9 @@ namespace RadarTorres.App.Services;
 /// </remarks>
 public sealed class CameraQuadranteService : ICameraQuadranteService
 {
+    /// <summary>Código do SQLite para violação de restrição (índice único) — ver SQLITE_CONSTRAINT.</summary>
+    private const int RaiseConstraint = 19;
+
     private readonly ICameraQuadranteRepository _repository;
     private readonly ILoggingService _logger;
     private readonly object _gate = new();
@@ -79,7 +83,18 @@ public sealed class CameraQuadranteService : ICameraQuadranteService
                 return ResultadoAtribuicaoQuadrante.Falha("Quadrante inválido — use Q1, Q2, Q3 ou Q4.");
             }
 
+            // Quadrante ocupado por OUTRA câmera é recusado, não transferido: tomar a
+            // responsabilidade de quem já a tinha deixaria essa câmera sem quadrante sem que
+            // ninguém tivesse pedido. Reatribuir a MESMA câmera ao mesmo quadrante é permitido
+            // (operação sem efeito).
             CameraQuadrante? ocupante = ObterCameraDoQuadrante(quadrante);
+
+            if (ocupante is not null && ocupante.DispositivoId != camera.Id)
+            {
+                return ResultadoAtribuicaoQuadrante.Falha(
+                    $"O quadrante {QuadrantHelper.ToDisplayLabel(quadrante)} já é monitorado pela câmera " +
+                    $"\"{ocupante.Nome}\". Defina \"Nenhum\" no painel dela antes de atribuí-lo a esta câmera.");
+            }
 
             _repository.Salvar(new CameraQuadrante
             {
@@ -90,19 +105,24 @@ public sealed class CameraQuadranteService : ICameraQuadranteService
             });
 
             Recarregar();
-
-            if (ocupante is not null && ocupante.DispositivoId != camera.Id)
-            {
-                _logger.Warning(
-                    $"Quadrante {QuadrantHelper.ToDisplayLabel(quadrante)} transferido de \"{ocupante.Nome}\" " +
-                    $"para \"{camera.Name}\" — um quadrante é monitorado por uma única câmera.");
-            }
-            else
-            {
-                _logger.Info($"Câmera \"{camera.Name}\" passou a monitorar o quadrante {QuadrantHelper.ToDisplayLabel(quadrante)}.");
-            }
+            _logger.Info($"Câmera \"{camera.Name}\" passou a monitorar o quadrante {QuadrantHelper.ToDisplayLabel(quadrante)}.");
 
             return ResultadoAtribuicaoQuadrante.Ok();
+        }
+        catch (SqliteException ex) when (ex.SqliteErrorCode == RaiseConstraint)
+        {
+            // Duas janelas atribuindo o mesmo quadrante ao mesmo tempo: a checagem acima passou
+            // nas duas, e o índice único do banco é quem decide. Recarrega para a tela mostrar
+            // quem efetivamente ficou com o quadrante.
+            Recarregar();
+
+            _logger.Warning(
+                $"Atribuição recusada pelo banco: o quadrante {QuadrantHelper.ToDisplayLabel(quadrante)} " +
+                $"foi tomado por outra câmera antes desta gravação.");
+
+            return ResultadoAtribuicaoQuadrante.Falha(
+                $"O quadrante {QuadrantHelper.ToDisplayLabel(quadrante)} acabou de ser atribuído a outra câmera. " +
+                "A lista foi atualizada.");
         }
         catch (Exception ex)
         {

@@ -32,6 +32,7 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
     private readonly IConfiguracoesAplicativoRepository _repositorio;
     private readonly ILocalizationService _localizationService;
     private readonly IThemeService _themeService;
+    private readonly ITermosDeUsoService _termosDeUsoService;
     private readonly ILoggingService _logger;
 
     private ConfiguracoesAplicativo _edicao;
@@ -40,11 +41,13 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         IConfiguracoesAplicativoRepository repositorio,
         ILocalizationService localizationService,
         IThemeService themeService,
+        ITermosDeUsoService termosDeUsoService,
         ILoggingService logger)
     {
         _repositorio = repositorio;
         _localizationService = localizationService;
         _themeService = themeService;
+        _termosDeUsoService = termosDeUsoService;
         _logger = logger;
 
         _edicao = repositorio.Atual.Clonar();
@@ -53,6 +56,8 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         RestaurarPadroesCommand = new RelayCommand(_ => RestaurarPadroes());
         CancelarCommand = new RelayCommand(_ => Cancelar());
         AbrirPastaDiagnosticoCommand = new RelayCommand(_ => AbrirPastaDiagnostico());
+        AbrirTermosDeUsoCommand = new RelayCommand(_ => AbrirTermosDeUsoSolicitado?.Invoke(this, EventArgs.Empty));
+        BaixarTermosDeUsoCommand = new RelayCommand(_ => BaixarTermosDeUsoSolicitado?.Invoke(this, _termosDeUsoService.NomeArquivoSugerido));
         UsarTamanhoAtualCommand = new RelayCommand(_ => UsarTamanhoAtualDaJanela());
     }
 
@@ -244,6 +249,26 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
     public RelayCommand CancelarCommand { get; }
     public RelayCommand AbrirPastaDiagnosticoCommand { get; }
     public RelayCommand UsarTamanhoAtualCommand { get; }
+
+    // ---------------------------------------------------------------- Termos de Uso
+    //
+    // A tela só dá acesso ao documento; quem o lê e o converte em PDF é o ITermosDeUsoService,
+    // a partir do mesmo arquivo exibido pelo instalador. Abrir janela e mostrar diálogo de
+    // arquivo são responsabilidade da View (ver ConfiguracoesView.xaml.cs), como no restante do
+    // projeto.
+
+    /// <summary>Abre a janela de leitura dos termos.</summary>
+    public RelayCommand AbrirTermosDeUsoCommand { get; }
+
+    /// <summary>Exporta o documento integral em PDF, sem precisar abrir a janela antes.</summary>
+    public RelayCommand BaixarTermosDeUsoCommand { get; }
+
+    public event EventHandler? AbrirTermosDeUsoSolicitado;
+
+    public event EventHandler<string>? BaixarTermosDeUsoSolicitado;
+
+    /// <summary>Linha de vigência do documento aceito nesta instalação (ex.: "Versão 1.1 — vigente a partir de …").</summary>
+    public string VersaoTermosDeUso => _termosDeUsoService.Obter().Versao;
 
     private void MarcarAlterado()
     {

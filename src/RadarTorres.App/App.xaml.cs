@@ -188,6 +188,18 @@ public partial class App : Application
         services.AddScoped<ConfiguracoesViewModel>();
         services.AddScoped<ConfiguracoesView>();
 
+        // --- Termos de Uso: Singleton porque lê e analisa UMA vez o arquivo embutido (o mesmo
+        //     que o instalador exibe como página de licença). A janela de leitura é Transient —
+        //     é um diálogo, aberto e descartado a cada uso.
+        services.AddSingleton<ITermosDeUsoService, TermosDeUsoService>();
+        services.AddTransient<TermosDeUsoViewModel>();
+        services.AddTransient<TermosDeUsoWindow>();
+
+        //     Fábrica explícita: o contêiner da Microsoft não resolve Func<T> sozinho, e a tela
+        //     de Configurações precisa de uma JANELA NOVA a cada abertura — no WPF, uma Window
+        //     já fechada não pode ser exibida de novo.
+        services.AddTransient<Func<TermosDeUsoWindow>>(sp => () => sp.GetRequiredService<TermosDeUsoWindow>());
+
         // --- Aba "Configurações do Arduino" (ambiente/compilação/monitor serial). O compilador
         //     e o localizador do CLI não guardam estado entre chamadas (Transient); as
         //     preferências persistidas usam o mesmo arquivo em disco independentemente da
