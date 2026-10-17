@@ -24,7 +24,24 @@ public sealed class PersistenciaSqliteTests : IDisposable
     public PersistenciaSqliteTests()
     {
         _pasta = FotosDeTeste.CriarPasta();
+
+        // Os DOIS redirecionamentos são obrigatórios: redirecionar só o banco deixa a fila de
+        // escrita offline apontando para o arquivo REAL do usuário, e qualquer instrução que o
+        // teste não conseguir aplicar seria gravada lá — e aplicada no banco de verdade na
+        // próxima abertura do aplicativo. Foi exatamente o que aconteceu antes desta correção.
         SqliteConnectionFactory.UsarBancoDeTeste(Path.Combine(_pasta, "teste.db"));
+        PendingWriteQueue.UsarArquivoDeTeste(Path.Combine(_pasta, "pending-writes.sql"));
+    }
+
+    /// <summary>
+    /// Guarda contra regressão do isolamento: se alguém remover um dos redirecionamentos acima,
+    /// este teste falha antes de os dados de teste chegarem ao ambiente real.
+    /// </summary>
+    [Fact]
+    public void Testes_nao_escrevem_no_ambiente_real_do_usuario()
+    {
+        Assert.StartsWith(_pasta, PendingWriteQueue.FilePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(_pasta, SqliteConnectionFactory.ConnectionString, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()
