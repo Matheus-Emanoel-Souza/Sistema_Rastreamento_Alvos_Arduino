@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="clr-namespace:RadarTorres.App.Localization">
 
-    <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,1,0">
+    <Border Background="{DynamicResource Bg.Sidebar}" BorderBrush="{DynamicResource Border.Divider}" BorderThickness="0,0,1,0">
         <Border.Style>
             <!--
                 Largura animada (não só trocada instantaneamente) ao expandir/recolher — Duration
@@ -52,7 +52,7 @@
                  posição "quase à esquerda" (52px) até o centro real da barra (210px) conforme
                  ela cresce, sem precisar de nenhuma transformação/animação própria no ícone. -->
             <Button DockPanel.Dock="Top" Command="{Binding ToggleSidebarCommand}"
-                    Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}"
+                    Background="Transparent" BorderThickness="0" Foreground="{DynamicResource Text.Primary}"
                     FontSize="16" Padding="14,12" HorizontalContentAlignment="Center" Cursor="Hand">
                 <Button.Content>
                     <TextBlock Text="&#9776;"/>
@@ -71,11 +71,11 @@
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

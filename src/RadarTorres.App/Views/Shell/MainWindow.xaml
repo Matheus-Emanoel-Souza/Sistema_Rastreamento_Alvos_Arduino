@@ -5,8 +5,8 @@
         xmlns:loc="clr-namespace:RadarTorres.App.Localization"
         Title="{loc:Loc App.Title}" Height="860" Width="1450" MinHeight="650" MinWidth="1100"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource BackgroundBrush}"
-        Foreground="{DynamicResource TextPrimaryBrush}"
+        Background="{DynamicResource Bg.Window}"
+        Foreground="{DynamicResource Text.Primary}"
         FontFamily="Segoe UI">
 
     <!--
@@ -24,7 +24,7 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -35,7 +35,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Border.Control}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -50,7 +50,7 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -61,7 +61,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Border.Control}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -71,8 +71,8 @@
     </Window.Resources>
 
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundBrush}"
-                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="8,4,8,0">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Bg.Window}"
+                BorderBrush="{DynamicResource Border.Control}" BorderThickness="0,0,0,1" Padding="8,4,8,0">
             <StackPanel Orientation="Horizontal">
                 <ItemsControl ItemsSource="{Binding Tabs}">
                     <ItemsControl.ItemsPanel>
@@ -90,25 +90,25 @@
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="TabBg" Background="{DynamicResource BackgroundBrush}"
-                                                            BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1,1,1,0"
+                                                    <Border x:Name="TabBg" Background="{DynamicResource Bg.Window}"
+                                                            BorderBrush="{DynamicResource Border.Control}" BorderThickness="1,1,1,0"
                                                             CornerRadius="6,6,0,0" Padding="12,7" Margin="0,0,3,0" MinWidth="120">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="{Binding Header}" VerticalAlignment="Center"
                                                                        TextTrimming="CharacterEllipsis" MaxWidth="140"
-                                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                                       Foreground="{DynamicResource Text.Primary}"/>
                                                             <Button Style="{StaticResource TabCloseButton}" Click="TabClose_Click" Tag="{Binding}"/>
                                                         </StackPanel>
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <!-- IsSelected é mantido por MainWindow.xaml.cs sempre que a aba
                                                              ativa muda (ver SelectedTab) — aba ativa fica com o mesmo
-                                                             fundo do conteúdo (PanelBrush), "colada" visualmente nele. -->
+                                                             fundo do conteúdo (Bg.Card), "colada" visualmente nele. -->
                                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                            <Setter TargetName="TabBg" Property="Background" Value="{DynamicResource PanelBrush}"/>
+                                                            <Setter TargetName="TabBg" Property="Background" Value="{DynamicResource Bg.Card}"/>
                                                         </DataTrigger>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="TabBg" Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                                                            <Setter TargetName="TabBg" Property="Background" Value="{DynamicResource Border.Control}"/>
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>

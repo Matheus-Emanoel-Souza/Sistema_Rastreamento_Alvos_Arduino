@@ -366,7 +366,7 @@ public partial class RadarControl : UserControl
     {
         var circle = new Ellipse
         {
-            Stroke = TryFindBrush("DangerBrush", Brushes.Red),
+            Stroke = TryFindBrush("Danger.Fill", Brushes.Red),
             StrokeThickness = 1.5,
             StrokeDashArray = new DoubleCollection { 4, 3 },
             Fill = Brushes.Transparent,
@@ -487,9 +487,9 @@ public partial class RadarControl : UserControl
         RadarCanvas.Width = size;
         RadarCanvas.Height = size;
 
-        var background = TryFindBrush("RadarBackgroundBrush", Brushes.Black);
-        var gridBrush = TryFindBrush("RadarGridBrush", Brushes.DarkGreen);
-        var textBrush = TryFindBrush("TextSecondaryBrush", Brushes.Gray);
+        var background = TryFindBrush("Bg.Sidebar", Brushes.Black);
+        var gridBrush = TryFindBrush("Accent.Fill", Brushes.DarkGreen);
+        var textBrush = TryFindBrush("Text.Secondary", Brushes.Gray);
 
         var baseCircle = new Ellipse
         {
@@ -540,7 +540,7 @@ public partial class RadarControl : UserControl
         StaticLayer.Children.Add(new Line { X1 = radius, Y1 = 0, X2 = radius, Y2 = size, Stroke = gridBrush, StrokeThickness = 1 });
 
         // Base (origem) ao centro.
-        var baseMarker = new Ellipse { Width = 8, Height = 8, Fill = TryFindBrush("AccentBrush", Brushes.LimeGreen) };
+        var baseMarker = new Ellipse { Width = 8, Height = 8, Fill = TryFindBrush("Accent.Fill", Brushes.LimeGreen) };
         Canvas.SetLeft(baseMarker, radius - 4);
         Canvas.SetTop(baseMarker, radius - 4);
         StaticLayer.Children.Add(baseMarker);
@@ -576,7 +576,7 @@ public partial class RadarControl : UserControl
     private void DrawZonaMortas(double size, double radius, double maxDistance)
     {
         var zones = (ZonaMortas?.Cast<ZonaMorta>() ?? Enumerable.Empty<ZonaMorta>()).Where(z => z.Enabled);
-        Brush brush = TryFindBrush("DangerBrush", Brushes.Red);
+        Brush brush = TryFindBrush("Danger.Fill", Brushes.Red);
         var center = new Point(radius, radius);
 
         // Pontos onde cada semieixo cruza a borda do radar, na ordem Leste->Norte->Oeste->Sul —
@@ -670,7 +670,7 @@ public partial class RadarControl : UserControl
 
             Canvas.SetLeft(visual.Shape, p.X - 8);
             Canvas.SetTop(visual.Shape, p.Y - 8);
-            visual.Shape.Fill = TowerBrushFor(tower.State);
+            visual.Shape.Fill = TowerVisualBrushFor(tower.State);
 
             visual.Label.Text = tower.Name;
             Canvas.SetLeft(visual.Label, p.X + 9);
@@ -685,12 +685,12 @@ public partial class RadarControl : UserControl
         DynamicLayer.Children.Remove(visual.Label);
     }
 
-    private Brush TowerBrushFor(TowerState state) => state switch
+    private Brush TowerVisualBrushFor(TowerState state) => state switch
     {
-        TowerState.Selected => TryFindBrush("TowerSelectedBrush", Brushes.LimeGreen),
-        TowerState.Firing => TryFindBrush("DangerBrush", Brushes.Red),
-        TowerState.Unavailable or TowerState.Offline => TryFindBrush("TextSecondaryBrush", Brushes.Gray),
-        _ => TryFindBrush("TowerBrush", Brushes.Purple)
+        TowerState.Selected => TryFindBrush("Accent.Fill", Brushes.LimeGreen),
+        TowerState.Firing => TryFindBrush("Danger.Fill", Brushes.Red),
+        TowerState.Unavailable or TowerState.Offline => TryFindBrush("Text.Secondary", Brushes.Gray),
+        _ => TryFindBrush("Accent.Fill", Brushes.Purple)
     };
 
     // ---------------------------------------------------------------- Alvos (camada dinâmica)
@@ -729,7 +729,7 @@ public partial class RadarControl : UserControl
 
             Canvas.SetLeft(visual.Circle, p.X - 7);
             Canvas.SetTop(visual.Circle, p.Y - 7);
-            visual.Circle.Fill = isSelected ? TryFindBrush("TargetSelectedBrush", Brushes.Gold) : TryFindBrush("TargetBrush", Brushes.DodgerBlue);
+            visual.Circle.Fill = isSelected ? TryFindBrush("Target.Fill", Brushes.Gold) : TryFindBrush("Target.Fill", Brushes.DodgerBlue);
             visual.Circle.Width = visual.Circle.Height = isSelected ? 18 : 14;
             Canvas.SetLeft(visual.Circle, p.X - visual.Circle.Width / 2);
             Canvas.SetTop(visual.Circle, p.Y - visual.Circle.Height / 2);
@@ -760,7 +760,7 @@ public partial class RadarControl : UserControl
         {
             visual.TowerLink = new Line
             {
-                Stroke = TryFindBrush("TowerSelectedBrush", Brushes.LimeGreen),
+                Stroke = TryFindBrush("Accent.Fill", Brushes.LimeGreen),
                 StrokeThickness = 1,
                 StrokeDashArray = new DoubleCollection { 4, 3 },
                 Opacity = 0.8

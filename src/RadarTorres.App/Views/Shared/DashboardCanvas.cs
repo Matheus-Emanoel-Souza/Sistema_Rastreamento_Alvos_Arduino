@@ -453,7 +453,7 @@ public class DashboardCanvas : Canvas
     {
         if (_verticalGuide is not null) return;
 
-        var guideBrush = TryFindBrush("AccentBrush", Brushes.DeepSkyBlue);
+        var guideBrush = TryFindBrush("Accent.Fill", Brushes.DeepSkyBlue);
 
         _verticalGuide = new Line { Stroke = guideBrush, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 4, 3 }, Visibility = Visibility.Collapsed, IsHitTestVisible = false };
         _horizontalGuide = new Line { Stroke = guideBrush, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 4, 3 }, Visibility = Visibility.Collapsed, IsHitTestVisible = false };

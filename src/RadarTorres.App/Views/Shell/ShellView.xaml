@@ -2,8 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shell="clr-namespace:RadarTorres.App.Views.Shell"
-             Background="{DynamicResource BackgroundBrush}"
-             Foreground="{DynamicResource TextPrimaryBrush}"
+             Background="{DynamicResource Bg.Window}"
+             Foreground="{DynamicResource Text.Primary}"
              FontFamily="Segoe UI">
 
     <DockPanel>

@@ -1,8 +1,8 @@
 <UserControl x:Class="RadarTorres.App.Views.AcoesRealizadasView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource BackgroundBrush}"
-             Foreground="{DynamicResource TextPrimaryBrush}"
+             Background="{DynamicResource Bg.Window}"
+             Foreground="{DynamicResource Text.Primary}"
              FontFamily="Segoe UI">
     <!--
         Tela "Ações Realizadas" (Requisito 5 — auditoria de acionamentos). Os registros vêm de
@@ -17,21 +17,21 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="AÇÕES REALIZADAS" FontSize="18" FontWeight="Bold"
-                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+                   Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,4"/>
         <TextBlock Grid.Row="1" Text="Histórico de acionamentos (Requisito 5) — todo acionamento efetivamente executado fica registrado aqui."
-                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
+                   Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,0,0,12"/>
 
         <DataGrid Grid.Row="2" ItemsSource="{Binding Itens}" AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True"
                   GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                  Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
-                  BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
-                  RowBackground="{DynamicResource PanelBrush}" AlternatingRowBackground="{DynamicResource InputBackgroundBrush}"
-                  HorizontalGridLinesBrush="{DynamicResource PanelBorderBrush}" VerticalGridLinesBrush="{DynamicResource PanelBorderBrush}">
+                  Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
+                  BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                  RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
+                  HorizontalGridLinesBrush="{DynamicResource Border.Control}" VerticalGridLinesBrush="{DynamicResource Border.Control}">
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
                     <Setter Property="Padding" Value="8,6"/>
                     <Setter Property="FontWeight" Value="SemiBold"/>
                 </Style>

@@ -13,10 +13,10 @@
             hover com cores fixas do sistema operacional (SystemColors), que não acompanham o
             tema do app — por isso "Idioma"/"Tema" continuavam com popup branco fixo no tema
             escuro mesmo depois de ajustar só o Foreground. Aqui o fundo do popup usa
-            DynamicResource (PanelBrush/PanelBorderBrush/AccentBrush), então segue o tema.
+            DynamicResource (Bg.Card/Border.Control/Accent.Fill), então segue o tema.
         -->
         <Style TargetType="MenuItem">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -35,8 +35,8 @@
                             <Popup x:Name="PART_Popup" Placement="Right" PlacementTarget="{Binding ElementName=RowBorder}"
                                    IsOpen="{TemplateBinding IsSubmenuOpen}" AllowsTransparency="True"
                                    Focusable="False" PopupAnimation="Fade">
-                                <Border Background="{DynamicResource PanelBrush}"
-                                        BorderBrush="{DynamicResource PanelBorderBrush}"
+                                <Border Background="{DynamicResource Bg.Card}"
+                                        BorderBrush="{DynamicResource Border.Control}"
                                         BorderThickness="1" CornerRadius="6" Padding="4" Margin="4,0,0,0">
                                     <Border.Effect>
                                         <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.35"/>
@@ -47,7 +47,7 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                                <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource Border.Control}"/>
                             </Trigger>
                             <Trigger Property="HasItems" Value="True">
                                 <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
@@ -62,8 +62,8 @@
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
@@ -72,15 +72,15 @@
             Estilo próprio para o MenuItem raiz "Opções", com o mesmo visual de botão dos
             botões Perfil/Sair (borda, padding, cursor de mão) em vez do texto nu que o
             template padrão do Windows renderia. O popup do submenu ganha borda arredondada
-            e sombra usando as cores do próprio tema (PanelBrush/PanelBorderBrush) — não
+            e sombra usando as cores do próprio tema (Bg.Card/Border.Control) — não
             depende das SystemColors nativas, então acompanha o tema claro/escuro.
         -->
         <Style x:Key="OptionsMenuItem" TargetType="MenuItem">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -104,8 +104,8 @@
                             <Popup x:Name="PART_Popup" Placement="Bottom" PlacementTarget="{Binding ElementName=HeaderBorder}"
                                    IsOpen="{TemplateBinding IsSubmenuOpen}" AllowsTransparency="True"
                                    Focusable="False" PopupAnimation="Fade">
-                                <Border Background="{DynamicResource PanelBrush}"
-                                        BorderBrush="{DynamicResource PanelBorderBrush}"
+                                <Border Background="{DynamicResource Bg.Card}"
+                                        BorderBrush="{DynamicResource Border.Control}"
                                         BorderThickness="1" CornerRadius="6" Padding="4" Margin="0,4,0,0">
                                     <Border.Effect>
                                         <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.35"/>
@@ -116,10 +116,10 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+                                <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource Border.Control}"/>
                             </Trigger>
                             <Trigger Property="IsSubmenuOpen" Value="True">
-                                <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource Accent.Fill}"/>
                                 <Setter TargetName="Chevron" Property="Data" Value="M0,4 L4,0 L8,4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -129,7 +129,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+    <Border Background="{DynamicResource Bg.Window}" BorderBrush="{DynamicResource Border.Divider}"
             BorderThickness="0,0,0,1" Padding="12,6">
         <Grid>
             <Grid.ColumnDefinitions>
@@ -166,9 +166,9 @@
                  nome maior + a pill de perfil já deixam isso implícito, sem precisar de rótulo). -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="{Binding NomeUsuario}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="9,3" Margin="10,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding PerfilUsuario}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                           Foreground="{DynamicResource Text.Primary}"/>
+                <Border Background="{DynamicResource Accent.Fill}" CornerRadius="10" Padding="9,3" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding PerfilUsuario}" Foreground="{DynamicResource OnAccent}" FontSize="10" FontWeight="Bold"/>
                 </Border>
             </StackPanel>
 
