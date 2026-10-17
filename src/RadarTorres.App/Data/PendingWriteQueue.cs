@@ -23,7 +23,31 @@ public static class PendingWriteQueue
     private static readonly object FileLock = new();
     private static int _offlineIdCounter;
 
-    public static string FilePath { get; } = Path.Combine(AppDataPaths.DataFolder, "pending-writes.sql");
+    private static string _filePath = Path.Combine(AppDataPaths.DataFolder, "pending-writes.sql");
+
+    public static string FilePath => _filePath;
+
+    /// <summary>
+    /// Redireciona a fila para um arquivo de teste. Existe exclusivamente para os testes
+    /// automatizados (<c>RadarTorres.Tests</c>, ver <c>InternalsVisibleTo</c> no .csproj) —
+    /// junto com <see cref="SqliteConnectionFactory.UsarBancoDeTeste"/>, que redireciona o banco.
+    /// </summary>
+    /// <remarks>
+    /// Os dois redirecionamentos andam juntos de propósito: redirecionar só o banco deixa esta
+    /// fila apontando para o arquivo REAL do usuário, e qualquer escrita que o teste não
+    /// conseguir aplicar vira instrução pendente no ambiente dele — que o aplicativo aplicaria no
+    /// banco de verdade na próxima abertura. Aconteceu durante o desenvolvimento destes testes.
+    /// </remarks>
+    internal static void UsarArquivoDeTeste(string caminho)
+    {
+        lock (FileLock)
+        {
+            string? pasta = Path.GetDirectoryName(caminho);
+            if (!string.IsNullOrEmpty(pasta)) Directory.CreateDirectory(pasta);
+
+            _filePath = caminho;
+        }
+    }
 
     /// <summary>
     /// Id temporário e negativo para uso imediato (ex.: exibir na tela) enquanto o cadastro real
@@ -39,7 +63,7 @@ public static class PendingWriteQueue
     {
         lock (FileLock)
         {
-            Directory.CreateDirectory(AppDataPaths.DataFolder);
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             string linha = sqlStatement.TrimEnd().TrimEnd(';') + ";" + Environment.NewLine;
             File.AppendAllText(FilePath, linha);
         }
