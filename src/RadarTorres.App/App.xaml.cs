@@ -160,6 +160,19 @@ public partial class App : Application
         services.AddSingleton<IAlvoVisualService, AlvoVisualService>();
         services.AddSingleton<IAlertaSonoroService, AlertaSonoroService>();
 
+        //     Rastreamento das detecções por câmera e registro das ocorrências. Ambos Singleton
+        //     porque a identidade dos objetos acompanhados é COMPARTILHADA entre as câmeras que
+        //     estiverem detectando ao mesmo tempo (card de Monitoramento + os 4 painéis da tela
+        //     "Câmeras"): é o que garante uma ocorrência por quadrante, sem duplicar, mesmo com
+        //     as câmeras processando em paralelo em threads distintas.
+        services.AddSingleton<IRastreamentoVisualService, RastreamentoVisualService>();
+        services.AddSingleton<IOcorrenciaDeteccaoService, OcorrenciaDeteccaoService>();
+
+        //     Associação câmera → quadrante (tela "Câmeras"): Singleton, um cadastro único da
+        //     instalação, consultado pela detecção a cada ocorrência registrada.
+        services.AddSingleton<ICameraQuadranteRepository, SqliteCameraQuadranteRepository>();
+        services.AddSingleton<ICameraQuadranteService, CameraQuadranteService>();
+
         //     Relatório de desempenho: Singleton porque é UM arquivo por execução do aplicativo.
         //     O resumo estatístico é escrito no Dispose, disparado pelo ServiceProvider.Dispose()
         //     em OnExit — por isso não pode ser Transient/Scoped, ou cada instância abriria e

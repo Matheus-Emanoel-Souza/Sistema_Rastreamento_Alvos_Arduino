@@ -25,17 +25,20 @@ public sealed class FireControlService : IFireControlService
     private readonly ILoggingService _logger;
     private readonly IAcaoRealizadaRepository _acaoRepository;
     private readonly IZonaMortaService _zonaMortaService;
+    private readonly IOcorrenciaDeteccaoService _ocorrenciaService;
     private readonly Dispatcher _dispatcher;
 
     public FireControlService(
         ILoggingService logger,
         IAcaoRealizadaRepository acaoRepository,
         IZonaMortaService zonaMortaService,
+        IOcorrenciaDeteccaoService ocorrenciaService,
         Dispatcher? dispatcher = null)
     {
         _logger = logger;
         _acaoRepository = acaoRepository;
         _zonaMortaService = zonaMortaService;
+        _ocorrenciaService = ocorrenciaService;
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
     }
 
@@ -103,11 +106,33 @@ public sealed class FireControlService : IFireControlService
         }
 
         RegistrarAcao(tower, target.ObjetoDetectadoId);
+        MarcarOcorrenciaPendenteDeAbate(target);
 
         // Mantém o feedback visual de "disparando" por um curto período antes de voltar a "selecionada".
         _ = ResetFiringStateAfterDelay(tower);
 
         return true;
+    }
+
+    /// <summary>
+    /// Acionamento efetivado é o evento confiável que coloca a ocorrência do alvo em
+    /// <see cref="EstadoOcorrencia.AbatePendente"/> — o abate em si só se confirma por decisão de
+    /// um operador na tela "Objetos Detectados". Esta é a ÚNICA porta de entrada automática para
+    /// o ciclo de abate: desaparecer da imagem nunca abate nada.
+    /// </summary>
+    private void MarcarOcorrenciaPendenteDeAbate(Target target)
+    {
+        if (target.ObjetoDetectadoId is not { } ocorrenciaId) return;
+
+        bool marcada = _ocorrenciaService.MarcarAbatePendente(
+            ocorrenciaId,
+            usuario: null,
+            observacao: $"Acionamento demonstrativo executado contra o alvo #{target.Id:D2}. Aguardando confirmação de abate pelo operador.");
+
+        if (marcada)
+        {
+            _logger.Warning($"Ocorrência #{ocorrenciaId} aguardando confirmação de abate na tela \"Objetos Detectados\".");
+        }
     }
 
     private void RegistrarAcao(Tower tower, int? objetoDetectadoId)

@@ -38,14 +38,16 @@ public sealed class ObjetoDetectadoExportService : IObjetoDetectadoExportService
 
     private static readonly (string Header, double Width, Func<ObjetoDetectado, string> Value)[] Columns =
     [
-        ("Id", 30, o => o.Id.ToString()),
-        ("Tipo", 95, o => o.Tipo),
-        ("X (m)", 55, o => o.X.ToString("0.00")),
-        ("Y (m)", 55, o => o.Y.ToString("0.00")),
-        ("Quad.", 40, o => o.Quadrante),
-        ("Data/Hora", 115, o => o.DataHora.ToString("dd/MM/yyyy HH:mm:ss")),
-        ("Dispositivo", 80, o => o.Dispositivo),
-        ("Observação", 140, o => string.IsNullOrEmpty(o.Observacao) ? "—" : o.Observacao),
+        ("Id", 28, o => o.Id.ToString()),
+        ("Tipo", 85, o => o.Tipo),
+        ("X (m)", 48, o => o.X.ToString("0.00")),
+        ("Y (m)", 48, o => o.Y.ToString("0.00")),
+        ("Quad.", 38, o => o.Quadrante),
+        ("Câmera", 85, o => string.IsNullOrEmpty(o.CameraNome) ? "—" : o.CameraNome),
+        ("Estado", 72, o => o.Estado.ToString()),
+        ("Data/Hora", 105, o => o.DataHora.ToString("dd/MM/yyyy HH:mm:ss")),
+        ("Dispositivo", 70, o => o.Dispositivo),
+        ("Observação", 110, o => string.IsNullOrEmpty(o.Observacao) ? "—" : o.Observacao),
     ];
 
     public void ExportPdf(IEnumerable<ObjetoDetectado> itens, string filePath)

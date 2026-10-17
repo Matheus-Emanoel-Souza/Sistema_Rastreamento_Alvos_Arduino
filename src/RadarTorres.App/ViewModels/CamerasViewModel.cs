@@ -11,8 +11,10 @@ namespace RadarTorres.App.ViewModels;
 /// ViewModel do módulo "Câmeras": orquestra até 4 painéis independentes
 /// (<see cref="CameraSlotViewModel"/>), cada um com sua própria câmera/webcam selecionável,
 /// permitindo visualizar em tempo real até 4 câmeras simultaneamente (numa grade 2x2 na View).
-/// Escopo desta etapa continua sendo exclusivamente visualização — sem gravação, captura de
-/// foto, processamento de imagem ou qualquer integração com o Arduino/torres (ver
+/// Cada painel, além de visualizar, roda a detecção por visão na sua própria câmera e registra
+/// as ocorrências no quadrante atribuído a ela (ver <see cref="CameraSlotViewModel"/>) — é o que
+/// permite cobrir os quatro quadrantes simultaneamente, uma câmera por quadrante. Continua sem
+/// gravação de vídeo e sem integração direta com o Arduino/torres (ver
 /// Docs/Projeto/LOG_SOLICITACOES.md).
 /// </summary>
 /// <remarks>
@@ -36,12 +38,25 @@ public sealed class CamerasViewModel : ViewModelBase, INavigationAware, IDisposa
     public CamerasViewModel(
         ICameraDeviceEnumerator deviceEnumerator,
         ICameraCaptureServiceFactory captureServiceFactory,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        ICameraQuadranteService cameraQuadranteService,
+        IOcorrenciaDeteccaoService ocorrenciaService,
+        IPerfilAlvoService perfilAlvoService,
+        IAlvoVisualService alvoVisualService,
+        ILoggingService logger)
     {
         _deviceEnumerator = deviceEnumerator;
 
         Slots = Enumerable.Range(1, SlotCount)
-            .Select(slotNumber => new CameraSlotViewModel(slotNumber, captureServiceFactory.Create(), localizationService))
+            .Select(slotNumber => new CameraSlotViewModel(
+                slotNumber,
+                captureServiceFactory.Create(),
+                localizationService,
+                cameraQuadranteService,
+                ocorrenciaService,
+                perfilAlvoService,
+                alvoVisualService,
+                logger))
             .ToList();
 
         foreach (CameraSlotViewModel slot in Slots)

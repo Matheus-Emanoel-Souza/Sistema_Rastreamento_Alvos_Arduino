@@ -25,5 +25,12 @@ public static class CsvObjetoDetectadoColumns
         new CsvColumn<ObjetoDetectado>("NivelConfianca", o => CsvConvert.From(o.NivelConfianca), (o, v) => o.NivelConfianca = CsvConvert.ToNullableDouble(v)),
         new CsvColumn<ObjetoDetectado>("Observacao", o => o.Observacao ?? "", (o, v) => o.Observacao = v),
         new CsvColumn<ObjetoDetectado>("ReferenciaImagem", o => o.ReferenciaImagem ?? "", (o, v) => o.ReferenciaImagem = v),
+        // Vínculos e ciclo de vida da ocorrência (ver ObjetoDetectado): exportados para o arquivo
+        // dizer o mesmo que a tela — qual alvo cadastrado, qual câmera/quadrante e em que estado.
+        new CsvColumn<ObjetoDetectado>("PerfilAlvoId", o => CsvConvert.From(o.PerfilAlvoId), (o, v) => o.PerfilAlvoId = CsvConvert.ToNullableInt(v)),
+        new CsvColumn<ObjetoDetectado>("CameraNome", o => o.CameraNome ?? "", (o, v) => o.CameraNome = v),
+        new CsvColumn<ObjetoDetectado>("RastreamentoId", o => o.RastreamentoId ?? "", (o, v) => o.RastreamentoId = v),
+        new CsvColumn<ObjetoDetectado>("Estado", o => o.Estado.ToString(), (o, v) => o.Estado = CsvConvert.ToEnum(v, EstadoOcorrencia.Detectado)),
+        new CsvColumn<ObjetoDetectado>("DataHoraUltimaDeteccao", o => CsvConvert.From(o.DataHoraUltimaDeteccao), (o, v) => o.DataHoraUltimaDeteccao = CsvConvert.ToNullableDateTime(v)),
     ];
 }

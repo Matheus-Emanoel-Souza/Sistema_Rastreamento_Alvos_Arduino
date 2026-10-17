@@ -14,7 +14,8 @@ namespace RadarTorres.App.Services;
 
 /// <summary>
 /// Implementação de <see cref="IAlvoVisualService"/>. Quando o perfil ativo tem foto de
-/// referência (<see cref="PerfilAlvo.CaminhoFotoReferencia"/>), cada caixa candidata do quadro
+/// referência (<see cref="PerfilAlvo.Fotos"/>, cada uma recortada no objeto que o usuário marcou
+/// em <see cref="FotoReferenciaAlvo.Recorte"/>), cada caixa candidata do quadro
 /// ao vivo é comparada DIRETAMENTE com a foto (ver <see cref="ExtrairAssinatura"/>/
 /// <see cref="CalcularSimilaridade"/>). Sem foto, cai de volta para a heurística de cor
 /// dominante + proporção da caixa, sem quebrar perfis já cadastrados sem foto.
@@ -29,8 +30,9 @@ namespace RadarTorres.App.Services;
 /// </para>
 /// <list type="number">
 /// <item>
-/// A região do objeto dentro da foto de referência é escolhida pela COR cadastrada no perfil,
-/// não pela confiança do detector (<see cref="EncontrarAreaDoObjeto"/>). Pegar a caixa de maior
+/// A região do objeto dentro de cada foto de referência vem da marcação do usuário quando existe e,
+/// sem ela, é escolhida pela COR cadastrada no perfil — nunca pela confiança do detector
+/// (<see cref="EncontrarAreaDoObjeto"/>). Pegar a caixa de maior
 /// score fazia o perfil guardar a assinatura da pessoa que segurava o objeto — o tiny-YOLOv3
 /// pontua "person" muito acima de um objeto comum, e a classe COCO é ignorada por este pipeline.
 /// </item>
@@ -99,7 +101,7 @@ public sealed class AlvoVisualService : IAlvoVisualService
     private readonly ILoggingService _logger;
 
     private string? _chaveFotoCacheada;
-    private AssinaturaVisual? _assinaturaFotoCacheada;
+    private IReadOnlyList<AssinaturaVisual> _assinaturasFotoCacheadas = Array.Empty<AssinaturaVisual>();
 
     public AlvoVisualService(IObjectDetectionService detectionService, IPerfilAlvoService perfilAlvoService, ILoggingService logger)
     {
@@ -124,10 +126,10 @@ public sealed class AlvoVisualService : IAlvoVisualService
         double preparoMs = Decorrido(marco);
 
         marco = Stopwatch.GetTimestamp();
-        AssinaturaVisual? assinaturaReferencia = ObterAssinaturaReferencia(perfil, config);
+        IReadOnlyList<AssinaturaVisual> assinaturasReferencia = ObterAssinaturasReferencia(perfil, config);
         double referenciaMs = Decorrido(marco);
 
-        bool usandoFoto = assinaturaReferencia is not null;
+        bool usandoFoto = assinaturasReferencia.Count > 0;
 
         IReadOnlyList<Candidato> candidatos = ObterCandidatos(
             frame, trabalho, perfil, config, out double segmentacaoMs, out double detectorMs, out bool detectorExecutou);
@@ -150,7 +152,12 @@ public sealed class AlvoVisualService : IAlvoVisualService
             if (usandoFoto)
             {
                 AssinaturaVisual assinaturaCandidata = ExtrairAssinatura(trabalho.Bitmap, candidato.Caixa, config);
-                pontuacao = CalcularSimilaridade(assinaturaReferencia!, assinaturaCandidata, config);
+
+                // Melhor similaridade entre TODAS as fotos do perfil: cada foto e o mesmo objeto
+                // visto de outro angulo/iluminacao, entao basta UMA bater. Exigir media (ou
+                // todas) faria a foto mais desfavoravel derrubar o reconhecimento inteiro --
+                // justamente o oposto do motivo de haver varias.
+                pontuacao = assinaturasReferencia.Max(a => CalcularSimilaridade(a, assinaturaCandidata, config));
 
                 // A cor cadastrada entra como segunda prova mesmo havendo foto: é barata, já foi
                 // informada pelo usuário e descarta de imediato o candidato que "parece" pela
@@ -182,7 +189,7 @@ public sealed class AlvoVisualService : IAlvoVisualService
             : new AlvoVisualResultado(
                 perfil,
                 melhorAceito.Deteccao,
-                EstimarDistanciaMetros(melhorAceito.Deteccao, perfil.TamanhoCm, frame.Width, config.CameraFovHorizontalGraus));
+                EstimarDistanciaMetros(melhorAceito.Deteccao, perfil.MaiorDimensaoCm, frame.Width, config.CameraFovHorizontalGraus));
 
         var tempos = new TemposRodada(
             Decorrido(inicioRodada),
@@ -417,34 +424,45 @@ public sealed class AlvoVisualService : IAlvoVisualService
     private sealed record AssinaturaVisual(float[] Grade, float[] Histograma);
 
     /// <summary>
-    /// Assinatura visual da foto de referência do perfil, cacheada por caminho de arquivo + cor
-    /// — recarregar/reprocessar a foto a cada quadro (a cada ~500ms) seria trabalho repetido à
-    /// toa, já que a foto não muda enquanto o perfil continuar o mesmo. A cor entra na chave
-    /// porque é ela que decide qual região da foto vira assinatura (ver <see cref="EncontrarAreaDoObjeto"/>).
+    /// Uma assinatura visual por fotografia do perfil, cacheadas em conjunto por (cor + lista de
+    /// caminhos + recorte de cada um) — recarregar e reprocessar as fotos a cada quadro seria
+    /// trabalho repetido à toa, já que elas não mudam enquanto o perfil continuar o mesmo. Cor e
+    /// recortes entram na chave porque são eles que decidem qual região de cada foto vira
+    /// assinatura (ver <see cref="EncontrarAreaDoObjeto"/>): sem isso, marcar outro objeto —
+    /// ou adicionar/remover uma foto na edição do perfil — continuaria usando as assinaturas
+    /// antigas.
     /// </summary>
-    private AssinaturaVisual? ObterAssinaturaReferencia(PerfilAlvo perfil, VisionSettings config)
+    private IReadOnlyList<AssinaturaVisual> ObterAssinaturasReferencia(PerfilAlvo perfil, VisionSettings config)
     {
-        string? caminho = perfil.CaminhoFotoReferencia;
-        if (string.IsNullOrEmpty(caminho) || !File.Exists(caminho)) return null;
+        List<FotoReferenciaAlvo> fotos = perfil.Fotos.Where(f => File.Exists(f.Caminho)).ToList();
+        if (fotos.Count == 0) return Array.Empty<AssinaturaVisual>();
 
-        string chave = $"{caminho}|{perfil.Cor}";
-        if (chave == _chaveFotoCacheada) return _assinaturaFotoCacheada;
+        string chave = $"{perfil.Cor}|" + string.Join(";", fotos.Select(f => $"{f.Caminho}@{f.Recorte}"));
+        if (chave == _chaveFotoCacheada) return _assinaturasFotoCacheadas;
 
-        try
+        var assinaturas = new List<AssinaturaVisual>(fotos.Count);
+
+        foreach (FotoReferenciaAlvo foto in fotos)
         {
-            using var referencia = new Bitmap(caminho);
-            Rectangle area = EncontrarAreaDoObjeto(referencia, perfil, config);
-            AssinaturaVisual assinatura = ExtrairAssinatura(referencia, area, config);
+            try
+            {
+                using var referencia = new Bitmap(foto.Caminho);
+                Rectangle area = EncontrarAreaDoObjeto(referencia, perfil, foto, config);
+                assinaturas.Add(ExtrairAssinatura(referencia, area, config));
+            }
+            catch (Exception ex)
+            {
+                // Uma foto ilegível não invalida as outras: segue com as que deram certo, e o
+                // aviso diz exatamente qual arquivo revisar.
+                _logger.Warning(
+                    $"Não foi possível processar a fotografia \"{Path.GetFileName(foto.Caminho)}\" do perfil " +
+                    $"\"{perfil.Nome}\" para comparação: {ex.Message}");
+            }
+        }
 
-            _chaveFotoCacheada = chave;
-            _assinaturaFotoCacheada = assinatura;
-            return assinatura;
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning($"Não foi possível processar a foto de referência de \"{perfil.Nome}\" para comparação: {ex.Message}");
-            return null;
-        }
+        _chaveFotoCacheada = chave;
+        _assinaturasFotoCacheadas = assinaturas;
+        return assinaturas;
     }
 
     /// <summary>
@@ -452,7 +470,10 @@ public sealed class AlvoVisualService : IAlvoVisualService
     /// inteira (que inclui fundo, e normalmente a pessoa que segurava o objeto).
     /// </summary>
     /// <remarks>
-    /// A escolha é pela COR cadastrada no perfil, não pela confiança do detector. Pegar a caixa
+    /// Com <see cref="PerfilAlvo.RecorteFotoReferencia"/> preenchido, a região é a que o usuário
+    /// marcou sobre a foto e nada mais é calculado. O resto deste método é o caminho automático,
+    /// usado só por perfis sem marcação: a escolha aí é pela COR cadastrada no perfil, não pela
+    /// confiança do detector. Pegar a caixa
     /// de maior score parece o óbvio e está errado aqui: o tiny-YOLOv3 pontua "person" bem acima
     /// de um objeto comum, e como este pipeline ignora a classe COCO, a foto de um objeto
     /// segurado na mão virava a assinatura do rosto/roupa de quem segurava — todo o
@@ -460,8 +481,31 @@ public sealed class AlvoVisualService : IAlvoVisualService
     /// assume que o usuário centralizou o objeto ao tirar a foto (a tela "Perfis de Alvo" mostra
     /// o preview ao vivo exatamente para isso) e usa um recorte central.
     /// </remarks>
-    private Rectangle EncontrarAreaDoObjeto(Bitmap referencia, PerfilAlvo perfil, VisionSettings config)
+    private Rectangle EncontrarAreaDoObjeto(Bitmap referencia, PerfilAlvo perfil, FotoReferenciaAlvo foto, VisionSettings config)
     {
+        // Se o usuário marcou o objeto na foto, não há o que adivinhar: é exatamente esta a
+        // região a observar. Toda a busca abaixo existe só para quem não marcou nada.
+        if (foto.Recorte is { EhValido: true } recorte)
+        {
+            Rectangle marcada = Rectangle.Intersect(
+                new Rectangle(recorte.X, recorte.Y, recorte.Largura, recorte.Altura),
+                new Rectangle(0, 0, referencia.Width, referencia.Height));
+
+            if (marcada.Width > 0 && marcada.Height > 0)
+            {
+                _logger.Info(
+                    $"Perfil \"{perfil.Nome}\": usando o objeto marcado pelo usuário em " +
+                    $"\"{Path.GetFileName(foto.Caminho)}\" ({marcada.Width}×{marcada.Height}px em x={marcada.X}, y={marcada.Y}).");
+                return marcada;
+            }
+
+            // Recorte fora da foto (foto trocada por fora, por exemplo) — segue para a busca
+            // automática em vez de devolver uma região vazia.
+            _logger.Warning(
+                $"Perfil \"{perfil.Nome}\": a marcação do objeto não cai dentro de \"{Path.GetFileName(foto.Caminho)}\". " +
+                "Localizando o objeto automaticamente — remarque o objeto na tela \"Perfis de Alvo\".");
+        }
+
         using var trabalho = FrameTrabalho.Criar(referencia);
 
         IEnumerable<Rectangle> candidatas = SegmentarPorCor(trabalho.Bitmap, perfil.Cor, config)
@@ -485,13 +529,13 @@ public sealed class AlvoVisualService : IAlvoVisualService
         if (melhorFracao >= config.LimiarCorCandidato)
         {
             _logger.Info(
-                $"Perfil \"{perfil.Nome}\": objeto localizado na foto de referência em {melhor.Width}×{melhor.Height}px " +
+                $"Perfil \"{perfil.Nome}\": objeto localizado em \"{Path.GetFileName(foto.Caminho)}\" em {melhor.Width}×{melhor.Height}px " +
                 $"({melhorFracao:P0} de {perfil.Cor}).");
             return melhor;
         }
 
         _logger.Warning(
-            $"Perfil \"{perfil.Nome}\": nenhuma região da foto de referência tem {perfil.Cor} suficiente " +
+            $"Perfil \"{perfil.Nome}\": nenhuma região de \"{Path.GetFileName(foto.Caminho)}\" tem {perfil.Cor} suficiente " +
             $"(melhor: {melhorFracao:P0}). Usando o centro da foto — confira se a cor cadastrada bate com o objeto.");
 
         int largura = (int)(referencia.Width * 0.6);
