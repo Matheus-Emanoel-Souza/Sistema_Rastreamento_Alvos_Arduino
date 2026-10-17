@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!--
         Tema claro. Mesmas chaves de recurso do tema escuro (Themes/Dark.xaml) — nenhuma
         tela precisa saber qual tema está ativo, todas já usam DynamicResource.
@@ -40,4 +41,9 @@
     <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#0B0F0C"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#0B0F0C"/>
+
+    <!-- Ver comentário equivalente em Themes/Dark.xaml. Bem mais apagada aqui: o quadrado
+         escuro do ícone contrasta muito com o fundo claro deste tema. -->
+    <sys:Double x:Key="LoginMarcaDaguaOpacidade">0.10</sys:Double>
+
 </ResourceDictionary>

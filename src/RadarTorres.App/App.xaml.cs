@@ -525,20 +525,49 @@ public partial class App : Application
     }
 
     /// <summary>Exceções não tratadas geradas na thread de UI (bindings, comandos, eventos).</summary>
+    /// <remarks>
+    /// Um diálogo por vez e um por mensagem distinta, de propósito: <see cref="MessageBox"/>
+    /// roda um bombeamento de mensagens ANINHADO, então uma falha que se repete a cada lote do
+    /// dispatcher abre uma janela em cima da outra — foram dezenas de modais empilhados num
+    /// caso real, escondendo justamente o primeiro erro, que é o que interessa. As repetições
+    /// continuam sendo registradas no relatório de desempenho e no console de eventos; só o
+    /// alarme visual é que não se repete.
+    /// </remarks>
+    /// <summary>Se um diálogo de erro já está aberto (ver <see cref="OnDispatcherUnhandledException"/>).</summary>
+    private bool _exibindoErro;
+
+    /// <summary>Mensagem do último erro mostrado em diálogo — repetições não reabrem a janela.</summary>
+    private string? _ultimaMensagemDeErroExibida;
+
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         RegistrarErroNoRelatorio("thread de UI", e.Exception);
 
-        MessageBox.Show(
-            $"Ocorreu um erro inesperado e o RadarTorres pode não continuar funcionando corretamente.\n\n" +
-            $"Detalhes: {e.Exception.Message}",
-            "RadarTorres - Erro inesperado",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
-
-        // Marca como tratada para evitar o encerramento abrupto sempre que for seguro
-        // continuar (ex.: falha pontual ao processar uma leitura do sensor).
+        // Marcada como tratada primeiro: evita o encerramento abrupto sempre que for seguro
+        // continuar (ex.: falha pontual ao processar uma leitura do sensor), e vale mesmo que
+        // a exibição da mensagem abaixo seja suprimida.
         e.Handled = true;
+
+        if (_exibindoErro || e.Exception.Message == _ultimaMensagemDeErroExibida) return;
+
+        _exibindoErro = true;
+        _ultimaMensagemDeErroExibida = e.Exception.Message;
+
+        try
+        {
+            MessageBox.Show(
+                $"Ocorreu um erro inesperado e o RadarTorres pode não continuar funcionando corretamente.\n\n" +
+                $"Detalhes: {e.Exception.Message}\n\n" +
+                "Repetições deste mesmo erro não voltarão a abrir esta janela — elas continuam no " +
+                "console de eventos e no relatório de desempenho desta execução.",
+                "RadarTorres - Erro inesperado",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            _exibindoErro = false;
+        }
     }
 
     /// <summary>Exceções não tratadas geradas em threads de fundo (ex.: leitura serial, timers).</summary>

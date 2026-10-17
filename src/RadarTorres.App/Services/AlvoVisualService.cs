@@ -100,8 +100,11 @@ public sealed class AlvoVisualService : IAlvoVisualService
     private readonly IPerfilAlvoService _perfilAlvoService;
     private readonly ILoggingService _logger;
 
-    private string? _chaveFotoCacheada;
-    private IReadOnlyList<AssinaturaVisual> _assinaturasFotoCacheadas = Array.Empty<AssinaturaVisual>();
+    /// <summary>Chave + assinaturas numa única referência, trocada de uma vez (ver <see cref="ObterAssinaturasReferencia"/>).</summary>
+    private sealed record CacheAssinaturas(string Chave, IReadOnlyList<AssinaturaVisual> Assinaturas);
+
+    private CacheAssinaturas? _cacheAssinaturas;
+    private readonly object _travaCache = new();
 
     public AlvoVisualService(IObjectDetectionService detectionService, IPerfilAlvoService perfilAlvoService, ILoggingService logger)
     {
@@ -424,6 +427,7 @@ public sealed class AlvoVisualService : IAlvoVisualService
     private sealed record AssinaturaVisual(float[] Grade, float[] Histograma);
 
     /// <summary>
+    /// <para>
     /// Uma assinatura visual por fotografia do perfil, cacheadas em conjunto por (cor + lista de
     /// caminhos + recorte de cada um) — recarregar e reprocessar as fotos a cada quadro seria
     /// trabalho repetido à toa, já que elas não mudam enquanto o perfil continuar o mesmo. Cor e
@@ -431,6 +435,15 @@ public sealed class AlvoVisualService : IAlvoVisualService
     /// assinatura (ver <see cref="EncontrarAreaDoObjeto"/>): sem isso, marcar outro objeto —
     /// ou adicionar/remover uma foto na edição do perfil — continuaria usando as assinaturas
     /// antigas.
+    /// </para>
+    /// <para>
+    /// <b>Concorrência:</b> desde que a detecção roda em paralelo (card de Monitoramento + os
+    /// quatro painéis da tela "Câmeras"), até cinco threads chamam este método ao mesmo tempo.
+    /// Chave e assinaturas vivem numa única referência trocada de uma vez — com dois campos
+    /// separados, uma thread podia enxergar a chave NOVA junto da lista VELHA e comparar o
+    /// quadro ao vivo com a assinatura do perfil anterior. A reconstrução acontece sob trava
+    /// para não processar as mesmas fotos cinco vezes (nem repetir cinco vezes o mesmo aviso).
+    /// </para>
     /// </summary>
     private IReadOnlyList<AssinaturaVisual> ObterAssinaturasReferencia(PerfilAlvo perfil, VisionSettings config)
     {
@@ -438,31 +451,39 @@ public sealed class AlvoVisualService : IAlvoVisualService
         if (fotos.Count == 0) return Array.Empty<AssinaturaVisual>();
 
         string chave = $"{perfil.Cor}|" + string.Join(";", fotos.Select(f => $"{f.Caminho}@{f.Recorte}"));
-        if (chave == _chaveFotoCacheada) return _assinaturasFotoCacheadas;
 
-        var assinaturas = new List<AssinaturaVisual>(fotos.Count);
+        // Leitura sem trava: a referência é trocada de uma vez só, então ou se enxerga o cache
+        // antigo inteiro, ou o novo inteiro — nunca a chave nova com a lista velha.
+        if (_cacheAssinaturas is { } cache && cache.Chave == chave) return cache.Assinaturas;
 
-        foreach (FotoReferenciaAlvo foto in fotos)
+        lock (_travaCache)
         {
-            try
-            {
-                using var referencia = new Bitmap(foto.Caminho);
-                Rectangle area = EncontrarAreaDoObjeto(referencia, perfil, foto, config);
-                assinaturas.Add(ExtrairAssinatura(referencia, area, config));
-            }
-            catch (Exception ex)
-            {
-                // Uma foto ilegível não invalida as outras: segue com as que deram certo, e o
-                // aviso diz exatamente qual arquivo revisar.
-                _logger.Warning(
-                    $"Não foi possível processar a fotografia \"{Path.GetFileName(foto.Caminho)}\" do perfil " +
-                    $"\"{perfil.Nome}\" para comparação: {ex.Message}");
-            }
-        }
+            // Outra câmera pode ter reconstruído enquanto esta esperava a trava.
+            if (_cacheAssinaturas is { } atual && atual.Chave == chave) return atual.Assinaturas;
 
-        _chaveFotoCacheada = chave;
-        _assinaturasFotoCacheadas = assinaturas;
-        return assinaturas;
+            var assinaturas = new List<AssinaturaVisual>(fotos.Count);
+
+            foreach (FotoReferenciaAlvo foto in fotos)
+            {
+                try
+                {
+                    using var referencia = new Bitmap(foto.Caminho);
+                    Rectangle area = EncontrarAreaDoObjeto(referencia, perfil, foto, config);
+                    assinaturas.Add(ExtrairAssinatura(referencia, area, config));
+                }
+                catch (Exception ex)
+                {
+                    // Uma foto ilegível não invalida as outras: segue com as que deram certo, e o
+                    // aviso diz exatamente qual arquivo revisar.
+                    _logger.Warning(
+                        $"Não foi possível processar a fotografia \"{Path.GetFileName(foto.Caminho)}\" do perfil " +
+                        $"\"{perfil.Nome}\" para comparação: {ex.Message}");
+                }
+            }
+
+            _cacheAssinaturas = new CacheAssinaturas(chave, assinaturas);
+            return assinaturas;
+        }
     }
 
     /// <summary>
