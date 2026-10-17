@@ -8,6 +8,12 @@
         mescla o tema correto em Application.Resources antes de mostrar qualquer janela.
     -->
     <Application.Resources>
-        <ResourceDictionary/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Ícones da identidade visual — não variam por tema, por isso ficam fora do
+                     ResourceDictionary trocado em runtime por ThemeService.ApplyTheme. -->
+                <ResourceDictionary Source="Resources/Icons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
