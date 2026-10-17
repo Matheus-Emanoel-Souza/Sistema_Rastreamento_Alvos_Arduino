@@ -10,9 +10,10 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Ícones da identidade visual — não variam por tema, por isso ficam fora do
-                     ResourceDictionary trocado em runtime por ThemeService.ApplyTheme. -->
+                <!-- Ícones e tipografia da identidade visual — não variam por tema, por isso
+                     ficam fora do ResourceDictionary trocado em runtime por ThemeService.ApplyTheme. -->
                 <ResourceDictionary Source="Resources/Icons.xaml"/>
+                <ResourceDictionary Source="Styles/Typography.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

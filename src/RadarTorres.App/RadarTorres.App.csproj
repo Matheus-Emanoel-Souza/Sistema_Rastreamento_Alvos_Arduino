@@ -85,6 +85,13 @@
          recursos Win32 do executável, de onde o XAML não consegue ler. -->
     <Resource Include="Assets\RadarTorres.ico" />
 
+    <!-- Fontes da identidade visual (Chakra Petch / IBM Plex Sans / JetBrains Mono, todas OFL —
+         licenças em Resources\Fonts\*-OFL.txt), embutidas porque o instalador é self-contained e
+         a máquina do usuário final não tem essas fontes instaladas. Build Action "Resource" (não
+         "Content"/"None") para ficarem dentro do assembly, referenciadas via
+         "./Resources/Fonts/#<Nome da família>" em Styles/Typography.xaml. -->
+    <Resource Include="Resources\Fonts\*.ttf" />
+
     <!-- Termos de Uso: o MESMO arquivo que o Inno Setup exibe como página de licença
          (installer\RadarTorres.iss) é embutido no executável, para a tela de Configurações e o
          PDF exportado lerem exatamente a redação aceita na instalação. Embutido, e não copiado
