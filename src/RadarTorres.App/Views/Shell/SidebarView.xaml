@@ -6,6 +6,7 @@
     <UserControl.Resources>
         <conv:ResourceKeyToGeometryConverter x:Key="ResourceKeyToGeometryConverter"/>
         <conv:GroupHeaderVisibilityConverter x:Key="GroupHeaderVisibilityConverter"/>
+        <conv:CollapsedToAlignmentConverter x:Key="CollapsedToAlignmentConverter"/>
     </UserControl.Resources>
 
     <Border Background="{DynamicResource Bg.Sidebar}" BorderBrush="{DynamicResource Border.Divider}" BorderThickness="0,0,1,0">
@@ -130,7 +131,7 @@
                                         CommandParameter="{Binding Item}" Cursor="Hand"
                                         ToolTip="{Binding Label}" AutomationProperties.Name="{Binding Label}"
                                         Padding="12,11" Margin="0,0,0,2" BorderThickness="0"
-                                        HorizontalContentAlignment="Left">
+                                        HorizontalContentAlignment="{Binding DataContext.IsSidebarCollapsed, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CollapsedToAlignmentConverter}}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -154,8 +155,20 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Path Data="{Binding IconKey, Converter={StaticResource ResourceKeyToGeometryConverter}}"
                                               Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                              StrokeThickness="2" Width="18" Height="18" Stretch="Uniform"
-                                              VerticalAlignment="Center"/>
+                                              StrokeThickness="2" Stretch="Uniform" VerticalAlignment="Center">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Width" Value="18"/>
+                                                    <Setter Property="Height" Value="18"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding DataContext.IsSidebarCollapsed, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                            <Setter Property="Width" Value="22"/>
+                                                            <Setter Property="Height" Value="22"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
                                         <TextBlock Text="{Binding Label}" FontFamily="{DynamicResource Font.Body}"
                                                    FontSize="15" Margin="12,0,0,0" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis">
