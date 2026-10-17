@@ -46,7 +46,7 @@
                 <StackPanel Orientation="Horizontal">
                     <Border Background="{DynamicResource Accent.Fill}" CornerRadius="4" Padding="7,2" Margin="0,0,10,0"
                             VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Numero}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+                        <TextBlock Text="{Binding Numero}" Foreground="{DynamicResource OnAccent}" FontWeight="Bold" FontSize="12"/>
                     </Border>
                     <TextBlock Text="{Binding Titulo}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap"
                                VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
@@ -147,7 +147,7 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="{Binding TextoBotaoPdf}" Command="{Binding BaixarPdfCommand}"
-                            Background="{DynamicResource Accent.Fill}" Foreground="White" FontWeight="SemiBold"/>
+                            Background="{DynamicResource Accent.Fill}" Foreground="{DynamicResource OnAccent}" FontWeight="SemiBold"/>
                     <Button x:Name="BotaoFechar" Content="Fechar" IsCancel="True" Click="Fechar_Click" Margin="0"/>
                 </StackPanel>
             </Grid>

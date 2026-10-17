@@ -115,7 +115,7 @@
                 </ComboBox>
                 <Button Grid.Column="1" Content="{loc:Loc Cameras.Quadrante.Salvar}" Margin="0"
                         Command="{Binding DefinirQuadranteCommand}" Background="{DynamicResource Accent.Fill}"
-                        Foreground="White"/>
+                        Foreground="{DynamicResource OnAccent}"/>
             </Grid>
             <TextBlock Text="{Binding QuadranteDescricao}" Style="{StaticResource LabelText}" TextWrapping="Wrap"/>
 
