@@ -177,4 +177,46 @@ public sealed class VisionSettings
     /// <see cref="Services.AlvoVisualService"/>). Evita propor respingos de cor do fundo.
     /// </summary>
     public double AreaMinimaRegiaoCor { get; set; } = 0.005;
+
+    // ---------------------------------------------------------------- Rastreamento de ocorrências
+
+    /// <summary>
+    /// Quantas rodadas consecutivas de detecção o mesmo objeto precisa ser reconhecido antes de
+    /// abrir uma ocorrência no histórico (ver <see cref="Services.RastreamentoVisualService"/>).
+    /// </summary>
+    /// <remarks>
+    /// 2 e não 1 de propósito: a pontuação do reconhecimento oscila entre quadros, e um único
+    /// quadro no limite do limiar geraria uma ocorrência que não se repete na rodada seguinte —
+    /// exatamente o tipo de registro que suja o histórico. Com duas rodadas (~240 ms no intervalo
+    /// padrão) o custo em latência é irrelevante e o falso positivo isolado desaparece.
+    /// </remarks>
+    public int ConfirmacoesParaRegistrarOcorrencia { get; set; } = 2;
+
+    /// <summary>
+    /// Por quantos segundos sem nenhuma detecção um rastreamento continua valendo — tolerância a
+    /// oclusão, objeto saindo e voltando ao campo de visão e falha momentânea do detector.
+    /// Enquanto vale, o objeto que reaparece volta para a MESMA ocorrência; depois disso, o
+    /// rastreamento é encerrado e um reaparecimento gera uma ocorrência nova.
+    /// </summary>
+    /// <remarks>
+    /// Encerrar o rastreamento NÃO significa abate: o estado da ocorrência continua
+    /// <see cref="Models.EstadoOcorrencia.Detectado"/>. Abate só por evento explícito — ver
+    /// <see cref="Models.EstadoOcorrencia"/>.
+    /// </remarks>
+    public int ToleranciaPerdaRastreamentoSegundos { get; set; } = 10;
+
+    /// <summary>
+    /// Interseção sobre união mínima entre a caixa deste quadro e a última caixa conhecida de um
+    /// rastreamento para considerar que é o mesmo objeto. Baixo de propósito (0,2): a caixa muda
+    /// bastante de tamanho conforme o objeto se aproxima ou gira, e perder a identidade por isso
+    /// criaria ocorrências repetidas do mesmo alvo.
+    /// </summary>
+    public double LimiarIoURastreamento { get; set; } = 0.2;
+
+    /// <summary>
+    /// Intervalo mínimo (segundos) entre duas gravações de "continua sendo detectado" da mesma
+    /// ocorrência. Evita um UPDATE no banco a cada rodada de um alvo parado em frente à câmera,
+    /// sem perder a noção de até quando o acompanhamento durou.
+    /// </summary>
+    public int IntervaloAtualizacaoAcompanhamentoSegundos { get; set; } = 5;
 }

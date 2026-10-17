@@ -7,16 +7,19 @@
              Foreground="{DynamicResource TextPrimaryBrush}"
              FontFamily="Segoe UI">
     <!--
-        Tela "Perfis de Alvo" — cadastra o que a detecção por visão computacional deve travar
-        (cor, formato, tamanho) e permite escolher qual perfil está ativo. Sem edição de campos
-        após criado (mesmo padrão de Zonas Mortas): trocar cor/formato/tamanho é remover e criar
-        outro perfil. A seção "Foto de referência" captura uma imagem da câmera escolhida para
-        tratar o objeto manualmente depois — não faz parte da detecção automática.
+        Tela "Perfis de Alvo" — cadastra e EDITA o que a detecção por visão computacional deve
+        travar: cor, formato, dimensões físicas (uma dimensão, ou largura+altura quando o objeto
+        é retangular) e as fotografias de referência. O cadastro exige no mínimo 3 fotografias
+        válidas (o botão fica desabilitado até lá); a edição altera o mesmo registro, preservando
+        o vínculo com o histórico de detecções. Em cada foto o usuário arrasta para marcar QUAL
+        objeto deve ser observado, e o reconhecimento compara o quadro ao vivo com todas elas
+        (ver PerfilAlvoViewModel e AlvoVisualService).
     -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <conv:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisibilityConverter"/>
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="6,5"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
@@ -73,7 +76,7 @@
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="360"/>
             </Grid.ColumnDefinitions>
 
             <DataGrid Grid.Column="0" Margin="0,0,16,0" ItemsSource="{Binding Perfis}" SelectedItem="{Binding SelectedPerfil}"
@@ -92,10 +95,13 @@
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="160"/>
+                    <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="50"/>
+                    <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="150"/>
                     <DataGridTextColumn Header="Cor" Binding="{Binding Cor}" Width="80"/>
-                    <DataGridTextColumn Header="Formato" Binding="{Binding Formato}" Width="100"/>
-                    <DataGridTextColumn Header="Tamanho (cm)" Binding="{Binding TamanhoCm, StringFormat={}{0:0.0}}" Width="110"/>
+                    <DataGridTextColumn Header="Formato" Binding="{Binding Formato}" Width="95"/>
+                    <!-- Dimensões físicas: "L × A cm" nos retangulares, dimensão única nos demais. -->
+                    <DataGridTextColumn Header="Dimensões" Binding="{Binding DimensoesDescricao}" Width="120"/>
+                    <DataGridTextColumn Header="Fotos" Binding="{Binding TotalFotos}" Width="60"/>
                     <DataGridCheckBoxColumn Header="Ativo" Binding="{Binding Selecionado}" Width="60"/>
                 </DataGrid.Columns>
             </DataGrid>
@@ -105,7 +111,9 @@
                 <Border Style="{StaticResource SectionCard}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
                     <StackPanel>
                         <TextBlock Text="{loc:Loc PerfilAlvo.Form.DefinicaoAlvo}" FontSize="15" FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding TituloFormulario}" FontSize="11" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
 
                         <TextBlock Text="{loc:Loc PerfilAlvo.Form.Nome}" Style="{StaticResource FieldLabel}"/>
                         <TextBox Text="{Binding FormNome, UpdateSourceTrigger=PropertyChanged}"/>
@@ -130,42 +138,46 @@
                                          IsChecked="{Binding FormFormato, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Retangular}"/>
                         </StackPanel>
 
-                        <TextBlock Text="{loc:Loc PerfilAlvo.Form.TamanhoCm}" Style="{StaticResource FieldLabel}"/>
-                        <TextBox Text="{Binding FormTamanhoCm, UpdateSourceTrigger=PropertyChanged}"/>
+                        <!-- ===== Dimensões físicas (sempre em centímetros do objeto real) =====
+                             Objeto retangular tem altura e largura independentes; quadrado e
+                             redondo têm uma única medida (lado/diâmetro). Os dois blocos se
+                             alternam pelo formato escolhido, para nunca pedir a medida errada. -->
+                        <StackPanel Visibility="{Binding FormFormato, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Retangular}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                    <TextBlock Text="{loc:Loc PerfilAlvo.Form.LarguraCm}" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox Text="{Binding FormLarguraCm, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{loc:Loc PerfilAlvo.Form.AlturaCm}" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox Text="{Binding FormAlturaCm, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
 
-                        <TextBlock Text="{Binding MensagemFormulario}" TextWrapping="Wrap" Margin="0,0,0,10">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SucessoFormulario}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        <DataTrigger Binding="{Binding EhRetangular}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                            </StackPanel.Style>
+                            <TextBlock Text="{Binding RotuloDimensaoUnica}" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding FormTamanhoCm, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
 
-                        <Button Content="{loc:Loc PerfilAlvo.Form.Salvar}" Command="{Binding SalvarCommand}" Margin="0,0,0,0"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource SectionCard}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc PerfilAlvo.Selecionado.Titulo}" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding SelectedPerfil}" TextWrapping="Wrap" Margin="0,0,0,10"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-
-                        <Button Content="{loc:Loc PerfilAlvo.Selecionado.SelecionarAtivo}" Command="{Binding SelecionarAtivoCommand}"/>
-                        <Button Content="{loc:Loc PerfilAlvo.Selecionado.Remover}" Style="{StaticResource SecondaryButton}" Command="{Binding RemoverCommand}" Margin="0"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource SectionCard}" Margin="0">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.Titulo}" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <!-- ===== Fotografias ===== -->
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.Titulo}" FontWeight="Bold" Margin="0,6,0,4"/>
                         <TextBlock Text="{loc:Loc PerfilAlvo.Foto.Descricao}" FontSize="11" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8"/>
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -178,12 +190,9 @@
                                     Command="{Binding AtualizarCamerasCommand}" Margin="0,0,0,10"/>
                         </Grid>
 
-                        <TextBlock Text="{Binding StatusFoto}" TextWrapping="Wrap" FontSize="11" Margin="0,0,0,6"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-
                         <TextBlock Text="{loc:Loc PerfilAlvo.Foto.PreviewTempoReal}" Style="{StaticResource FieldLabel}"/>
                         <Border Background="{DynamicResource RadarBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
-                                BorderThickness="1" CornerRadius="4" Height="180" Margin="0,0,0,10">
+                                BorderThickness="1" CornerRadius="4" Height="170" Margin="0,0,0,8">
                             <Grid>
                                 <Image Source="{Binding CurrentFrame}" Stretch="Uniform"
                                        Visibility="{Binding IsStreaming, Converter={StaticResource BooleanToVisibilityConverter}}"/>
@@ -206,18 +215,128 @@
 
                         <Button Content="{loc:Loc PerfilAlvo.Foto.Tirar}" Command="{Binding TirarFotoCommand}"/>
 
-                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.UltimaSalva}" Style="{StaticResource FieldLabel}"/>
+                        <!-- Quantas fotos já existem e quantas faltam para o mínimo exigido. -->
+                        <TextBlock Text="{Binding MensagemFotos}" TextWrapping="Wrap" FontSize="11" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                        <!-- Lista das fotos do rascunho: clicar seleciona para marcar o objeto;
+                             "✕" desvincula a foto (o arquivo continua no disco). -->
+                        <ListBox ItemsSource="{Binding FormFotos}" SelectedItem="{Binding FotoSelecionada}"
+                                 Background="Transparent" BorderThickness="0" Margin="0,0,0,8"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 Visibility="{Binding FotoSelecionada, Converter={StaticResource NullToVisibilityConverter}}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Width="92" Margin="0,0,6,6">
+                                        <Border Background="{DynamicResource RadarBackgroundBrush}"
+                                                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="4">
+                                            <Grid>
+                                                <Image Source="{Binding Caminho}" Height="64" Stretch="Uniform" Margin="2"/>
+                                                <!-- Indica que esta foto já tem o objeto marcado. -->
+                                                <TextBlock Text="✓" FontWeight="Bold" FontSize="14" Margin="4,2"
+                                                           HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           Visibility="{Binding TemRecorte, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                <Button Content="✕" Width="20" Height="20" Padding="0" Margin="0"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                        Background="{DynamicResource DangerBrush}" FontSize="11"
+                                                        ToolTip="Remover esta fotografia do cadastro"
+                                                        Command="{Binding DataContext.RemoverFotoCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Text="{Binding StatusFoto}" TextWrapping="Wrap" FontSize="11" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                        <!-- ===== Marcação do objeto na foto selecionada ===== -->
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.MarcarObjeto}" FontSize="11" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"
+                                   Visibility="{Binding FotoSelecionadaPreview, Converter={StaticResource NullToVisibilityConverter}}"/>
                         <Border Background="{DynamicResource RadarBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
-                                BorderThickness="1" CornerRadius="4" Height="140">
+                                BorderThickness="1" CornerRadius="4" Height="220" Margin="0,0,0,8">
                             <Grid>
-                                <Image Source="{Binding FotoReferenciaPreview}" Stretch="Uniform"
-                                       Visibility="{Binding FotoReferenciaPreview, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                <!--
+                                    O Canvas tem o tamanho EXATO da foto em pixels e é escalado
+                                    pelo Viewbox, então a posição do mouse dentro dele já é a
+                                    posição em pixels da foto — o code-behind não converte nada e
+                                    a marcação continua certa em qualquer tamanho de janela.
+                                -->
+                                <Viewbox Stretch="Uniform" Margin="4"
+                                         Visibility="{Binding FotoSelecionadaPreview, Converter={StaticResource NullToVisibilityConverter}}">
+                                    <Canvas x:Name="SelecaoCanvas"
+                                            Width="{Binding FotoLargura}" Height="{Binding FotoAltura}"
+                                            Background="Transparent" Cursor="Cross"
+                                            MouseLeftButtonDown="SelecaoCanvas_MouseLeftButtonDown"
+                                            MouseMove="SelecaoCanvas_MouseMove"
+                                            MouseLeftButtonUp="SelecaoCanvas_MouseLeftButtonUp">
+                                        <Image Source="{Binding FotoSelecionadaPreview}"
+                                               Width="{Binding FotoLargura}" Height="{Binding FotoAltura}"/>
+
+                                        <!-- Marcação já feita nesta foto -->
+                                        <Rectangle Canvas.Left="{Binding RecorteX}" Canvas.Top="{Binding RecorteY}"
+                                                   Width="{Binding RecorteLargura}" Height="{Binding RecorteAltura}"
+                                                   Stroke="{DynamicResource AccentBrush}" StrokeThickness="3"
+                                                   Visibility="{Binding TemRecorte, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                        <!-- Retângulo em desenho, enquanto o usuário arrasta -->
+                                        <Rectangle x:Name="SelecaoEmCurso" Stroke="White" StrokeThickness="3"
+                                                   StrokeDashArray="4 3" Visibility="Collapsed"/>
+                                    </Canvas>
+                                </Viewbox>
                                 <TextBlock Text="{loc:Loc PerfilAlvo.Foto.SemFoto}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                            TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240" FontSize="12"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
-                                           Visibility="{Binding FotoReferenciaPreview, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+                                           Visibility="{Binding FotoSelecionadaPreview, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
                             </Grid>
                         </Border>
+
+                        <Button Content="{loc:Loc PerfilAlvo.Foto.LimparMarcacao}" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding LimparRecorteCommand}"
+                                Visibility="{Binding FotoSelecionadaPreview, Converter={StaticResource NullToVisibilityConverter}}"/>
+
+                        <TextBlock Text="{Binding MensagemFormulario}" TextWrapping="Wrap" Margin="0,4,0,10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SucessoFormulario}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- Rótulo muda entre "Cadastrar alvo" e "Salvar alterações" conforme o
+                             formulário esteja criando ou editando (ver TextoBotaoSalvar). -->
+                        <Button Content="{Binding TextoBotaoSalvar}" Command="{Binding SalvarCommand}"/>
+                        <Button Content="{loc:Loc PerfilAlvo.Form.CancelarEdicao}" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding CancelarEdicaoCommand}" Margin="0"
+                                Visibility="{Binding EmEdicao, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SectionCard}" Margin="0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc PerfilAlvo.Selecionado.Titulo}" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding SelectedPerfil}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                        <Button Content="{loc:Loc PerfilAlvo.Selecionado.Editar}" Command="{Binding EditarCommand}"/>
+                        <Button Content="{loc:Loc PerfilAlvo.Selecionado.SelecionarAtivo}" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding SelecionarAtivoCommand}"/>
+                        <Button Content="{loc:Loc PerfilAlvo.Selecionado.Remover}" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding RemoverCommand}" Margin="0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

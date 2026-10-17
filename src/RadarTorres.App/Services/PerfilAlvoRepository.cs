@@ -45,7 +45,9 @@ public sealed class PerfilAlvoRepository : IPerfilAlvoRepository
             }
 
             string json = File.ReadAllText(_filePath);
-            return JsonSerializer.Deserialize<List<PerfilAlvo>>(json) ?? new List<PerfilAlvo>();
+            List<PerfilAlvo> perfis = JsonSerializer.Deserialize<List<PerfilAlvo>>(json) ?? new List<PerfilAlvo>();
+            MigrarFotoUnica(perfis);
+            return perfis;
         }
         catch (Exception ex)
         {
@@ -54,6 +56,59 @@ public sealed class PerfilAlvoRepository : IPerfilAlvoRepository
             // preferências em JSON do projeto.
             _logger?.Warning($"Não foi possível ler os perfis de alvo salvos ({_filePath}): {ex.Message}. Nenhum perfil carregado.");
             return new List<PerfilAlvo>();
+        }
+    }
+
+    /// <summary>
+    /// Converte os perfis gravados quando havia UMA foto de referência por perfil
+    /// (<c>CaminhoFotoReferencia</c> + <c>RecorteFotoReferencia</c> na raiz do perfil) para a
+    /// lista <see cref="PerfilAlvo.Fotos"/> usada hoje. Sem isso, atualizar o aplicativo
+    /// apagaria da vista a foto e a marcação de todo perfil já cadastrado.
+    /// </summary>
+    /// <remarks>
+    /// Migração só de leitura: nada é regravado aqui. O arquivo passa a ter o formato novo no
+    /// próximo <see cref="Save"/> (qualquer alteração de perfil), e até lá os campos antigos
+    /// continuam no disco intactos — se o usuário voltar para a versão anterior do aplicativo,
+    /// as fotos continuam lá.
+    /// </remarks>
+    private void MigrarFotoUnica(List<PerfilAlvo> perfis)
+    {
+        int migrados = 0;
+
+        foreach (PerfilAlvo perfil in perfis)
+        {
+            if (perfil.Fotos.Count > 0 || string.IsNullOrWhiteSpace(perfil.CaminhoFotoReferenciaLegado)) continue;
+
+            perfil.Fotos = new List<FotoReferenciaAlvo>
+            {
+                new()
+                {
+                    Caminho = perfil.CaminhoFotoReferenciaLegado,
+                    Recorte = perfil.RecorteFotoReferenciaLegado,
+                    CapturadaEm = SeguroUltimaEscrita(perfil.CaminhoFotoReferenciaLegado)
+                }
+            };
+
+            perfil.CaminhoFotoReferenciaLegado = null;
+            perfil.RecorteFotoReferenciaLegado = null;
+            migrados++;
+        }
+
+        if (migrados > 0)
+        {
+            _logger?.Info($"Perfis de alvo: {migrados} foto(s) de referência do formato antigo (uma por perfil) migrada(s) para a lista de fotografias.");
+        }
+    }
+
+    private static DateTime SeguroUltimaEscrita(string caminho)
+    {
+        try
+        {
+            return File.Exists(caminho) ? File.GetLastWriteTime(caminho) : DateTime.Now;
+        }
+        catch (Exception)
+        {
+            return DateTime.Now;
         }
     }
 

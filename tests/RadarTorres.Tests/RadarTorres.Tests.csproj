@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <!-- O projeto testado é WPF (ViewModels referenciam System.Windows): sem UseWPF o
+         compilador não encontra os tipos da UI ao referenciá-lo. Os testes em si não abrem
+         janela nenhuma — exercitam serviços, repositórios e helpers. -->
+    <UseWPF>true</UseWPF>
+    <RootNamespace>RadarTorres.Tests</RootNamespace>
+    <AssemblyName>RadarTorres.Tests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RadarTorres.App\RadarTorres.App.csproj" />
+  </ItemGroup>
+
+</Project>

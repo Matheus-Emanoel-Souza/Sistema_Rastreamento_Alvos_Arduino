@@ -816,6 +816,180 @@ iluminação/ângulo diferentes entre a foto de cadastro e a cena ao vivo tendem
 similaridade bastante; se continuar não reconhecendo, o texto do card agora informa a melhor
 similaridade encontrada, o que diz exatamente quanto abaixar o limiar.
 
+## 2026-10-16 — Marcação manual do objeto dentro da foto de referência
+
+**Pedido:** "assim que tirar a foto do alvo, eu possa selecionar na foto qual é o objeto a ser
+observado".
+
+**Por que importa:** até aqui, a região do objeto DENTRO da foto era adivinhada pelo
+`AlvoVisualService` — pela cor cadastrada no perfil e, quando nenhuma região tinha cor
+suficiente, por um recorte central. Era a fonte documentada de dois erros: a assinatura podia
+sair da pessoa que segurava o objeto, e objetos de cor diferente da cadastrada caíam no recorte
+central. Com a marcação do usuário, não há mais o que adivinhar.
+
+**Entregue:**
+- `Models/PerfilAlvo.cs`: novo `RecorteAlvo(X, Y, Largura, Altura)` (pixels da própria foto) em
+  `PerfilAlvo.RecorteFotoReferencia` — persiste junto no `perfis-alvo.json` existente; perfis
+  antigos leem `null` e seguem funcionando.
+- `IPerfilAlvoService.DefinirRecorteFotoReferencia` (grava/limpa a marcação).
+  `DefinirFotoReferencia` passou a descartar a marcação anterior — recorte é em pixels da foto
+  antiga, não vale para a nova.
+- `AlvoVisualService.EncontrarAreaDoObjeto`: com marcação válida, usa exatamente ela e não
+  calcula mais nada; sem marcação, o caminho automático anterior continua igual. A chave do
+  cache de assinatura passou a incluir o recorte (sem isso, remarcar o objeto na mesma foto
+  continuaria usando a assinatura antiga). Marcação que não cai dentro da foto cai no caminho
+  automático com aviso no log, em vez de devolver região vazia.
+- `PerfilAlvoViewModel`: `FotoLargura`/`FotoAltura`, `RecorteSelecionado` (+ `RecorteX/Y/...`
+  para o desenho), `MarcarObjeto(x, y, w, h)` com clamp nos limites da foto e descarte de
+  arrasto sem área, e `LimparRecorteCommand`.
+- `PerfilAlvoView`: a foto salva virou área de marcação (altura 140 → 220). A foto é desenhada
+  num `Canvas` do tamanho EXATO da imagem em pixels dentro de um `Viewbox` — assim a posição do
+  mouse já chega em pixels da foto, sem conversão de escala nem cálculo de "letterbox" para
+  errar. Retângulo cheio = marcação salva; tracejado = arrasto em curso. O arrasto fica no
+  code-behind (entrada de ponteiro); a ViewModel recebe só o retângulo final.
+- Localização pt-BR/en-US: `PerfilAlvo.Foto.MarcarObjeto`, `PerfilAlvo.Foto.LimparMarcacao`;
+  `PerfilAlvo.Foto.Descricao`/`UltimaSalva` reescritas — o texto antigo ainda dizia que a foto
+  "não faz parte da detecção automática", o que deixou de ser verdade em 2026-10-13.
+- `dotnet build` (solution): 0 erros (só os `NU1701` pré-existentes do AForge). Sem `dotnet test`
+  — não há projeto de testes no repositório.
+
+**Pendência que depende do usuário:** validação visual na máquina dele — tirar a foto, arrastar
+sobre o objeto, conferir que o retângulo fica onde foi desenhado, reabrir a tela e ver se a
+marcação voltou, e checar no `.log` a linha "usando o objeto marcado pelo usuário".
+
+## 2026-10-16 (continuação) — Edição de alvos, 3 fotos, altura×largura, antiduplicidade por quadrante e câmeras por quadrante
+
+**Pedido (8 frentes):** editar alvos cadastrados; exigir no mínimo 3 fotografias válidas no
+cadastro; separar altura e largura para objetos retangulares; impedir que o mesmo alvo gere
+vários registros enquanto continua sendo rastreado; deixar o card "Detecção por câmera"
+responsivo; associar cada câmera a um quadrante; classificar as ocorrências por quadrante; e
+revisar o modelo de dados — com testes automatizados dos 13 critérios de aceitação.
+
+**Decisões do usuário (perguntadas antes de implementar, porque mudavam a arquitetura):**
+
+1. **Abatido** — não existia nenhum conceito de abate no código. Decidido: acionamento
+   bem-sucedido deixa a ocorrência em `AbatePendente` e o **operador confirma ou descarta** na
+   tela "Objetos Detectados". Nenhum automatismo abate nada.
+2. **Quadrante por câmera** — exatamente **um** quadrante por câmera, com unicidade (atribuir um
+   quadrante ocupado transfere a responsabilidade).
+3. **Multi-câmera** — a detecção passa a rodar **nos 4 painéis da tela "Câmeras"**, em paralelo,
+   cada um no seu quadrante (o card de Monitoramento continua existindo, com uma câmera).
+4. **3 fotos** — exigência vale **só na criação**; na edição, perfis antigos (criados quando o
+   sistema aceitava uma foto) continuam podendo ser corrigidos.
+
+**O que o diagnóstico mudou em relação ao enunciado:** o projeto é WPF desktop — não há
+frontend web, CSS nem API HTTP. "Validação no backend" virou validação na camada de serviço
+(`PerfilAlvoService`), que recusa a operação independentemente da tela; "responsividade" virou
+layout elástico ao tamanho do card; "migração de banco" virou `Data/SqliteSchema.cs` (não havia
+nenhum mecanismo de migração — `CREATE TABLE IF NOT EXISTS` não altera tabela existente).
+
+**Entregue — cadastro de alvos (frentes 1, 2 e 3):**
+- `Models/PerfilAlvo.cs`: lista `Fotos` (`FotoReferenciaAlvo`: caminho + recorte + data) no lugar
+  da foto única; `LarguraCm`/`AlturaCm` para retangulares, com `MaiorDimensaoCm` e
+  `DimensoesDescricao` derivados; `MinimoFotos = 3`. Tudo em CENTÍMETROS do objeto real — a
+  medida em pixels continua sendo só a caixa detectada (`VisionDetection`), e as duas
+  representações se encontram apenas na estimativa de distância.
+- `Helpers/ValidacaoFotoAlvo.cs`: foto válida é a que existe, **abre como imagem** e tem pelo
+  menos 64×64 px. Abrir o arquivo (em vez de olhar a extensão) é o que descarta PNG truncado,
+  que só quebraria depois, dentro do reconhecimento.
+- `IPerfilAlvoService`: `Add`/`Atualizar` devolvem `ResultadoPerfilAlvo` (padrão de `AuthResult`)
+  e recebem `DimensoesAlvo`. `Atualizar` altera o objeto já presente na coleção, preservando o
+  `Id` — é ele que liga o alvo ao histórico (`ObjetoDetectado.PerfilAlvoId`), então recriar o
+  registro desvincularia silenciosamente as detecções anteriores.
+- `PerfilAlvoViewModel`/`PerfilAlvoView`: formulário único para criar e editar, trabalhando
+  sobre uma CÓPIA das fotos (`ClonarFotos`) — desistir no meio não deixa o perfil num estado
+  intermediário. Botão desabilitado com menos de 3 fotos e mensagem dizendo quantas faltam;
+  galeria de fotos com remoção e indicador de "objeto já marcado"; marcação do objeto por foto.
+- `AlvoVisualService`: compara o quadro ao vivo com **todas** as fotos do perfil e fica com a
+  melhor similaridade (basta uma bater — exigir média faria a foto mais desfavorável derrubar o
+  reconhecimento, o oposto do motivo de haver várias). Cache de assinaturas passou a ter na
+  chave a lista de fotos + recortes. Distância usa `MaiorDimensaoCm`.
+- `PerfilAlvoRepository.MigrarFotoUnica`: perfis no formato antigo (uma foto na raiz) são
+  convertidos na leitura, sem reescrever o arquivo até a próxima alteração — voltar à versão
+  anterior do app continua funcionando.
+- Remoção de foto **desvincula sem apagar o arquivo**: ocorrências já gravadas guardam o caminho
+  em `ReferenciaImagem`, e apagar deixaria o histórico apontando para arquivo inexistente.
+
+**Entregue — ocorrências, rastreamento e abate (frentes 4, 7 e 8):**
+- `Models/ObjetoDetectado.cs`: a tabela passa a ser de OCORRÊNCIAS, com
+  `PerfilAlvoId`, `CameraDispositivoId`, `CameraNome`, `RastreamentoId`, `Estado`
+  (`Detectado`/`AbatePendente`/`Abatido`) e `DataHoraUltimaDeteccao`; nova
+  `OcorrenciaEstadoTransicao` (tabela `OcorrenciaEstados`) para o histórico de transições.
+- `Services/RastreamentoVisualService.cs` (novo): identidade dos objetos entre quadros por
+  continuidade espacial (IoU + resgate por "centro dentro da caixa anterior", que cobre o objeto
+  se aproximando). Justificativa de ser um serviço novo e não `TargetTrackingService`: lá o
+  identificador **vem pronto** no protocolo do Arduino; a câmera não fornece nenhum.
+  Tolerância configurável a oclusão/perda (padrão 10s) — e encerrar identidade **nunca** é abate.
+- `Services/OcorrenciaDeteccaoService.cs` (novo): enquanto o mesmo acompanhamento segue no mesmo
+  quadrante, não há linha nova — só `DataHoraUltimaDeteccao` avança. Ocorrência só abre depois de
+  N confirmações consecutivas (padrão 2), para a oscilação de pontuação entre quadros não sujar o
+  histórico. O quadrante vem da CÂMERA; sem quadrante atribuído, cai no cálculo geométrico
+  anterior.
+- `SqliteObjetoDetectadoRepository`: `AdicionarSeNaoExistir` com `ON CONFLICT … DO NOTHING` sobre
+  índice **único parcial** `(RastreamentoId, Quadrante) WHERE RastreamentoId IS NOT NULL` —
+  defesa final contra duplicidade com as câmeras processando em paralelo; o parcial preserva o
+  radar, que não tem rastreamento visual e pode repetir quadrante. Também `AtualizarEstado`,
+  `RegistrarDeteccaoContinuada`, `GetById` e `ObterHistoricoEstados`.
+- `FireControlService`: acionamento efetivado marca a ocorrência como `AbatePendente`;
+  `ObjetosDetectadosViewModel`/`View` ganharam "Confirmar abate"/"Descartar abate" (só para quem
+  pode executar ações e só em ocorrência pendente) e a faixa com o histórico de estados.
+- **Mudança de comportamento deliberada:** o registro da detecção por câmera saiu de dentro do
+  debounce do alerta e deixou de depender do modo de operação. Antes era uma linha a cada alerta
+  (5s) e nenhuma no modo Verde; agora é uma ocorrência por acompanhamento, em qualquer modo — o
+  modo continua decidindo apenas se o **alarme** toca. O que motivava o acoplamento (evitar
+  dezenas de linhas por minuto) é exatamente o que o rastreamento resolve melhor.
+
+**Entregue — câmeras e quadrantes (frentes 5 e 6):**
+- `Models/CameraQuadrante.cs`, `Repositories/SqliteCameraQuadranteRepository.cs` (tabela
+  `Cameras`, índices únicos em `DispositivoId` e `Quadrante`, transferência na mesma transação) e
+  `Services/CameraQuadranteService.cs`.
+- `CameraSlotViewModel`/`CameraPanelView`: seletor de quadrante por painel (Q1..Q4 ou nenhum) e
+  detecção própria rodando em paralelo (um `Helpers/AnalisadorQuadros` por painel). Sem quadrante
+  atribuído a detecção fica desligada — sem quadrante não há onde registrar, e rodar inferência à
+  toa tiraria CPU dos painéis configurados.
+- `Helpers/AnalisadorQuadros.cs` (novo): extraído de `DeteccaoCameraViewModel` quando a detecção
+  passou a rodar em 5 lugares — concentra limite de frequência, rodada única por vez e a
+  marshalização do buffer da câmera, que são justamente as partes delicadas de duplicar.
+- Card "DETECÇÃO POR CÂMERA" responsivo: `Grid` com o vídeo na única linha `*` (antes `StackPanel`
+  com altura fixa de 130px, que era cortado ao redimensionar), `Stretch="Uniform"` preservando a
+  proporção, textos com `TextWrapping` e os blocos inferiores num `ScrollViewer` vertical — sem
+  nenhuma rolagem horizontal. Mostra também o quadrante da câmera selecionada.
+
+**Modelo de dados / migração:**
+- `Data/SqliteSchema.cs` (novo): `PRAGMA table_info` + `ALTER TABLE ADD COLUMN` /
+  `CREATE INDEX IF NOT EXISTS`, idempotente, chamado pelos repositórios. Nenhum dado é
+  descartado: linhas antigas ficam com as colunas novas nulas e `Estado = 'Detectado'`.
+- Documentação atualizada: `Docs/Tecnica/MODELO_DADOS.md`,
+  `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql`, `Modelo_Banco_de_Dados.dbml` e
+  `Modelo_Banco_de_Dados.md` (DER, colunas novas, tabelas `ocorrencia_estados` e `cameras`).
+  **Pendência:** o PDF/TeX do entregável (`Modelo_Banco_Dados_RadarTorres.pdf`) precisa ser
+  regerado a partir dos fontes atualizados.
+
+**Testes (frente 9):** criado `tests/RadarTorres.Tests` (xunit) — o projeto era referenciado pelo
+`InternalsVisibleTo` do .csproj mas **nunca existiu**. 68 testes cobrindo os 13 critérios:
+mínimo de fotos (incluindo arquivo corrompido, vazio, minúsculo e repetido), edição sem criar
+registro e preservando o vínculo do histórico, largura×altura e perfil retangular legado,
+alvo acompanhado sem gerar linha por quadro, perda temporária que não vira abate, ocorrência por
+quadrante, controle no mesmo quadrante, câmera/quadrante de cada ocorrência, concorrência de 4
+câmeras, migração de tabela antiga e unicidade no SQLite de verdade.
+`SqliteConnectionFactory.UsarBancoDeTeste` (internal) redireciona para um banco temporário — sem
+isso os testes escreveriam no banco real do usuário em `%AppData%`.
+
+**Dois defeitos encontrados pelos próprios testes, ambos reais e corrigidos:**
+1. O `INSERT` tinha `;` no fim da constante, então o `ON CONFLICT` anexado depois produzia SQL
+   inválido — **toda** ocorrência de câmera cairia na fila offline (`PendingWriteQueue`) com Id
+   negativo, e a antiduplicidade nunca funcionaria.
+2. SQLite só aceita índice **parcial** como alvo de `ON CONFLICT` se o predicado for repetido na
+   cláusula; sem `WHERE RastreamentoId IS NOT NULL`, o comando falhava com "no unique index
+   matching the conflict target".
+
+**Verificação:** `dotnet build` da solution — 0 erros (restam os `NU1701` pré-existentes do
+AForge). `dotnet test` — 68/68 aprovados.
+
+**Pendências que dependem do usuário:** validação visual na máquina dele (ver o relatório final
+da conversa) — cadastro com 3 fotos, edição, atribuição de quadrantes nos 4 painéis com câmeras
+reais, redimensionamento do card de detecção e o ciclo acionamento → confirmar abate.
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).

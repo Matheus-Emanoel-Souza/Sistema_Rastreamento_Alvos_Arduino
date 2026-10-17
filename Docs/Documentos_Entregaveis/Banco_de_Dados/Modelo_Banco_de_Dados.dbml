@@ -47,10 +47,39 @@ Table objetos_detectados {
   dispositivo varchar [note: '"Arduino", "Simulador", ...']
   nivel_confianca float [note: '0..1, NULL se não medido']
   observacao varchar
-  referencia_imagem varchar [note: 'não usado hoje (sem câmera de detecção)']
+  referencia_imagem varchar [note: 'foto de referência do perfil de alvo, quando a origem é câmera']
+  perfil_alvo_id integer [note: 'alvo CADASTRADO que originou a ocorrência; NULL no radar/simulador']
+  camera_dispositivo_id varchar [note: 'câmera que detectou (moniker DirectShow); NULL fora da câmera']
+  camera_nome varchar
+  rastreamento_id varchar [note: 'identidade da OCORRÊNCIA (acompanhamento entre quadros), não do alvo cadastrado']
+  estado varchar [note: 'Detectado | AbatePendente | Abatido']
+  data_hora_ultima_deteccao timestamp [note: 'avança enquanto o mesmo acompanhamento continua — em vez de criar linha nova']
 
-  Note: 'objetos_detectados.csv — CsvObjetoDetectadoRepository. Sem vínculo persistido com nenhuma outra tabela.'
+  Note: 'Tabela ObjetosDetectados (SQLite) — SqliteObjetoDetectadoRepository. Uma linha por OCORRÊNCIA: único por (rastreamento_id, quadrante).'
 }
+
+Table ocorrencia_estados {
+  id integer [primary key]
+  objeto_detectado_id integer [note: 'FK para objetos_detectados.id']
+  estado varchar [note: 'Detectado | AbatePendente | Abatido']
+  data_hora timestamp
+  usuario varchar [note: 'login do responsável, quando a transição partiu de ação humana']
+  observacao varchar
+
+  Note: 'Histórico de transições de estado da ocorrência (auditoria do ciclo de abate).'
+}
+
+Table cameras {
+  id integer [primary key]
+  dispositivo_id varchar [note: 'único — moniker DirectShow da câmera']
+  nome varchar
+  quadrante varchar [note: 'único — Q1..Q4; uma câmera por quadrante']
+  atualizado_em timestamp
+
+  Note: 'Qual câmera monitora qual quadrante — SqliteCameraQuadranteRepository.'
+}
+
+Ref: ocorrencia_estados.objeto_detectado_id > objetos_detectados.id
 
 Table acoes_realizadas {
   id_acao integer [primary key]

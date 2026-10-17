@@ -38,7 +38,8 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
     private readonly IAlvoVisualService _alvoVisualService;
     private readonly IAlertaSonoroService _alertaSonoroService;
     private readonly IPerfilAlvoService _perfilAlvoService;
-    private readonly IObjetoDetectadoRepository _objetoDetectadoRepository;
+    private readonly IOcorrenciaDeteccaoService _ocorrenciaService;
+    private readonly ICameraQuadranteService _cameraQuadranteService;
     private readonly IPerformanceMonitor _performanceMonitor;
     private readonly ConfiguracoesAplicativo _configuracoes;
     private readonly ILoggingService _logger;
@@ -50,12 +51,12 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
     /// </summary>
     private DateTime? _semAlvoDesde = DateTime.Now;
 
+    private readonly AnalisadorQuadros _analisador;
+
     private ICameraCaptureService? _captureService;
     private WriteableBitmap? _previewBitmap;
     private SystemMode _modoAtual = SystemMode.LigadoApenas;
-    private DateTime _ultimoProcessamento = DateTime.MinValue;
     private DateTime _ultimoAlertaEm = DateTime.MinValue;
-    private int _processando;
 
     /// <summary>
     /// Regiões da última rodada de detecção, redesenhadas sobre cada quadro novo. A detecção
@@ -74,7 +75,8 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
         IAlvoVisualService alvoVisualService,
         IAlertaSonoroService alertaSonoroService,
         IPerfilAlvoService perfilAlvoService,
-        IObjetoDetectadoRepository objetoDetectadoRepository,
+        IOcorrenciaDeteccaoService ocorrenciaService,
+        ICameraQuadranteService cameraQuadranteService,
         IPerformanceMonitor performanceMonitor,
         IConfiguracoesAplicativoRepository configuracoesRepository,
         ILoggingService logger)
@@ -84,10 +86,19 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
         _alvoVisualService = alvoVisualService;
         _alertaSonoroService = alertaSonoroService;
         _perfilAlvoService = perfilAlvoService;
-        _objetoDetectadoRepository = objetoDetectadoRepository;
+        _ocorrenciaService = ocorrenciaService;
+        _cameraQuadranteService = cameraQuadranteService;
         _performanceMonitor = performanceMonitor;
         _configuracoes = configuracoesRepository.Atual;
         _logger = logger;
+
+        _analisador = new AnalisadorQuadros(_alvoVisualService, logger);
+        _analisador.QuadroAvaliado += OnQuadroAvaliado;
+
+        // O quadrante exibido vem do cadastro feito na tela "Câmeras": reagir à mudança evita
+        // o card continuar mostrando um quadrante que já foi reatribuído em outra tela.
+        _cameraQuadranteService.AssociacoesAlteradas += (_, _) =>
+            Application.Current?.Dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(QuadranteDaCamera)));
 
         _mostrarCaixasDeteccao = _configuracoes.MostrarCaixasDeteccao;
 
@@ -129,8 +140,12 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
         get => _selectedCamera;
         set
         {
+            CameraDevice? anterior = _selectedCamera;
+
             if (SetProperty(ref _selectedCamera, value))
             {
+                if (anterior is not null) _ocorrenciaService.EncerrarCamera(anterior.Id, "câmera trocada neste card");
+                OnPropertyChanged(nameof(QuadranteDaCamera));
                 IniciarPreview(value);
             }
         }
@@ -164,6 +179,18 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
         get => _mostrarCaixasDeteccao;
         set => SetProperty(ref _mostrarCaixasDeteccao, value);
     }
+
+    /// <summary>
+    /// Quadrante atribuído à câmera selecionada, para a tela deixar claro onde a ocorrência vai
+    /// ser registrada. Atribuição é feita na tela "Câmeras".
+    /// </summary>
+    public string QuadranteDaCamera => SelectedCamera is null
+        ? "—"
+        : _cameraQuadranteService.ObterQuadrante(SelectedCamera.Id) switch
+        {
+            Quadrant.None => "sem quadrante atribuído",
+            Quadrant q => QuadrantHelper.ToDisplayLabel(q)
+        };
 
     private double? _ultimaDistanciaMetros;
     public double? UltimaDistanciaMetros
@@ -210,6 +237,7 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
         if (device is null) return;
 
         StatusDeteccao = "Iniciando a câmera…";
+        _analisador.Reiniciar();
         _performanceMonitor.RegistrarEvento($"Câmera iniciada: {device.Name}. Perfil ativo: {_perfilAlvoService.PerfilAtivo?.Nome ?? "(nenhum)"}.");
         _semAlvoDesde = DateTime.Now;
 
@@ -242,51 +270,16 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
             }
         });
 
-        TentarProcessarQuadro(e);
+        _analisador.Submeter(e);
     }
 
     /// <summary>
-    /// Processa no máximo uma rodada de detecção por vez (<see cref="_processando"/>) e no
-    /// máximo a cada <see cref="VisionSettings.IntervaloProcessamentoMs"/> — a inferência do
-    /// YOLO é bem mais lenta que a taxa de quadros da câmera, então não roda em todo quadro.
+    /// Fim de uma rodada de detecção (vem de uma thread de trabalho — ver
+    /// <see cref="AnalisadorQuadros"/>), despachado para a interface antes de tocar em qualquer
+    /// propriedade ligada à tela.
     /// </summary>
-    private void TentarProcessarQuadro(CameraFrameCapturedEventArgs e)
-    {
-        DateTime agora = DateTime.Now;
-        int intervaloMs = AppConfig.Current.VisionSettings.IntervaloProcessamentoMs;
-        if ((agora - _ultimoProcessamento).TotalMilliseconds < intervaloMs) return;
-
-        if (Interlocked.CompareExchange(ref _processando, 1, 0) != 0) return;
-        _ultimoProcessamento = agora;
-
-        byte[] pixelsCopia = (byte[])e.PixelsBgr24.Clone();
-        int width = e.Width, height = e.Height, stride = e.Stride;
-
-        System.Threading.Tasks.Task.Run(() => ProcessarQuadro(pixelsCopia, width, height, stride))
-            .ContinueWith(_ => Interlocked.Exchange(ref _processando, 0));
-    }
-
-    private void ProcessarQuadro(byte[] pixels, int width, int height, int stride)
-    {
-        IntPtr ptr = Marshal.AllocHGlobal(stride * height);
-        try
-        {
-            Marshal.Copy(pixels, 0, ptr, stride * height);
-            using var bmp = new Bitmap(width, height, stride, System.Drawing.Imaging.PixelFormat.Format24bppRgb, ptr);
-
-            AlvoVisualAvaliacao avaliacao = _alvoVisualService.AvaliarFrame(bmp);
-
-            Application.Current?.Dispatcher.BeginInvoke(() => AplicarResultado(avaliacao, width, height));
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning($"Falha ao processar quadro para detecção por visão: {ex.Message}");
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(ptr);
-        }
-    }
+    private void OnQuadroAvaliado(object? sender, AvaliacaoQuadroEventArgs e) =>
+        Application.Current?.Dispatcher.BeginInvoke(() => AplicarResultado(e.Avaliacao, e.Largura, e.Altura));
 
     /// <summary>
     /// Traduz a avaliação do quadro em status legível — deliberadamente granular (diferencia
@@ -313,6 +306,10 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
         {
             UltimaDistanciaMetros = null;
 
+            // Rodada sem alvo só alimenta a tolerância de perda do rastreamento — não encerra
+            // acompanhamento nem conclui abate (ver IOcorrenciaDeteccaoService).
+            _ocorrenciaService.RegistrarRodadaSemDeteccao(DateTime.Now);
+
             if (avaliacao.TotalDeteccoes == 0)
             {
                 StatusDeteccao = $"Visualizando. Nenhuma região candidata neste quadro — nem mancha de {perfilAtivo.Cor}, nem objeto reconhecido pelo detector.";
@@ -331,14 +328,41 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
 
         UltimaDistanciaMetros = avaliacao.Resultado.DistanciaMetros;
 
-        bool modoAlertaAtivo = _modoAtual is SystemMode.AcompanharAlvos or SystemMode.Disparar;
-        if (!modoAlertaAtivo)
+        // O registro da ocorrência acontece ANTES de qualquer regra de alerta e independe do
+        // modo de operação: é o rastreamento que decide se há ocorrência nova (ver
+        // IOcorrenciaDeteccaoService), e o histórico do que foi visto não deve depender de o
+        // alarme estar liberado. O modo continua decidindo apenas se o alerta toca.
+        // A rodada roda em thread de fundo: quando o resultado chega, a câmera pode já ter sido
+        // desligada ou trocada. Sem alvo de registro, só o status é atualizado.
+        if (SelectedCamera is not { } cameraAtual)
         {
-            StatusDeteccao = $"Alvo \"{avaliacao.Resultado.Perfil.Nome}\" identificado a {avaliacao.Resultado.DistanciaMetros:0.0} m — alarme NÃO disparado: modo atual é Verde (alarme só dispara em Amarelo/Vermelho).";
+            StatusDeteccao = $"Alvo \"{avaliacao.Resultado.Perfil.Nome}\" identificado, mas a câmera foi desligada antes do registro.";
             return;
         }
 
-        StatusDeteccao = $"Alvo \"{avaliacao.Resultado.Perfil.Nome}\" identificado — {avaliacao.Resultado.DistanciaMetros:0.0} m.";
+        ResultadoRegistroOcorrencia registro = _ocorrenciaService.RegistrarDeteccao(new ContextoDeteccao(
+            cameraAtual,
+            avaliacao.Resultado.Perfil,
+            avaliacao.Resultado,
+            avaliacao.MelhorPontuacao,
+            larguraQuadro,
+            _modoAtual));
+
+        string sufixoOcorrencia = registro switch
+        {
+            { Criada: true, Ocorrencia: { } nova } => $" Ocorrência #{nova.Id} aberta em {QuadrantHelper.ToDisplayLabel(registro.Quadrante)}.",
+            { AguardandoConfirmacao: true } => " Confirmando o alvo antes de registrar a ocorrência…",
+            _ => $" Mesma ocorrência em acompanhamento ({QuadrantHelper.ToDisplayLabel(registro.Quadrante)}) — sem novo registro."
+        };
+
+        bool modoAlertaAtivo = _modoAtual is SystemMode.AcompanharAlvos or SystemMode.Disparar;
+        if (!modoAlertaAtivo)
+        {
+            StatusDeteccao = $"Alvo \"{avaliacao.Resultado.Perfil.Nome}\" identificado a {avaliacao.Resultado.DistanciaMetros:0.0} m — alarme NÃO disparado: modo atual é Verde (alarme só dispara em Amarelo/Vermelho).{sufixoOcorrencia}";
+            return;
+        }
+
+        StatusDeteccao = $"Alvo \"{avaliacao.Resultado.Perfil.Nome}\" identificado — {avaliacao.Resultado.DistanciaMetros:0.0} m.{sufixoOcorrencia}";
 
         bool debounceLiberado = (DateTime.Now - _ultimoAlertaEm).TotalSeconds >= AppConfig.Current.VisionSettings.DebounceAlertaSegundos;
         if (debounceLiberado)
@@ -356,55 +380,6 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
             _logger.Warning(
                 $"Alvo visual identificado a {avaliacao.Resultado.DistanciaMetros:0.0} m " +
                 $"(modo {_modoAtual}{(_configuracoes.AlertaSonoroHabilitado ? "" : ", alerta sonoro desligado nas configurações")}).");
-
-            RegistrarObjetoDetectado(avaliacao.Resultado, avaliacao.MelhorPontuacao, larguraQuadro);
-        }
-    }
-
-    /// <summary>
-    /// Persiste o alvo confirmado no histórico de objetos detectados, para a detecção por
-    /// câmera aparecer na tela "Objetos Detectados" junto com o que vem do Arduino — até então
-    /// ela só mudava o status na tela e tocava o alerta, sem deixar registro nenhum.
-    /// </summary>
-    /// <remarks>
-    /// Gravado dentro do debounce do alerta, e não a cada rodada de detecção, de propósito: com
-    /// o alvo parado em frente à câmera a avaliação confirma a cada ~500ms, o que encheria a
-    /// tabela com dezenas de linhas por minuto para o mesmo objeto. Uma linha por alerta mantém
-    /// o histórico legível e espelha a granularidade do que o operador ouve.
-    /// </remarks>
-    private void RegistrarObjetoDetectado(AlvoVisualResultado resultado, double pontuacao, int larguraQuadro)
-    {
-        try
-        {
-            // A câmera só informa direção horizontal: o ângulo sai da posição do centro da caixa
-            // dentro do campo de visão, e a distância vira X/Y no mesmo plano usado pelos alvos
-            // do radar (Y para frente da câmera), para as duas origens conviverem na mesma tela.
-            double centroXPx = resultado.Deteccao.BoxXPx + (resultado.Deteccao.BoxWidthPx / 2.0);
-            double anguloGraus = ((centroXPx / Math.Max(1, larguraQuadro)) - 0.5) * AppConfig.Current.VisionSettings.CameraFovHorizontalGraus;
-            double anguloRad = anguloGraus * Math.PI / 180.0;
-
-            double x = resultado.DistanciaMetros * Math.Sin(anguloRad);
-            double y = resultado.DistanciaMetros * Math.Cos(anguloRad);
-
-            _objetoDetectadoRepository.Add(new ObjetoDetectado
-            {
-                Tipo = resultado.Perfil.Nome,
-                X = x,
-                Y = y,
-                Z = null,
-                Quadrante = QuadrantHelper.ToDisplayLabel(QuadrantHelper.Determine(x, y)),
-                DataHora = DateTime.Now,
-                Dispositivo = "Câmera",
-                NivelConfianca = pontuacao,
-                Observacao = $"Detecção por visão computacional — perfil \"{resultado.Perfil.Nome}\" ({resultado.Perfil.Cor}/{resultado.Perfil.Formato}), {anguloGraus:0.0}° do centro, modo {_modoAtual}.",
-                ReferenciaImagem = resultado.Perfil.CaminhoFotoReferencia
-            });
-        }
-        catch (Exception ex)
-        {
-            // Falhar ao gravar o histórico não pode interromper a detecção nem o alerta — o
-            // alerta ao operador vale mais que a linha no banco.
-            _logger.Error($"Alvo detectado, mas não foi possível gravar no histórico de objetos detectados: {ex.Message}");
         }
     }
 
@@ -551,6 +526,11 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
 
     private void PararPreview()
     {
+        if (SelectedCamera is not null)
+        {
+            _ocorrenciaService.EncerrarCamera(SelectedCamera.Id, "câmera parada neste card");
+        }
+
         if (_captureService is null)
         {
             IsStreaming = false;
@@ -573,5 +553,10 @@ public sealed class DeteccaoCameraViewModel : ViewModelBase, IDisposable
         UltimaDistanciaMetros = null;
     }
 
-    public void Dispose() => PararPreview();
+    public void Dispose()
+    {
+        _analisador.QuadroAvaliado -= OnQuadroAvaliado;
+        _analisador.Dispose();
+        PararPreview();
+    }
 }
