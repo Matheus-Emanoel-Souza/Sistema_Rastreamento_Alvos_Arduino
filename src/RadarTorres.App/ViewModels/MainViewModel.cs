@@ -37,6 +37,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly IPermissionService _permissionService;
     private readonly Dispatcher _dispatcher;
 
+    public DeteccaoCameraViewModel DeteccaoCamera { get; }
+
     public MainViewModel(
         ILoggingService logger,
         ISerialCommunicationService serialService,
@@ -48,7 +50,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         IObjetoDetectadoRepository objetoRepository,
         IModoAtualTorreRepository modoAtualTorreRepository,
         IAuthService authService,
-        IPermissionService permissionService)
+        IPermissionService permissionService,
+        DeteccaoCameraViewModel deteccaoCameraViewModel)
     {
         _logger = logger;
         _serialService = serialService;
@@ -61,7 +64,10 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _modoAtualTorreRepository = modoAtualTorreRepository;
         _authService = authService;
         _permissionService = permissionService;
+        DeteccaoCamera = deteccaoCameraViewModel;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+
+        DeteccaoCamera.AtualizarModoAtual(_currentMode);
 
         _minDistance = AppConfig.Current.RadarSettings.MinSafetyDistanceMeters;
         _maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
@@ -107,7 +113,11 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     /// <summary>Chamado pelo NavigationService toda vez que o usuário volta a esta tela.
     /// Nenhum dado precisa ser recarregado aqui (a tela já reage a eventos em tempo real) — só
     /// avisa a View para recarregar o layout salvo do usuário atual.</summary>
-    public void OnNavigatedTo() => ScreenActivated?.Invoke(this, EventArgs.Empty);
+    public void OnNavigatedTo()
+    {
+        ScreenActivated?.Invoke(this, EventArgs.Empty);
+        DeteccaoCamera.RetomarCamera();
+    }
 
     // ---------------------------------------------------------------- Coleções expostas
 
@@ -301,6 +311,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 OnPropertyChanged(nameof(OutrosModos));
                 OnModeChanged(old, value);
                 RegistrarModoAtualTorre(old, value);
+                DeteccaoCamera.AtualizarModoAtual(value);
             }
         }
     }
@@ -715,5 +726,6 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _trackingService.TargetRemoved -= OnTargetRemoved;
         _simulationService.ReadingGenerated -= OnSimulationReadingGenerated;
         _authService.SessionChanged -= OnAuthSessionChanged;
+        DeteccaoCamera.Dispose();
     }
 }

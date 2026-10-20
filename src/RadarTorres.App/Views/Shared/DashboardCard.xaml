@@ -18,10 +18,10 @@
         `meuCard.CardContent as TipoDoElemento` em vez de FindName/x:Name (ver
         MonitoramentoView.xaml.cs, LogEntries_CollectionChanged).
     -->
-    <Border Background="{DynamicResource PanelBrush}"
-            BorderBrush="{DynamicResource PanelBorderBrush}"
+    <Border Background="{DynamicResource Bg.Card}"
+            BorderBrush="{DynamicResource Border.Card}"
             BorderThickness="1"
-            CornerRadius="8">
+            CornerRadius="16">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -37,9 +37,9 @@
                    DragDelta="HeaderThumb_DragDelta" DragCompleted="HeaderThumb_DragCompleted">
                 <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
-                        <Border Background="{DynamicResource PanelBorderBrush}" CornerRadius="8,8,0,0" Padding="12,7,32,7">
+                        <Border Background="{DynamicResource Border.Control}" CornerRadius="8,8,0,0" Padding="12,7,32,7">
                             <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Text.Secondary}" FontSize="12" FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis"/>
                         </Border>
                     </ControlTemplate>
@@ -53,11 +53,11 @@
                     Background="Transparent" BorderThickness="0" Cursor="Hand"
                     Focusable="False" Click="CloseButton_Click"
                     ToolTip="{loc:Loc Dashboard.OcultarCard}">
-                <TextBlock Text="✕" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <TextBlock Text="✕" FontSize="11" Foreground="{DynamicResource Text.Muted}"/>
             </Button>
 
             <!-- Conteúdo do card, definido por quem usa o controle. -->
-            <ContentPresenter Grid.Row="1" Margin="16,12"
+            <ContentPresenter Grid.Row="1" Margin="20,16,20,20"
                                Content="{Binding CardContent, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
 
             <!-- Alça de redimensionamento no canto inferior direito (Requisito "redimensionar
@@ -69,7 +69,7 @@
                    DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted">
                 <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
-                        <Path Data="M 2,14 L 14,14 L 14,2 Z" Fill="{DynamicResource TextSecondaryBrush}" Opacity="0.55"/>
+                        <Path Data="M 2,14 L 14,14 L 14,2 Z" Fill="{DynamicResource Text.Muted}" Opacity="0.55"/>
                     </ControlTemplate>
                 </Thumb.Template>
             </Thumb>

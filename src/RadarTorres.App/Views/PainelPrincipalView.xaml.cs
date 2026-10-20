@@ -95,6 +95,12 @@ public partial class PainelPrincipalView : UserControl
         }
     }
 
+    private void ConectarLink_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
+        _viewModel.ConectarCommand.Execute(null);
+
+    private void AbrirMonitoramentoLink_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
+        _viewModel.AbrirMonitoramentoCommand.Execute(null);
+
     private void OnReopenCard(object? sender, string cardId)
     {
         var card = LayoutCanvas.Children.OfType<DashboardCard>().FirstOrDefault(c => c.CardId == cardId);

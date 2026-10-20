@@ -22,7 +22,17 @@ public static class AppDataPaths
     /// </summary>
     public static string DataFolder { get; } = Path.Combine(RootFolder, "Data");
 
+    /// <summary>
+    /// Pasta com um relatório de desempenho por execução do aplicativo (ver
+    /// <see cref="Services.IPerformanceMonitor"/>). Separada de <see cref="DataFolder"/> porque
+    /// é material de diagnóstico descartável — pode ser apagada inteira sem perder nenhum dado
+    /// do sistema.
+    /// </summary>
+    public static string DiagnosticoFolder { get; } = Path.Combine(RootFolder, "Diagnostico");
+
     public static string GetCsvPath(string tableName) => Path.Combine(DataFolder, $"{tableName}.csv");
 
     public static void EnsureDataFolderExists() => Directory.CreateDirectory(DataFolder);
+
+    public static void EnsureDiagnosticoFolderExists() => Directory.CreateDirectory(DiagnosticoFolder);
 }

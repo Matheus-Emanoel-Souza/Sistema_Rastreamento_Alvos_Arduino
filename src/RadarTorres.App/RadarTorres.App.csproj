@@ -60,6 +60,14 @@
     <PackageReference Include="AForge.Video" Version="2.2.5" />
     <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+
+    <!-- Detecção por visão computacional (card "Detecção por Câmera" em Monitoramento):
+         roda o modelo tiny-yolov3-11.onnx já presente em ComputerVision/Models/YoloModel/
+         dentro do próprio processo (ver OnnxYoloDetectionService) — mesma lógica de "sem
+         processo externo" já adotada para o módulo Câmeras. System.Speech dá o anúncio por
+         voz da distância (SAPI do Windows, builtin, sem modelo/arquivo extra). -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+    <PackageReference Include="System.Speech" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -70,11 +78,41 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- O mesmo arquivo usado em <ApplicationIcon> (ícone do .exe e das janelas) também
+         precisa existir como Resource para ser carregado em tempo de execução por um pack
+         URI — é assim que a tela de login o usa como marca d'água de fundo
+         (ver Views/LoginView.xaml). <ApplicationIcon> sozinho grava o ícone só nos
+         recursos Win32 do executável, de onde o XAML não consegue ler. -->
+    <Resource Include="Assets\RadarTorres.ico" />
+
+    <!-- Fontes da identidade visual (Chakra Petch / IBM Plex Sans / JetBrains Mono, todas OFL —
+         licenças em Resources\Fonts\*-OFL.txt), embutidas porque o instalador é self-contained e
+         a máquina do usuário final não tem essas fontes instaladas. Build Action "Resource" (não
+         "Content"/"None") para ficarem dentro do assembly, referenciadas via
+         "./Resources/Fonts/#<Nome da família>" em Styles/Typography.xaml. -->
+    <Resource Include="Resources\Fonts\*.ttf" />
+
+    <!-- Termos de Uso: o MESMO arquivo que o Inno Setup exibe como página de licença
+         (installer\RadarTorres.iss) é embutido no executável, para a tela de Configurações e o
+         PDF exportado lerem exatamente a redação aceita na instalação. Embutido, e não copiado
+         para a pasta de saída, para não existir a possibilidade de o app rodar com uma cópia
+         diferente da que o instalador apresentou. -->
+    <EmbeddedResource Include="..\..\installer\TERMOS_DE_USO.txt"
+                      Link="Resources\TERMOS_DE_USO.txt"
+                      LogicalName="RadarTorres.App.Resources.TERMOS_DE_USO.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <!-- Arquivos de tradução (Requisito 1) — nunca strings hardcoded no código/XAML. -->
     <None Update="Resources\Localization\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Modelo ONNX usado por OnnxYoloDetectionService — precisa ser copiado para o output
+         (arquivos binários fora de Compile não são incluídos automaticamente pelo SDK). -->
+    <None Update="ComputerVision\Models\YoloModel\*.onnx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

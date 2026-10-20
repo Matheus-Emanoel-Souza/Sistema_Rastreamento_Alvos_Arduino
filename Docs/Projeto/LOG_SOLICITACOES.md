@@ -629,8 +629,536 @@ de roteamento: HashRouter escolhido).
 - Commits locais feitos na branch `feature/site-documentacao`; **push não realizado** sem
   autorização explícita na sessão.
 
+## 2026-10-12 — Planejamento do módulo de visão computacional + tela "Perfis de Alvo"
+
+**Pedido (em duas partes, mesma sessão):** (1) verificação somente-leitura do repositório
+(branches locais vs. GitHub) e plano de arquitetura para o módulo de detecção por câmera
+(YOLO) com envio de posição/distância ao Arduino — sem código, só documento de projeto; (2)
+depois de aprovado, uma tela nova para cadastrar o que a detecção deve "travar": cor (apenas
+as primárias), formato (quadrado/redondo/retangular) e tamanho, mais uma opção de tirar foto
+do objeto para tratar depois.
+
+**Antes de codar (parte 2):** 4 perguntas de esclarecimento feitas e respondidas: cores =
+RGB; tamanho = numérico em cm; vários perfis salvos, um ativo por vez; implementar agora (não
+só documentar). Módulo "Câmeras" (visualização) e modelo `tiny-yolov3-11.onnx` já existentes
+na branch `tratamento-de-imagens` foram inspecionados antes de desenhar a integração.
+
+**Entregue:**
+
+- `Docs/Projeto/ETAPA2_VISAO_COMPUTACIONAL.md`: documento de planejamento (arquitetura
+  recomendada — C# in-process com ONNX Runtime em vez de serviço Python separado —, fluxo de
+  dados, extensão aditiva do protocolo serial com `DISTANCE`/`AIM`/`AIMED`, interfaces
+  propostas e perguntas abertas). Nenhum código deste documento foi implementado ainda.
+- Tela "Perfis de Alvo" (`MenuItem.PerfilAlvo`, visível a todos os perfis exceto
+  Visualizador — `IPermissionService.PodeGerenciarPerfisAlvo`): `Models/CorAlvo.cs`,
+  `Models/FormatoAlvo.cs`, `Models/PerfilAlvo.cs`; `Services/IPerfilAlvoRepository.cs` +
+  `PerfilAlvoRepository.cs` (JSON em `%LocalAppData%\RadarTorres\perfis-alvo.json`, mesmo
+  padrão de `ZonaMortaRepository`); `Services/IPerfilAlvoService.cs` + `PerfilAlvoService.cs`
+  (só um perfil ativo por vez, sem edição de campos após criado — igual Zonas Mortas);
+  `ViewModels/PerfilAlvoViewModel.cs` + `Views/PerfilAlvoView.xaml(.cs)`.
+- Captura de "foto de referência": reaproveita `ICameraCaptureServiceFactory`/
+  `ICameraDeviceEnumerator` já existentes do módulo "Câmeras" (sessão de captura própria,
+  independente das já abertas em outras telas); salva PNG em
+  `%LocalAppData%\RadarTorres\PerfisAlvo\Fotos\` e grava o caminho no perfil. Não participa da
+  detecção automática — é só para consulta manual posterior, como pedido.
+- Chaves de localização pt-BR/en-US adicionadas (`Sidebar.PerfilAlvo`, `PerfilAlvo.*`).
+- `dotnet build`: 0 erros (avisos restantes são `NU1701` pré-existentes do pacote AForge, não
+  relacionados a esta mudança). Sem `dotnet test` — não há projeto de testes no repositório.
+- **Suposição assumida e não confirmada com o usuário:** quem pode gerenciar perfis de alvo é
+  Operador+Administrador (mesmo critério de `PodeExecutarAcoes`), não restrito só a
+  Administrador como Zonas Mortas/Usuários — sinalizar se precisar ser mais restritivo.
+- **Pendência:** validação visual/manual da tela (arraste de RadioButtons, captura de foto
+  real com webcam) não foi feita — ambiente sem display interativo nesta sessão.
+
+## 2026-10-13 — Preview ao vivo na foto de referência + detecção por câmera (YOLO) em Monitoramento
+
+**Pedido (em duas partes):** (1) na tela "Perfis de Alvo", a câmera escolhida para a foto de
+referência deveria ativar a visualização imediatamente, para centralizar o objeto antes de
+capturar (antes só tirava a foto direto, sem mostrar o quadro ao vivo); (2) na tela
+Monitoramento, abrir uma câmera e, se o modo de operação estiver Amarelo ou Vermelho e um
+objeto ativo for identificado, disparar um alarme sonoro e informar a distância do alvo.
+
+**Antes de codar (parte 2):** fiz perguntas de esclarecimento, porque a identificação "real"
+por câmera depende do pipeline de visão
+computacional inteiro (YOLO), que só tinha sido planejado (`ETAPA2_VISAO_COMPUTACIONAL.md`),
+nunca implementado. Respostas do usuário: detecção deve filtrar pelo Perfil de Alvo ativo
+(cor/formato/tamanho, não classes genéricas do YOLO); distância anunciada em texto E por voz;
+distância estimada pela imagem (tamanho da caixa × campo de visão da câmera), não pelo
+Arduino. O contrato real do modelo `tiny-yolov3-11.onnx` (entradas/saídas, shapes) foi
+confirmado carregando o arquivo com `Microsoft.ML.OnnxRuntime` num projeto console descartável
+antes de escrever o serviço — não foi suposição.
+
+**Entregue:**
+
+- Preview ao vivo em "Perfis de Alvo": `PerfilAlvoViewModel` agora liga a câmera assim que
+  selecionada (antes só ao clicar "Tirar foto"); "Tirar foto" passou a salvar o quadro atual
+  da pré-visualização em vez de iniciar uma captura nova. Bug corrigido no caminho: ao
+  voltar à tela depois de navegar para outra, o preview não religava (mesma referência de
+  câmera não disparava o `set`) — corrigido em `OnNavigatedTo`.
+- Novo card "Detecção por Câmera" em Monitoramento (`DeteccaoCameraViewModel`, exposto por
+  `MainViewModel.DeteccaoCamera`): seleção de câmera + preview ao vivo + status + distância.
+- Pipeline de visão computacional novo (primeira implementação real da Etapa 2, bem reduzida
+  em escopo — só o necessário para este alerta, não o fluxo completo de mira pan/tilt do
+  documento de planejamento): `Models/VisionDetection.cs`, `Models/AlvoVisualResultado.cs`,
+  `Services/IObjectDetectionService.cs` + `OnnxYoloDetectionService.cs` (inferência ONNX sobre
+  `tiny-yolov3-11.onnx`, ignora a classe COCO — só usa as caixas como região candidata),
+  `Services/IAlvoVisualService.cs` + `AlvoVisualService.cs` (cor por canal dominante, formato
+  por proporção da caixa + preenchimento, distância por campo de visão), `Services/
+  IAlertaSonoroService.cs` + `AlertaSonoroService.cs` (`Console.Beep` + `System.Speech`/SAPI).
+- Novos pacotes: `Microsoft.ML.OnnxRuntime` 1.20.1, `System.Speech` 9.0.0.
+- `Configuration/AppSettings.cs` + `appsettings.json`: seção nova `VisionSettings` com todos
+  os limiares (confiança mínima, intervalo de processamento, campo de visão da câmera,
+  limiares de formato/cor, debounce do alerta) — nenhum valor calibrado com hardware real.
+- `dotnet build` (Debug e Release): 0 erros (os 9 avisos restantes são `NU1701` pré-existentes
+  do AForge). App testado abrindo (processo estável, sem crash na inicialização).
+- **Limitação explícita, sem suposição de que funciona de ponta a ponta:** não há câmera nem
+  monitor neste ambiente para validar visualmente detecção real, cor/formato classificados
+  corretamente, precisão da distância estimada, ou se alguma voz pt-BR está instalada para o
+  TTS funcionar. Os limiares em `VisionSettings` são valores de partida (comentados no próprio
+  `AppSettings.cs`) e quase certamente precisarão de calibração depois de testar com a câmera
+  e o objeto físico reais — pedir para o usuário testar e reportar o comportamento antes de
+  considerar este card "pronto", só "implementado".
+
+## 2026-10-13 (continuação) — Correções reportadas em Monitoramento (binding, crash fatal, sobreposição de cards)
+
+**Pedidos, nesta ordem, reportando problemas reais ao testar:** (1) scroll em "Perfis de
+Alvo" cortava conteúdo; (2) cards sobrepostos em Monitoramento + pedido para fixar o arranjo
+como padrão do sistema; (3) erro de binding ao abrir Monitoramento; (4) aplicativo fechando
+sozinho ao abrir Monitoramento.
+
+**Diagnosticado e corrigido:**
+
+- **Scroll cortado** em `PerfilAlvoView.xaml`: coluna direita (Definição de Alvo/Perfil
+  selecionado/Foto de referência) não tinha `ScrollViewer` — adicionado.
+- **Sobreposição de cards em Monitoramento** — causa raiz real, não só o card novo: o usuário
+  tinha um layout salvo (`dashboard-layout-monitoramento-1.json`) de uma versão antiga do app
+  (cards `Acoes`/`Distancias`, que não existem mais). `DashboardCanvas.ApplyLayoutSnapshot`
+  tinha um bug genuíno: cards sem entrada no layout salvo (ex.: o card novo) eram posicionados
+  por `ArrangeDefaultFlow`, que **nunca verifica contra os cards já restaurados do layout
+  salvo** — o card novo caía "no vácuo" em cima do Radar. Corrigido para usar `FindFreeSlot`
+  (já existia, usado por `ShowCard`), que verifica contra todos os cards visíveis no estado
+  atual — corrige o bug para qualquer card adicionado no futuro, não só este. Removido o
+  arquivo de layout pessoal obsoleto do usuário de teste, para ele voltar a usar o arranjo
+  padrão do sistema (recalculado automaticamente, sempre sem sobreposição por construção).
+- **Erro de binding** ("TwoWay/OneWayToSource não pode funcionar em propriedade somente
+  leitura `UltimaDistanciaMetros`"): `Run.Text` tem `BindingMode` padrão **TwoWay** (diferente
+  de `TextBlock.Text`, que é OneWay) — armadilha clássica do WPF; o resto do projeto já
+  conhecia e sempre especificava `Mode=OneWay`/`OneTime` em bindings de `Run`, só o trecho
+  novo não seguiu o padrão. Trocado por um único `TextBlock.Text` com `StringFormat`.
+- **Crash fatal (fechava o app sozinho)** — o mais sério: `0x80131506` (erro fatal da CLR,
+  acesso de memória inválido, não uma exceção .NET normal) dentro de
+  `AlvoVisualService.CalcularFracaoCor`. Causa: `Bitmap.LockBits` com um retângulo recortado
+  (a caixa detectada) sobre um `Bitmap` cujo `PixelFormat` já bate com o pedido não copia
+  dados — `Scan0`/`Stride` continuam sendo os da imagem INTEIRA, só com `Scan0` deslocado até
+  o canto do recorte. O código copiava `data.Stride` (largura da imagem inteira) por linha em
+  vez de só `area.Width * 3` (largura do recorte) — perto da última linha da imagem, isso lia
+  além do fim do buffer alocado. Corrigido para copiar só os bytes de cada linha do recorte.
+  Verificado que os outros 2 lugares do projeto (novo e pré-existente) que fazem
+  `LockBits`/`Marshal.Copy` sempre travam a imagem INTEIRA (nunca um recorte), então não têm
+  esse problema.
+- `dotnet build` (Release): 0 erros em cada correção. App reaberto depois de cada mudança e
+  confirmado que o processo permanece de pé (sem crash) — ainda sem câmera/objeto real para
+  validar visualmente a detecção em si.
+
+## 2026-10-13 (continuação 2) — Diagnóstico granular: alarme não disparava ao passar o alvo
+
+**Pedido:** "o sistema não está apitando quando o alvo passa em frente a câmera" — pediu para
+corrigir.
+
+**Investigado, sem conseguir reproduzir (sem câmera/objeto físico neste ambiente):** a cadeia
+`DeteccaoCameraViewModel → AlvoVisualService → IObjectDetectionService` tem vários pontos que
+podem silenciosamente não disparar o alarme por design (sem ser bug): nenhum perfil de alvo
+selecionado como ativo; modo de operação em Verde (alarme só dispara em Amarelo/Vermelho,
+por pedido original); YOLO não propor nenhuma caixa candidata para o objeto usado no teste
+(o modelo é treinado nas 80 classes do COCO — um objeto de demonstração arbitrário pode não
+ser reconhecido); ou caixa candidata encontrada mas sem bater o limiar de cor/formato do
+perfil. Antes dessa mudança, `StatusDeteccao` colapsava todos esses casos na mesma mensagem
+genérica ("nenhum alvo identificado"), tornando impossível diferenciar causa sem acesso à
+máquina/depurador.
+
+**Entregue:** `IAlvoVisualService.AvaliarFrame` passou a devolver `AlvoVisualAvaliacao`
+(`Models/AlvoVisualAvaliacao.cs`) — não só se bateu, mas quantas caixas o YOLO propôs no
+quadro e a melhor fração de pixels na cor esperada entre elas, mesmo quando nada bate.
+`DeteccaoCameraViewModel.AplicarResultado` agora mostra, na própria tela de Monitoramento,
+qual das 4 causas está ocorrendo: sem perfil ativo / YOLO sem candidatos / candidatos sem
+bater cor-formato (com o "quão perto" chegou) / alvo identificado mas modo Verde suprime o
+alarme / alarme disparado normalmente. `dotnet build` (Release): 0 erros.
+
+**Pendência que depende do usuário:** preciso que ele teste de novo e me diga **exatamente o
+texto** que aparece no card "Detecção por Câmera" ao passar o objeto na frente da câmera —
+isso aponta com certeza qual limiar ajustar (ou confirma se é a troca de modo que falta) em
+vez de eu continuar tentando adivinhar sem poder reproduzir.
+
+## 2026-10-13 (continuação 3) — Reconhecimento por comparação com a foto de referência
+
+**Esclarecimento que motivou a mudança:** o usuário esperava que a foto de referência tirada
+em "Perfis de Alvo" fosse usada para RECONHECER o objeto (não só um registro manual, como
+implementado antes) — confirmado objetivamente por pergunta antes de codar: "comparar com a
+foto tirada" (não "continuar só por Cor+Formato+Tamanho").
+
+**Entregue:** `AlvoVisualService` agora, quando o perfil ativo tem foto de referência, compara
+cada caixa candidata do YOLO diretamente com a foto — não mais só cor dominante + proporção da
+caixa. Comparação: reduz tanto a foto quanto cada candidata a uma grade 8×8 de cor média
+(`ExtrairAssinatura`) e mede a diferença média por canal (`CalcularSimilaridade`, 0–1, limiar
+`VisionSettings.LimiarSimilaridadeFoto`, padrão 0,65 — valor de partida, não calibrado). Antes
+de comparar, roda a mesma detecção do YOLO **na própria foto de referência** para recortar só
+o objeto (não a foto inteira com fundo); sem detecção na foto, assume que o usuário centralizou
+o objeto ao tirar a foto (preview ao vivo já existente) e usa um recorte central como
+aproximação. **Perfis sem foto continuam funcionando pelo método anterior (cor/formato)** —
+mudança aditiva, sem regressão para quem não tirou foto ainda.
+`Models/AlvoVisualAvaliacao.cs` ganhou `UsouFotoReferencia`/`MelhorPontuacao` (renomeado de
+`MelhorFracaoCor`) para a mensagem de diagnóstico no card dizer "melhor similaridade: X%"
+(comparação por foto) em vez de "melhor correspondência de cor" quando for o caso.
+`dotnet build` (Release): 0 erros. App reaberto, processo estável.
+
+**Pendência, mesma de sempre nesta frente:** limiar de similaridade (0,65) é chute inicial —
+iluminação/ângulo diferentes entre a foto de cadastro e a cena ao vivo tendem a derrubar a
+similaridade bastante; se continuar não reconhecendo, o texto do card agora informa a melhor
+similaridade encontrada, o que diz exatamente quanto abaixar o limiar.
+
+## 2026-10-16 — Marcação manual do objeto dentro da foto de referência
+
+**Pedido:** "assim que tirar a foto do alvo, eu possa selecionar na foto qual é o objeto a ser
+observado".
+
+**Por que importa:** até aqui, a região do objeto DENTRO da foto era adivinhada pelo
+`AlvoVisualService` — pela cor cadastrada no perfil e, quando nenhuma região tinha cor
+suficiente, por um recorte central. Era a fonte documentada de dois erros: a assinatura podia
+sair da pessoa que segurava o objeto, e objetos de cor diferente da cadastrada caíam no recorte
+central. Com a marcação do usuário, não há mais o que adivinhar.
+
+**Entregue:**
+- `Models/PerfilAlvo.cs`: novo `RecorteAlvo(X, Y, Largura, Altura)` (pixels da própria foto) em
+  `PerfilAlvo.RecorteFotoReferencia` — persiste junto no `perfis-alvo.json` existente; perfis
+  antigos leem `null` e seguem funcionando.
+- `IPerfilAlvoService.DefinirRecorteFotoReferencia` (grava/limpa a marcação).
+  `DefinirFotoReferencia` passou a descartar a marcação anterior — recorte é em pixels da foto
+  antiga, não vale para a nova.
+- `AlvoVisualService.EncontrarAreaDoObjeto`: com marcação válida, usa exatamente ela e não
+  calcula mais nada; sem marcação, o caminho automático anterior continua igual. A chave do
+  cache de assinatura passou a incluir o recorte (sem isso, remarcar o objeto na mesma foto
+  continuaria usando a assinatura antiga). Marcação que não cai dentro da foto cai no caminho
+  automático com aviso no log, em vez de devolver região vazia.
+- `PerfilAlvoViewModel`: `FotoLargura`/`FotoAltura`, `RecorteSelecionado` (+ `RecorteX/Y/...`
+  para o desenho), `MarcarObjeto(x, y, w, h)` com clamp nos limites da foto e descarte de
+  arrasto sem área, e `LimparRecorteCommand`.
+- `PerfilAlvoView`: a foto salva virou área de marcação (altura 140 → 220). A foto é desenhada
+  num `Canvas` do tamanho EXATO da imagem em pixels dentro de um `Viewbox` — assim a posição do
+  mouse já chega em pixels da foto, sem conversão de escala nem cálculo de "letterbox" para
+  errar. Retângulo cheio = marcação salva; tracejado = arrasto em curso. O arrasto fica no
+  code-behind (entrada de ponteiro); a ViewModel recebe só o retângulo final.
+- Localização pt-BR/en-US: `PerfilAlvo.Foto.MarcarObjeto`, `PerfilAlvo.Foto.LimparMarcacao`;
+  `PerfilAlvo.Foto.Descricao`/`UltimaSalva` reescritas — o texto antigo ainda dizia que a foto
+  "não faz parte da detecção automática", o que deixou de ser verdade em 2026-10-13.
+- `dotnet build` (solution): 0 erros (só os `NU1701` pré-existentes do AForge). Sem `dotnet test`
+  — não há projeto de testes no repositório.
+
+**Pendência que depende do usuário:** validação visual na máquina dele — tirar a foto, arrastar
+sobre o objeto, conferir que o retângulo fica onde foi desenhado, reabrir a tela e ver se a
+marcação voltou, e checar no `.log` a linha "usando o objeto marcado pelo usuário".
+
+## 2026-10-16 (continuação) — Edição de alvos, 3 fotos, altura×largura, antiduplicidade por quadrante e câmeras por quadrante
+
+**Pedido (8 frentes):** editar alvos cadastrados; exigir no mínimo 3 fotografias válidas no
+cadastro; separar altura e largura para objetos retangulares; impedir que o mesmo alvo gere
+vários registros enquanto continua sendo rastreado; deixar o card "Detecção por câmera"
+responsivo; associar cada câmera a um quadrante; classificar as ocorrências por quadrante; e
+revisar o modelo de dados — com testes automatizados dos 13 critérios de aceitação.
+
+**Decisões do usuário (perguntadas antes de implementar, porque mudavam a arquitetura):**
+
+1. **Abatido** — não existia nenhum conceito de abate no código. Decidido: acionamento
+   bem-sucedido deixa a ocorrência em `AbatePendente` e o **operador confirma ou descarta** na
+   tela "Objetos Detectados". Nenhum automatismo abate nada.
+2. **Quadrante por câmera** — exatamente **um** quadrante por câmera, com unicidade (atribuir um
+   quadrante ocupado transfere a responsabilidade).
+3. **Multi-câmera** — a detecção passa a rodar **nos 4 painéis da tela "Câmeras"**, em paralelo,
+   cada um no seu quadrante (o card de Monitoramento continua existindo, com uma câmera).
+4. **3 fotos** — exigência vale **só na criação**; na edição, perfis antigos (criados quando o
+   sistema aceitava uma foto) continuam podendo ser corrigidos.
+
+**O que o diagnóstico mudou em relação ao enunciado:** o projeto é WPF desktop — não há
+frontend web, CSS nem API HTTP. "Validação no backend" virou validação na camada de serviço
+(`PerfilAlvoService`), que recusa a operação independentemente da tela; "responsividade" virou
+layout elástico ao tamanho do card; "migração de banco" virou `Data/SqliteSchema.cs` (não havia
+nenhum mecanismo de migração — `CREATE TABLE IF NOT EXISTS` não altera tabela existente).
+
+**Entregue — cadastro de alvos (frentes 1, 2 e 3):**
+- `Models/PerfilAlvo.cs`: lista `Fotos` (`FotoReferenciaAlvo`: caminho + recorte + data) no lugar
+  da foto única; `LarguraCm`/`AlturaCm` para retangulares, com `MaiorDimensaoCm` e
+  `DimensoesDescricao` derivados; `MinimoFotos = 3`. Tudo em CENTÍMETROS do objeto real — a
+  medida em pixels continua sendo só a caixa detectada (`VisionDetection`), e as duas
+  representações se encontram apenas na estimativa de distância.
+- `Helpers/ValidacaoFotoAlvo.cs`: foto válida é a que existe, **abre como imagem** e tem pelo
+  menos 64×64 px. Abrir o arquivo (em vez de olhar a extensão) é o que descarta PNG truncado,
+  que só quebraria depois, dentro do reconhecimento.
+- `IPerfilAlvoService`: `Add`/`Atualizar` devolvem `ResultadoPerfilAlvo` (padrão de `AuthResult`)
+  e recebem `DimensoesAlvo`. `Atualizar` altera o objeto já presente na coleção, preservando o
+  `Id` — é ele que liga o alvo ao histórico (`ObjetoDetectado.PerfilAlvoId`), então recriar o
+  registro desvincularia silenciosamente as detecções anteriores.
+- `PerfilAlvoViewModel`/`PerfilAlvoView`: formulário único para criar e editar, trabalhando
+  sobre uma CÓPIA das fotos (`ClonarFotos`) — desistir no meio não deixa o perfil num estado
+  intermediário. Botão desabilitado com menos de 3 fotos e mensagem dizendo quantas faltam;
+  galeria de fotos com remoção e indicador de "objeto já marcado"; marcação do objeto por foto.
+- `AlvoVisualService`: compara o quadro ao vivo com **todas** as fotos do perfil e fica com a
+  melhor similaridade (basta uma bater — exigir média faria a foto mais desfavorável derrubar o
+  reconhecimento, o oposto do motivo de haver várias). Cache de assinaturas passou a ter na
+  chave a lista de fotos + recortes. Distância usa `MaiorDimensaoCm`.
+- `PerfilAlvoRepository.MigrarFotoUnica`: perfis no formato antigo (uma foto na raiz) são
+  convertidos na leitura, sem reescrever o arquivo até a próxima alteração — voltar à versão
+  anterior do app continua funcionando.
+- Remoção de foto **desvincula sem apagar o arquivo**: ocorrências já gravadas guardam o caminho
+  em `ReferenciaImagem`, e apagar deixaria o histórico apontando para arquivo inexistente.
+
+**Entregue — ocorrências, rastreamento e abate (frentes 4, 7 e 8):**
+- `Models/ObjetoDetectado.cs`: a tabela passa a ser de OCORRÊNCIAS, com
+  `PerfilAlvoId`, `CameraDispositivoId`, `CameraNome`, `RastreamentoId`, `Estado`
+  (`Detectado`/`AbatePendente`/`Abatido`) e `DataHoraUltimaDeteccao`; nova
+  `OcorrenciaEstadoTransicao` (tabela `OcorrenciaEstados`) para o histórico de transições.
+- `Services/RastreamentoVisualService.cs` (novo): identidade dos objetos entre quadros por
+  continuidade espacial (IoU + resgate por "centro dentro da caixa anterior", que cobre o objeto
+  se aproximando). Justificativa de ser um serviço novo e não `TargetTrackingService`: lá o
+  identificador **vem pronto** no protocolo do Arduino; a câmera não fornece nenhum.
+  Tolerância configurável a oclusão/perda (padrão 10s) — e encerrar identidade **nunca** é abate.
+- `Services/OcorrenciaDeteccaoService.cs` (novo): enquanto o mesmo acompanhamento segue no mesmo
+  quadrante, não há linha nova — só `DataHoraUltimaDeteccao` avança. Ocorrência só abre depois de
+  N confirmações consecutivas (padrão 2), para a oscilação de pontuação entre quadros não sujar o
+  histórico. O quadrante vem da CÂMERA; sem quadrante atribuído, cai no cálculo geométrico
+  anterior.
+- `SqliteObjetoDetectadoRepository`: `AdicionarSeNaoExistir` com `ON CONFLICT … DO NOTHING` sobre
+  índice **único parcial** `(RastreamentoId, Quadrante) WHERE RastreamentoId IS NOT NULL` —
+  defesa final contra duplicidade com as câmeras processando em paralelo; o parcial preserva o
+  radar, que não tem rastreamento visual e pode repetir quadrante. Também `AtualizarEstado`,
+  `RegistrarDeteccaoContinuada`, `GetById` e `ObterHistoricoEstados`.
+- `FireControlService`: acionamento efetivado marca a ocorrência como `AbatePendente`;
+  `ObjetosDetectadosViewModel`/`View` ganharam "Confirmar abate"/"Descartar abate" (só para quem
+  pode executar ações e só em ocorrência pendente) e a faixa com o histórico de estados.
+- **Mudança de comportamento deliberada:** o registro da detecção por câmera saiu de dentro do
+  debounce do alerta e deixou de depender do modo de operação. Antes era uma linha a cada alerta
+  (5s) e nenhuma no modo Verde; agora é uma ocorrência por acompanhamento, em qualquer modo — o
+  modo continua decidindo apenas se o **alarme** toca. O que motivava o acoplamento (evitar
+  dezenas de linhas por minuto) é exatamente o que o rastreamento resolve melhor.
+
+**Entregue — câmeras e quadrantes (frentes 5 e 6):**
+- `Models/CameraQuadrante.cs`, `Repositories/SqliteCameraQuadranteRepository.cs` (tabela
+  `Cameras`, índices únicos em `DispositivoId` e `Quadrante`, transferência na mesma transação) e
+  `Services/CameraQuadranteService.cs`.
+- `CameraSlotViewModel`/`CameraPanelView`: seletor de quadrante por painel (Q1..Q4 ou nenhum) e
+  detecção própria rodando em paralelo (um `Helpers/AnalisadorQuadros` por painel). Sem quadrante
+  atribuído a detecção fica desligada — sem quadrante não há onde registrar, e rodar inferência à
+  toa tiraria CPU dos painéis configurados.
+- `Helpers/AnalisadorQuadros.cs` (novo): extraído de `DeteccaoCameraViewModel` quando a detecção
+  passou a rodar em 5 lugares — concentra limite de frequência, rodada única por vez e a
+  marshalização do buffer da câmera, que são justamente as partes delicadas de duplicar.
+- Card "DETECÇÃO POR CÂMERA" responsivo: `Grid` com o vídeo na única linha `*` (antes `StackPanel`
+  com altura fixa de 130px, que era cortado ao redimensionar), `Stretch="Uniform"` preservando a
+  proporção, textos com `TextWrapping` e os blocos inferiores num `ScrollViewer` vertical — sem
+  nenhuma rolagem horizontal. Mostra também o quadrante da câmera selecionada.
+
+**Modelo de dados / migração:**
+- `Data/SqliteSchema.cs` (novo): `PRAGMA table_info` + `ALTER TABLE ADD COLUMN` /
+  `CREATE INDEX IF NOT EXISTS`, idempotente, chamado pelos repositórios. Nenhum dado é
+  descartado: linhas antigas ficam com as colunas novas nulas e `Estado = 'Detectado'`.
+- Documentação atualizada: `Docs/Tecnica/MODELO_DADOS.md`,
+  `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql`, `Modelo_Banco_de_Dados.dbml` e
+  `Modelo_Banco_de_Dados.md` (DER, colunas novas, tabelas `ocorrencia_estados` e `cameras`).
+  **Pendência:** o PDF/TeX do entregável (`Modelo_Banco_Dados_RadarTorres.pdf`) precisa ser
+  regerado a partir dos fontes atualizados.
+
+**Testes (frente 9):** criado `tests/RadarTorres.Tests` (xunit) — o projeto era referenciado pelo
+`InternalsVisibleTo` do .csproj mas **nunca existiu**. 68 testes cobrindo os 13 critérios:
+mínimo de fotos (incluindo arquivo corrompido, vazio, minúsculo e repetido), edição sem criar
+registro e preservando o vínculo do histórico, largura×altura e perfil retangular legado,
+alvo acompanhado sem gerar linha por quadro, perda temporária que não vira abate, ocorrência por
+quadrante, controle no mesmo quadrante, câmera/quadrante de cada ocorrência, concorrência de 4
+câmeras, migração de tabela antiga e unicidade no SQLite de verdade.
+`SqliteConnectionFactory.UsarBancoDeTeste` (internal) redireciona para um banco temporário — sem
+isso os testes escreveriam no banco real do usuário em `%AppData%`.
+
+**Dois defeitos encontrados pelos próprios testes, ambos reais e corrigidos:**
+1. O `INSERT` tinha `;` no fim da constante, então o `ON CONFLICT` anexado depois produzia SQL
+   inválido — **toda** ocorrência de câmera cairia na fila offline (`PendingWriteQueue`) com Id
+   negativo, e a antiduplicidade nunca funcionaria.
+2. SQLite só aceita índice **parcial** como alvo de `ON CONFLICT` se o predicado for repetido na
+   cláusula; sem `WHERE RastreamentoId IS NOT NULL`, o comando falhava com "no unique index
+   matching the conflict target".
+
+**Verificação:** `dotnet build` da solution — 0 erros (restam os `NU1701` pré-existentes do
+AForge). `dotnet test` — 68/68 aprovados.
+
+**Pendências que dependem do usuário:** validação visual na máquina dele (ver o relatório final
+da conversa) — cadastro com 3 fotos, edição, atribuição de quadrantes nos 4 painéis com câmeras
+reais, redimensionamento do card de detecção e o ciclo acionamento → confirmar abate.
+
+## 2026-10-17 — Termos de Uso no app (com PDF), rolagem em Usuários, quadrante como identidade da câmera e cadastro de alvo em modal
+
+**Pedido (7 frentes):** corrigir a cláusula 1.1 dos Termos de Uso; apresentá-los com hierarquia
+visual; botão para baixar o documento integral em PDF; corrigir a rolagem da tela "Usuários";
+usar o quadrante como identificação da câmera; impedir duas câmeras no mesmo quadrante; e trocar
+o formulário lateral de "Perfis de Alvo" por um modal com etapas.
+
+**Decisões do usuário (perguntadas antes de implementar):**
+
+1. **Onde os termos aparecem** — "no ato da instalação e na tela de configurações". Não houve
+   criação de item na barra lateral: a seção fica em Configurações, que abre a janela de leitura.
+2. **Página de termos do instalador** — mantida em texto puro. Converter para RTF formatado
+   criaria um segundo arquivo para manter em sincronia, exatamente o que o pedido manda evitar.
+
+**Diagnóstico que mudou o escopo:** não existia tela de Termos de Uso no aplicativo. Eles só
+apareciam na página de licença do instalador (`LicenseFile=TERMOS_DE_USO.txt`) e no atalho do
+Menu Iniciar, que abre o `.txt` no Bloco de Notas — e um botão de download não cabe no
+instalador. A tela foi criada do zero.
+
+**Entregue — Termos de Uso (frentes 1, 2 e 3):**
+- `installer/TERMOS_DE_USO.txt`: cláusula 1.1 passa a identificar Matheus Emanoel de Souza e
+  Gabriel Vasconcellos de Morais, estudantes de Engenharia da Computação da UCL, sob orientação
+  de Anker Loss. Conteúdo alterado ⇒ versão **1.0 → 1.1** (vigente a partir de 16/10/2026), para
+  a regra de aceite já existente — toda instalação reexibe a página — passar a valer sobre esta
+  redação. Nenhuma outra cláusula foi tocada.
+- **Fonte única da verdade:** o MESMO arquivo é embutido no executável
+  (`<EmbeddedResource>` no .csproj) e lido por `TermosDeUsoService`. Instalador, tela e PDF leem
+  a mesma redação; não há cópia do texto em código, XAML nem banco.
+- `Models/TermosDeUso.cs` + parser em `TermosDeUsoService`: classifica o texto puro em blocos
+  (título, versão, cláusula, parágrafo numerado, alínea, item do resumo) e desfaz a quebra em 78
+  colunas do arquivo. Os blocos alimentam tela E PDF — por construção não há como divergirem.
+- `Views/TermosDeUsoWindow`: leitura com hierarquia visual (número da cláusula em etiqueta,
+  título destacado, parágrafos com entrelinha), coluna de leitura limitada a 760px e
+  centralizada, tema claro/escuro e janela redimensionável.
+- `ConfiguracoesView`: seção "Termos de Uso" com a versão vigente, "Ler os Termos de Uso" e
+  "Baixar Termos de Uso em PDF" (atalho que dispensa abrir a janela).
+- PDF com PDFsharp (dependência que o projeto já tinha): título, hierarquia, quebra de linha
+  medida, quebra de página sem cláusula órfã, rodapé com versão e "Página X de Y", acentuação
+  preservada. Nome sugerido `RadarTorres_Termos_de_Uso.pdf`. Geração fora da thread de interface,
+  com o botão desabilitado e rotulado "Gerando o PDF…" enquanto roda.
+
+**Bug pré-existente encontrado pelos testes:** o PDFsharp 6 não acompanha fonte alguma e não
+consulta o sistema sozinho — sem um `IFontResolver` registrado, `new XFont("Verdana", …)` lança
+`InvalidOperationException`. Ou seja, **a exportação de "Objetos Detectados" em PDF nunca
+funcionou** nesta versão da biblioteca. Criado `ResolvedorFontesPdf` (lê Verdana/Segoe UI/Arial
+de `%WINDIR%\Fonts`, com fallback entre elas) e registrado nos dois geradores.
+
+**Entregue — Usuários (frente 4):** a coluna direita (cartões de cadastro/edição e de redefinição
+de senha) vivia solta numa linha de altura `*`, sem `ScrollViewer`: em janela mais baixa o
+segundo cartão e o botão "Salvar" ficavam cortados, sem como alcançá-los — a grade da esquerda
+rola sozinha, a coluna não rolava. Passou a usar o mesmo arranjo das outras telas (rolagem
+vertical, horizontal desabilitada).
+
+**Entregue — câmeras e quadrantes (frentes 5 e 6):**
+- O cabeçalho do painel passa a ser a identificação do QUADRANTE ("Quadrante 2") em vez de
+  "Câmera N", que era só a posição na grade. Sem atribuição, mostra "Painel N — defina o
+  quadrante". O nome do dispositivo continua no seletor logo abaixo: identificação técnica e
+  responsabilidade espacial são dados distintos.
+- **Quadrante ocupado passa a ser recusado**, não transferido. Antes a atribuição tomava o
+  quadrante da outra câmera (deixando-a sem responsabilidade sem ninguém pedir); agora a
+  operação é recusada com mensagem nomeando a câmera que já o ocupa, e o seletor volta para o
+  valor realmente gravado. Liberar com "Nenhum" continua permitido, e quadrante vago segue sendo
+  uma situação válida.
+- Concorrência: a checagem do serviço pode perder a corrida entre duas janelas, então a violação
+  do índice único do banco é capturada e vira mensagem ("acabou de ser atribuído a outra
+  câmera"), com recarga da lista. Os painéis assinam `AssociacoesAlteradas` e se atualizam
+  sozinhos quando outro painel muda alguma atribuição.
+- Compatibilidade verificada no banco real antes de mudar a regra: duas webcams conhecidas e uma
+  única associação (Q1). Nenhum conflito a corrigir.
+
+**Entregue — cadastro de alvo em modal (frente 7):**
+- A tela ficou só com a listagem (agora em largura total), as ações do alvo selecionado e o botão
+  **"Cadastrar novo alvo"** ao lado do título. O formulário fixo da lateral direita deixou de
+  existir.
+- Modal como overlay DENTRO da própria view (e não `Window` separada), porque o requisito pede a
+  tela de fundo visível sob um escurecimento; de quebra, o fundo fica inerte a clique e a Tab
+  sem precisar ser desabilitado (o que o deixaria cinza).
+- Assistente em 4 etapas — Informações, Fotografias, Dimensões, Revisão — com indicador de
+  progresso, validação por etapa (`PodeAvancar`/`PendenciaEtapa`), navegação que preserva tudo o
+  que já foi preenchido e conclusão só na última etapa. O mínimo de 3 fotografias continua valendo
+  na tela e no serviço.
+- Edição reaproveita o mesmo assistente, preservando o `Id` (e o vínculo com o histórico).
+- Esc e "✕" fecham com confirmação quando há dados; clique no fundo escurecido NÃO fecha; foco
+  vai para o primeiro campo ao abrir e volta ao botão ao fechar; campos com
+  `AutomationProperties.Name` para leitor de tela; `EstaSalvando` impede concluir duas vezes.
+- A câmera agora só liga enquanto o modal está aberto — antes a tela segurava a webcam só para
+  listar alvos, disputando o dispositivo com o módulo "Câmeras" e o card de detecção.
+
+**Testes:** 105 no total (eram 73). Novos: 10 de Termos de Uso (cláusula 1.1, 15 cláusulas
+preservadas, alíneas, versão, PDF com ≥5 páginas abrindo como PDF válido, parser isolado),
+6 de câmera×quadrante (recusa com mensagem, uma câmera um quadrante, liberar e reatribuir,
+persistência após reiniciar, atribuições simultâneas) e 16 do modal de cadastro (abertura,
+validação por etapa, navegação preservando dados, conclusão, duplo clique, falha que mantém o
+rascunho, edição pelo mesmo modal). `dotnet build` da solution: 0 erros, 0 avisos CS.
+
+**Observação registrada, sem alteração:** o preâmbulo dos Termos define o termo "AUTOR" no
+singular ("o autor identificado na Cláusula 1"). Com dois desenvolvedores, o rigor pediria
+"AUTORES" — mas isso propaga por todo o documento, e o pedido foi explícito em não reescrever o
+texto jurídico além do necessário. Fica para decisão do usuário.
+
+**Pendência que depende do usuário:** conferência visual das telas novas (janela dos termos, PDF
+aberto, modal em resoluções menores) e do fluxo de quadrantes com as duas webcams reais.
+
+## 2026-10-17 — Nova identidade visual (tokens de cor, tipografia, Shell, Painel Principal, Monitoramento)
+
+**Pedido (resumo):** aplicar uma nova identidade visual ao RadarTorres — tokens de cor
+semânticos (claro/escuro), 3 fontes (Chakra Petch/IBM Plex Sans/JetBrains Mono, OFL,
+embutidas), ícones de traço próprios, Shell reconstruída (Sidebar agrupada com ícones,
+248px/76px, cabeçalho com título+chip de comunicação), cards do Painel Principal redesenhados
++ card novo "Radar ao vivo (prévia)", Monitoramento redesenhado (3 botões de modo sempre
+visíveis com selos ATIVO/pede confirmação, radar com quadrantes Q1/Q3 translúcidos permanentes,
+torres quadradas vazadas/preenchidas, alvos quadrados âmbar) e uma passagem de tokens/tipografia
+nas demais telas — regra explícita: **mudança puramente visual**, nenhuma regra de negócio
+alterada. Pedido feito em duas partes na mesma sessão: primeiro um plano com perguntas de
+aprovação, depois "faça tudo que ficou pendente" confirmando as decisões.
+
+**Branch:** `tratamento-de-imagens`. Commits (nesta ordem, cada um com `dotnet build`/`dotnet
+test` passando): tokens de cor → bugfix i18n do estado de comunicação → dicionário de ícones →
+fontes embutidas → Shell (sidebar/topbar) → ajuste de alinhamento da sidebar compacta → cards
+do Painel Principal + radar ao vivo → Monitoramento + radar → tipografia/tabelas nas demais
+telas → contraste (OnAccent em vez de branco fixo sobre cores de destaque).
+
+**Decisões aprovadas pelo usuário (perguntadas antes de codar):** troca direta dos tokens
+antigos (sem alias de compatibilidade); hambúrguer da Sidebar alternando 248px/76px em
+qualquer tela (era 210/52px); implementar o card "Radar ao vivo" (funcionalidade nova,
+reaproveitando `ITargetTrackingService`/`ITowerSelectionService` já existentes, sem duplicar
+lógica); fontes OFL podem ser embutidas no instalador.
+
+**Achado que simplificou o escopo:** a confirmação antes de trocar para o modo Vermelho/Disparar
+**já existia** (`MainViewModel.CurrentMode`, `MessageBox.Show` de confirmação) — o selo "pede
+confirmação" pedido é só visual, não precisou de lógica nova.
+
+**Bug corrigido:** o card "Comunicação" do Painel Principal mostrava o enum em inglês
+("Disconnected") mesmo com o app em português — faltava passar pelo dicionário de tradução.
+
+**Itens com fidelidade parcial ao mock (decisão de risco, não implementado por completo):**
+- Os controles de zoom/alcance do radar continuam como overlay interno (22x22, cantos
+  superiores), não como a barra externa de botões 44x44 descrita no mock — movê-los exigiria
+  expor estado interno do `RadarControl` como propriedade pública, risco maior para o tempo
+  disponível.
+- O rótulo "N · 0°" do radar foi reposicionado (mais à esquerda) para não colidir com o rótulo
+  de distância do anel mais externo, mas continua dentro do círculo, não fora dele — colocá-lo
+  fora exigiria somar uma margem a toda a matemática de conversão mundo→tela do radar (torres,
+  alvos, cliques), risco alto de regressão num componente que não dá para testar visualmente
+  nesta sessão.
+- Cabeçalhos de coluna das tabelas (`DataGrid`) ganharam cor/fonte/divisória do token novo, mas
+  o texto de cada coluna não foi reescrito em maiúsculas (são ~70 strings hardcoded em 5 telas).
+- A barra de abas "estilo navegador" do `MainWindow.xaml` (sessões paralelas) não foi alterada —
+  ficou pendente uma dúvida não respondida sobre uma suposta aba "Administrador" duplicando o
+  cabeçalho, que não foi localizada no código.
+
+**Testes:** 105 no total, todos passando a cada commit. O teste
+`PersistenciaSqliteTests.Insercoes_concorrentes_do_mesmo_rastreamento_resultam_numa_ocorrencia`
+é instável (falha ~1 a cada poucas execuções) — confirmado via `git stash` que já falhava assim
+antes de qualquer alteração desta frente; não foi investigado, por ser camada de persistência/
+concorrência, fora do escopo "só visual".
+
+**Pendência que depende do usuário:** validação visual completa nas duas telas, nos dois temas
+(claro/escuro) e nos dois idiomas — a sessão não pode abrir o aplicativo para conferir. Também
+ficou pendente a resposta sobre a aba "Administrador" citada acima.
+
+**Armadilha de processo encontrada e documentada:** `build.bat`/`run.bat` compilam e abrem o que
+estiver *checked out* no momento, sem indicar a branch — rodar numa branch errada (ex.: `main`,
+sem estas mudanças) parece "a mudança não funcionou". Conferir `git branch --show-current` antes
+de compilar.
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
 - [[INSTALADOR]] — detalhamento técnico do processo de instalação Windows.
 - [[ETAPA1_FUNDACAO]] — detalhamento técnico da fundação multiusuário.
+- [[IDENTIDADE_VISUAL]] — tokens de cor, tipografia e ícones da nova identidade visual.

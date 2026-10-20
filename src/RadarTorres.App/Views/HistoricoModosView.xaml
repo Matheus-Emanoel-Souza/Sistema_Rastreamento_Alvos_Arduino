@@ -1,9 +1,9 @@
 <UserControl x:Class="RadarTorres.App.Views.HistoricoModosView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource BackgroundBrush}"
-             Foreground="{DynamicResource TextPrimaryBrush}"
-             FontFamily="Segoe UI">
+             Background="{DynamicResource Bg.Window}"
+             Foreground="{DynamicResource Text.Primary}"
+             FontFamily="{DynamicResource Font.Body}">
     <!--
         Tela "Histórico de Modos" (Requisito 6 — auditoria de troca de modo). Registros vêm de
         IModoAtualTorreRepository, gravados por MainViewModel toda vez que o usuário confirma
@@ -17,23 +17,35 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="HISTÓRICO DE MODOS" FontSize="18" FontWeight="Bold"
-                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+                   Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,4"/>
         <TextBlock Grid.Row="1" Text="Toda troca de modo confirmada pelo sistema (Requisito 6), com quem confirmou."
-                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
+                   Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,0,0,12"/>
 
         <DataGrid Grid.Row="2" ItemsSource="{Binding Itens}" AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True"
                   GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                  Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
-                  BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
-                  RowBackground="{DynamicResource PanelBrush}" AlternatingRowBackground="{DynamicResource InputBackgroundBrush}"
-                  HorizontalGridLinesBrush="{DynamicResource PanelBorderBrush}" VerticalGridLinesBrush="{DynamicResource PanelBorderBrush}">
+                  Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
+                  BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                  RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
+                  HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Selection.Subtle}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                    <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+                    <Setter Property="FontSize" Value="12"/>
                     <Setter Property="Padding" Value="8,6"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource Border.Divider}"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
                 </Style>
             </DataGrid.ColumnHeaderStyle>
             <DataGrid.Columns>
