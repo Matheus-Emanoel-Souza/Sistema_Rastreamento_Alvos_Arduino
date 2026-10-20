@@ -1,7 +1,8 @@
 <UserControl x:Class="RadarTorres.App.Views.Shared.DashboardToolbar"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:loc="clr-namespace:RadarTorres.App.Localization">
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization"
+             xmlns:conv="clr-namespace:RadarTorres.App.Converters">
     <!--
         Barra de ações de layout, reutilizada pelo painel principal e pelo Monitoramento
         (Requisito "mesmo padrão de flexibilização... em todas as telas"). Não conhece
@@ -17,6 +18,34 @@
         mesma função de reabrir painéis ocultados — ver DashboardToolbar.xaml.cs.
     -->
     <UserControl.Resources>
+        <conv:ResourceKeyToGeometryConverter x:Key="ResourceKeyToGeometryConverter"/>
+
+        <!-- Item do modal "+ Adicionar painel": ícone do tipo de painel + nome, linha inteira
+             clicável para reimportar o painel oculto na tela (Requisito: substituir o menu
+             esbranquiçado por um modal legível, com imagens dos tipos disponíveis). -->
+        <Style x:Key="HiddenPanelItemButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Selection.Subtle}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="SegmentButton" TargetType="Button">
             <Setter Property="Padding" Value="14,0"/>
             <Setter Property="MinHeight" Value="34"/>
@@ -138,6 +167,49 @@
 
             <Button x:Name="HiddenPanelsButton" Grid.Column="1" Style="{StaticResource DashedButton}"
                     Click="HiddenPanelsButton_Click"/>
+
+            <!-- Modal sobreposto (Popup) com os tipos de painel ocultos disponíveis para
+                 reimportar — substitui o antigo ContextMenu padrão do Windows (fundo e texto
+                 esbranquiçados, fora do padrão visual). Popup flutua acima de toda a tela,
+                 então o conteúdo continua legível mesmo a partir de uma barra estreita como
+                 esta. -->
+            <Popup x:Name="HiddenPanelsPopup" Grid.Column="1" PlacementTarget="{Binding ElementName=HiddenPanelsButton}"
+                   Placement="Bottom" HorizontalOffset="0" VerticalOffset="8"
+                   AllowsTransparency="True" PopupAnimation="Fade" StaysOpen="False">
+                <Border Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
+                        BorderThickness="1" CornerRadius="12" Padding="8" MinWidth="260" MaxWidth="320">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.5" Color="Black"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Dashboard.PaineisOcultos}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Text.Secondary}" Margin="6,2,6,8"/>
+                        <ItemsControl x:Name="HiddenPanelsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource HiddenPanelItemButton}" Tag="{Binding CardId}"
+                                            Click="HiddenPanelItem_Click"
+                                            ToolTip="Adicionar este painel de volta à tela"
+                                            AutomationProperties.Name="{Binding Title}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="34" Height="34" CornerRadius="8"
+                                                    Background="{DynamicResource Bg.Sidebar}"
+                                                    BorderBrush="{DynamicResource Border.Control}" BorderThickness="1">
+                                                <Path Data="{Binding IconKey, Converter={StaticResource ResourceKeyToGeometryConverter}}"
+                                                      Stroke="{DynamicResource Accent.Text}" StrokeThickness="2"
+                                                      Stretch="Uniform" Width="16" Height="16"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}" Foreground="{DynamicResource Text.Primary}"
+                                                       FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Popup>
         </Grid>
 
         <TextBlock x:Name="StatusText" Margin="0,8,0,0" TextWrapping="Wrap"
