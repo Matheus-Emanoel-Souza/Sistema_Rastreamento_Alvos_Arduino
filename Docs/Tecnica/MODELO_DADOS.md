@@ -169,3 +169,9 @@ Etapa 2.
 Chamados de suporte (Requisito 9) — suporta atualização (`Update`) porque um administrador
 pode alterar `Status`/`RespostaAdmin` ao tratar o chamado; usuário e data de envio são
 preenchidos automaticamente pelo sistema, nunca digitados.
+
+## Ver também
+
+- [[Modelo_Banco_de_Dados]] — versão deste modelo para o entregável acadêmico (DER, schema SQL).
+- [[DOCUMENTACAO_TECNICA]] — classes/repositórios que leem e gravam estas tabelas.
+- [[Matriz_de_Rastreabilidade]] — requisito → tabela/coluna.

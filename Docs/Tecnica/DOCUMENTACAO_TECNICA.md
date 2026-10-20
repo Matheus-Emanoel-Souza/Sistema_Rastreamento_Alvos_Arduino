@@ -383,3 +383,9 @@ origem), `BoolToFoundBrushConverter` (indicador "CLI encontrado/não encontrado"
 5. Avaliar métricas reais de latência ponta-a-ponta (sensor → radar) para validar se
    `RadarSettings.RefreshRateMs` e `SimulationSettings.GenerationIntervalMs` precisam de
    ajuste fino para o hardware definitivo.
+
+## Ver também
+
+- [[ARQUITETURA]] — racional arquitetural geral (já referenciado no topo deste documento).
+- [[MODELO_DADOS]] — schema das tabelas usadas pelos repositórios aqui descritos.
+- [[Matriz_de_Rastreabilidade]] — requisito → classe/função, cruzando com este documento.

@@ -235,3 +235,11 @@ fisicamente essa cadeia é executada, e como ela se estende, na outra ponta da c
 até o Arduino e os dispositivos físicos que ele controla. Essa tríade de diagramas — comportamento
 externo, estrutura interna e topologia física — cobre, de forma complementar, tanto o software
 quanto a integração com hardware que caracterizam o RadarTorres.
+
+## Ver também
+
+- [[Conceito_UML]] — embasamento teórico geral sobre UML usado como base deste documento.
+- [[Casos_de_Uso]] — especificação textual completa dos 28 casos de uso (Seção 3.1 aqui).
+- [[Diagrama_de_Implantacao]] — detalhamento do diagrama de implantação (Seção 6 aqui).
+- [[Decisoes_Arquiteturais]] — decisões internas citadas na nota sobre MVVM (Seção 2).
+- [[Limitacoes_Conhecidas]] — divergência D1 (modos de operação), citada na Seção 4.

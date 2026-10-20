@@ -50,3 +50,9 @@ acionar as torres demonstrativas.
 * A segregação em quatro blocos internos (Apresentação/Serviços/Persistência/Runtime) é
   **didática**, não uma leitura de componentes fisicamente distribuídos — ver Seção 6 de
   [`UML_RadarTorres.md`](UML_RadarTorres.md).
+
+## Ver também
+
+- [[UML_RadarTorres]] — Seção 6, discussão conceitual deste diagrama.
+- [[COMUNICACAO_ARDUINO]] — protocolo que trafega na ligação USB/serial representada aqui.
+- [[Diagrama_Eletrico]] — detalhe físico/pinagem do nó Arduino.
