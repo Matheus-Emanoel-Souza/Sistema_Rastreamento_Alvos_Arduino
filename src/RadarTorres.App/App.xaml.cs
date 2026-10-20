@@ -235,6 +235,7 @@ public partial class App : Application
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<IFocusModeService, FocusModeService>();
         services.AddScoped<INavigationService, NavigationService>();
 
         // --- Telas / ViewModels

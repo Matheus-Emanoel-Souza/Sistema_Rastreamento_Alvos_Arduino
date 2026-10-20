@@ -188,6 +188,9 @@
                      preferência de configuração, então merece um botão próprio e visível. -->
                 <Button Content="{loc:Loc TopBar.NovaJanela}" Command="{Binding NovaJanelaCommand}"
                         ToolTip="{loc:Loc TopBar.NovaJanelaDica}" Style="{StaticResource TopBarButton}"/>
+
+                <Button Content="{Binding FocusModeButtonLabel}" Command="{Binding ToggleFocusModeCommand}"
+                        ToolTip="{loc:Loc Shell.FocusMode.Tooltip}" Style="{StaticResource TopBarButton}"/>
             </StackPanel>
 
             <!-- Pílula do usuário: avatar + nome + crachá do perfil. -->
