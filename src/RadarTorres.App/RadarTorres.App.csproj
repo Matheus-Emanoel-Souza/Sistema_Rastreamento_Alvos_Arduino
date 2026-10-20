@@ -100,6 +100,13 @@
     <EmbeddedResource Include="..\..\installer\TERMOS_DE_USO.txt"
                       Link="Resources\TERMOS_DE_USO.txt"
                       LogicalName="RadarTorres.App.Resources.TERMOS_DE_USO.txt" />
+
+    <!-- Layout "padrão do sistema" de cada tela (posição/tamanho/visibilidade dos painéis, nas
+         mesmas frações gravadas por IDashboardLayoutRepository.Save) — embutido no executável
+         para já vir assim numa instalação nova, antes de qualquer usuário salvar um layout
+         pessoal (ver DashboardLayoutRepository.LoadSystemDefault). -->
+    <EmbeddedResource Include="Resources\DefaultLayouts\monitoramento.json"
+                      LogicalName="RadarTorres.App.Resources.DefaultLayouts.monitoramento.json" />
   </ItemGroup>
 
   <ItemGroup>

@@ -172,11 +172,29 @@ public partial class MonitoramentoView : UserControl
         }
         else
         {
-            PinLogToggle.IsChecked = false;
-            LayoutCanvas.ResetToDefaultLayout();
+            ApplySystemDefaultLayout();
         }
 
         RefreshHiddenPanelsMenu();
+    }
+
+    /// <summary>Aplica o layout "padrão do sistema" embutido (Resources/DefaultLayouts) se
+    /// houver um para esta tela; senão cai no arranjo automático de DashboardCanvas. Usado
+    /// tanto na primeira exibição sem layout pessoal salvo quanto em "Retornar ao padrão do
+    /// sistema".</summary>
+    private void ApplySystemDefaultLayout()
+    {
+        var systemDefault = _layoutRepository.LoadSystemDefault(Screen);
+        if (systemDefault is { Count: > 0 })
+        {
+            LayoutCanvas.ApplyLayoutSnapshot(systemDefault);
+            ApplyLogPinFromSnapshot(systemDefault);
+        }
+        else
+        {
+            PinLogToggle.IsChecked = false;
+            LayoutCanvas.ResetToDefaultLayout();
+        }
     }
 
     private void OnSaveMyLayout(object? sender, EventArgs e)
@@ -189,12 +207,10 @@ public partial class MonitoramentoView : UserControl
 
     private void OnSystemDefault(object? sender, EventArgs e)
     {
-        // "Padrão do sistema" nunca inclui o console fixado — solta antes de rearranjar, senão
-        // ArrangeDefaultFlow reexibiria o card vazio (o ListBox continuaria em PinnedLogHost).
-        PinLogToggle.IsChecked = false;
-
+        // "Padrão do sistema" nunca inclui o console fixado por padrão — ApplySystemDefaultLayout
+        // decide o estado correto a partir do layout embutido (ou solta, no arranjo automático).
         // Só recalcula o arranjo em memória/tela — nunca toca no arquivo salvo (Requisito 6).
-        LayoutCanvas.ResetToDefaultLayout();
+        ApplySystemDefaultLayout();
         RefreshHiddenPanelsMenu();
         Toolbar.ShowStatus(LocalizationService.Current?["Dashboard.LayoutSistemaRestaurado"] ?? "Layout do sistema restaurado.", success: true);
     }
