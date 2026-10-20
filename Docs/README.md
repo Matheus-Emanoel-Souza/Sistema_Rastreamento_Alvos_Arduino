@@ -2,6 +2,11 @@
 
 Guia rápido de onde procurar cada tipo de documento do projeto.
 
+> MOC principal do vault: [[Índice]] (raiz do repositório). Índices por subpasta:
+> [[Docs/Projeto/README|Projeto]], [[Docs/Tecnica/README|Técnica]],
+> [[Docs/Embasamento_Teorico/README|Embasamento Teórico]],
+> [[Docs/Documentos_Entregaveis/README|Documentos Entregáveis]].
+
 | Pasta | Conteúdo |
 |---|---|
 | [`Documentos_Entregaveis/`](Documentos_Entregaveis) | Entregáveis oficiais do TCC (artigo, requisitos, UML, diagrama de classes, banco de dados, diagrama elétrico, controle de sessões de orientação). |

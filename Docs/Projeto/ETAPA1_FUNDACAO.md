@@ -126,3 +126,9 @@ segurança, ajustes de desempenho) seguem depois, como já planejado no pedido o
   rodando, e verificação criptográfica isolada de que o hash de senha semeado bate com
   `admin123`. Recomenda-se um teste manual de clique adicional antes de considerar a etapa
   definitivamente fechada.
+
+## Ver também
+
+- [[CONTEXTO_PROJETO]] — estado atual consolidado (o que descrito aqui já evoluiu desde então).
+- [[MODELO_DADOS]] — schema das tabelas criadas nesta etapa.
+- [[DOCUMENTACAO_TECNICA]] — referência das classes/serviços introduzidos.

@@ -108,3 +108,8 @@ Fonte PlantUML equivalente: `Diagrama_Eletrico_RadarTorres.puml` (mesma pasta).
 - **Pinos sugeridos** (D7–D9, D2–D5): não há reserva de pinos no firmware atual
   (`ArduinoSimulation.ino` não lê sensores reais), então a numeração é uma proposta — ajustar
   conforme o firmware definitivo for implementado.
+
+## Ver também
+
+- [[COMUNICACAO_ARDUINO]] — protocolo serial que trafega entre o PC e este hardware.
+- [[Diagrama_de_Implantacao]] — topologia física PC ↔ Arduino em nível mais alto.

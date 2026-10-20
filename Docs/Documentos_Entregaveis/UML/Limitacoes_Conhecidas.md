@@ -59,3 +59,9 @@ resolvido. A divergência que permanece é outra:
 solicitado — a remoção do caminho de acionamento manual (ou sua restrição ao modo `Disparar`) e
 a adição da checagem de modo em `Authorize` ficam para uma tarefa de implementação separada, a
 ser autorizada explicitamente.
+
+## Ver também
+
+- [[DOCUMENTACAO_TECNICA]] — seção "Bugs conhecidos", referenciada em L03.
+- [[Matriz_de_Rastreabilidade]] — seção "Limitações e Divergências → implementação".
+- [[Casos_de_Uso]] — UC08/UC10/UC11, onde a divergência D1 se manifesta no comportamento.
