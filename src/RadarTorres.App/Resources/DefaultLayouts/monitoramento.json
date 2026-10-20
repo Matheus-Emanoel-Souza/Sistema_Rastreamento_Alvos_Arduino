@@ -1,0 +1,56 @@
+{
+  "Radar": {
+    "RelX": 0.010135135135135137,
+    "RelY": 0.017339035949601202,
+    "RelWidth": 0.47297297297297297,
+    "RelHeight": 0.8091550109813895,
+    "IsVisible": false,
+    "ZIndex": 0,
+    "IsPinnedRight": false
+  },
+  "ModoOperacao": {
+    "RelX": 0.46451954611830604,
+    "RelY": 0,
+    "RelWidth": 0.3420151772676131,
+    "RelHeight": 0.24430656322175157,
+    "IsVisible": true,
+    "ZIndex": 9,
+    "IsPinnedRight": false
+  },
+  "DeteccaoCamera": {
+    "RelX": 0,
+    "RelY": 0,
+    "RelWidth": 0.46412754650132865,
+    "RelHeight": 0.4470588235294118,
+    "IsVisible": true,
+    "ZIndex": 3,
+    "IsPinnedRight": false
+  },
+  "Monitoramento": {
+    "RelX": 0,
+    "RelY": 0.4591479847053836,
+    "RelWidth": 0.46457618609321394,
+    "RelHeight": 0.29575397607893006,
+    "IsVisible": true,
+    "ZIndex": 23,
+    "IsPinnedRight": false
+  },
+  "ConsoleEventos": {
+    "RelX": 0.46451954611830604,
+    "RelY": 0.24477007078406435,
+    "RelWidth": 0.34507154213036567,
+    "RelHeight": 0.20653828980442027,
+    "IsVisible": true,
+    "ZIndex": 15,
+    "IsPinnedRight": false
+  },
+  "ZonasMortas": {
+    "RelX": 0.6303991297799347,
+    "RelY": 0.630395670000748,
+    "RelWidth": 0.30405405405405406,
+    "RelHeight": 0.6068662582360421,
+    "IsVisible": false,
+    "ZIndex": 27,
+    "IsPinnedRight": false
+  }
+}

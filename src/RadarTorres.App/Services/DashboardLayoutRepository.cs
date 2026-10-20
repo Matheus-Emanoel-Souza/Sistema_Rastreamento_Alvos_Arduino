@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using RadarTorres.App.Models;
 
@@ -88,6 +89,24 @@ public sealed class DashboardLayoutRepository : IDashboardLayoutRepository
         catch (Exception ex)
         {
             _logger?.Error($"Não foi possível limpar o layout salvo ({filePath}): {ex.Message}");
+        }
+    }
+
+    public Dictionary<string, DashboardCardLayout>? LoadSystemDefault(string screen)
+    {
+        string logicalName = $"RadarTorres.App.Resources.DefaultLayouts.{screen}.json";
+
+        try
+        {
+            using Stream? stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(logicalName);
+            if (stream is null) return null;
+
+            return JsonSerializer.Deserialize<Dictionary<string, DashboardCardLayout>>(stream);
+        }
+        catch (Exception ex)
+        {
+            _logger?.Warning($"Não foi possível ler o layout padrão do sistema embutido ({logicalName}): {ex.Message}. Usando arranjo automático.");
+            return null;
         }
     }
 
