@@ -31,6 +31,7 @@ public sealed class NavigationService : INavigationService
         {
             [MenuItem.PainelPrincipal] = () => _serviceProvider.GetRequiredService<PainelPrincipalView>(),
             [MenuItem.Monitoramento] = () => _serviceProvider.GetRequiredService<MonitoramentoView>(),
+            [MenuItem.Desempenho] = () => _serviceProvider.GetRequiredService<DesempenhoView>(),
             [MenuItem.ObjetosDetectados] = () => _serviceProvider.GetRequiredService<ObjetosDetectadosView>(),
             [MenuItem.AcoesRealizadas] = () => _serviceProvider.GetRequiredService<AcoesRealizadasView>(),
             [MenuItem.HistoricoModos] = () => _serviceProvider.GetRequiredService<HistoricoModosView>(),

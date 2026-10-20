@@ -185,7 +185,11 @@ public partial class RadarControl : UserControl
         {
             Interval = TimeSpan.FromMilliseconds(refreshMs)
         };
-        _renderTimer.Tick += (_, _) => Render();
+        _renderTimer.Tick += (_, _) =>
+        {
+            Render();
+            Services.DesempenhoMonitorService.Current?.RegisterRadarTick();
+        };
 
         Loaded += (_, _) => { _renderTimer.Start(); Render(); };
         Unloaded += (_, _) => _renderTimer.Stop();
