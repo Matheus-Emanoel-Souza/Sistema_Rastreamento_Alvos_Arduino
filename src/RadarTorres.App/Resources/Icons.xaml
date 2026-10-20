@@ -20,6 +20,10 @@
         <PathGeometry Figures="M12,12 L19,6"/>
     </GeometryGroup>
 
+    <GeometryGroup x:Key="Icon.Desempenho">
+        <PathGeometry Figures="M4,20 L4,14 M10,20 L10,9 M16,20 L16,5 M20,20 L20,11"/>
+    </GeometryGroup>
+
     <GeometryGroup x:Key="Icon.ObjetosDetectados">
         <RectangleGeometry Rect="5,5,5,5"/>
         <RectangleGeometry Rect="14,14,5,5"/>

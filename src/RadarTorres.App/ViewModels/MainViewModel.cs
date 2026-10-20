@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -35,6 +36,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly IModoAtualTorreRepository _modoAtualTorreRepository;
     private readonly IAuthService _authService;
     private readonly IPermissionService _permissionService;
+    private readonly IDesempenhoMonitorService _desempenhoMonitorService;
     private readonly Dispatcher _dispatcher;
 
     public DeteccaoCameraViewModel DeteccaoCamera { get; }
@@ -51,6 +53,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         IModoAtualTorreRepository modoAtualTorreRepository,
         IAuthService authService,
         IPermissionService permissionService,
+        IDesempenhoMonitorService desempenhoMonitorService,
         DeteccaoCameraViewModel deteccaoCameraViewModel)
     {
         _logger = logger;
@@ -64,6 +67,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _modoAtualTorreRepository = modoAtualTorreRepository;
         _authService = authService;
         _permissionService = permissionService;
+        _desempenhoMonitorService = desempenhoMonitorService;
         DeteccaoCamera = deteccaoCameraViewModel;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
@@ -618,7 +622,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         {
             case TargetMessage targetMessage:
                 if (IsPaused) return;
-                _trackingService.ProcessReading(new SensorReading
+                ProcessReadingMeasured(new SensorReading
                 {
                     TargetId = targetMessage.Id,
                     Angle = targetMessage.Angle,
@@ -648,14 +652,32 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private void OnSimulationReadingGenerated(object? sender, SensorReading reading)
     {
         if (IsPaused) return;
+        ProcessReadingMeasured(reading);
+    }
+
+    /// <summary>
+    /// Encaminha a leitura para <see cref="ITargetTrackingService.ProcessReading"/> medindo o
+    /// tempo de ciclo completo (tela de Desempenho): como o evento <c>TargetCreated</c>/
+    /// <c>TargetUpdated</c> é disparado de forma síncrona dentro de <c>ProcessReading</c>
+    /// (ver <see cref="TargetTrackingService"/>), este único <see cref="Stopwatch"/> já cobre
+    /// todo o pipeline reativo — rastreamento, seleção de torre e atualização do estado das
+    /// torres, disparados a partir de <see cref="OnTargetCreatedOrUpdated"/>.
+    /// </summary>
+    private void ProcessReadingMeasured(SensorReading reading)
+    {
+        long inicio = Stopwatch.GetTimestamp();
         _trackingService.ProcessReading(reading);
+        _desempenhoMonitorService.RecordCycleTime(Stopwatch.GetElapsedTime(inicio).TotalMilliseconds);
     }
 
     private void OnTargetCreatedOrUpdated(object? sender, Target target)
     {
         if (CurrentMode == SystemMode.AcompanharAlvos || CurrentMode == SystemMode.Disparar)
         {
+            long inicioDecisao = Stopwatch.GetTimestamp();
             TowerSelectionResult result = _towerService.SelectTowerFor(target);
+            _desempenhoMonitorService.RecordDecisionTime(Stopwatch.GetElapsedTime(inicioDecisao).TotalMilliseconds);
+
             _towerService.RecomputeTowerStates(Targets.Where(t => t.IsActive));
 
             if (result.Success)

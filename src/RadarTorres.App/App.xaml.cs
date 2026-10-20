@@ -70,6 +70,10 @@ public partial class App : Application
         // parser XAML antes de qualquer window existir — ver comentário em LocalizationService.
         LocalizationService.Current = ServiceProvider.GetRequiredService<ILocalizationService>();
 
+        // Bridge estático para o RadarControl (também instanciado via XAML, sem DI) reportar
+        // cada renderização ao monitor de desempenho — ver DesempenhoMonitorService.Current.
+        DesempenhoMonitorService.Current = ServiceProvider.GetRequiredService<IDesempenhoMonitorService>();
+
         AppDataPaths.EnsureDataFolderExists();
 
         // Resolve o monitor já aqui para o relatório desta execução existir desde o início,
@@ -236,6 +240,7 @@ public partial class App : Application
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IFocusModeService, FocusModeService>();
+        services.AddSingleton<IDesempenhoMonitorService, DesempenhoMonitorService>();
         services.AddScoped<INavigationService, NavigationService>();
 
         // --- Telas / ViewModels
@@ -269,6 +274,10 @@ public partial class App : Application
         // Tela "Histórico de Modos": mesmo padrão de recarregamento no Loaded.
         services.AddTransient<HistoricoModosViewModel>();
         services.AddScoped<HistoricoModosView>();
+
+        // Tela "Desempenho": timer de amostragem iniciado/parado no Loaded/Unloaded da view.
+        services.AddTransient<DesempenhoViewModel>();
+        services.AddScoped<DesempenhoView>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginView>();
