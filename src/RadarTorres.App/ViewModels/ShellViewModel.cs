@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using RadarTorres.App.Helpers;
@@ -25,6 +26,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     private readonly IPermissionService _permissionService;
     private readonly IPreferenciasUsuarioRepository _preferenciasRepository;
     private readonly ISerialCommunicationService _serialService;
+    private readonly IFocusModeService _focusModeService;
     private readonly Dispatcher _dispatcher;
 
     public ShellViewModel(
@@ -34,7 +36,8 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         INavigationService navigationService,
         IPermissionService permissionService,
         IPreferenciasUsuarioRepository preferenciasRepository,
-        ISerialCommunicationService serialService)
+        ISerialCommunicationService serialService,
+        IFocusModeService focusModeService)
     {
         _authService = authService;
         _localizationService = localizationService;
@@ -43,6 +46,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         _permissionService = permissionService;
         _preferenciasRepository = preferenciasRepository;
         _serialService = serialService;
+        _focusModeService = focusModeService;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
         _authService.SessionChanged += OnSessionChanged;
@@ -57,6 +61,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         LogoutCommand = new RelayCommand(Logout);
         RestaurarPadraoCommand = new RelayCommand(RestaurarPadrao);
         NovaJanelaCommand = new RelayCommand(() => NovaJanelaSolicitada?.Invoke(this, EventArgs.Empty));
+        ToggleFocusModeCommand = new RelayCommand(async () => await ToggleFocusModeAsync(), () => !_isTogglingFocusMode);
 
         MenuItems = new ObservableCollection<SidebarMenuEntry>();
         RebuildMenu();
@@ -112,6 +117,61 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     public event EventHandler? NovaJanelaSolicitada;
 
     public RelayCommand NovaJanelaCommand { get; }
+
+    // ---------------------------------------------------------------- Modo foco
+
+    public RelayCommand ToggleFocusModeCommand { get; }
+
+    private bool _isTogglingFocusMode;
+
+    public bool IsFocusModeActive => _focusModeService.IsActive;
+
+    public string FocusModeButtonLabel => _localizationService[IsFocusModeActive
+        ? "Shell.FocusMode.Desativar"
+        : "Shell.FocusMode.Ativar"];
+
+    private async Task ToggleFocusModeAsync()
+    {
+        if (_isTogglingFocusMode) return;
+
+        bool ativando = !_focusModeService.IsActive;
+
+        string pergunta = ativando
+            ? _localizationService["Shell.FocusMode.ConfirmarAtivar"]
+            : _localizationService["Shell.FocusMode.ConfirmarDesativar"];
+
+        bool confirmado = MessageBox.Show(pergunta, _localizationService["Shell.FocusMode.Titulo"],
+            MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        if (!confirmado) return;
+
+        _isTogglingFocusMode = true;
+        RelayCommand.RaiseCanExecuteChangedForAll();
+
+        try
+        {
+            if (ativando)
+            {
+                FocusModeResultado resultado = await _focusModeService.EnterFocusModeAsync();
+                string resumo = string.Format(_localizationService["Shell.FocusMode.Resumo"],
+                    resultado.ProcessosFechados, resultado.ProcessosComFalha,
+                    resultado.RedeDesativada
+                        ? _localizationService["Shell.FocusMode.RedeOk"]
+                        : _localizationService["Shell.FocusMode.RedeFalhou"]);
+                MessageBox.Show(resumo, _localizationService["Shell.FocusMode.Titulo"], MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                await _focusModeService.ExitFocusModeAsync();
+            }
+        }
+        finally
+        {
+            _isTogglingFocusMode = false;
+            OnPropertyChanged(nameof(IsFocusModeActive));
+            OnPropertyChanged(nameof(FocusModeButtonLabel));
+            RelayCommand.RaiseCanExecuteChangedForAll();
+        }
+    }
 
     private void SetLanguage(string languageCode)
     {
@@ -207,6 +267,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(EstadoComunicacaoTexto));
+        OnPropertyChanged(nameof(FocusModeButtonLabel));
     }
 
     // ---------------------------------------------------------------- Navegação
