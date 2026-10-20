@@ -72,6 +72,12 @@ public partial class App : Application
 
         AppDataPaths.EnsureDataFolderExists();
 
+        // Resolve o monitor já aqui para o relatório desta execução existir desde o início,
+        // mesmo que a tela de Monitoramento nunca seja aberta. Sem isso o Singleton só seria
+        // construído ao abrir o card de detecção, e uma execução sem câmera não deixaria
+        // arquivo nenhum — inclusive o cabeçalho com os limiares em vigor, que é útil por si só.
+        ServiceProvider.GetRequiredService<IPerformanceMonitor>();
+
         // Reaplica no banco qualquer escrita que ficou pendente de uma sessão anterior sem
         // conexão (ver PendingWriteQueue) — antes de qualquer outra leitura/escrita, inclusive
         // o seed do admin padrão abaixo.
@@ -81,10 +87,15 @@ public partial class App : Application
             ServiceProvider.GetRequiredService<IUsuarioRepository>(),
             ServiceProvider.GetRequiredService<IPasswordHasher>());
 
-        // Tema padrão antes de qualquer janela aparecer (evita "flash" sem estilo na tela de
-        // login); a preferência real do usuário é aplicada depois de autenticar. Tema/idioma
-        // são compartilhados por todas as janelas (recursos globais da Application no WPF).
-        ServiceProvider.GetRequiredService<IThemeService>().ApplyTheme(TemaPreferido.Escuro);
+        // Tema e idioma desta MÁQUINA antes de qualquer janela aparecer (evita "flash" sem
+        // estilo na tela de login); a preferência por CONTA DE USUÁRIO é aplicada depois de
+        // autenticar e sobrepõe esta. Tema/idioma são compartilhados por todas as janelas
+        // (recursos globais da Application no WPF).
+        ConfiguracoesAplicativo configuracoes =
+            ServiceProvider.GetRequiredService<IConfiguracoesAplicativoRepository>().Atual;
+
+        ServiceProvider.GetRequiredService<IThemeService>().ApplyTheme(configuracoes.Tema);
+        ServiceProvider.GetRequiredService<ILocalizationService>().SetLanguage(configuracoes.Idioma);
 
         // Cada sessão (aba) fecha independentemente — o app só encerra quando a última fecha
         // (ver CloseSession). Controlamos isso manualmente em vez de deixar o WPF decidir
@@ -94,6 +105,17 @@ public partial class App : Application
         _mainWindow = new MainWindow();
         _mainWindow.NovaAbaSolicitada += (_, _) => OpenNewSession();
         _mainWindow.AbaFechada += (_, tab) => FecharAba(tab);
+
+        // Fechar a janela pelo "X" precisa encerrar o aplicativo EXPLICITAMENTE: com
+        // ShutdownMode.OnExplicitShutdown o WPF não encerra sozinho ao fechar a última janela,
+        // e sem este encerramento o processo continuava vivo e invisível no Gerenciador de
+        // Tarefas — segurando a câmera e o arquivo do executável (impedindo até recompilar),
+        // até alguém notar e matá-lo à mão. Também é o que garante que OnExit rode e o
+        // relatório de desempenho desta execução seja fechado com as estatísticas.
+        _mainWindow.Closed += (_, _) => Shutdown();
+
+        AplicarConfiguracoesDeJanela(_mainWindow, configuracoes);
+
         _mainWindow.Show();
 
         OpenNewSession();
@@ -123,6 +145,60 @@ public partial class App : Application
         //     consultados por TowerSelectionService/FireControlService acima.
         services.AddSingleton<IZonaMortaRepository, ZonaMortaRepository>();
         services.AddSingleton<IZonaMortaService, ZonaMortaService>();
+
+        // --- Perfis de alvo (cor/formato/tamanho que a detecção por visão computacional deve
+        //     travar). Mesmo padrão de Zonas Mortas: repositório e serviço únicos para toda a
+        //     instalação, arquivo JSON próprio.
+        services.AddSingleton<IPerfilAlvoRepository, PerfilAlvoRepository>();
+        services.AddSingleton<IPerfilAlvoService, PerfilAlvoService>();
+
+        // --- Detecção por visão computacional (card "Detecção por Câmera" em Monitoramento).
+        //     IObjectDetectionService é Singleton porque carrega o modelo ONNX uma única vez
+        //     (custoso); IAlvoVisualService/IAlertaSonoroService não guardam estado próprio,
+        //     Singleton só evita realocação a cada uso.
+        services.AddSingleton<IObjectDetectionService, OnnxYoloDetectionService>();
+        services.AddSingleton<IAlvoVisualService, AlvoVisualService>();
+        services.AddSingleton<IAlertaSonoroService, AlertaSonoroService>();
+
+        //     Rastreamento das detecções por câmera e registro das ocorrências. Ambos Singleton
+        //     porque a identidade dos objetos acompanhados é COMPARTILHADA entre as câmeras que
+        //     estiverem detectando ao mesmo tempo (card de Monitoramento + os 4 painéis da tela
+        //     "Câmeras"): é o que garante uma ocorrência por quadrante, sem duplicar, mesmo com
+        //     as câmeras processando em paralelo em threads distintas.
+        services.AddSingleton<IRastreamentoVisualService, RastreamentoVisualService>();
+        services.AddSingleton<IOcorrenciaDeteccaoService, OcorrenciaDeteccaoService>();
+
+        //     Associação câmera → quadrante (tela "Câmeras"): Singleton, um cadastro único da
+        //     instalação, consultado pela detecção a cada ocorrência registrada.
+        services.AddSingleton<ICameraQuadranteRepository, SqliteCameraQuadranteRepository>();
+        services.AddSingleton<ICameraQuadranteService, CameraQuadranteService>();
+
+        //     Relatório de desempenho: Singleton porque é UM arquivo por execução do aplicativo.
+        //     O resumo estatístico é escrito no Dispose, disparado pelo ServiceProvider.Dispose()
+        //     em OnExit — por isso não pode ser Transient/Scoped, ou cada instância abriria e
+        //     fecharia um arquivo diferente e nenhum teria a sessão inteira.
+        services.AddSingleton<IPerformanceMonitor, PerformanceMonitorService>();
+
+        // --- Configurações desta máquina (tela "Configurações"). Singleton porque são um único
+        //     arquivo local, lido na abertura da janela — antes de qualquer login — e consultado
+        //     em pontos sensíveis a latência; a View/ViewModel acompanham o ciclo da sessão,
+        //     como as demais telas.
+        services.AddSingleton<IConfiguracoesAplicativoRepository>(
+            sp => new ConfiguracoesAplicativoRepository(sp.GetRequiredService<ILoggingService>()));
+        services.AddScoped<ConfiguracoesViewModel>();
+        services.AddScoped<ConfiguracoesView>();
+
+        // --- Termos de Uso: Singleton porque lê e analisa UMA vez o arquivo embutido (o mesmo
+        //     que o instalador exibe como página de licença). A janela de leitura é Transient —
+        //     é um diálogo, aberto e descartado a cada uso.
+        services.AddSingleton<ITermosDeUsoService, TermosDeUsoService>();
+        services.AddTransient<TermosDeUsoViewModel>();
+        services.AddTransient<TermosDeUsoWindow>();
+
+        //     Fábrica explícita: o contêiner da Microsoft não resolve Func<T> sozinho, e a tela
+        //     de Configurações precisa de uma JANELA NOVA a cada abertura — no WPF, uma Window
+        //     já fechada não pode ser exibida de novo.
+        services.AddTransient<Func<TermosDeUsoWindow>>(sp => () => sp.GetRequiredService<TermosDeUsoWindow>());
 
         // --- Aba "Configurações do Arduino" (ambiente/compilação/monitor serial). O compilador
         //     e o localizador do CLI não guardam estado entre chamadas (Transient); as
@@ -170,6 +246,7 @@ public partial class App : Application
         // antes — só deixam de ser compartilhados ENTRE janelas. Os serviços de hardware que
         // MainViewModel usa (serial, rastreamento, seleção de torre, acionamento, simulação)
         // continuam Singleton acima — é a mesma conexão física vista por todas as janelas.
+        services.AddScoped<DeteccaoCameraViewModel>();
         services.AddScoped<MainViewModel>();
         services.AddScoped<MonitoramentoView>();
 
@@ -206,6 +283,9 @@ public partial class App : Application
 
         services.AddScoped<CamerasViewModel>();
         services.AddScoped<CamerasView>();
+
+        services.AddScoped<PerfilAlvoViewModel>();
+        services.AddScoped<PerfilAlvoView>();
     }
 
     /// <summary>
@@ -361,25 +441,153 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Dimensiona a janela principal conforme as configurações desta máquina (tela
+    /// "Configurações") e, ao fechar, guarda o tamanho para o modo "lembrar último tamanho".
+    /// </summary>
+    /// <remarks>
+    /// O tamanho é limitado à área de trabalho disponível antes de ser aplicado: uma
+    /// configuração gravada num monitor grande e aberta depois num monitor menor (ou num
+    /// notebook sem a segunda tela) deixaria a janela maior que a tela, com a barra de título e
+    /// os botões fora do alcance do mouse — sem como redimensionar de volta.
+    /// </remarks>
+    private void AplicarConfiguracoesDeJanela(Window janela, ConfiguracoesAplicativo configuracoes)
+    {
+        double larguraMaxima = SystemParameters.WorkArea.Width;
+        double alturaMaxima = SystemParameters.WorkArea.Height;
+
+        switch (configuracoes.ModoAbertura)
+        {
+            case ModoAberturaJanela.Maximizada:
+                janela.WindowState = WindowState.Maximized;
+                break;
+
+            case ModoAberturaJanela.LembrarUltimoTamanho:
+                if (configuracoes.UltimaMaximizada)
+                {
+                    janela.WindowState = WindowState.Maximized;
+                }
+                else if (configuracoes.UltimaLargura is { } largura && configuracoes.UltimaAltura is { } altura)
+                {
+                    janela.Width = Math.Min(largura, larguraMaxima);
+                    janela.Height = Math.Min(altura, alturaMaxima);
+                }
+                break;
+
+            default:
+                janela.Width = Math.Min(configuracoes.LarguraJanela, larguraMaxima);
+                janela.Height = Math.Min(configuracoes.AlturaJanela, alturaMaxima);
+                break;
+        }
+
+        janela.Closing += (_, _) => GuardarTamanhoDaJanela(janela);
+    }
+
+    /// <summary>Registra o tamanho/estado atual da janela para a próxima abertura.</summary>
+    private void GuardarTamanhoDaJanela(Window janela)
+    {
+        try
+        {
+            IConfiguracoesAplicativoRepository repositorio =
+                ServiceProvider!.GetRequiredService<IConfiguracoesAplicativoRepository>();
+
+            ConfiguracoesAplicativo atuais = repositorio.Atual;
+            atuais.UltimaMaximizada = janela.WindowState == WindowState.Maximized;
+
+            // RestoreBounds (e não ActualWidth/Height) porque, com a janela maximizada ou
+            // minimizada, as dimensões atuais são as da tela — guardá-las faria o modo
+            // "lembrar" reabrir sempre do tamanho do monitor, perdendo o tamanho real que o
+            // usuário tinha escolhido antes de maximizar.
+            if (janela.WindowState == WindowState.Normal)
+            {
+                atuais.UltimaLargura = janela.ActualWidth;
+                atuais.UltimaAltura = janela.ActualHeight;
+            }
+            else if (!janela.RestoreBounds.IsEmpty)
+            {
+                atuais.UltimaLargura = janela.RestoreBounds.Width;
+                atuais.UltimaAltura = janela.RestoreBounds.Height;
+            }
+
+            repositorio.Salvar(atuais);
+        }
+        catch (Exception)
+        {
+            // Encerrando: não vale impedir o fechamento por não conseguir lembrar o tamanho.
+        }
+    }
+
+    /// <summary>
+    /// Anota uma exceção não tratada no relatório de desempenho desta execução. Melhor esforço:
+    /// o relatório pode nem ter sido criado (falha de disco) e o contêiner pode já estar
+    /// descartado se o erro acontecer durante o encerramento — em nenhum desses casos faz
+    /// sentido uma segunda exceção vinda do próprio tratamento de erro.
+    /// </summary>
+    private static void RegistrarErroNoRelatorio(string contexto, Exception? exception)
+    {
+        try
+        {
+            ServiceProvider?.GetService<IPerformanceMonitor>()?
+                .RegistrarErro(contexto, $"{exception?.GetType().Name}: {exception?.Message}");
+        }
+        catch (Exception)
+        {
+            // Ignorado de propósito — ver resumo acima.
+        }
+    }
+
     /// <summary>Exceções não tratadas geradas na thread de UI (bindings, comandos, eventos).</summary>
+    /// <remarks>
+    /// Um diálogo por vez e um por mensagem distinta, de propósito: <see cref="MessageBox"/>
+    /// roda um bombeamento de mensagens ANINHADO, então uma falha que se repete a cada lote do
+    /// dispatcher abre uma janela em cima da outra — foram dezenas de modais empilhados num
+    /// caso real, escondendo justamente o primeiro erro, que é o que interessa. As repetições
+    /// continuam sendo registradas no relatório de desempenho e no console de eventos; só o
+    /// alarme visual é que não se repete.
+    /// </remarks>
+    /// <summary>Se um diálogo de erro já está aberto (ver <see cref="OnDispatcherUnhandledException"/>).</summary>
+    private bool _exibindoErro;
+
+    /// <summary>Mensagem do último erro mostrado em diálogo — repetições não reabrem a janela.</summary>
+    private string? _ultimaMensagemDeErroExibida;
+
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        MessageBox.Show(
-            $"Ocorreu um erro inesperado e o RadarTorres pode não continuar funcionando corretamente.\n\n" +
-            $"Detalhes: {e.Exception.Message}",
-            "RadarTorres - Erro inesperado",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
+        RegistrarErroNoRelatorio("thread de UI", e.Exception);
 
-        // Marca como tratada para evitar o encerramento abrupto sempre que for seguro
-        // continuar (ex.: falha pontual ao processar uma leitura do sensor).
+        // Marcada como tratada primeiro: evita o encerramento abrupto sempre que for seguro
+        // continuar (ex.: falha pontual ao processar uma leitura do sensor), e vale mesmo que
+        // a exibição da mensagem abaixo seja suprimida.
         e.Handled = true;
+
+        if (_exibindoErro || e.Exception.Message == _ultimaMensagemDeErroExibida) return;
+
+        _exibindoErro = true;
+        _ultimaMensagemDeErroExibida = e.Exception.Message;
+
+        try
+        {
+            MessageBox.Show(
+                $"Ocorreu um erro inesperado e o RadarTorres pode não continuar funcionando corretamente.\n\n" +
+                $"Detalhes: {e.Exception.Message}\n\n" +
+                "Repetições deste mesmo erro não voltarão a abrir esta janela — elas continuam no " +
+                "console de eventos e no relatório de desempenho desta execução.",
+                "RadarTorres - Erro inesperado",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            _exibindoErro = false;
+        }
     }
 
     /// <summary>Exceções não tratadas geradas em threads de fundo (ex.: leitura serial, timers).</summary>
     private void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         var exception = e.ExceptionObject as Exception;
+        RegistrarErroNoRelatorio("thread de fundo", exception);
+
         MessageBox.Show(
             $"Ocorreu um erro crítico no RadarTorres e o aplicativo será encerrado.\n\n" +
             $"Detalhes: {exception?.Message ?? "Erro desconhecido."}",

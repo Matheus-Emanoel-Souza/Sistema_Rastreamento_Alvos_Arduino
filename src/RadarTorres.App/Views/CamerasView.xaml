@@ -21,10 +21,10 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{loc:Loc Cameras.Title}" FontSize="20" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource Accent.Fill}" VerticalAlignment="Center"/>
                 <Button Grid.Column="1" Content="{loc:Loc Cameras.Selecao.Atualizar}" Command="{Binding RefreshCommand}"
-                        Padding="10,5" Background="{DynamicResource PanelBorderBrush}"
-                        Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"/>
+                        Padding="10,5" Background="{DynamicResource Border.Control}"
+                        Foreground="{DynamicResource Text.Primary}" BorderThickness="0" Cursor="Hand"/>
             </Grid>
 
             <!-- Grade 2x2: cada item de Slots vira uma CameraPanelView independente. -->

@@ -35,9 +35,19 @@ Detectados (exportação sob demanda para o usuário, não persistência da apli
   `Administrador` | `Operador` | `Visualizador`. Senha em PBKDF2-HMACSHA256 (100.000 iterações,
   salt de 128 bits por usuário, `PasswordHasher.cs`) — nunca texto puro. Semeado no primeiro uso
   com `admin`/`admin123` (`DataSeeder.cs`).
-* **`objetos_detectados`** — histórico de detecções: uma linha por **primeira detecção** de um
-  alvo (não a cada atualização de posição), para não inflar o arquivo a cada ciclo do radar
-  (~150 ms). `Z` é sempre `null` hoje (sensores 2D); campo reservado para sensores 3D futuros.
+* **`objetos_detectados`** — histórico de **ocorrências** de detecção. No radar, uma linha por
+  **primeira detecção** de um alvo (não a cada atualização de posição), para não inflar a tabela
+  a cada ciclo (~150 ms). Na câmera, uma linha por **acompanhamento** (`RastreamentoId`) em cada
+  quadrante: enquanto o mesmo objeto segue sendo acompanhado, só `DataHoraUltimaDeteccao` avança.
+  Um mesmo alvo cadastrado pode originar até quatro ocorrências, uma por quadrante, sem duplicar
+  dentro de um deles — garantido pelo índice único parcial `(RastreamentoId, Quadrante)`.
+  `PerfilAlvoId` liga a ocorrência ao alvo cadastrado; `Estado` (`Detectado` | `AbatePendente` |
+  `Abatido`) só muda por evento explícito do sistema, nunca por o objeto sair da imagem. `Z` é
+  sempre `null` hoje (sensores 2D); campo reservado para sensores 3D futuros.
+* **`ocorrencia_estados`** — transições de `objetos_detectados.Estado`, somente inserção
+  (auditoria do ciclo de abate: quem confirmou ou descartou, e quando).
+* **`cameras`** — qual câmera monitora qual quadrante (Q1..Q4). Uma câmera por quadrante e um
+  quadrante por câmera, com índices únicos em `DispositivoId` e `Quadrante`.
 * **`acoes_realizadas`** — auditoria de acionamentos, **somente inserção** (o repositório não
   expõe Update/Delete de propósito). Gravado em `FireControlService.cs:105`, apenas quando o
   acionamento é **efetivamente executado com sucesso**; tentativas bloqueadas por segurança ou
@@ -59,6 +69,8 @@ erDiagram
     USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
     OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
+    OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
+    CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
 
     USUARIOS {
         int Id PK
@@ -84,6 +96,29 @@ erDiagram
         double NivelConfianca "nullable"
         string Observacao "nullable"
         string ReferenciaImagem "nullable"
+        int PerfilAlvoId "nullable"
+        string CameraDispositivoId "nullable"
+        string CameraNome "nullable"
+        string RastreamentoId "nullable"
+        string Estado "Detectado|AbatePendente|Abatido"
+        datetime DataHoraUltimaDeteccao "nullable"
+    }
+
+    OCORRENCIA_ESTADOS {
+        int Id PK
+        int ObjetoDetectadoId FK
+        string Estado "Detectado|AbatePendente|Abatido"
+        datetime DataHora
+        string Usuario "nullable - login de quem decidiu"
+        string Observacao "nullable"
+    }
+
+    CAMERAS {
+        int Id PK
+        string DispositivoId UK "moniker DirectShow"
+        string Nome
+        string Quadrante UK "Q1..Q4"
+        datetime AtualizadoEm
     }
 
     ACOES_REALIZADAS {

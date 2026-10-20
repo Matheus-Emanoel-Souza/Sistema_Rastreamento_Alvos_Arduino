@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using RadarTorres.App.Models;
 using RadarTorres.App.Services;
 using RadarTorres.App.ViewModels;
@@ -43,6 +44,9 @@ public partial class MonitoramentoView : UserControl
     /// "Painéis ocultos" (fixado não é a mesma coisa que oculto).</summary>
     private bool _isLogPinned;
 
+    /// <summary>Se já existe uma rolagem automática do console agendada para o próximo passe de layout (ver <see cref="LogEntries_CollectionChanged"/>).</summary>
+    private bool _autoScrollAgendado;
+
     public MonitoramentoView(MainViewModel viewModel, IDashboardLayoutRepository layoutRepository, IAuthService authService)
     {
         InitializeComponent();
@@ -68,6 +72,7 @@ public partial class MonitoramentoView : UserControl
         // lateral, então o carregamento inicial precisa do Loaded (primeiro momento em que o
         // LayoutCanvas tem um tamanho real para converter frações em pixels).
         Loaded += (_, _) => LoadLayoutForCurrentUser();
+        Unloaded += (_, _) => _viewModel.DeteccaoCamera.PararCamera();
     }
 
     /// <summary>Chave de persistência do layout — por tela e por usuário logado (Requisito
@@ -81,16 +86,43 @@ public partial class MonitoramentoView : UserControl
     private void Radar_ZonaMortaRangeSelected(object? sender, (double MinDistance, double MaxDistance) range) =>
         _viewModel.OnRadarRangeSelected(range.MinDistance, range.MaxDistance);
 
+    /// <summary>
+    /// Rola o console de eventos para a última linha quando chega log novo — <b>fora</b> da
+    /// notificação de mudança da coleção.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>ScrollIntoView</c> força a geração de containers e um passe de layout do ListBox
+    /// virtualizado. Chamado DENTRO do <c>CollectionChanged</c>, isso reentra no
+    /// <c>ItemContainerGenerator</c> enquanto ele ainda está processando a inserção, e o WPF
+    /// derruba a tela com "Um ItemsControl é inconsistente com a origem de seus itens".
+    /// Passou a acontecer quando a detecção virou multi-câmera: antes havia um pipeline
+    /// alimentando o console, agora são até cinco (o card de Monitoramento e os quatro painéis
+    /// da tela "Câmeras"), e as inserções chegam em rajada.
+    /// </para>
+    /// <para>
+    /// O agendamento único (<see cref="_autoScrollAgendado"/>) também serve de limitador: numa
+    /// rajada de dezenas de linhas, rola uma vez ao final em vez de uma vez por linha.
+    /// </para>
+    /// </remarks>
     private void LogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action != NotifyCollectionChangedAction.Add) return;
+        if (_autoScrollAgendado) return;
 
-        // _logListBox (não CardConsoleEventos.CardContent) porque o ListBox pode estar tanto
-        // dentro do card quanto na faixa lateral fixada — ver comentário no campo.
-        if (_logListBox is { Items.Count: > 0 } listBox)
+        _autoScrollAgendado = true;
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
         {
-            listBox.ScrollIntoView(listBox.Items[^1]);
-        }
+            _autoScrollAgendado = false;
+
+            // _logListBox (não CardConsoleEventos.CardContent) porque o ListBox pode estar tanto
+            // dentro do card quanto na faixa lateral fixada — ver comentário no campo.
+            if (_logListBox is { Items.Count: > 0 } listBox)
+            {
+                listBox.ScrollIntoView(listBox.Items[^1]);
+            }
+        });
     }
 
     // ---------------------------------------------------------------- Fixar console na lateral

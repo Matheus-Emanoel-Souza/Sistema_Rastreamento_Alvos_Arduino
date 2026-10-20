@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows;
+using System.Windows.Threading;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.Repositories;
@@ -22,6 +24,8 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     private readonly INavigationService _navigationService;
     private readonly IPermissionService _permissionService;
     private readonly IPreferenciasUsuarioRepository _preferenciasRepository;
+    private readonly ISerialCommunicationService _serialService;
+    private readonly Dispatcher _dispatcher;
 
     public ShellViewModel(
         IAuthService authService,
@@ -29,7 +33,8 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         IThemeService themeService,
         INavigationService navigationService,
         IPermissionService permissionService,
-        IPreferenciasUsuarioRepository preferenciasRepository)
+        IPreferenciasUsuarioRepository preferenciasRepository,
+        ISerialCommunicationService serialService)
     {
         _authService = authService;
         _localizationService = localizationService;
@@ -37,9 +42,13 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         _navigationService = navigationService;
         _permissionService = permissionService;
         _preferenciasRepository = preferenciasRepository;
+        _serialService = serialService;
+        _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
         _authService.SessionChanged += OnSessionChanged;
         _localizationService.PropertyChanged += OnLocalizationChanged;
+        _serialService.ConnectionStateChanged += OnConnectionStateChanged;
+        _navigationService.Navigated += OnNavigated;
 
         SetLanguageCommand = new RelayCommand(codigo => SetLanguage((string)codigo!));
         SetThemeCommand = new RelayCommand(tema => SetTheme((TemaPreferido)tema!));
@@ -61,6 +70,27 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     public string NomeUsuario => _authService.CurrentUser?.Nome ?? string.Empty;
 
     public string PerfilUsuario => _authService.CurrentUser?.Perfil.ToString() ?? string.Empty;
+
+    /// <summary>Inicial do nome do usuário logado, para o avatar circular do cabeçalho.</summary>
+    public string IniciaisUsuario => string.IsNullOrEmpty(NomeUsuario) ? string.Empty : NomeUsuario[..1].ToUpperInvariant();
+
+    // ---------------------------------------------------------------- Comunicação (chip do cabeçalho)
+
+    public ConnectionState EstadoComunicacao => _serialService.State;
+
+    public string EstadoComunicacaoTexto => _localizationService[$"ConnectionState.{EstadoComunicacao}"];
+
+    private void OnConnectionStateChanged(object? sender, ConnectionState e) => RunOnUi(() =>
+    {
+        OnPropertyChanged(nameof(EstadoComunicacao));
+        OnPropertyChanged(nameof(EstadoComunicacaoTexto));
+    });
+
+    private void RunOnUi(Action action)
+    {
+        if (_dispatcher.CheckAccess()) action();
+        else _dispatcher.BeginInvoke(action);
+    }
 
     // ---------------------------------------------------------------- Idioma / tema
 
@@ -130,29 +160,39 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<SidebarMenuEntry> MenuItems { get; }
 
+    /// <summary>Grupos da Sidebar (Requisito "agrupar os itens com rótulos") — a chave de grupo
+    /// só é anexada ao PRIMEIRO item de cada grupo; é esse valor não-nulo que faz o cabeçalho de
+    /// grupo renderizar uma única vez (ver SidebarView.xaml).</summary>
+    private static readonly (MenuItem Item, string LabelKey, string IconKey, string? GroupLabelKey)[] TodosOsItens =
+    [
+        (MenuItem.PainelPrincipal, "Sidebar.PainelPrincipal", "Icon.PainelPrincipal", "Sidebar.Group.Operacao"),
+        (MenuItem.Monitoramento, "Sidebar.Monitoramento", "Icon.Monitoramento", null),
+        (MenuItem.ObjetosDetectados, "Sidebar.ObjetosDetectados", "Icon.ObjetosDetectados", null),
+        (MenuItem.AcoesRealizadas, "Sidebar.AcoesRealizadas", "Icon.AcoesRealizadas", null),
+        (MenuItem.HistoricoModos, "Sidebar.HistoricoModos", "Icon.HistoricoModos", null),
+        (MenuItem.Cameras, "Sidebar.Cameras", "Icon.Cameras", "Sidebar.Group.Equipamento"),
+        (MenuItem.PerfilAlvo, "Sidebar.PerfilAlvo", "Icon.PerfisAlvo", null),
+        (MenuItem.ConfiguracoesArduino, "Sidebar.ConfiguracoesArduino", "Icon.ConfiguracoesArduino", null),
+        (MenuItem.Usuarios, "Sidebar.Usuarios", "Icon.Usuarios", "Sidebar.Group.Administracao"),
+        (MenuItem.Configuracoes, "Sidebar.Configuracoes", "Icon.Configuracoes", null),
+    ];
+
     private void RebuildMenu()
     {
         MenuItems.Clear();
 
         Models.PerfilUsuario perfil = _authService.CurrentUser?.Perfil ?? Models.PerfilUsuario.Visualizador;
 
-        (MenuItem Item, string LabelKey)[] todos =
-        [
-            (MenuItem.PainelPrincipal, "Sidebar.PainelPrincipal"),
-            (MenuItem.Monitoramento, "Sidebar.Monitoramento"),
-            (MenuItem.ObjetosDetectados, "Sidebar.ObjetosDetectados"),
-            (MenuItem.AcoesRealizadas, "Sidebar.AcoesRealizadas"),
-            (MenuItem.HistoricoModos, "Sidebar.HistoricoModos"),
-            (MenuItem.Usuarios, "Sidebar.Usuarios"),
-            (MenuItem.Cameras, "Sidebar.Cameras"),
-            (MenuItem.ConfiguracoesArduino, "Sidebar.ConfiguracoesArduino"),
-        ];
-
-        foreach ((MenuItem item, string labelKey) in todos)
+        foreach ((MenuItem item, string labelKey, string iconKey, string? groupLabelKey) in TodosOsItens)
         {
             if (_permissionService.PodeVerMenu(perfil, item))
             {
-                MenuItems.Add(new SidebarMenuEntry(item, labelKey) { Label = _localizationService[labelKey] });
+                var entry = new SidebarMenuEntry(item, labelKey, iconKey, groupLabelKey)
+                {
+                    Label = _localizationService[labelKey]
+                };
+                if (groupLabelKey is not null) entry.GroupLabel = _localizationService[groupLabelKey];
+                MenuItems.Add(entry);
             }
         }
     }
@@ -162,23 +202,42 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         foreach (SidebarMenuEntry entry in MenuItems)
         {
             entry.Label = _localizationService[entry.LabelKey];
+            if (entry.GroupLabelKey is not null) entry.GroupLabel = _localizationService[entry.GroupLabelKey];
+            if (entry.IsSelected) CurrentPageTitle = entry.Label;
         }
+
+        OnPropertyChanged(nameof(EstadoComunicacaoTexto));
     }
 
     // ---------------------------------------------------------------- Navegação
 
     public RelayCommand NavigateCommand { get; }
 
+    /// <summary>Título da página atual (Requisito "título da página" no cabeçalho) — reaproveita
+    /// o rótulo já traduzido do item de menu correspondente, em vez de duplicar as chaves de
+    /// tradução em outro lugar.</summary>
+    private string _currentPageTitle = string.Empty;
+    public string CurrentPageTitle
+    {
+        get => _currentPageTitle;
+        private set => SetProperty(ref _currentPageTitle, value);
+    }
+
     /// <summary>Chamado pela ShellWindow logo após registrar o ContentControl host (ver SetHost).</summary>
     public void NavigateToDefault() => Navigate(MenuItem.PainelPrincipal);
 
-    private void Navigate(MenuItem item)
-    {
-        _navigationService.NavigateTo(item);
+    private void Navigate(MenuItem item) => _navigationService.NavigateTo(item);
 
+    /// <summary>Sincroniza seleção da Sidebar e título do cabeçalho com a navegação real —
+    /// assina <see cref="INavigationService.Navigated"/> em vez de só reagir ao próprio
+    /// <see cref="Navigate"/>, para também cobrir navegação disparada por outra tela (ex.: o
+    /// link "Conectar à porta serial" do Painel Principal, que chama NavigateTo diretamente).</summary>
+    private void OnNavigated(object? sender, MenuItem item)
+    {
         foreach (SidebarMenuEntry entry in MenuItems)
         {
             entry.IsSelected = entry.Item == item;
+            if (entry.IsSelected) CurrentPageTitle = entry.Label;
         }
     }
 
@@ -199,6 +258,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(NomeUsuario));
         OnPropertyChanged(nameof(PerfilUsuario));
+        OnPropertyChanged(nameof(IniciaisUsuario));
         RebuildMenu();
 
         // Um novo usuário logou (a ShellWindow é reaproveitada entre logout/login) — volta
@@ -228,5 +288,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     {
         _authService.SessionChanged -= OnSessionChanged;
         _localizationService.PropertyChanged -= OnLocalizationChanged;
+        _serialService.ConnectionStateChanged -= OnConnectionStateChanged;
+        _navigationService.Navigated -= OnNavigated;
     }
 }

@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Famílias de fonte da identidade visual. As 3 famílias (Chakra Petch, IBM Plex Sans,
+        JetBrains Mono — todas OFL) estão embutidas no assembly como Resource (ver
+        RadarTorres.App.csproj), por isso o caminho relativo "./Resources/Fonts/#<Nome>" em vez de
+        um nome de fonte instalada no Windows. O fallback (Segoe UI / Consolas) é o segundo nome na
+        mesma string — o WPF já resolve lista de fallback separada por vírgula nativamente, então
+        não precisa de nenhum código: se a fonte embutida não carregar por algum motivo, cai no
+        fallback sem quebrar a tela.
+    -->
+    <FontFamily x:Key="Font.Display">./Resources/Fonts/#Chakra Petch, Segoe UI</FontFamily>
+    <FontFamily x:Key="Font.Body">./Resources/Fonts/#IBM Plex Sans, Segoe UI</FontFamily>
+    <FontFamily x:Key="Font.Mono">./Resources/Fonts/#JetBrains Mono, Consolas</FontFamily>
+</ResourceDictionary>

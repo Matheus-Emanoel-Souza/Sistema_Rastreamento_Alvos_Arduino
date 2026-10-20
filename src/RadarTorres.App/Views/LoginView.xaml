@@ -4,29 +4,29 @@
              xmlns:loc="clr-namespace:RadarTorres.App.Localization"
              xmlns:conv="clr-namespace:RadarTorres.App.Converters"
              xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
-             Background="{DynamicResource BackgroundBrush}"
-             Foreground="{DynamicResource TextPrimaryBrush}"
-             FontFamily="Segoe UI">
+             Background="{DynamicResource Bg.Window}"
+             Foreground="{DynamicResource Text.Primary}"
+             FontFamily="{DynamicResource Font.Body}">
 
     <UserControl.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="8,7"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="FontSize" Value="14"/>
         </Style>
         <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="0,10"/>
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -34,17 +34,41 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid>
+    <!-- ClipToBounds: a marca d'água abaixo é escalada para COBRIR a área (UniformToFill), o
+         que significa que ela sempre sobra em uma das direções — sem o recorte, esse excesso
+         vazaria para fora da aba. -->
+    <Grid ClipToBounds="True">
+        <!--
+            Marca d'água com o ícone do aplicativo (mesmo arquivo do ícone do .exe, exposto
+            como Resource no .csproj). UniformToFill, e não Uniform: o ícone é quadrado e a
+            área de login é larga, então "preencher e recortar" deixa a torre centralizada
+            ocupando o fundo inteiro, enquanto "caber inteiro" deixaria duas faixas vazias e
+            traria o wordmark do ícone para a tela — repetindo o título "RadarTorres" que o
+            cartão já exibe logo acima do formulário.
+
+            DecodePixelWidth=256 escolhe explicitamente o maior quadro do .ico (ele tem 7, de
+            16 a 256 px): sem isso o decodificador pode pegar um quadro pequeno e a ampliação
+            fica visivelmente serrilhada. A opacidade vem do tema (ver Themes/Dark.xaml), e
+            IsHitTestVisible=False garante que a imagem não roube cliques do formulário.
+        -->
+        <Image Stretch="UniformToFill" IsHitTestVisible="False"
+               Opacity="{DynamicResource LoginMarcaDaguaOpacidade}"
+               RenderOptions.BitmapScalingMode="HighQuality">
+            <Image.Source>
+                <BitmapImage UriSource="pack://application:,,,/Assets/RadarTorres.ico" DecodePixelWidth="256"/>
+            </Image.Source>
+        </Image>
+
         <Border VerticalAlignment="Center" HorizontalAlignment="Center"
-                Background="{DynamicResource PanelBrush}"
-                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                Background="{DynamicResource Bg.Card}"
+                BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
                 CornerRadius="10" Padding="32" Width="340">
             <StackPanel>
                 <TextBlock Text="RadarTorres" FontSize="22" FontWeight="Bold"
-                           HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
+                           HorizontalAlignment="Center" Foreground="{DynamicResource Accent.Fill}"/>
                 <TextBlock Text="{loc:Loc Login.Subtitle}" FontSize="11" TextWrapping="Wrap"
                            HorizontalAlignment="Center" TextAlignment="Center"
-                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,24"/>
+                           Foreground="{DynamicResource Text.Secondary}" Margin="0,4,0,24"/>
 
                 <TextBlock Text="{loc:Loc Login.Username}" Style="{StaticResource FieldLabel}"/>
                 <TextBox x:Name="LoginTextBox" Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}"/>
@@ -53,7 +77,7 @@
                 <shared:PasswordRevealBox Password="{Binding Senha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
 
                 <TextBlock Text="{Binding ErrorMessage}"
-                           Foreground="{DynamicResource DangerBrush}" FontSize="12"
+                           Foreground="{DynamicResource Danger.Fill}" FontSize="12"
                            TextWrapping="Wrap" Margin="0,8,0,0"
                            Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibilityConverter}}"/>
 
@@ -62,7 +86,7 @@
 
                 <TextBlock Text="{loc:Loc Login.DefaultAdminHint}" FontSize="10"
                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,16,0,0"/>
+                           Foreground="{DynamicResource Text.Secondary}" Margin="0,16,0,0"/>
             </StackPanel>
         </Border>
     </Grid>
