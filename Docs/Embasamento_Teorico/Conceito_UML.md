@@ -100,3 +100,7 @@ texto (PlantUML/Mermaid) ou de edição visual (draw.io, StarUML).
 ## Referência
 
 - OMG UML Specification — https://www.omg.org/spec/UML/
+
+## Ver também
+
+- [[UML_RadarTorres]] — aplicação prática destes conceitos ao RadarTorres (entregável do TCC).

@@ -17,14 +17,22 @@ public static class AppDataPaths
         "RadarTorres");
 
     /// <summary>
-    /// Pasta com as "tabelas" em CSV (ver <c>Docs/Tecnica/MODELO_DADOS.md</c>).
-    /// TODO(SQL): quando migrar para um banco relacional, este é o único lugar que precisa
-    /// mudar de raciocínio — os repositórios em <c>Repositories/</c> continuam com a mesma
-    /// interface, só a implementação concreta troca de CSV para o banco escolhido.
+    /// Pasta com <c>radartorres.db</c> (SQLite, único armazenamento — ver
+    /// <see cref="SqliteConnectionFactory"/> e <c>Docs/Tecnica/MODELO_DADOS.md</c>).
     /// </summary>
     public static string DataFolder { get; } = Path.Combine(RootFolder, "Data");
+
+    /// <summary>
+    /// Pasta com um relatório de desempenho por execução do aplicativo (ver
+    /// <see cref="Services.IPerformanceMonitor"/>). Separada de <see cref="DataFolder"/> porque
+    /// é material de diagnóstico descartável — pode ser apagada inteira sem perder nenhum dado
+    /// do sistema.
+    /// </summary>
+    public static string DiagnosticoFolder { get; } = Path.Combine(RootFolder, "Diagnostico");
 
     public static string GetCsvPath(string tableName) => Path.Combine(DataFolder, $"{tableName}.csv");
 
     public static void EnsureDataFolderExists() => Directory.CreateDirectory(DataFolder);
+
+    public static void EnsureDiagnosticoFolderExists() => Directory.CreateDirectory(DiagnosticoFolder);
 }

@@ -1,0 +1,416 @@
+﻿================================================================================
+                  TERMOS DE USO DO SOFTWARE "RADARTORRES"
+================================================================================
+
+Versão 1.1 — vigente a partir de 16 de outubro de 2026.
+
+LEIA ATENTAMENTE ANTES DE INSTALAR OU UTILIZAR.
+
+Este documento é um contrato de licença de uso de software, celebrado entre
+você ("USUÁRIO") e o autor identificado na Cláusula 1 ("AUTOR"). A instalação,
+a cópia ou o uso do RadarTorres ("SOFTWARE") implica aceitação integral e sem
+reservas destes Termos. Caso não concorde com qualquer disposição, interrompa
+a instalação e não utilize o SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+1. IDENTIFICAÇÃO E NATUREZA ACADÊMICA
+--------------------------------------------------------------------------------
+
+1.1. O SOFTWARE denomina-se "RadarTorres — Sistema de Detecção e Seleção de
+Torres" e foi desenvolvido por Matheus Emanoel de Souza e Gabriel Vasconcellos
+de Morais, estudantes do curso de Engenharia da Computação da UCL, como
+Trabalho de Conclusão de Curso (TCC), sob orientação de Anker Loss.
+
+1.2. O SOFTWARE é um ARTEFATO ACADÊMICO EXPERIMENTAL, produzido com finalidade
+exclusivamente didática, científica e demonstrativa, no contexto de avaliação
+curricular. NÃO é, nem pretende ser, um produto comercial, industrial, militar
+ou de segurança, e não foi submetido a homologação, certificação, ensaio de
+conformidade ou validação por qualquer órgão regulador.
+
+1.3. O USUÁRIO declara compreender que protótipos acadêmicos são desenvolvidos
+sob restrições de tempo, orçamento e escopo incompatíveis com os requisitos de
+engenharia exigidos de produtos destinados ao mercado, e que o SOFTWARE pode
+conter defeitos, imprecisões e comportamentos não previstos.
+
+1.4. Eventual menção à instituição de ensino destina-se unicamente a indicar o
+contexto acadêmico de produção, não implicando endosso, patrocínio, garantia ou
+responsabilidade da instituição quanto ao SOFTWARE ou ao seu uso.
+
+
+--------------------------------------------------------------------------------
+2. DEFINIÇÕES
+--------------------------------------------------------------------------------
+
+2.1. "DADOS GERADOS": todo e qualquer dado produzido, coletado ou registrado
+durante a execução do SOFTWARE, incluindo, sem limitação: registros de objetos
+detectados; registros de ações realizadas; histórico de modos de operação;
+relatórios de desempenho e diagnóstico; parâmetros de configuração; perfis de
+alvo; e imagens capturadas por câmera, inclusive fotografias de referência.
+
+2.2. "USO COMERCIAL": qualquer utilização, direta ou indireta, que vise
+vantagem econômica ou proveito comercial, incluindo venda, sublicenciamento,
+locação, prestação de serviços remunerados, uso em atividade empresarial
+produtiva, incorporação a produto ou serviço oferecido a terceiros, e uso
+publicitário ou promocional.
+
+2.3. "APLICAÇÃO CRÍTICA": qualquer emprego em que falha, imprecisão,
+indisponibilidade ou atraso do SOFTWARE possa resultar em morte, lesão
+corporal, dano ambiental, dano patrimonial relevante ou violação de direitos.
+
+
+--------------------------------------------------------------------------------
+3. ACEITAÇÃO E CAPACIDADE
+--------------------------------------------------------------------------------
+
+3.1. A aceitação se dá por ato inequívoco de instalação ou uso, na forma do
+artigo 111 do Código Civil (Lei nº 10.406/2002), que admite o silêncio
+qualificado e a manifestação tácita de vontade quando as circunstâncias ou os
+usos a autorizarem.
+
+3.2. O USUÁRIO declara ser plenamente capaz nos termos da lei civil, ou estar
+devidamente assistido ou representado, e possuir legitimidade para assumir as
+obrigações aqui previstas.
+
+3.3. Se o USUÁRIO instalar ou utilizar o SOFTWARE em nome de pessoa jurídica ou
+de terceiro, declara ter poderes bastantes para vinculá-lo a estes Termos.
+
+
+--------------------------------------------------------------------------------
+4. LICENÇA DE USO CONCEDIDA
+--------------------------------------------------------------------------------
+
+4.1. O AUTOR concede ao USUÁRIO licença pessoal, não exclusiva, intransferível,
+revogável, gratuita e limitada ao território nacional e ao prazo destes Termos,
+para instalar e executar o SOFTWARE exclusivamente para fins de ESTUDO,
+PESQUISA, ENSINO, AVALIAÇÃO ACADÊMICA E DEMONSTRAÇÃO NÃO COMERCIAL.
+
+4.2. A licença é concedida A TÍTULO GRATUITO. Não há, portanto, relação de
+consumo onerosa, contraprestação pecuniária, nem fornecimento de produto ou
+serviço no mercado de consumo, o que afasta a incidência do regime do Código de
+Defesa do Consumidor (Lei nº 8.078/1990) sobre esta relação, sem prejuízo do
+disposto na Cláusula 10.4.
+
+4.3. A licença não transfere a propriedade do SOFTWARE nem qualquer direito
+patrimonial de autor, que permanecem integralmente com o AUTOR.
+
+4.4. RELAÇÃO COM A LICENÇA DE CÓDIGO-FONTE. O código-fonte do SOFTWARE pode ser
+distribuído separadamente sob licença de software livre própria. Havendo
+conflito entre estes Termos e a licença de código-fonte aplicável a uma cópia
+específica, prevalecerá, quanto àquela cópia e na exata extensão do conflito, a
+licença de código-fonte, por força de seu caráter irrevogável. Estes Termos
+regem a distribuição binária ora instalada, os DADOS GERADOS e as condições de
+suporte, garantia e responsabilidade.
+
+
+--------------------------------------------------------------------------------
+5. VEDAÇÃO AO USO COMERCIAL
+--------------------------------------------------------------------------------
+
+5.1. É EXPRESSAMENTE VEDADO O USO COMERCIAL do SOFTWARE, conforme definido na
+Cláusula 2.2.
+
+5.2. É igualmente vedado, independentemente de finalidade lucrativa:
+
+   a) comercializar, alugar, emprestar, ceder ou sublicenciar o SOFTWARE;
+   b) incorporá-lo, no todo ou em parte, a produto ou serviço de terceiros;
+   c) remover, alterar ou ocultar avisos de autoria, créditos acadêmicos ou
+      estes Termos;
+   d) apresentar o SOFTWARE como criação própria ou de terceiro;
+   e) utilizá-lo em demonstração comercial, feira ou material promocional sem
+      autorização escrita e específica do AUTOR.
+
+5.3. A violação desta cláusula caracteriza infração aos direitos de autor,
+sujeitando o infrator às sanções civis e penais da Lei nº 9.609/1998 (Lei do
+Software), em especial o artigo 12, e da Lei nº 9.610/1998 (Lei de Direitos
+Autorais), sem prejuízo de perdas e danos.
+
+
+--------------------------------------------------------------------------------
+6. RESTRIÇÕES DE SEGURANÇA — CLÁUSULA ESSENCIAL
+--------------------------------------------------------------------------------
+
+6.1. O SOFTWARE implementa, em ambiente de simulação e demonstração acadêmica,
+conceitos de detecção, rastreamento e seleção de alvos, incluindo modos de
+operação nominalmente denominados de acompanhamento e de disparo.
+
+6.2. TAIS DENOMINAÇÕES SÃO ESTRITAMENTE SIMBÓLICAS E DIDÁTICAS. O SOFTWARE NÃO
+ACIONA, NÃO CONTROLA E NÃO SE DESTINA A ACIONAR OU CONTROLAR ARMAMENTO DE
+QUALQUER ESPÉCIE.
+
+6.3. É TERMINANTEMENTE PROIBIDO:
+
+   a) acoplar o SOFTWARE a arma de fogo, arma de pressão, dispositivo de
+      arremesso, laser de potência, ou a qualquer mecanismo capaz de causar
+      dano a pessoas, animais ou bens;
+   b) empregá-lo em APLICAÇÃO CRÍTICA, conforme Cláusula 2.3, incluindo
+      sistemas de segurança patrimonial, vigilância, controle de acesso,
+      proteção perimetral, aplicações médicas, aeronáuticas, veiculares,
+      industriais de risco ou militares;
+   c) utilizá-lo para vigiar, monitorar, perseguir ou identificar pessoas sem
+      base legal e consentimento, ou de modo a violar a intimidade, a vida
+      privada, a honra ou a imagem alheias, protegidas pelo artigo 5º, inciso
+      X, da Constituição Federal;
+   d) utilizá-lo para qualquer finalidade ilícita.
+
+6.4. O USUÁRIO que descumprir esta cláusula assume INTEGRAL E EXCLUSIVA
+responsabilidade civil, administrativa e penal pelos danos resultantes, e
+obriga-se a manter o AUTOR e a instituição de ensino indenes, nos termos da
+Cláusula 11.
+
+6.5. Esta cláusula é essencial ao contrato. Seu descumprimento acarreta
+resolução automática da licença, independentemente de notificação.
+
+
+--------------------------------------------------------------------------------
+7. DADOS GERADOS — COMPARTILHAMENTO E CONSENTIMENTO
+--------------------------------------------------------------------------------
+
+7.1. CONSENTIMENTO. Ao aceitar estes Termos, o USUÁRIO CONSENTE LIVRE,
+INFORMADA E INEQUIVOCAMENTE, nos termos do artigo 7º, inciso I, e do artigo 8º
+da Lei nº 13.709/2018 (LGPD), com o compartilhamento dos DADOS GERADOS com o
+AUTOR, para as finalidades específicas descritas na Cláusula 7.3.
+
+7.2. FORMA DE COMPARTILHAMENTO. O SOFTWARE armazena os DADOS GERADOS
+localmente, no computador do USUÁRIO. NÃO HÁ transmissão automática pela
+internet. O compartilhamento ocorre por ato voluntário do USUÁRIO, mediante
+envio dos arquivos ao AUTOR, ou pela disponibilização do equipamento em sessão
+de avaliação acadêmica.
+
+7.3. FINALIDADES. Os DADOS GERADOS serão tratados exclusivamente para:
+
+   a) avaliação acadêmica do Trabalho de Conclusão de Curso;
+   b) diagnóstico técnico, correção de defeitos e aferição de desempenho;
+   c) calibração e aprimoramento dos algoritmos de detecção;
+   d) produção de resultados, estatísticas, gráficos e conclusões em trabalhos
+      acadêmicos, artigos, apresentações e bancas examinadoras.
+
+7.4. ANONIMIZAÇÃO. Dados divulgados em trabalhos acadêmicos serão apresentados
+de forma agregada ou anonimizada, salvo autorização específica e por escrito do
+titular. Dados anonimizados não são considerados dados pessoais, na forma do
+artigo 12 da LGPD.
+
+7.5. IMAGENS E DADOS DE TERCEIROS — ATENÇÃO. O SOFTWARE utiliza câmera e pode
+capturar e armazenar imagens que contenham pessoas identificáveis. Imagem de
+pessoa natural é dado pessoal (artigo 5º, inciso I, da LGPD) e bem jurídico
+protegido pelo artigo 20 do Código Civil.
+
+   a) O USUÁRIO é o CONTROLADOR dos dados que capturar, na forma do artigo 5º,
+      inciso VI, da LGPD, e responde pelo cumprimento da legislação;
+   b) o USUÁRIO obriga-se a obter o consentimento prévio, específico e por
+      escrito de toda pessoa cuja imagem venha a ser capturada;
+   c) o USUÁRIO obriga-se a NÃO capturar imagens de crianças e adolescentes
+      sem o consentimento específico de ao menos um dos pais ou responsável
+      legal, exigido pelo artigo 14 da LGPD;
+   d) o USUÁRIO obriga-se a não capturar dados pessoais sensíveis (artigo 5º,
+      inciso II, da LGPD) e a não empregar o SOFTWARE para identificação
+      biométrica de pessoas;
+   e) o AUTOR não tem ingerência sobre o que o USUÁRIO captura e não responde
+      por captação irregular.
+
+7.6. DIREITOS DO TITULAR. São assegurados os direitos do artigo 18 da LGPD,
+notadamente confirmação de tratamento, acesso, correção, anonimização, bloqueio,
+eliminação e revogação do consentimento, exercitáveis pelo canal da Cláusula 14.
+
+7.7. REVOGAÇÃO. O consentimento pode ser revogado a qualquer tempo, por
+manifestação expressa, sem ônus. A revogação não invalida tratamentos já
+realizados sob consentimento válido, nem a divulgação acadêmica já publicada,
+dada a impossibilidade material de retratação de obra já tornada pública.
+
+7.8. ELIMINAÇÃO LOCAL. O USUÁRIO pode, a qualquer momento, excluir os DADOS
+GERADOS apagando os arquivos correspondentes nas pastas de dados do SOFTWARE,
+ou desinstalando-o.
+
+7.9. SEGURANÇA. O AUTOR adotará medidas técnicas e administrativas razoáveis
+para proteger os dados que lhe forem compartilhados (artigo 46 da LGPD). O
+USUÁRIO reconhece, contudo, que nenhum sistema é absolutamente seguro e que a
+segurança do equipamento onde o SOFTWARE é executado é de sua responsabilidade.
+
+
+--------------------------------------------------------------------------------
+8. PROPRIEDADE INTELECTUAL
+--------------------------------------------------------------------------------
+
+8.1. O SOFTWARE, seu código-fonte, arquitetura, documentação, interface,
+elementos gráficos e denominação são protegidos pela Lei nº 9.609/1998 e pela
+Lei nº 9.610/1998, e constituem propriedade intelectual do AUTOR.
+
+8.2. Estes Termos não conferem qualquer direito sobre marcas, nomes, logotipos
+ou sinais distintivos do AUTOR ou da instituição de ensino.
+
+8.3. Componentes de terceiros eventualmente integrados ao SOFTWARE permanecem
+sujeitos às respectivas licenças, que prevalecem quanto a tais componentes.
+
+8.4. Trabalhos acadêmicos que utilizem o SOFTWARE ou os resultados por ele
+produzidos deverão citar a fonte, conforme a praxe científica e a NBR 10520.
+
+
+--------------------------------------------------------------------------------
+9. AUSÊNCIA DE GARANTIA
+--------------------------------------------------------------------------------
+
+9.1. O SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA" (AS IS), SEM GARANTIA
+DE QUALQUER NATUREZA, EXPRESSA OU IMPLÍCITA.
+
+9.2. O AUTOR NÃO GARANTE, especificamente:
+
+   a) que o SOFTWARE funcionará de modo ininterrupto ou livre de erros;
+   b) a exatidão, precisão, confiabilidade ou completude das detecções,
+      identificações, medições de distância ou estimativas produzidas;
+   c) a compatibilidade com qualquer equipamento, câmera, sistema operacional
+      ou configuração específica;
+   d) a adequação a qualquer finalidade determinada;
+   e) a preservação, integridade ou recuperabilidade dos DADOS GERADOS.
+
+9.3. O USUÁRIO reconhece expressamente que os algoritmos de visão computacional
+empregados são aproximações heurísticas calibradas em condições específicas de
+iluminação, câmera e objeto, e que FALSOS POSITIVOS E FALSOS NEGATIVOS SÃO
+RESULTADOS ESPERADOS E INERENTES, não configurando defeito ou vício.
+
+9.4. Não há obrigação de suporte técnico, manutenção, correção de defeitos,
+atualização ou evolução do SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+10. LIMITAÇÃO DE RESPONSABILIDADE
+--------------------------------------------------------------------------------
+
+10.1. Na máxima extensão permitida pela legislação brasileira, o AUTOR não
+responde por quaisquer danos diretos, indiretos, incidentais, especiais,
+emergentes, lucros cessantes, perda de dados, perda de chance, danos morais,
+danos à imagem ou prejuízos de qualquer natureza decorrentes do uso ou da
+impossibilidade de uso do SOFTWARE.
+
+10.2. A exclusão abrange, sem limitação, danos decorrentes de: decisão tomada
+com base em informação produzida pelo SOFTWARE; detecção incorreta, ausente ou
+tardia; falha de comunicação com dispositivo externo; incompatibilidade de
+hardware; perda ou corrupção de dados; e uso em desacordo com estes Termos.
+
+10.3. Tratando-se de licença gratuita e de natureza acadêmica, aplica-se o
+artigo 392 do Código Civil, segundo o qual, nos contratos benéficos, responde
+por simples culpa o contratante a quem o contrato aproveite, e por dolo aquele a
+quem não favoreça. Não havendo proveito econômico ao AUTOR, sua responsabilidade
+restringe-se às hipóteses de DOLO.
+
+10.4. As limitações desta cláusula não se aplicam a dolo, nem excluem direitos
+que a legislação de ordem pública reconheça como irrenunciáveis. Caso
+reconhecida alguma responsabilidade, esta ficará limitada ao valor efetivamente
+pago pelo USUÁRIO pela licença, que é de R$ 0,00 (zero reais).
+
+10.5. O AUTOR não responde por caso fortuito ou força maior (artigo 393 do
+Código Civil), nem por atos de terceiros, incluindo falhas de sistema
+operacional, drivers, hardware ou componentes de terceiros.
+
+
+--------------------------------------------------------------------------------
+11. INDENIZAÇÃO E REGRESSO
+--------------------------------------------------------------------------------
+
+11.1. O USUÁRIO obriga-se a manter indenes o AUTOR, seus orientadores e a
+instituição de ensino, isentando-os de qualquer reclamação, demanda judicial ou
+administrativa, multa, sanção, custo ou honorário advocatício decorrente de:
+
+   a) uso do SOFTWARE em desacordo com estes Termos;
+   b) violação das restrições de segurança da Cláusula 6;
+   c) captação ou tratamento irregular de dados pessoais de terceiros;
+   d) violação de direitos de terceiros.
+
+11.2. O USUÁRIO assume o polo passivo em eventual demanda ajuizada contra o
+AUTOR por fato a ele imputável, requerendo a exclusão do AUTOR da lide, ou,
+subsidiariamente, responde em regresso pela integralidade dos valores
+despendidos.
+
+
+--------------------------------------------------------------------------------
+12. VIGÊNCIA E RESCISÃO
+--------------------------------------------------------------------------------
+
+12.1. Estes Termos vigem por prazo indeterminado, a partir da aceitação.
+
+12.2. O USUÁRIO pode rescindir a qualquer tempo, desinstalando o SOFTWARE.
+
+12.3. O AUTOR pode revogar a licença, a qualquer tempo e sem necessidade de
+motivação, mediante comunicação, ou automaticamente em caso de descumprimento.
+
+12.4. Rescindida a licença, cessa imediatamente o direito de uso e o USUÁRIO
+deve desinstalar o SOFTWARE e eliminar as cópias em seu poder.
+
+12.5. Sobrevivem à rescisão as Cláusulas 6, 7, 8, 9, 10, 11 e 15.
+
+
+--------------------------------------------------------------------------------
+13. ALTERAÇÕES
+--------------------------------------------------------------------------------
+
+13.1. O AUTOR pode alterar estes Termos, publicando versão atualizada junto às
+novas distribuições do SOFTWARE.
+
+13.2. As alterações não retroagem: a versão aceita no momento da instalação
+continua regendo aquela instalação até que o USUÁRIO instale versão posterior,
+ocasião em que deverá aceitar os Termos então vigentes.
+
+
+--------------------------------------------------------------------------------
+14. CANAL DE CONTATO E ENCARREGADO DE DADOS
+--------------------------------------------------------------------------------
+
+14.1. Para exercício de direitos de titular (LGPD), dúvidas, revogação de
+consentimento ou solicitação de autorização para uso diverso do permitido:
+
+        Responsável / Encarregado: Matheus Emanoel de Souza
+        E-mail: matheusemanoel@ucl.br
+
+14.2. As solicitações serão respondidas em prazo razoável, observados os prazos
+do artigo 19 da LGPD quando aplicáveis.
+
+
+--------------------------------------------------------------------------------
+15. DISPOSIÇÕES FINAIS
+--------------------------------------------------------------------------------
+
+15.1. INDEPENDÊNCIA DAS CLÁUSULAS. A eventual nulidade ou ineficácia de
+qualquer cláusula não prejudica as demais, que permanecem em pleno vigor,
+devendo a cláusula inválida ser interpretada de modo a preservar ao máximo a
+intenção original das partes.
+
+15.2. NÃO RENÚNCIA. A tolerância quanto ao descumprimento de qualquer obrigação
+constitui mera liberalidade, não implicando novação, renúncia ou alteração do
+pactuado.
+
+15.3. INTEGRALIDADE. Estes Termos, em conjunto com a licença de código-fonte
+aplicável, constituem o acordo integral entre as partes quanto ao SOFTWARE,
+substituindo entendimentos anteriores.
+
+15.4. BOA-FÉ. As partes obrigam-se a conduzir-se segundo a boa-fé objetiva e a
+função social do contrato, nos termos dos artigos 421 e 422 do Código Civil.
+
+15.5. LEI APLICÁVEL. Estes Termos são regidos pelas leis da República
+Federativa do Brasil.
+
+15.6. FORO. Fica eleito o foro da comarca do domicílio do AUTOR para dirimir
+controvérsias, com renúncia a qualquer outro, por mais privilegiado que seja,
+ressalvada hipótese legal de foro privilegiado irrenunciável.
+
+
+================================================================================
+ DECLARAÇÃO DE CIÊNCIA DO USUÁRIO
+================================================================================
+
+Ao prosseguir com a instalação, o USUÁRIO declara que:
+
+  [X] LEU e COMPREENDEU integralmente estes Termos de Uso;
+
+  [X] COMPREENDE que o RadarTorres é um PROTÓTIPO ACADÊMICO, criado como
+      Trabalho de Conclusão de Curso, sem garantia de qualquer natureza;
+
+  [X] COMPREENDE e CONCORDA que o SOFTWARE NÃO PODE SER UTILIZADO PARA FINS
+      COMERCIAIS, nem em aplicações críticas ou acopladas a armamento;
+
+  [X] CONCORDA em COMPARTILHAR com o AUTOR os dados gerados pelo aplicativo,
+      para fins de avaliação acadêmica, diagnóstico técnico e divulgação
+      científica, nos termos da Cláusula 7;
+
+  [X] ASSUME a responsabilidade por obter o consentimento de pessoas cuja
+      imagem venha a ser capturada pela câmera.
+
+================================================================================

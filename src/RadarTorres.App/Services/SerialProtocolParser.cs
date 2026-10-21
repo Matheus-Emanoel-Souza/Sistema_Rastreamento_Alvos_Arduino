@@ -131,4 +131,13 @@ public static class SerialProtocolParser
 
     public static string BuildFire(int towerId, int targetId) =>
         $"FIRE;TOWER={towerId};TARGET={targetId}";
+
+    /// <summary>
+    /// Comando que reposiciona fisicamente (eixo PAN) a torre indicada para o ângulo informado —
+    /// mesma convenção de bússola de <c>TARGET.ANGLE</c> (0°-360°, 0°=Norte, sentido horário).
+    /// Enviado pelo <see cref="Services.TowerSelectionService"/> sempre que uma torre é designada
+    /// para um alvo, inclusive quando está cobrindo um alvo de outro quadrante.
+    /// </summary>
+    public static string BuildAim(int towerId, double angleDegrees) =>
+        $"AIM;TOWER={towerId};ANGLE={angleDegrees.ToString("0.0", CultureInfo.InvariantCulture)}";
 }

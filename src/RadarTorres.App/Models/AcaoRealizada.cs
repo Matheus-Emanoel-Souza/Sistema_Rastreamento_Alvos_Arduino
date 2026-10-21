@@ -3,18 +3,20 @@ using System;
 namespace RadarTorres.App.Models;
 
 /// <summary>
-/// Registro de auditoria de uma ação de acionamento demonstrativo (ex.: "Torre 1 —
-/// Acionamento demonstrativo"). Gravado por <see cref="Services.FireControlService"/>
-/// a cada tentativa (autorizada e executada, bloqueada ou com erro) — nunca editável ou
-/// removível por usuários comuns (ver <see cref="Repositories.IAcaoRealizadaRepository"/>,
-/// que propositalmente não expõe Update/Delete).
+/// Registro de auditoria de um acionamento demonstrativo efetivamente executado. Gravado por
+/// <see cref="Services.FireControlService"/> só quando o comando chega a ser enviado com
+/// sucesso (tentativas bloqueadas/com erro só geram log, não linha aqui — ver
+/// <see cref="Repositories.IAcaoRealizadaRepository"/>, que propositalmente não expõe
+/// Update/Delete). Espelha a tabela acadêmica <c>acoes_realizadas</c> (ID_ACAO, ID_TORRE,
+/// ID_OBJETO, DH_ACAO, OBSERVACAO) descrita em
+/// <c>Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql</c>.
 /// </summary>
 public class AcaoRealizada
 {
     public int Id { get; set; }
 
-    /// <summary>Torre + ação combinadas num único campo (ex.: "Torre 1 — Acionamento demonstrativo").</summary>
-    public string TorreAcao { get; set; } = string.Empty;
+    /// <summary>Id da torre que executou a ação (ver <see cref="Tower.Id"/>).</summary>
+    public int TorreId { get; set; }
 
     /// <summary>
     /// Referência ao <see cref="ObjetoDetectado"/> que originou esta ação — é a chave para as
@@ -27,13 +29,5 @@ public class AcaoRealizada
 
     public DateTime DataHora { get; set; }
 
-    /// <summary>Login do usuário que originou a ordem, quando manual. <c>null</c> se automática.</summary>
-    public string? UsuarioResponsavel { get; set; }
-
-    public OrigemAcao Origem { get; set; }
-
-    public ResultadoAcao Resultado { get; set; }
-
-    /// <summary>Observação livre ou mensagem de erro (ex.: motivo do bloqueio de segurança).</summary>
     public string? Observacao { get; set; }
 }

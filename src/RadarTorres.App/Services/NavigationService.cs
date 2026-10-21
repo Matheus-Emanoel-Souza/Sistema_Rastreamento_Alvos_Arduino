@@ -31,13 +31,15 @@ public sealed class NavigationService : INavigationService
         {
             [MenuItem.PainelPrincipal] = () => _serviceProvider.GetRequiredService<PainelPrincipalView>(),
             [MenuItem.Monitoramento] = () => _serviceProvider.GetRequiredService<MonitoramentoView>(),
+            [MenuItem.Desempenho] = () => _serviceProvider.GetRequiredService<DesempenhoView>(),
             [MenuItem.ObjetosDetectados] = () => _serviceProvider.GetRequiredService<ObjetosDetectadosView>(),
             [MenuItem.AcoesRealizadas] = () => _serviceProvider.GetRequiredService<AcoesRealizadasView>(),
             [MenuItem.HistoricoModos] = () => _serviceProvider.GetRequiredService<HistoricoModosView>(),
             [MenuItem.Usuarios] = () => _serviceProvider.GetRequiredService<UsuariosView>(),
             [MenuItem.Cameras] = () => _serviceProvider.GetRequiredService<CamerasView>(),
-            [MenuItem.Configuracoes] = () => new PlaceholderView("Sidebar.Configuracoes"),
+            [MenuItem.PerfilAlvo] = () => _serviceProvider.GetRequiredService<PerfilAlvoView>(),
             [MenuItem.ConfiguracoesArduino] = () => _serviceProvider.GetRequiredService<ArduinoSettingsView>(),
+            [MenuItem.Configuracoes] = () => _serviceProvider.GetRequiredService<ConfiguracoesView>(),
         };
     }
 

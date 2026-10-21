@@ -18,4 +18,6 @@ public sealed class PermissionService : IPermissionService
     public bool PodeGerenciarUsuarios(PerfilUsuario perfil) => perfil == PerfilUsuario.Administrador;
 
     public bool PodeGerenciarZonasMortas(PerfilUsuario perfil) => perfil == PerfilUsuario.Administrador;
+
+    public bool PodeGerenciarPerfisAlvo(PerfilUsuario perfil) => perfil != PerfilUsuario.Visualizador;
 }

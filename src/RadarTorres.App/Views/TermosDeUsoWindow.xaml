@@ -1,0 +1,156 @@
+<Window x:Class="RadarTorres.App.Views.TermosDeUsoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:RadarTorres.App.Converters"
+        xmlns:models="clr-namespace:RadarTorres.App.Models"
+        Title="Termos de Uso — RadarTorres"
+        Width="880" Height="720" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Bg.Window}"
+        Foreground="{DynamicResource Text.Primary}"
+        FontFamily="{DynamicResource Font.Body}">
+    <!--
+        Leitura dos Termos de Uso vigentes, abertos a partir da tela "Configurações".
+
+        O conteúdo vem do MESMO arquivo que o instalador exibe como página de licença
+        (ITermosDeUsoService), já classificado em blocos — título, versão, cláusula, parágrafo,
+        alínea. Cada tipo de bloco tem seu DataTemplate implícito abaixo, então a hierarquia
+        visual sai da estrutura do próprio documento, sem nenhuma cópia do texto no XAML.
+
+        A coluna de leitura é limitada a 760px e centralizada: linha longa demais cansa a leitura
+        e é justamente o que o requisito de "largura confortável" pede. A janela continua
+        redimensionável, e abaixo dessa largura o texto simplesmente acompanha a janela.
+    -->
+    <Window.Resources>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- ===================== Blocos do documento ===================== -->
+
+        <DataTemplate DataType="{x:Type models:TituloTermos}">
+            <TextBlock Text="{Binding Texto}" FontSize="22" FontWeight="Bold" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,2"/>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type models:VersaoTermos}">
+            <Border Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
+                    BorderThickness="1" CornerRadius="4" Padding="8,4" HorizontalAlignment="Left" Margin="0,4,0,18">
+                <TextBlock Text="{Binding Texto}" FontSize="11" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Text.Secondary}"/>
+            </Border>
+        </DataTemplate>
+
+        <!-- Cláusula: número em destaque + título, com uma régua fina embaixo. -->
+        <DataTemplate DataType="{x:Type models:SecaoTermos}">
+            <StackPanel Margin="0,22,0,10">
+                <StackPanel Orientation="Horizontal">
+                    <Border Background="{DynamicResource Accent.Fill}" CornerRadius="4" Padding="7,2" Margin="0,0,10,0"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Numero}" Foreground="{DynamicResource OnAccent}" FontWeight="Bold" FontSize="12"/>
+                    </Border>
+                    <TextBlock Text="{Binding Titulo}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap"
+                               VerticalAlignment="Center" Foreground="{DynamicResource Text.Primary}"/>
+                </StackPanel>
+                <Rectangle Height="1" Fill="{DynamicResource Border.Control}" Margin="0,8,0,0"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Parágrafo: o número fica numa coluna própria, para o texto alinhar em bloco. -->
+        <DataTemplate DataType="{x:Type models:ParagrafoTermos}">
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding Numero}" FontWeight="Bold" FontSize="13" Margin="0,0,10,0"
+                           Foreground="{DynamicResource Accent.Fill}"
+                           Visibility="{Binding Numero, Converter={StaticResource NullToVisibilityConverter}}"/>
+
+                <TextBlock Grid.Column="1" Text="{Binding Texto}" TextWrapping="Wrap" FontSize="13" LineHeight="21"
+                           Foreground="{DynamicResource Text.Primary}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <!-- Avisos em caixa alta do próprio documento ganham peso extra. -->
+                                <DataTrigger Binding="{Binding Destaque}" Value="True">
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Target.Fill}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type models:ItemListaTermos}">
+            <Grid Margin="18,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding Marcador}" FontWeight="SemiBold" FontSize="13" Margin="0,0,8,0"
+                           Foreground="{DynamicResource Accent.Fill}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Texto}" TextWrapping="Wrap" FontSize="13" LineHeight="21"
+                           Foreground="{DynamicResource Text.Primary}"/>
+            </Grid>
+        </DataTemplate>
+
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Padding="0,24,0,24">
+            <!-- Coluna de leitura centralizada e com largura máxima confortável. -->
+            <Border MaxWidth="760" HorizontalAlignment="Center" Margin="28,0">
+                <ItemsControl ItemsSource="{Binding Documento.Blocos}"
+                              KeyboardNavigation.TabNavigation="None" Focusable="False"/>
+            </Border>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
+                BorderThickness="0,1,0,0" Padding="20,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding MensagemStatus}" TextWrapping="Wrap" FontSize="11"
+                           VerticalAlignment="Center" Margin="0,0,16,0"
+                           Visibility="{Binding MensagemStatus, Converter={StaticResource NullToVisibilityConverter}}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatusSucesso}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="{Binding TextoBotaoPdf}" Command="{Binding BaixarPdfCommand}"
+                            Background="{DynamicResource Accent.Fill}" Foreground="{DynamicResource OnAccent}" FontWeight="SemiBold"/>
+                    <Button x:Name="BotaoFechar" Content="Fechar" IsCancel="True" Click="Fechar_Click" Margin="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

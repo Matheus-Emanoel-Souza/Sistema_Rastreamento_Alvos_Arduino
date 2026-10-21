@@ -14,6 +14,8 @@
 \usepackage{graphicx}
 \usepackage{array}
 \usepackage{xcolor}
+\usepackage[alf]{abntex2cite}
+\renewcommand{\refname}{Referências}
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.8em}
@@ -64,7 +66,10 @@ de aquisição de dados. Integrar sensoriamento de baixo custo, processamento em
 seleção automática de resposta em um único protótipo exige lidar com comunicação entre hardware e
 software e tratamento de leituras ruidosas. Este trabalho tem como objetivo demonstrar a
 viabilidade de um sistema de detecção, localização e seleção automática de ação construído
-inteiramente com componentes acessíveis, em vez de hardware industrial. O protótipo resultante,
+inteiramente com componentes acessíveis, em vez de hardware industrial. O sistema combina dois
+sensores ultrassónicos (módulo de baixo custo que mede a distância pelo eco do ultrassom) com
+quatro câmeras de 720p, processa quadros de vídeo (\textit{frames}) e classifica o alvo por sua
+cor, formato e tamanho. O protótipo resultante,
 denominado RadarTorres, converte leituras de ângulo e distância em posição cartesiana, exibindo-as
 em tempo real em um radar circular, seleciona automaticamente, entre torres candidatas posicionadas
 ao redor da base, a mais adequada para responder a cada alvo, e registra em auditoria toda ação
@@ -83,7 +88,9 @@ inerentes à abordagem de baixo custo adotada.
 detection, localization and selection through sensing, developed as a Final Course Project in
 Computer Engineering. The prototype integrates sensors to identify objects in a monitored
 environment, register their position and allow manual or automatic activation of response
-devices. This work details the application's data model: persistence is currently implemented
+devices. The system combines two ultrasonic sensors (a low-cost module that measures distance by
+ultrasound echo) with four 720p cameras, processes video frames, and classifies the target by
+color, shape, and size. This work details the application's data model: persistence is currently implemented
 through CSV files organized per operating-system user, covering six tables -- users, detected
 objects, executed actions, mode changes, user preferences and help tickets --, each accessed
 through a dedicated repository interface. This choice, documented in the project's technical
@@ -118,10 +125,41 @@ sensoriamento, rastreamento e decisão presentes em sistemas mais sofisticados.
 % ============================================================
 \section{Desenvolvimento}
 
-\subsection{Fundamentação teórica}
+\subsection{Revisão da literatura e fundamentação teórica}
 
-Revisão bibliográfica sobre o assunto, com a devida citação das fontes,
-por exemplo (SOBRENOME, 2024) ou conforme Sobrenome (2024).
+Sistemas de detecção e rastreamento de alvos costumam recorrer a sensores como radar e LIDAR, de
+custo elevado. Como alternativa, sensores de baixo custo podem ser combinados de modo que as
+limitações de um sejam compensadas pelas qualidades do outro. Sensores ultrassônicos, como o
+HC-SR04, medem distância com baixo custo e boa confiabilidade em curto alcance, mas não distinguem
+o tipo do obstáculo; câmeras, por sua vez, fornecem informação semântica, porém dependem das
+condições de iluminação e exigem maior poder de processamento \cite{majoni2025}. A fusão de
+sensores (\textit{sensor fusion}) combina as duas modalidades para aproveitar essa
+complementaridade.
+
+\citeonline{majoni2025} descrevem uma arquitetura em que um Arduino Mega trata o sensoriamento
+ultrassônico de baixa latência, enquanto um Raspberry Pi processa as imagens da câmera com uma rede
+YOLOv4-tiny, com comunicação serial entre os dois. Essa divisão de papéis é análoga à do
+RadarTorres, em que o Arduino realiza a aquisição e a aplicação desktop concentra o processamento.
+A literatura também mostra que sensores ultrassônicos de baixo custo podem complementar câmeras e
+LiDAR em sistemas de rastreamento, com a precisão melhorada por predição baseada em filtro de
+Kalman e fusão com a distância medida pelos ultrassônicos \cite{curbscan}. O mesmo trabalho observa
+que as leituras ultrassônicas se tornam ruidosas em distâncias maiores, o que motiva o uso de
+filtragem.
+
+Definidos o alvo e sua posição, resta decidir qual recurso deve responder. Na literatura de defesa,
+esse problema é tratado como avaliação de ameaças e atribuição de armas (\textit{Threat Evaluation
+and Weapon Assignment}, TEWA), no qual as informações dos sensores alimentam as etapas de detecção,
+rastreamento e identificação, seguidas da avaliação da ameaça e da atribuição dos recursos
+\cite{naseem_tewa, roux_tewa}. As abordagens são classificadas em ameaça por ameaça, em que as
+armas são atribuídas sequencialmente, e multiameaça, em que o conjunto de ameaças é considerado
+simultaneamente \cite{roux_tewa}.
+
+O RadarTorres adota uma abordagem simples, por proximidade, aplicada alvo a alvo, com propósito
+exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento real); a
+abordagem multiameaça fica como trabalho futuro.
+
+% PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
+% computacional clássica (a ser informada pelo autor).
 
 \subsection{Procedimentos metodológicos}
 
@@ -156,6 +194,102 @@ usado para observar o comportamento do sistema durante este trabalho, o que imp�
 ao escopo dos resultados relatados: eles atestam a corretude da lógica de decisão implementada em
 software, mas não substituem uma validação de campo com sensores e torres físicas, deixada como
 trabalho futuro.
+
+\subsection{Projeto e implementação}
+
+\subsubsection{Módulo de detecção de alvos}
+
+% CONFIRMAR: arranjo físico dos sensores (dois HC-SR04 de costas em mastro movido por motor de
+% passo 28BYJ-48, oscilação de 180° para cobertura de 360°). A documentação atual do repositório
+% (Docs/Projeto/ETAPA2_VISAO_COMPUTACIONAL.md e
+% Docs/Documentos_Entregaveis/Diagrama_Eletrico/Diagrama_Eletrico.md) descreve outro arranjo e
+% precisa ser atualizada.
+O módulo de detecção utiliza dois sensores ultrassônicos HC-SR04 instalados de costas um para o
+outro no topo de um mastro, na torre central. O mastro é movido por um motor de passo 28BYJ-48 que
+oscila 180°, de modo que, em conjunto, os dois sensores cobrem uma varredura de 360°. Cada sensor
+emite pulsos de 40 kHz e calcula a distância pelo atraso do eco, segundo a relação
+$d = \frac{v \cdot \Delta t}{2}$, em que $v$ é a velocidade do som no ar (cerca de 343 m/s à
+temperatura ambiente). A cada leitura, o Arduino envia à aplicação desktop, pela porta serial, o
+ângulo e a distância em protocolo de texto simples, que a aplicação converte em posição cartesiana
+e exibe no radar circular de quatro quadrantes.
+
+O protocolo é textual em ASCII, transportado pela porta serial USB a 9600 bauds por padrão, com
+cada mensagem terminada por \texttt{\textbackslash n} e composta por um tipo em maiúsculas seguido
+de pares chave-valor separados por ponto e vírgula. Uma leitura de alvo chega na forma
+\texttt{TARGET;ID=1;ANGLE=45;DIST=2.80}, em que \texttt{ANGLE} é dado em graus no intervalo
+$[0, 360)$ e \texttt{DIST} em metros. O ângulo segue a convenção de bússola -- $0^\circ$ apontando
+para o Norte, sentido horário --, escolhida por ser a leitura mais intuitiva para quem opera um
+radar, e a conversão para coordenadas cartesianas de mundo, isolada em
+\texttt{CoordinateConverter.PolarToCartesian}, é dada por $x = d \cdot \sin\theta$ e
+$y = d \cdot \cos\theta$, com $\theta$ em radianos. A partir do par $(x, y)$, o quadrante do alvo é
+determinado pelos sinais das duas coordenadas (\texttt{QuadrantHelper}) e a distância até cada torre
+candidata pela distância euclidiana clássica (\texttt{DistanceCalculator.Euclidean}). Leituras com
+campos ausentes, não numéricos, com ângulo fora do intervalo válido ou com distância negativa são
+convertidas em mensagens de erro registradas no console de eventos, nunca em exceções -- falhas de
+sensor ou de cabo produzem degradação graciosa, e não interrupção da aplicação.
+
+\subsubsection{Projeto elétrico e estrutural}
+
+% CONFIRMAR: todo o conteúdo desta subseção foi informado pelo autor e ainda não consta da
+% documentação técnica do repositório. O Diagrama_Eletrico.md atual descreve um arranjo diferente
+% (um HC-SR04, um servo SG90, quatro LEDs, alimentação pela USB) e não menciona 74HC595, ULN2003,
+% fonte de 5 V/15 A, rolamento 51108, cubo duplo-D nem as dimensões citadas.
+% CONFIRMAR: número de câmeras por torre e onde cada câmera é montada.
+O projeto elétrico é baseado em um Arduino Uno, plataforma disponível no simulador Tinkercad usado
+para simular o circuito. Os sinais dos motores de passo são gerados por registradores de
+deslocamento 74HC595 em cascata, e os motores 28BYJ-48 são acionados por drivers ULN2003,
+alimentados por uma fonte de 5 V/15 A. Cada uma das quatro torres armadas possui dois motores
+28BYJ-48 (movimentos de pan e tilt), um laser de baixa potência e um LED de cor própria; o
+acionamento é exclusivamente demonstrativo. Na torre central, o mastro dos sensores não é acoplado
+diretamente ao eixo do motor: ele assenta em um disco que gira sobre um rolamento axial 51108,
+acionado pelo motor por um cubo duplo-D. A passagem dos fios fica próxima ao eixo central, com folga
+de cabo em vez de anel coletor (\textit{slip ring}), já que o giro é limitado a 180°. A torre
+central é cerca de 5 cm mais alta que as torres armadas (cerca de 137,5 mm de altura). As peças
+estruturais são impressas em 3D.
+
+\subsubsection{Módulo de visão}
+
+% CONFIRMAR: número de câmeras (quatro) e resolução (720p) -- não há registro desses valores no
+% código nem na documentação do repositório.
+O módulo de visão utiliza quatro câmeras de 720p conectadas por USB ao computador, associadas aos
+quadrantes do radar, e processa os quadros de vídeo (\textit{frames}) para classificar o alvo por
+sua cor, formato e tamanho. Cada quadro capturado é entregue já decodificado à detecção, que executa
+localmente um modelo tiny-YOLOv3 em formato ONNX para propor as regiões candidatas da imagem. Cada
+candidata é então comparada ao perfil do alvo previamente cadastrado -- definido por cor, formato e
+tamanho, e opcionalmente por fotos de referência recortadas no objeto de interesse. Havendo foto de
+referência, a comparação combina um histograma de matiz e saturação com uma grade espacial de cor
+média, usados como assinatura do objeto; na ausência de foto, o critério recai sobre a fração de
+pixels com a cor cadastrada e sobre a classificação de formato. Quando o detector não propõe nenhuma
+caixa com a cor do perfil, as regiões candidatas passam a ser propostas por segmentação de cor, como
+último recurso na ordenação de candidatos.
+
+O envio das informações resultantes ao Arduino, para guiar o apontamento da torre (movimentos de pan
+e tilt), foi projetado mas ainda não está implementado: o protocolo serial atual não possui comando
+de apontamento, e a fusão entre a posição estimada pela visão e a distância medida pelos sensores
+ultrassônicos permanece como etapa planejada. Como o hardware ainda não foi montado, a validação
+funcional descrita neste trabalho foi feita por simulação, e nenhum resultado de campo é relatado.
+
+\subsubsection{Fluxo operacional}
+
+Em operação, o sistema segue estas etapas: (1) o Arduino varre o ambiente com os dois sensores
+ultrassônicos e envia ângulo e distância à aplicação; (2) a aplicação converte cada leitura em
+posição cartesiana, determina o quadrante, exibe o alvo no radar e registra a detecção; (3) em
+paralelo, as câmeras fornecem quadros de vídeo, e o módulo de visão classifica o alvo por cor,
+formato e tamanho; (4) a aplicação seleciona, entre as torres armadas disponíveis, a mais adequada
+para o alvo, priorizando as do mesmo quadrante e, entre elas, a de menor distância euclidiana (por
+proximidade, alvo a alvo); (5) o comando é enviado ao Arduino, que aciona a torre selecionada;
+(6) o acionamento demonstrativo (laser de baixa potência ou LED) só ocorre respeitando a distância
+mínima de segurança e as regras de zona morta, que podem bloquear um quadrante inteiro ou uma faixa
+de distância a partir da base; (7) toda ação executada é registrada em auditoria.
+
+A seleção de torre e o acionamento dependem do modo de operação escolhido pelo operador, em um
+modelo de três níveis: no primeiro, os alvos são apenas detectados e exibidos; no segundo,
+acrescenta-se a seleção automática da torre, sem acionamento; no terceiro, acrescenta-se o
+acionamento demonstrativo automático. Quando a regra de segurança reprova um acionamento, ele é
+bloqueado e o motivo é registrado no console de eventos.
+
+% PREENCHER: figura do fluxograma (início, detecção, decisão e ação), a ser gerada sob demanda do
+% autor.
 
 \subsection{Diagrama de pacotes}
 
@@ -223,5 +357,10 @@ isoladas do formato de armazenamento por meio das interfaces de repositório.
   \caption{Modelo relacional proposto para a migração futura de persistência, de CSV/JSON para SQL
   (dos autores).}
 \end{figure}
+
+% ============================================================
+% REFERÊNCIAS
+% ============================================================
+\bibliography{referencias}
 
 \end{document}

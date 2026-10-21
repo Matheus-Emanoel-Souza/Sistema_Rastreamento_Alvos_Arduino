@@ -1,0 +1,619 @@
+<UserControl x:Class="RadarTorres.App.Views.PerfilAlvoView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization"
+             xmlns:conv="clr-namespace:RadarTorres.App.Converters"
+             xmlns:vm="clr-namespace:RadarTorres.App.ViewModels"
+             Background="{DynamicResource Bg.Window}"
+             Foreground="{DynamicResource Text.Primary}"
+             FontFamily="{DynamicResource Font.Body}">
+    <!--
+        Tela "Perfis de Alvo" — lista os alvos cadastrados e concentra o cadastro/edição num
+        MODAL com etapas, aberto sob demanda pelo botão "Cadastrar novo alvo". A tela em si fica
+        só com a listagem e as ações do alvo selecionado; o formulário fixo que ocupava a lateral
+        direita deixou de existir.
+
+        O modal é um overlay dentro desta própria view (e não uma Window separada) porque o
+        requisito pede a tela de fundo visível através de um fundo escurecido — e assim o fundo
+        também fica inerte a mouse e Tab sem precisar ser desabilitado (o que o deixaria cinza).
+        Ver PerfilAlvoView.xaml.cs para Esc, foco e confirmação de descarte.
+    -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <conv:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisibilityConverter"/>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,14,10"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        </Style>
+
+        <!-- Etapa do assistente: círculo numerado + rótulo, destacado quando é a etapa atual. -->
+        <Style x:Key="ChipEtapa" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style x:Key="TextoChipEtapa" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- ======================= TELA PRINCIPAL ======================= -->
+        <!-- Com o modal aberto, o fundo não recebe clique nem Tab (requisito de acessibilidade),
+             mas continua visível através do escurecimento. -->
+        <Grid x:Name="ConteudoPrincipal" Margin="16">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ModalAberto}" Value="True">
+                            <Setter Property="IsHitTestVisible" Value="False"/>
+                            <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Título + ação principal, lado a lado. -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{loc:Loc PerfilAlvo.Titulo}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,4"/>
+                    <TextBlock Text="{loc:Loc PerfilAlvo.Descricao}"
+                               Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,0,0,12"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Button x:Name="BotaoCadastrarAlvo" Grid.Column="1" VerticalAlignment="Top"
+                        Content="{loc:Loc PerfilAlvo.Form.CadastrarNovo}"
+                        Command="{Binding AbrirCadastroCommand}"
+                        FontWeight="SemiBold" Padding="14,8" Margin="12,0,0,0"/>
+            </Grid>
+
+            <!-- Ações do alvo selecionado na lista. -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                <Button Content="{loc:Loc PerfilAlvo.Selecionado.Editar}" Command="{Binding EditarCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Content="{loc:Loc PerfilAlvo.Selecionado.SelecionarAtivo}" Command="{Binding SelecionarAtivoCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Content="{loc:Loc PerfilAlvo.Selecionado.Remover}" Command="{Binding RemoverCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+
+                <TextBlock Text="{Binding SelectedPerfil}" VerticalAlignment="Center" Margin="8,0,0,0"
+                           FontSize="11" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource Text.Secondary}"/>
+            </StackPanel>
+
+            <!-- Retorno do último cadastro/edição concluído. -->
+            <TextBlock Grid.Row="2" Text="{Binding MensagemFormulario}" TextWrapping="Wrap" Margin="0,0,0,8"
+                       Visibility="{Binding MensagemFormulario, Converter={StaticResource NullToVisibilityConverter}}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SucessoFormulario}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <DataGrid Grid.Row="3" ItemsSource="{Binding Perfis}" SelectedItem="{Binding SelectedPerfil}"
+                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                      CanUserReorderColumns="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                      Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
+                      BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                      RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
+                      HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource Selection.Subtle}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                        <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+                        <Setter Property="FontSize" Value="12"/>
+                        <Setter Property="Padding" Value="8,6"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource Border.Divider}"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="50"/>
+                    <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
+                    <DataGridTextColumn Header="Cor" Binding="{Binding Cor}" Width="90"/>
+                    <DataGridTextColumn Header="Formato" Binding="{Binding Formato}" Width="100"/>
+                    <!-- Dimensões físicas: "L × A cm" nos retangulares, dimensão única nos demais. -->
+                    <DataGridTextColumn Header="Dimensões" Binding="{Binding DimensoesDescricao}" Width="130"/>
+                    <DataGridTextColumn Header="Fotos" Binding="{Binding TotalFotos}" Width="60"/>
+                    <DataGridCheckBoxColumn Header="Ativo" Binding="{Binding Selecionado}" Width="60"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <!-- ============================== MODAL ============================== -->
+        <Grid x:Name="Modal" Visibility="{Binding ModalAberto, Converter={StaticResource BooleanToVisibilityConverter}}"
+              KeyboardNavigation.TabNavigation="Cycle">
+            <!-- Fundo escurecido: a tela continua visível atrás. Clicar aqui NÃO fecha o modal,
+                 para não descartar um cadastro pela metade por engano. -->
+            <Rectangle Fill="#C4000000"/>
+
+            <Border MaxWidth="900" MaxHeight="820" Margin="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="{DynamicResource Bg.Card}"
+                    BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                    CornerRadius="10">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.55" Color="Black"/>
+                </Border.Effect>
+
+                <Grid Margin="22">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Cabeçalho -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding TituloFormulario}" FontSize="17" FontWeight="Bold"
+                                       TextWrapping="Wrap" Foreground="{DynamicResource Accent.Fill}"/>
+                            <TextBlock Text="{Binding RotuloEtapa}" FontSize="11" Margin="0,2,0,0"
+                                       Foreground="{DynamicResource Text.Secondary}"/>
+                        </StackPanel>
+
+                        <Button x:Name="BotaoFecharModal" Grid.Column="1" Content="✕" Width="30" Height="30" Padding="0" Margin="8,0,0,0"
+                                Style="{StaticResource SecondaryButton}" FontSize="13"
+                                ToolTip="Fechar sem salvar"
+                                AutomationProperties.Name="Fechar o cadastro de alvo"
+                                Click="FecharModal_Click"/>
+                    </Grid>
+
+                    <!-- Indicador de progresso: a etapa atual fica destacada. -->
+                    <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,14">
+                        <Border>
+                            <TextBlock Text="1 · Informações">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TextoChipEtapa}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Informacoes}">
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource ChipEtapa}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Informacoes}">
+                                            <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                        <Border>
+                            <TextBlock Text="2 · Fotografias">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TextoChipEtapa}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Fotografias}">
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource ChipEtapa}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Fotografias}">
+                                            <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                        <Border>
+                            <TextBlock Text="3 · Dimensões">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TextoChipEtapa}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Dimensoes}">
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource ChipEtapa}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Dimensoes}">
+                                            <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                        <Border>
+                            <TextBlock Text="4 · Revisão">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TextoChipEtapa}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Revisao}">
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource ChipEtapa}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EtapaAtual}" Value="{x:Static vm:EtapaCadastroAlvo.Revisao}">
+                                            <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Accent.Fill}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                    </WrapPanel>
+
+                    <!-- Conteúdo da etapa, com rolagem própria quando não couber. -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <Grid>
+                            <!-- ===== Etapa 1: informações ===== -->
+                            <StackPanel Visibility="{Binding EtapaAtual, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Informacoes}">
+                                <TextBlock Text="{loc:Loc PerfilAlvo.Form.Nome}" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="CampoNome" Text="{Binding FormNome, UpdateSourceTrigger=PropertyChanged}"
+                                         AutomationProperties.Name="Nome do alvo"/>
+
+                                <TextBlock Text="{loc:Loc PerfilAlvo.Form.Cor}" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <RadioButton Content="{loc:Loc PerfilAlvo.Cor.Vermelho}" GroupName="Cor"
+                                                 IsChecked="{Binding FormCor, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Vermelho}"/>
+                                    <RadioButton Content="{loc:Loc PerfilAlvo.Cor.Verde}" GroupName="Cor"
+                                                 IsChecked="{Binding FormCor, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Verde}"/>
+                                    <RadioButton Content="{loc:Loc PerfilAlvo.Cor.Azul}" GroupName="Cor"
+                                                 IsChecked="{Binding FormCor, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Azul}"/>
+                                </StackPanel>
+
+                                <TextBlock Text="{loc:Loc PerfilAlvo.Form.Formato}" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <RadioButton Content="{loc:Loc PerfilAlvo.Formato.Quadrado}" GroupName="Formato"
+                                                 IsChecked="{Binding FormFormato, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Quadrado}"/>
+                                    <RadioButton Content="{loc:Loc PerfilAlvo.Formato.Redondo}" GroupName="Formato"
+                                                 IsChecked="{Binding FormFormato, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Redondo}"/>
+                                    <RadioButton Content="{loc:Loc PerfilAlvo.Formato.Retangular}" GroupName="Formato"
+                                                 IsChecked="{Binding FormFormato, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Retangular}"/>
+                                </StackPanel>
+
+                                <TextBlock Text="A cor e o formato ajudam o reconhecimento a propor regiões candidatas no vídeo; as fotografias da próxima etapa são o que de fato identifica o objeto."
+                                           FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Foreground="{DynamicResource Text.Secondary}"/>
+                            </StackPanel>
+
+                            <!-- ===== Etapa 2: fotografias ===== -->
+                            <StackPanel Visibility="{Binding EtapaAtual, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Fotografias}">
+                                <TextBlock Text="{loc:Loc PerfilAlvo.Foto.Descricao}" FontSize="11" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource Text.Secondary}" Margin="0,0,0,10"/>
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0" ItemsSource="{Binding AvailableCameras}" SelectedItem="{Binding SelectedCamera}"
+                                              DisplayMemberPath="Name" Margin="0,0,6,10"
+                                              AutomationProperties.Name="Câmera usada para fotografar"/>
+                                    <Button Grid.Column="1" Content="{loc:Loc PerfilAlvo.Foto.Atualizar}" Style="{StaticResource SecondaryButton}"
+                                            Command="{Binding AtualizarCamerasCommand}" Margin="0,0,0,10"/>
+                                </Grid>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Vídeo ao vivo -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.PreviewTempoReal}" Style="{StaticResource FieldLabel}"/>
+                                        <Border Background="{DynamicResource Bg.Sidebar}" BorderBrush="{DynamicResource Border.Control}"
+                                                BorderThickness="1" CornerRadius="4" Height="200" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Image Source="{Binding CurrentFrame}" Stretch="Uniform"
+                                                       Visibility="{Binding IsStreaming, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                <TextBlock Text="{loc:Loc PerfilAlvo.Foto.SemPreview}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240" FontSize="12"
+                                                           Foreground="{DynamicResource Text.Secondary}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsStreaming}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Grid>
+                                        </Border>
+                                        <Button Content="{loc:Loc PerfilAlvo.Foto.Tirar}" Command="{Binding TirarFotoCommand}"
+                                                HorizontalAlignment="Stretch" Margin="0"/>
+                                    </StackPanel>
+
+                                    <!-- Marcação do objeto na foto escolhida -->
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                        <TextBlock Text="{loc:Loc PerfilAlvo.Foto.UltimaSalva}" Style="{StaticResource FieldLabel}"/>
+                                        <Border Background="{DynamicResource Bg.Sidebar}" BorderBrush="{DynamicResource Border.Control}"
+                                                BorderThickness="1" CornerRadius="4" Height="200" Margin="0,0,0,8">
+                                            <Grid>
+                                                <!--
+                                                    O Canvas tem o tamanho EXATO da foto em pixels e é escalado
+                                                    pelo Viewbox: a posição do mouse dentro dele já é a posição em
+                                                    pixels da foto, então o code-behind não converte escala nem
+                                                    precisa descontar borda vazia.
+                                                -->
+                                                <Viewbox Stretch="Uniform" Margin="4"
+                                                         Visibility="{Binding FotoSelecionadaPreview, Converter={StaticResource NullToVisibilityConverter}}">
+                                                    <Canvas x:Name="SelecaoCanvas"
+                                                            Width="{Binding FotoLargura}" Height="{Binding FotoAltura}"
+                                                            Background="Transparent" Cursor="Cross"
+                                                            MouseLeftButtonDown="SelecaoCanvas_MouseLeftButtonDown"
+                                                            MouseMove="SelecaoCanvas_MouseMove"
+                                                            MouseLeftButtonUp="SelecaoCanvas_MouseLeftButtonUp">
+                                                        <Image Source="{Binding FotoSelecionadaPreview}"
+                                                               Width="{Binding FotoLargura}" Height="{Binding FotoAltura}"/>
+
+                                                        <Rectangle Canvas.Left="{Binding RecorteX}" Canvas.Top="{Binding RecorteY}"
+                                                                   Width="{Binding RecorteLargura}" Height="{Binding RecorteAltura}"
+                                                                   Stroke="{DynamicResource Accent.Fill}" StrokeThickness="3"
+                                                                   Visibility="{Binding TemRecorte, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                                        <Rectangle x:Name="SelecaoEmCurso" Stroke="White" StrokeThickness="3"
+                                                                   StrokeDashArray="4 3" Visibility="Collapsed"/>
+                                                    </Canvas>
+                                                </Viewbox>
+                                                <TextBlock Text="{loc:Loc PerfilAlvo.Foto.SemFoto}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="240" FontSize="12"
+                                                           Foreground="{DynamicResource Text.Secondary}"
+                                                           Visibility="{Binding FotoSelecionadaPreview, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+                                            </Grid>
+                                        </Border>
+                                        <Button Content="{loc:Loc PerfilAlvo.Foto.LimparMarcacao}" Style="{StaticResource SecondaryButton}"
+                                                Command="{Binding LimparRecorteCommand}" HorizontalAlignment="Stretch" Margin="0"
+                                                Visibility="{Binding FotoSelecionadaPreview, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="{loc:Loc PerfilAlvo.Foto.MarcarObjeto}" FontSize="11" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource Text.Secondary}" Margin="0,10,0,6"/>
+
+                                <TextBlock Text="{Binding MensagemFotos}" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold"
+                                           Margin="0,0,0,6" Foreground="{DynamicResource Text.Primary}"/>
+
+                                <!-- Fotos do rascunho: clicar seleciona para marcar; "✕" desvincula. -->
+                                <ListBox ItemsSource="{Binding FormFotos}" SelectedItem="{Binding FotoSelecionada}"
+                                         Background="Transparent" BorderThickness="0" Margin="0,0,0,4"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         AutomationProperties.Name="Fotografias do alvo">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Width="92" Margin="0,0,6,6">
+                                                <Border Background="{DynamicResource Bg.Sidebar}"
+                                                        BorderBrush="{DynamicResource Border.Control}" BorderThickness="1" CornerRadius="4">
+                                                    <Grid>
+                                                        <Image Source="{Binding Caminho}" Height="64" Stretch="Uniform" Margin="2"/>
+                                                        <TextBlock Text="✓" FontWeight="Bold" FontSize="14" Margin="4,2"
+                                                                   HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                   ToolTip="Objeto já marcado nesta foto"
+                                                                   Foreground="{DynamicResource Accent.Fill}"
+                                                                   Visibility="{Binding TemRecorte, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <Button Content="✕" Width="20" Height="20" Padding="0" Margin="0"
+                                                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                                Background="{DynamicResource Danger.Fill}" FontSize="11"
+                                                                ToolTip="Remover esta fotografia do cadastro"
+                                                                Command="{Binding DataContext.RemoverFotoCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <TextBlock Text="{Binding StatusFoto}" TextWrapping="Wrap" FontSize="11"
+                                           Foreground="{DynamicResource Text.Secondary}"/>
+                            </StackPanel>
+
+                            <!-- ===== Etapa 3: dimensões ===== -->
+                            <StackPanel Visibility="{Binding EtapaAtual, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Dimensoes}">
+                                <TextBlock Text="Medidas do objeto real, em centímetros. Objeto retangular tem duas dimensões independentes; quadrado e redondo têm uma só."
+                                           FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"
+                                           Foreground="{DynamicResource Text.Secondary}"/>
+
+                                <StackPanel Visibility="{Binding FormFormato, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Retangular}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <TextBlock Text="{loc:Loc PerfilAlvo.Form.LarguraCm}" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox Text="{Binding FormLarguraCm, UpdateSourceTrigger=PropertyChanged}"
+                                                     AutomationProperties.Name="Largura em centímetros"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{loc:Loc PerfilAlvo.Form.AlturaCm}" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox Text="{Binding FormAlturaCm, UpdateSourceTrigger=PropertyChanged}"
+                                                     AutomationProperties.Name="Altura em centímetros"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding EhRetangular}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="{Binding RotuloDimensaoUnica}" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox Text="{Binding FormTamanhoCm, UpdateSourceTrigger=PropertyChanged}"
+                                             AutomationProperties.Name="Dimensão em centímetros"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- ===== Etapa 4: revisão ===== -->
+                            <StackPanel Visibility="{Binding EtapaAtual, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Revisao}">
+                                <TextBlock Text="Confira antes de gravar:" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                                <Border Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}"
+                                        BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <TextBlock Text="{Binding ResumoRevisao}" TextWrapping="Wrap" FontSize="13" LineHeight="22"/>
+                                </Border>
+
+                                <ItemsControl ItemsSource="{Binding FormFotos}" Margin="0,12,0,0" Focusable="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource Bg.Sidebar}" BorderBrush="{DynamicResource Border.Control}"
+                                                    BorderThickness="1" CornerRadius="4" Margin="0,0,6,6">
+                                                <Image Source="{Binding Caminho}" Height="56" Stretch="Uniform" Margin="2"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- Rodapé: pendência da etapa + navegação -->
+                    <Grid Grid.Row="3" Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock Text="{Binding PendenciaEtapa}" TextWrapping="Wrap" FontSize="11"
+                                       Foreground="{DynamicResource Target.Fill}"
+                                       Visibility="{Binding PendenciaEtapa, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            <TextBlock Text="{Binding MensagemFormulario}" TextWrapping="Wrap" FontSize="11"
+                                       Foreground="{DynamicResource Danger.Fill}"
+                                       Visibility="{Binding MensagemFormulario, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Voltar" Command="{Binding VoltarCommand}" Style="{StaticResource SecondaryButton}"/>
+                            <Button Content="Avançar" Command="{Binding AvancarCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EhUltimaEtapa}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Content="{Binding TextoBotaoSalvar}" Command="{Binding ConcluirCommand}" FontWeight="SemiBold" Margin="0">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EhUltimaEtapa}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

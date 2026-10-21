@@ -41,4 +41,21 @@ public static class QuadrantHelper
         Quadrant.Q4 => "Q4",
         _ => "—"
     };
+
+    /// <summary>
+    /// Verdadeiro se os dois quadrantes forem vizinhos geométricos (compartilham um eixo, ou seja,
+    /// uma torre de um deles cobre uma área fisicamente ao lado da área do outro). Usado pela
+    /// cooperação entre torres: Q1-Q2 e Q3-Q4 são vizinhos no eixo Y; Q1-Q4 e Q2-Q3 são vizinhos no
+    /// eixo X; Q1-Q3 e Q2-Q4 são diagonais (NÃO vizinhos) — cobertos só depois dos vizinhos diretos.
+    /// </summary>
+    public static bool AreAdjacent(Quadrant a, Quadrant b)
+    {
+        if (a == Quadrant.None || b == Quadrant.None || a == b) return false;
+
+        return (a, b) is
+            (Quadrant.Q1, Quadrant.Q2) or (Quadrant.Q2, Quadrant.Q1) or
+            (Quadrant.Q2, Quadrant.Q3) or (Quadrant.Q3, Quadrant.Q2) or
+            (Quadrant.Q3, Quadrant.Q4) or (Quadrant.Q4, Quadrant.Q3) or
+            (Quadrant.Q4, Quadrant.Q1) or (Quadrant.Q1, Quadrant.Q4);
+    }
 }

@@ -14,10 +14,10 @@ public sealed class ConnectionStateToBrushConverter : IValueConverter
     {
         string resourceKey = value switch
         {
-            ConnectionState.Connected => "AccentBrush",
-            ConnectionState.Connecting or ConnectionState.Reconnecting => "WarningBrush",
-            ConnectionState.Error => "DangerBrush",
-            _ => "TextSecondaryBrush"
+            ConnectionState.Connected => "Accent.Fill",
+            ConnectionState.Connecting or ConnectionState.Reconnecting => "Target.Fill",
+            ConnectionState.Error => "Danger.Fill",
+            _ => "Text.Secondary"
         };
 
         return Application.Current.TryFindResource(resourceKey) as SolidColorBrush ?? Brushes.Gray;

@@ -14,10 +14,10 @@ public sealed class ArduinoCompileStatusToBrushConverter : IValueConverter
     {
         string resourceKey = value switch
         {
-            ArduinoCompileStatus.Success => "AccentBrush",
-            ArduinoCompileStatus.Cancelled => "WarningBrush",
-            ArduinoCompileStatus.Failed => "DangerBrush",
-            _ => "TextSecondaryBrush"
+            ArduinoCompileStatus.Success => "Accent.Fill",
+            ArduinoCompileStatus.Cancelled => "Target.Fill",
+            ArduinoCompileStatus.Failed => "Danger.Fill",
+            _ => "Text.Secondary"
         };
 
         return Application.Current.TryFindResource(resourceKey) as SolidColorBrush ?? Brushes.Gray;

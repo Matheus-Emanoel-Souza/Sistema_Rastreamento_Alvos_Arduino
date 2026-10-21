@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using RadarTorres.App.Services;
@@ -16,6 +17,32 @@ public partial class DashboardToolbar : UserControl
 {
     public static readonly DependencyProperty StatusIsSuccessProperty = DependencyProperty.Register(
         nameof(StatusIsSuccess), typeof(bool), typeof(DashboardToolbar), new PropertyMetadata(false));
+
+    /// <summary>Um item do modal "+ Adicionar painel" (Requisito: imagens dos tipos de
+    /// monitoramento disponíveis para o usuário selecionar e importar).</summary>
+    private sealed record HiddenPanelEntry(string CardId, string Title, string IconKey);
+
+    /// <summary>Ícone representativo de cada tipo de painel, por CardId — cobre os painéis do
+    /// Painel Principal e do Monitoramento (Resources/Icons.xaml). CardId sem entrada aqui cai
+    /// no ícone genérico de Configurações.</summary>
+    private static readonly Dictionary<string, string> CardIconKeys = new()
+    {
+        ["Radar"] = "Icon.Monitoramento",
+        ["RadarAoVivo"] = "Icon.Monitoramento",
+        ["ModoOperacao"] = "Icon.HistoricoModos",
+        ["ModoAtual"] = "Icon.HistoricoModos",
+        ["DeteccaoCamera"] = "Icon.Cameras",
+        ["Monitoramento"] = "Icon.Desempenho",
+        ["ConsoleEventos"] = "Icon.ConsoleEventos",
+        ["ZonasMortas"] = "Icon.ZonasMortas",
+        ["ObjetosDetectados"] = "Icon.ObjetosDetectados",
+        ["AcoesRealizadas"] = "Icon.AcoesRealizadas",
+        ["EstadoComunicacao"] = "Icon.EstadoComunicacao",
+        ["UltimaModoAtualTorre"] = "Icon.HistoricoModos",
+        ["UltimaAtualizacao"] = "Icon.HistoricoModos",
+    };
+
+    private const string DefaultIconKey = "Icon.Configuracoes";
 
     private readonly List<(string CardId, string Title)> _hiddenCards = new();
 
@@ -60,6 +87,10 @@ public partial class DashboardToolbar : UserControl
         _hiddenCards.Clear();
         _hiddenCards.AddRange(hidden);
         UpdateHiddenPanelsButton();
+
+        HiddenPanelsList.ItemsSource = _hiddenCards
+            .Select(c => new HiddenPanelEntry(c.CardId, c.Title, CardIconKeys.GetValueOrDefault(c.CardId, DefaultIconKey)))
+            .ToList();
     }
 
     private void UpdateHiddenPanelsButton()
@@ -78,17 +109,13 @@ public partial class DashboardToolbar : UserControl
     private void HiddenPanelsButton_Click(object sender, RoutedEventArgs e)
     {
         if (_hiddenCards.Count == 0) return;
+        HiddenPanelsPopup.IsOpen = true;
+    }
 
-        var menu = new ContextMenu();
-        foreach ((string cardId, string title) in _hiddenCards)
-        {
-            var item = new System.Windows.Controls.MenuItem { Header = title, Tag = cardId };
-            item.Click += (_, _) => ReopenCardRequested?.Invoke(this, cardId);
-            menu.Items.Add(item);
-        }
-
-        HiddenPanelsButton.ContextMenu = menu;
-        menu.PlacementTarget = HiddenPanelsButton;
-        menu.IsOpen = true;
+    private void HiddenPanelItem_Click(object sender, RoutedEventArgs e)
+    {
+        var cardId = (string)((Button)sender).Tag;
+        HiddenPanelsPopup.IsOpen = false;
+        ReopenCardRequested?.Invoke(this, cardId);
     }
 }

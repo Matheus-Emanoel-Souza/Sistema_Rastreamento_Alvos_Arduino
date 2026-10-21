@@ -4,8 +4,8 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Acesso a contas de usuário. Implementação atual: <see cref="CsvUsuarioRepository"/>
-/// (ver TODO(SQL) em <see cref="Data.AppDataPaths"/>).
+/// Acesso a contas de usuário. Implementação atual: <see cref="SqliteUsuarioRepository"/>
+/// (SQLite, único armazenamento).
 /// </summary>
 public interface IUsuarioRepository
 {

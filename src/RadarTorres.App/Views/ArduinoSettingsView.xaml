@@ -19,8 +19,8 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <Style x:Key="SectionCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
@@ -29,46 +29,46 @@
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
         <Style x:Key="LabelText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,6,0,2"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
-            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="Padding" Value="6,3"/>
         </Style>
         <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}"/>
         </Style>
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Margin" Value="0,0,16,0"/>
         </Style>
         <Style x:Key="ConsoleBorder" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource RadarBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Sidebar}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Height" Value="180"/>
@@ -78,7 +78,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="4">
             <TextBlock Text="{loc:Loc Arduino.Title}" FontSize="20" FontWeight="Bold"
-                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,16"/>
+                       Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,16"/>
 
             <!-- ==================== SEÇÃO 1 — AMBIENTE ARDUINO ==================== -->
             <Border Style="{StaticResource SectionCard}">
@@ -103,11 +103,11 @@
                         <TextBlock Text="{Binding CliStatusText}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12"/>
                     </StackPanel>
                     <TextBlock Text="{Binding CliVersion, StringFormat='Versão: {0}', FallbackValue=''}"
-                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="18,2,0,0"
+                               Foreground="{DynamicResource Text.Secondary}" FontSize="11" Margin="18,2,0,0"
                                Visibility="{Binding IsCliFound, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
                     <TextBlock Text="{loc:Loc Arduino.Ambiente.NaoEncontradoAjuda}" TextWrapping="Wrap" FontSize="11" Margin="0,8,0,0"
-                               Foreground="{DynamicResource WarningBrush}">
+                               Foreground="{DynamicResource Target.Fill}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -162,7 +162,7 @@
                     </TextBlock>
 
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,6">
-                        <Button Content="{loc:Loc Arduino.Compilacao.Compilar}" Command="{Binding CompileCommand}" Background="{DynamicResource AccentBrush}"/>
+                        <Button Content="{loc:Loc Arduino.Compilacao.Compilar}" Command="{Binding CompileCommand}" Background="{DynamicResource Accent.Fill}"/>
                         <Button Content="{loc:Loc Arduino.Compilacao.Cancelar}" Command="{Binding CancelCompileCommand}"/>
                         <Button Content="{loc:Loc Arduino.Compilacao.LimparConsole}" Command="{Binding ClearCompileConsoleCommand}"/>
                         <ProgressBar Width="120" Height="14" Margin="10,0,0,0" VerticalAlignment="Center"
@@ -205,7 +205,7 @@
                     </UniformGrid>
 
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,10">
-                        <Button Content="{loc:Loc Arduino.Monitor.Conectar}" Command="{Binding ConnectCommand}" Background="{DynamicResource AccentBrush}"/>
+                        <Button Content="{loc:Loc Arduino.Monitor.Conectar}" Command="{Binding ConnectCommand}" Background="{DynamicResource Accent.Fill}"/>
                         <Button Content="{loc:Loc Arduino.Monitor.Desconectar}" Command="{Binding DisconnectCommand}"/>
                         <Ellipse Width="12" Height="12" Margin="10,0,4,0" VerticalAlignment="Center"
                                  Fill="{Binding MonitorConnectionState, Converter={StaticResource ConnectionStateToBrushConverter}}"/>
@@ -216,7 +216,7 @@
                         <CheckBox Content="{loc:Loc Arduino.Monitor.RolagemAutomatica}" IsChecked="{Binding AutoScroll}"/>
                         <CheckBox Content="{loc:Loc Arduino.Monitor.ExibirHorario}" IsChecked="{Binding ShowTimestamps}"/>
                         <Button Content="{loc:Loc Arduino.Monitor.LimparConsole}" Command="{Binding ClearMonitorConsoleCommand}" Margin="0,0,16,0"/>
-                        <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}">
+                        <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Text.Secondary}">
                             <Run Text="{loc:Loc Arduino.Monitor.MensagensRecebidas}"/>
                             <Run Text=": "/>
                             <Run Text="{Binding MessageCount, Mode=OneWay}"/>
@@ -228,7 +228,7 @@
                             <ItemsControl ItemsSource="{Binding MonitorLines}" Margin="6" FontFamily="Consolas" FontSize="12">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource Text.Primary}"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
