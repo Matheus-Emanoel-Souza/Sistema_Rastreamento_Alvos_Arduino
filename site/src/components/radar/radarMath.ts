@@ -39,27 +39,67 @@ export function quadrantOf(point: Point): Quadrant {
   return 'Q4'
 }
 
+/**
+ * Vizinhança geométrica entre quadrantes — mesma regra de QuadrantHelper.AreAdjacent.
+ * Q1-Q2 e Q3-Q4 são vizinhos no eixo Y; Q1-Q4 e Q2-Q3 no eixo X; Q1-Q3 e Q2-Q4 são
+ * diagonais (NÃO vizinhos).
+ */
+export function areAdjacent(a: Quadrant, b: Quadrant): boolean {
+  if (a === b) return false
+  const adjacentPairs: Record<Quadrant, Quadrant[]> = {
+    Q1: ['Q2', 'Q4'],
+    Q2: ['Q1', 'Q3'],
+    Q3: ['Q2', 'Q4'],
+    Q4: ['Q1', 'Q3'],
+  }
+  return adjacentPairs[a].includes(b)
+}
+
 export function euclideanDistance(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
+export type SelectionLayer = 'quadrante-proprio' | 'adjacente' | 'cobertura' | 'sobrecarregada'
+
 export interface TowerSelectionResult {
   tower: Tower
   distance: number
-  sameQuadrant: boolean
+  layer: SelectionLayer
 }
 
 /**
- * Reproduz TowerSelectionService: prioriza torres do mesmo quadrante do alvo;
- * se nenhuma disponível estiver no quadrante, considera todas; escolhe a de
- * menor distância euclidiana.
+ * Reproduz TowerSelectionService.SelectTowerFor (versão em camadas, com cooperação
+ * entre torres adjacentes): prioriza a torre do próprio quadrante do alvo; se estiver
+ * comprometida/indisponível, tenta uma torre de quadrante adjacente cujo próprio
+ * quadrante não tenha alvo concorrente; por fim, qualquer torre livre restante.
+ * `committedTowerIds` e `quadrantsWithOtherTargets` descrevem o estado dos OUTROS
+ * alvos simultâneos (vazio = comportamento de alvo único, como no demo atual).
  */
-export function selectTower(target: Point, towers: Tower[]): TowerSelectionResult | null {
-  if (towers.length === 0) return null
+export function selectTowerAmong(
+  target: Point,
+  towers: Tower[],
+  committedTowerIds: ReadonlySet<number> = new Set(),
+  quadrantsWithOtherTargets: ReadonlySet<Quadrant> = new Set(),
+): TowerSelectionResult | null {
+  const free = towers.filter((t) => !committedTowerIds.has(t.id))
+  if (free.length === 0) return null
 
   const targetQuadrant = quadrantOf(target)
-  const sameQuadrant = towers.filter((t) => quadrantOf(t) === targetQuadrant)
-  const pool = sameQuadrant.length > 0 ? sameQuadrant : towers
+
+  const home = free.filter((t) => quadrantOf(t) === targetQuadrant)
+  const adjacent = home.length > 0
+    ? []
+    : free.filter((t) => areAdjacent(quadrantOf(t), targetQuadrant) && !quadrantsWithOtherTargets.has(quadrantOf(t)))
+  const coverage = home.length === 0 && adjacent.length === 0 ? free : []
+
+  const [pool, layer]: [Tower[], SelectionLayer] =
+    home.length > 0
+      ? [home, 'quadrante-proprio']
+      : adjacent.length > 0
+        ? [adjacent, 'adjacente']
+        : coverage.length > 0
+          ? [coverage, 'cobertura']
+          : [towers, 'sobrecarregada']
 
   let best = pool[0]
   let bestDistance = euclideanDistance(target, best)
@@ -72,5 +112,10 @@ export function selectTower(target: Point, towers: Tower[]): TowerSelectionResul
     }
   }
 
-  return { tower: best, distance: bestDistance, sameQuadrant: sameQuadrant.length > 0 }
+  return { tower: best, distance: bestDistance, layer }
+}
+
+/** Atalho de alvo único (sem outros alvos concorrentes) — usado pelo demo visual atual. */
+export function selectTower(target: Point, towers: Tower[]): TowerSelectionResult | null {
+  return selectTowerAmong(target, towers)
 }

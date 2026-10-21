@@ -245,7 +245,7 @@ export default function RadarSimulation() {
           <dd>{selection ? selection.distance.toFixed(2) : '—'} m</dd>
 
           <dt className="text-muted">Critério</dt>
-          <dd>{selection?.sameQuadrant ? 'mesmo quadrante' : 'todas disponíveis'}</dd>
+          <dd>{selection?.layer === 'quadrante-proprio' ? 'mesmo quadrante' : 'todas disponíveis'}</dd>
         </dl>
       </div>
     </div>
