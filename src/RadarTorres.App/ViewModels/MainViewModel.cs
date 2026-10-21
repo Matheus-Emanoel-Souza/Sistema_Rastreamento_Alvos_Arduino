@@ -675,7 +675,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         if (CurrentMode == SystemMode.AcompanharAlvos || CurrentMode == SystemMode.Disparar)
         {
             long inicioDecisao = Stopwatch.GetTimestamp();
-            TowerSelectionResult result = _towerService.SelectTowerFor(target);
+            TowerSelectionResult result = _towerService.SelectTowerFor(target, Targets.Where(t => t.IsActive));
             _desempenhoMonitorService.RecordDecisionTime(Stopwatch.GetElapsedTime(inicioDecisao).TotalMilliseconds);
 
             _towerService.RecomputeTowerStates(Targets.Where(t => t.IsActive));
@@ -683,6 +683,10 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
             if (result.Success)
             {
                 _logger.Info($"Torre {result.SelectedTower!.Name} selecionada para o alvo #{target.Id:D2}");
+
+                // Reposiciona fisicamente (pan) a torre escolhida para encarar o alvo — inclusive
+                // quando ela está cobrindo um alvo de outro quadrante (adjacente ou sobressalente).
+                _ = SendCommandSafeAsync(SerialProtocolParser.BuildAim(result.SelectedTower!.Id, result.SelectedTower.AimAngleDegrees));
             }
 
             if (CurrentMode == SystemMode.Disparar && result.Success)
