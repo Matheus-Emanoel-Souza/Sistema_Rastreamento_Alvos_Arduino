@@ -8,7 +8,7 @@
 ' NOTA METODOLÓGICA: "Apresentação", "Serviços", "Persistência local" e ".NET 9 Desktop Runtime"
 ' são apresentados como itens de um mesmo bloco ("RadarTorres.App") por serem partes do MESMO
 ' processo .exe, executando no MESMO nó físico — não são componentes distribuídos nem processos
-' separados. Ver Seção 6 de UML_RadarTorres.md.
+' separados. Ver Seção 6 de ../UML_RadarTorres.md.
 
 skinparam shadowing false
 skinparam defaultTextAlignment left

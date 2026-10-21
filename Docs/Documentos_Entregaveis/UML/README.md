@@ -11,14 +11,15 @@ documentação estão sinalizados como **inferência** nos respectivos arquivos.
 | Arquivo | Conteúdo |
 |---|---|
 | Diagrama de Classes — *removido* | O artefato de diagrama de classes (antigo `Diagrama_de_Classes/`) foi removido do repositório e ainda não foi regenerado; ver observação em `UML_RadarTorres.md`, Seção 5 |
-| [`Diagrama_de_Pacotes.md`](Diagrama_de_Pacotes.md) | Organização em pacotes/namespaces reais do repositório + diagrama Mermaid de dependências |
+| [`Pacotes/Diagrama_de_Pacotes.md`](Pacotes/Diagrama_de_Pacotes.md) | Organização em pacotes/namespaces reais do repositório + diagrama Mermaid de dependências |
 | [`../Banco_de_Dados/Modelo_Banco_de_Dados.md`](../Banco_de_Dados/Modelo_Banco_de_Dados.md) | Modelo de dados atual (SQLite) com DER |
 | [`Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`](../Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | RF01–RF32 e RNF01–RNF30 consolidados em um único documento, com prioridade/categoria e status |
 | [`Decisoes_Arquiteturais.md`](Decisoes_Arquiteturais.md) | Escolhas internas de implementação (persistência, MVVM manual, protocolo serial, UX de cards) — não são requisitos do produto |
 | [`Limitacoes_Conhecidas.md`](Limitacoes_Conhecidas.md) | Funcionalidades ainda não implementadas e divergências entre a especificação revisada e o código atual |
 | [`../Requisitos_de_Sistema/Matriz_de_Rastreabilidade.md`](../Requisitos_de_Sistema/Matriz_de_Rastreabilidade.md) | Requisito/decisão/limitação → arquivo/classe/função → status |
-| [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml) | Diagrama de Casos de Uso (PlantUML) — atores, 28 casos de uso agrupados, `<<include>>`/`<<extend>>` |
-| [`Casos_de_Uso.md`](Casos_de_Uso.md) | Especificação textual de cada caso de uso (objetivo, atores, fluxos, status) e matriz Caso de Uso × Requisito |
+| [`Casos_de_Uso/Diagrama_Casos_de_Uso.puml`](Casos_de_Uso/Diagrama_Casos_de_Uso.puml) | Diagrama de Casos de Uso (PlantUML) — atores, 28 casos de uso agrupados, `<<include>>`/`<<extend>>` |
+| [`Casos_de_Uso/Casos_de_Uso.md`](Casos_de_Uso/Casos_de_Uso.md) | Especificação textual de cada caso de uso (objetivo, atores, fluxos, status) e matriz Caso de Uso × Requisito |
+| [`Implantacao/Diagrama_de_Implantacao.md`](Implantacao/Diagrama_de_Implantacao.md) | Diagrama de Implantação (PlantUML) — distribuição física PC ↔ Arduino |
 
 Diagramas Mermaid também foram renderizados como imagem (`.png`) nesta mesma pasta, quando a
 geração foi bem-sucedida — ver seção "Diagramas renderizados" abaixo. O código Mermaid

@@ -440,8 +440,8 @@ melhor desempenho de redesenho em tempo real — todos requisitos centrais deste
 | Documento | Conteúdo |
 |---|---|
 | [Requisitos funcionais e não funcionais](Docs/Documentos_Entregaveis/Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | Levantamento completo de requisitos do sistema |
-| [Casos de uso](Docs/Documentos_Entregaveis/UML/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
-| [Diagrama de Implantação](Docs/Documentos_Entregaveis/UML/Diagrama_de_Implantacao_RadarTorres.pdf) | Distribuição física dos componentes (app desktop + Arduino) |
+| [Casos de uso](Docs/Documentos_Entregaveis/UML/Casos_de_Uso/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
+| [Diagrama de Implantação](Docs/Documentos_Entregaveis/UML/Implantacao/Diagrama_de_Implantacao_RadarTorres.pdf) | Distribuição física dos componentes (app desktop + Arduino) |
 | [Diagrama de Classes](Docs/Documentos_Entregaveis/Diagrama_de_Classes/Diagrama_de_Classes_RadarTorres.pdf) | Modelos de domínio e interfaces de serviço |
 | [Modelo Banco de Dados](Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf) | Modelo de dados do sistema |
 | [Artigo do TCC](Docs/Documentos_Entregaveis/Artigo/Artigo.pdf) | Artigo acadêmico do Trabalho de Conclusão de Curso |
