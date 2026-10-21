@@ -1,0 +1,13 @@
+<Application x:Class="RadarTorres.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Sem StartupUri: o fluxo de abertura (login -> shell) é controlado por código em
+        App.xaml.cs, já que depende de autenticação. As cores da paleta foram movidas para
+        Themes/Dark.xaml e Themes/Light.xaml (Requisito "tema claro/escuro") — App.xaml.cs
+        mescla o tema correto em Application.Resources antes de mostrar qualquer janela.
+    -->
+    <Application.Resources>
+        <ResourceDictionary/>
+    </Application.Resources>
+</Application>

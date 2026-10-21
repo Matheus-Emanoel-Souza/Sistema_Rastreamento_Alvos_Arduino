@@ -1,0 +1,45 @@
+<UserControl x:Class="RadarTorres.App.Views.CamerasView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization"
+             xmlns:views="clr-namespace:RadarTorres.App.Views">
+    <!--
+        Módulo "Câmeras": grade 2x2 com até 4 painéis independentes de seleção + visualização de
+        webcam. Cada painel é uma CameraPanelView (DataContext = CameraSlotViewModel) gerada pelo
+        ItemsControl abaixo a partir de CamerasViewModel.Slots — assim os 4 painéis reaproveitam o
+        mesmo XAML/lógica de binding em vez de 4 cópias. Toda a lógica (detecção, início/parada,
+        exclusividade entre painéis, tratamento de erros) mora em CamerasViewModel/CameraSlotViewModel;
+        esta view só faz bindings e o mínimo de code-behind necessário para liberar as câmeras ao
+        sair da tela.
+    -->
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="4">
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{loc:Loc Cameras.Title}" FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Content="{loc:Loc Cameras.Selecao.Atualizar}" Command="{Binding RefreshCommand}"
+                        Padding="10,5" Background="{DynamicResource PanelBorderBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"/>
+            </Grid>
+
+            <!-- Grade 2x2: cada item de Slots vira uma CameraPanelView independente. -->
+            <ItemsControl ItemsSource="{Binding Slots}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="2" Rows="2"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <views:CameraPanelView Margin="0,0,12,12"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
