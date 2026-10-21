@@ -1351,6 +1351,102 @@ divergências do pedido):
 
 ---
 
+## 2026-10-21 — Troca do ícone do item de menu "Objetos detectados"
+
+**Pedido (texto integral):**
+
+> Preciso trocar o ícone do item de menu "Objetos detectados" (barra lateral da Shell) por um
+> novo ícone. É uma alteração apenas visual, e quero a menor alteração possível.
+>
+> REGRAS
+> - Antes de qualquer coisa: git status, branch atual, git fetch e comparação com o remoto.
+>   Me informe a situação. Não faça push.
+> - Antes de editar, me apresente um plano curto (arquivos que pretende tocar e o que muda em
+>   cada um) e espere minha aprovação.
+> - Não altere nada fora do pedido: sem refatoração, sem renomear itens, sem mexer em rota,
+>   permissão, texto ou ordem do menu. O texto do item continua "Objetos detectados".
+> - Siga exatamente o padrão que o projeto já usa para os ícones dos outros itens do menu
+>   (dicionário de recursos, Geometry/Path, tamanho, espessura, cor via DynamicResource). Não
+>   introduza biblioteca nem outro mecanismo. Se o padrão existente for diferente do que
+>   descrevo abaixo, siga o do projeto e me avise.
+> - Na dúvida sobre qualquer ponto, pare e pergunte. Não suponha.
+> - Não faça merge, rebase, reset, nem crie tags.
+>
+> O QUE FAZER
+> 1. Localizar o item de menu "Objetos detectados" e o ícone atual dele (dois quadrados ligados
+>    por uma linha).
+> 2. Substituir somente o ícone atual pelo ícone "binoculars" (estilo outline) do Tabler Icons
+>    (licença MIT). Obter o SVG oficial em
+>    https://github.com/tabler/tabler-icons/blob/main/icons/outline/binoculars.svg — não
+>    desenhar nem reproduzir o path de memória.
+> 3. Converter o SVG em Geometry, mantendo grade 24x24, traço de 2px, pontas e junções
+>    arredondadas, sem preenchimento. Descartar o path de fundo "M0 0h24v24H0z" se houver.
+>    Ajustar o nome da chave ao padrão existente (sugestão: `Icon.ObjetosDetectados`).
+> 4. Se não conseguir acessar o SVG por falta de rede, parar e pedir para colar o conteúdo do
+>    arquivo — não improvisar outro desenho.
+> 5. A cor do traço deve vir do estado do item (ativo = Accent.Text, inativo = Text.Secondary),
+>    via recurso dinâmico, igual aos demais ícones. Sem cor fixa no código. Conferir nos temas
+>    claro e escuro.
+> 6. Se o ícone antigo ficar sem uso em outro lugar, avisar em vez de apagá-lo.
+> 7. Se o SVG do Tabler usar comandos que o WPF não aceita na Geometry (ex.: arcos com flags
+>    colados), reescrever o path em sintaxe válida sem mudar o desenho, e avisar.
+>
+> VALIDAÇÃO: `dotnet build` (0 erros e 0 avisos) e `dotnet test` (21 testes). Se algo não puder
+> ser conferido visualmente, dizer isso claramente e pedir para o usuário conferir no app.
+>
+> COMMIT: só depois de autorização; revisar `git status`/`git diff` e incluir só os arquivos
+> desta alteração; mensagem em português, verbo no presente, até 72 caracteres, sem menção a
+> IA/assinatura/trailer. Sugestão: `style(menu): troca o ícone do item Objetos detectados`.
+>
+> Pediu também entrada neste log e relatório final cobrindo situação inicial do repositório,
+> sincronismo com o GitHub, arquivos alterados, validações, commits, pendências e riscos.
+
+**Situação do repositório no início:** branch `estrutura/cooperacao-torres-adjacentes`,
+working tree limpa, sincronizada com `origin/estrutura/cooperacao-torres-adjacentes` (sem
+commits locais pendentes de push); `main` local em dia com `origin/main`.
+
+**SVG obtido:** baixado via `curl` de
+`https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/binoculars.svg`
+(Tabler Icons v3.6, licença MIT) — conteúdo íntegro, sem o path de fundo "M0 0h24v24H0z"
+(não existia neste arquivo).
+
+**Divergências do pedido encontradas e avisadas antes de editar:**
+- O SVG usa comandos `h`/`v` em 3 dos 7 `<path>` (as duas "hastes" acima das lentes e o
+  retângulo central entre elas) — o próprio projeto já tinha documentado que "WPF não tem H/V
+  na mini-linguagem" (comentário em `Icon.LogoTorre`, `Icons.xaml`). Esses 3 trechos foram
+  recalculados à mão em coordenadas absolutas (`L`), preservando exatamente o desenho original
+  (sem mudar a forma, só a sintaxe do comando).
+- Os dois círculos das lentes (desenhados no SVG com arcos `a`) foram convertidos para
+  `EllipseGeometry Center="7,16" RadiusX="3" RadiusY="3"` / `Center="17,16"` em vez de manter
+  arco de path — nenhum ícone do projeto desenha círculo via arco, todos usam `EllipseGeometry`
+  (confirmado em `Icon.Monitoramento`, `Icon.PerfisAlvo`, `Icon.Desempenho`).
+- `Icon.ObjetosDetectados` também é usado em `DashboardToolbar.xaml.cs:38` (card
+  "ObjetosDetectados" no menu "Painéis ocultos") — mesma situação do `Icon.Desempenho` na
+  sessão anterior. Avisado antes de editar; seguida a mesma decisão já tomada pelo usuário
+  (trocar o recurso compartilhado, muda nos dois lugares).
+
+**Entregue:**
+
+- `src/RadarTorres.App/Resources/Icons.xaml` — `Icon.ObjetosDetectados` substituído pelo ícone
+  "binoculars" do Tabler Icons: 2 `EllipseGeometry` (lentes) + 1 `PathGeometry` combinando as 5
+  formas restantes, mesma grade 24x24/traço 2px/sem preenchimento dos demais ícones. Único
+  arquivo alterado. Comentário no próprio dicionário registra a fonte (Tabler Icons, MIT, com
+  caminho do arquivo) e as duas conversões (h/v→L, arco→Ellipse).
+- Cor do traço: nenhuma mudança necessária — herdada do `Foreground` do botão pai, igual aos
+  demais itens, nos dois temas.
+- Ícone antigo (dois quadrados ligados por linha): não ficou "sem uso" em outro lugar — era
+  conteúdo inline da própria chave `Icon.ObjetosDetectados` (sem recurso nomeado separado),
+  substituído no lugar.
+- `dotnet build`: 0 erros; 9 avisos, todos `NU1701` pré-existentes do pacote AForge (não
+  relacionados a esta mudança).
+- `dotnet test`: 110 testes, 110 aprovados (não 21 — número desatualizado; nenhum teste cobre
+  recursos de ícone).
+- Aplicativo recompilado e reaberto pela sessão para o usuário validar visualmente nos dois
+  temas.
+- Nenhum commit feito — aguardando autorização, conforme pedido.
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
