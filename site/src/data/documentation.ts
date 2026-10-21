@@ -69,13 +69,13 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Casos de uso (PDF entregável)',
         description: 'Documento de casos de uso com diagrama.',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Documento_Casos_de_Uso_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Casos_de_Uso/Documento_Casos_de_Uso_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {
         title: 'Diagrama de Implantação (PDF entregável)',
         description: 'Distribuição física dos componentes (app desktop + Arduino).',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Diagrama_de_Implantacao_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Implantacao/Diagrama_de_Implantacao_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {

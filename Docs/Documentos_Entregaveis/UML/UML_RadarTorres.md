@@ -105,10 +105,10 @@ alcançados apenas por `<<include>>`/`<<extend>>` a partir de quem efetivamente 
 o Usuário observando o radar, ou o Arduino enviando uma leitura — reforçando visualmente que não
 existe, no sistema, um caso de uso de "acionar manualmente".
 
-Diagrama fonte: [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml).
+Diagrama fonte: [`Diagrama_Casos_de_Uso.puml`](Casos_de_Uso/Diagrama_Casos_de_Uso.puml).
 A especificação textual completa de cada um dos 28 casos de uso (objetivo, atores, fluxos,
 requisito relacionado e status de implementação) está em
-`Docs/Documentos_Entregaveis/UML/Casos_de_Uso.md`.
+`Docs/Documentos_Entregaveis/UML/Casos_de_Uso/Casos_de_Uso.md`.
 
 ## 4. Modos de operação
 
@@ -187,7 +187,7 @@ para explicar onde o processamento efetivamente ocorre nem como a informação a
 entre o computador e o dispositivo físico.
 
 O diagrama de implantação do RadarTorres, em
-[`Implantacao_RadarTorres.puml`](Implantacao_RadarTorres.puml), representa dois nós físicos: o
+[`Implantacao_RadarTorres.puml`](Implantacao/Implantacao_RadarTorres.puml), representa dois nós físicos: o
 **computador do usuário** (Windows 10/11, 64-bit) e o **Arduino** (microcontrolador), conectados
 exclusivamente por **USB/serial**.
 

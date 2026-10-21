@@ -49,7 +49,7 @@ acionar as torres demonstrativas.
   `Docs/Tecnica/COMUNICACAO_ARDUINO.md`.
 * A segregação em quatro blocos internos (Apresentação/Serviços/Persistência/Runtime) é
   **didática**, não uma leitura de componentes fisicamente distribuídos — ver Seção 6 de
-  [`UML_RadarTorres.md`](UML_RadarTorres.md).
+  [`UML_RadarTorres.md`](../UML_RadarTorres.md).
 
 ## Ver também
 
