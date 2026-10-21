@@ -27,6 +27,31 @@ Detectados (exportação sob demanda para o usuário, não persistência da apli
 `objetos_detectados.Id` e `usuarios.Id`, com `PRAGMA foreign_keys = ON` — ver
 `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql`.
 
+### 1.1 Especificações técnicas do SGBD
+
+* **SGBD**: SQLite (embarcado, arquivo único, sem servidor).
+* **Driver/linguagem de acesso**: `Microsoft.Data.Sqlite` versão **9.0.0** (`src/RadarTorres.App/RadarTorres.App.csproj:50`), consumido em C#/.NET 9.
+* **Versão do engine SQLite**: não pinada separadamente pelo projeto — vem embutida no pacote `Microsoft.Data.Sqlite` 9.0.0 via `SQLitePCLRaw`; não há `packages.lock.json` no repositório fixando o número exato da build nativa.
+* **Codificação**: UTF-8 (padrão do SQLite para colunas `TEXT`; não há `PRAGMA encoding` customizado em `schema.sql`).
+* **Collation**: `BINARY` (padrão do SQLite; nenhuma coluna declara `COLLATE NOCASE` ou outra em `schema.sql`).
+* **Integridade referencial**: `PRAGMA foreign_keys = ON` (`schema.sql:5`).
+
+### 1.2 Índices (completo, de `schema.sql`)
+
+| Índice | Tabela | Coluna(s) | Tipo |
+|---|---|---|---|
+| `idx_acoes_realizadas_torre` | `acoes_realizadas` | `ID_TORRE` | normal |
+| `idx_objetos_detectados_datahora` | `objetos_detectados` | `DataHora` | normal |
+| `idx_acoes_realizadas_datahora` | `acoes_realizadas` | `DH_ACAO` | normal |
+| `idx_modo_atual_torre_usuario` | `modo_atual_torre` | `ID_USER` | normal |
+| `idx_objetos_detectados_perfil` | `objetos_detectados` | `PerfilAlvoId` | normal |
+| `idx_ocorrencia_estados_objeto` | `ocorrencia_estados` | `ObjetoDetectadoId` | normal |
+| `idx_objetos_detectados_rastreamento` | `objetos_detectados` | `RastreamentoId, Quadrante` | único, parcial (`WHERE RastreamentoId IS NOT NULL`) |
+| `idx_cameras_dispositivo` | `cameras` | `DispositivoId` | único |
+| `idx_cameras_quadrante` | `cameras` | `Quadrante` | único |
+
+Além desses, `Login` (`usuarios`) e `UsuarioId` (`preferencias_usuario`, PK) já têm índice implícito por `UNIQUE`/`PRIMARY KEY`.
+
 ## 2. Modelo identificado no código (SQLite atual)
 
 ### 2.1 Descrição textual das tabelas
@@ -138,7 +163,7 @@ erDiagram
     }
 
     PREFERENCIAS_USUARIO {
-        int UsuarioId PK-FK
+        int UsuarioId PK, FK
         string Idioma
         string Tema "Claro | Escuro | Sistema"
         bool SidebarRecolhida

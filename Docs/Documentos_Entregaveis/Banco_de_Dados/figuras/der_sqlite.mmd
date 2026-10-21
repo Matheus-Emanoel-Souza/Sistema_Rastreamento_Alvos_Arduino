@@ -1,0 +1,80 @@
+erDiagram
+    USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
+    USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
+    OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
+    OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
+    CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
+
+    USUARIOS {
+        int Id PK
+        string Nome
+        string Login UK
+        string SenhaHash
+        string SenhaSalt
+        string Perfil
+        bool Ativo
+        datetime DataCriacao
+        datetime UltimoAcesso "nullable"
+    }
+
+    OBJETOS_DETECTADOS {
+        int Id PK
+        string Tipo
+        double X
+        double Y
+        double Z "nullable"
+        string Quadrante
+        datetime DataHora
+        string Dispositivo
+        double NivelConfianca "nullable"
+        string Observacao "nullable"
+        string ReferenciaImagem "nullable"
+        int PerfilAlvoId "nullable"
+        string CameraDispositivoId "nullable"
+        string CameraNome "nullable"
+        string RastreamentoId "nullable"
+        string Estado "Detectado|AbatePendente|Abatido"
+        datetime DataHoraUltimaDeteccao "nullable"
+    }
+
+    OCORRENCIA_ESTADOS {
+        int Id PK
+        int ObjetoDetectadoId FK
+        string Estado "Detectado|AbatePendente|Abatido"
+        datetime DataHora
+        string Usuario "nullable - login de quem decidiu"
+        string Observacao "nullable"
+    }
+
+    CAMERAS {
+        int Id PK
+        string DispositivoId UK "moniker DirectShow"
+        string Nome
+        string Quadrante UK "Q1..Q4"
+        datetime AtualizadoEm
+    }
+
+    ACOES_REALIZADAS {
+        int ID_ACAO PK
+        int ID_TORRE
+        int ID_OBJETO FK "nullable"
+        datetime DH_ACAO
+        string OBSERVACAO "nullable"
+    }
+
+    MODO_ATUAL_TORRE {
+        int ID_MODO PK
+        string MODOATUAL
+        string MODOANTERIOR
+        int ID_USER FK "nullable"
+        datetime DHALTERACAO
+    }
+
+    PREFERENCIAS_USUARIO {
+        int UsuarioId PK, FK
+        string Idioma
+        string Tema "Claro | Escuro | Sistema"
+        bool SidebarRecolhida
+        string TelaInicial "nullable"
+        int RegistrosPorPagina
+    }

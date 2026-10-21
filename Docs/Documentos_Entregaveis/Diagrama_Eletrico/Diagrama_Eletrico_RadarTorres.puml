@@ -2,7 +2,7 @@
 
 ' RadarTorres — Diagrama Elétrico (conceitual/funcional)
 ' Objetivo: mostrar como os componentes de hardware serão conectados ao microcontrolador,
-' complementando o Diagrama de Implantação (Docs/Documentos_Entregaveis/UML/Implantacao_RadarTorres.puml)
+' complementando o Diagrama de Implantação (Docs/Documentos_Entregaveis/UML/Implantacao/Implantacao_RadarTorres.puml)
 ' e o protocolo serial (Docs/Tecnica/COMUNICACAO_ARDUINO.md).
 '
 ' Hardware assumido (confirmado com o autor em 2026-09-19):
