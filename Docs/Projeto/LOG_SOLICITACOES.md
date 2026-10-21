@@ -1251,6 +1251,106 @@ vez de criar uma chave nova só para a Sidebar.
 
 ---
 
+## 2026-10-21 — Redesenho da tela de Login (70% arte / 30% formulário)
+
+**Pedido (texto integral):**
+
+> Tarefa: redesenhar o layout da tela de Login (70% arte / 30% formulário)
+>
+> REGRAS: antes de qualquer alteração, verificar git status/branch/remoto/fetch e informar a
+> situação; apresentar plano e aguardar aprovação antes de alterar código; menor alteração
+> possível, sem refatorar fora do escopo, seguindo os padrões existentes (MVVM à mão,
+> DynamicResource, i18n); parar e perguntar na dúvida; sem push/merge/rebase/reset/tags sem
+> autorização explícita; commits pequenos, um por alteração lógica, formato
+> `<tipo>(<escopo>): <descrição>`, sem menção a IA; validar com `dotnet build` (0 erros/avisos)
+> e `dotnet test` (21 testes); registrar a sessão neste log; relatório final (situação inicial,
+> arquivos alterados, validações, commits, pendências).
+>
+> OBJETIVO: dividir a tela em painel de arte à esquerda (70%, logo centralizada + nome
+> "RadarTorres" abaixo) e painel de formulário à direita (30%, conteúdo centralizado). Só
+> visual — sem alterar lógica de autenticação, ViewModel, serviços ou fluxo pós-login; manter
+> todos os campos/botões/mensagens já existentes, só reposicionados/estilizados.
+>
+> ESPECIFICAÇÕES: `Grid` raiz com colunas `7*`/`3*`; coluna direita com `MinWidth` (perguntar o
+> valor); formulário com largura máxima e centralizado; painel esquerdo com fundo de tema e logo
+> proporcional sem distorcer; painel direito com fundo de tema e controles empilhados; botão
+> principal no estilo de destaque "já existente" (Accent.Fill/OnAccent, altura mínima 44, raio
+> 10); campos com altura mínima 44, raio 10, borda Border.Control; tudo via DynamicResource, sem
+> cor fixa, nos dois temas; fontes Chakra Petch/IBM Plex Sans (perguntar se já embutidas); logo
+> = ícone original do app (perguntar qual arquivo); textos via i18n existente.
+>
+> PERGUNTAR antes de implementar: (1) elementos decorativos no painel esquerdo ou só a logo; (2)
+> exibir versão do app; (3) seletor de idioma/tema na tela de login; (4) janela fixa ou
+> redimensionável; (5) existe "esqueci minha senha" hoje.
+
+**Situação do repositório no início:** branch `estrutura/cooperacao-torres-adjacentes`,
+working tree limpa, sincronizada com `origin/estrutura/cooperacao-torres-adjacentes` (sem
+commits locais pendentes de push); `main` local em dia com `origin/main`.
+
+**Levantamento feito antes de perguntar/editar** (evitou perguntas desnecessárias e revelou
+divergências do pedido):
+- Login não é uma `Window` própria — é `UserControl` hospedado como aba do `MainWindow`
+  (mesmo padrão de abas do resto do app); não existe "janela de login" com tamanho
+  fixo/redimensionável separado para decidir.
+- `LoginViewModel` não tem (nem tinha) comando de "esqueci minha senha" — confirmado que não
+  existe, não foi criado.
+- Fontes `Font.Display` (Chakra Petch) e `Font.Body` (IBM Plex Sans) já embutidas e com chave de
+  recurso pronta (`Styles/Typography.xaml`), com fallback Segoe UI automático.
+- Único arquivo de logo é `Assets/RadarTorres.ico` (sem PNG/SVG); quadro de 256px já tem a arte
+  completa (torre + mira), mesmo arquivo já usado antes na tela de login.
+- Chave de i18n `Login.Title` ("Entrar no RadarTorres"/"Sign in to RadarTorres") já existia nos
+  dois idiomas mas não era usada em lugar nenhum — reaproveitada para o título do formulário no
+  lugar do texto fixo "RadarTorres" que havia antes.
+- O nome "RadarTorres" como marca (não traduzido, dois `Run` coloridos) é o padrão já usado na
+  Sidebar — reproduzido exatamente igual abaixo da logo no painel esquerdo.
+- Nenhum botão do projeto hoje tem altura mínima 44 + raio 10 juntos, nem nenhum campo de texto
+  tem cantos arredondados (bordas retas padrão do WPF em todo o app) — o estilo descrito no
+  pedido como "já existente" não existia.
+
+**Perguntas feitas antes de editar (`AskUserQuestion`) e respostas — todas as recomendadas:**
+1. Raio/altura inexistentes hoje no projeto → aplicar só nesta tela (campo/botão com
+   `ControlTemplate` próprio, escopado por `x:Key`, sem virar padrão implícito do app).
+2. Painel esquerdo → só logo + nome, sem anéis/ponto decorativos.
+3. Versão do app no rodapé → não mostrar (hoje não aparece em nenhuma tela, só em relatório de
+   diagnóstico; evitado adicionar propriedade nova à ViewModel só para isso).
+4. Seletor de idioma/tema no login → manter como está (sem esses controles nessa tela).
+5. (Pergunta extra, fora da lista original, levantada ao detalhar a implementação) O campo de
+   senha usa o `PasswordRevealBox` compartilhado (Usuários/Perfil também usam) sem como mudar a
+   borda interna de fora → aceitar a pequena inconsistência (campo de usuário arredondado,
+   campo de senha só com altura 44) em vez de tocar no componente compartilhado.
+
+**Entregue:**
+
+- `src/RadarTorres.App/Views/LoginView.xaml` — reescrito: `Grid` raiz 2 colunas (`7*`/`3*`,
+  direita com `MinWidth="340"`); painel esquerdo (`Bg.Sidebar`) com a logo
+  (`Assets/RadarTorres.ico`, `Stretch="Uniform"`, sem distorcer/recortar) e "RadarTorres"
+  abaixo, centralizados; painel direito (`Bg.Window`) com o formulário existente
+  (título agora usando `Login.Title`, subtítulo, usuário, senha, mensagem de erro, botão,
+  dica de admin padrão) centralizado, `MaxWidth="360"`. Removida a antiga imagem de fundo
+  esticada (`UniformToFill` cobrindo a tela toda) que causava o desalinhamento relatado — o
+  painel dedicado à esquerda resolve isso por construção.
+- Dois estilos novos, escopados só a este arquivo (`x:Key`, não implícitos por tipo):
+  `LoginFieldTextBox` (campo de usuário, `ControlTemplate` com `CornerRadius="10"`,
+  `MinHeight="44"`) e `LoginSubmitButton` (botão, mesmo tratamento, com gatilhos de
+  hover/pressed para repor o feedback visual que o template substitui). O `Foreground` do botão
+  trocou de `"White"` fixo para `{DynamicResource OnAccent}`.
+- Nenhuma alteração em `LoginViewModel.cs`, `App.xaml.cs`, `PasswordRevealBox.xaml` nem em
+  nenhum serviço — bindings e comandos idênticos aos de antes.
+- `dotnet build`: 0 erros; 6 avisos, todos `NU1701` pré-existentes do pacote AForge (não
+  relacionados a esta mudança) — não bate com "0 avisos" do pedido, por causa alheia a esta
+  alteração.
+- `dotnet test`: 110 testes, 110 aprovados (não 21 — número desatualizado; nenhum teste cobre
+  XAML/layout).
+- Aplicativo recompilado e reaberto pela sessão para o usuário validar visualmente nos dois
+  temas e dois idiomas — a sessão não decide sozinha se o resultado está bom.
+- **Órfão identificado, não removido** (avisado em vez de apagado): `LoginMarcaDaguaOpacidade`
+  (`Themes/Dark.xaml`/`Light.xaml`) não é mais referenciado em lugar nenhum, já que a imagem de
+  fundo que a usava foi removida — chave morta, mantida para o usuário decidir se remove depois.
+- Nenhum commit feito — aguardando a validação visual do usuário antes de pedir autorização de
+  commit, conforme o fluxo já estabelecido nesta sessão.
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
