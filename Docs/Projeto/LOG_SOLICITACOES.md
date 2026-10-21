@@ -1156,6 +1156,297 @@ estiver *checked out* no momento, sem indicar a branch — rodar numa branch err
 sem estas mudanças) parece "a mudança não funcionou". Conferir `git branch --show-current` antes
 de compilar.
 
+## 2026-10-20 — Troca do ícone do item de menu "Desempenho"
+
+**Pedido (texto integral):**
+
+> Preciso trocar o ícone do item de menu "Desempenho" (barra lateral da Shell) por um novo
+> ícone. É uma alteração apenas visual, e quero a menor alteração possível.
+>
+> REGRAS
+> - Antes de qualquer coisa: git status, branch atual, git fetch e comparação com o remoto.
+>   Me informe a situação. Não faça push.
+> - Antes de editar, me apresente um plano curto (arquivos que pretende tocar e o que muda em
+>   cada um) e espere minha aprovação.
+> - Não altere nada fora do pedido: sem refatoração, sem renomear itens, sem mexer em rota,
+>   permissão, texto ou ordem do menu.
+> - Siga exatamente o padrão que o projeto já usa para os ícones dos outros itens do menu
+>   (dicionário de recursos, Geometry/Path, tamanho, espessura, cor via DynamicResource). Não
+>   introduza biblioteca nem outro mecanismo. Se o padrão existente for diferente do que
+>   descrevo abaixo, siga o do projeto e me avise.
+> - Na dúvida sobre qualquer ponto, pare e pergunte. Não suponha.
+> - Não faça merge, rebase, reset, nem crie tags.
+>
+> O QUE FAZER
+> 1. Localizar o item de menu "Desempenho" (se ele ainda aparecer como "Objetos detectados" no
+>    código, confirme comigo antes de seguir) e o ícone atual dele.
+> 2. Substituir somente o ícone atual por este: gráfico de dispersão (eixos em L + 4 pontos),
+>    grade 24x24, traço de 2px, pontas e junções arredondadas, sem preenchimento (geometria SVG
+>    fornecida com `M`/`V`/`H`/`A`). Ajuste o nome da chave ao padrão de nomenclatura dos ícones
+>    existentes.
+> 3. A cor do traço deve vir do estado do item (ativo = Accent.Text, inativo = Text.Secondary),
+>    via recurso dinâmico, igual aos demais ícones. Sem cor fixa no código. Confira nos temas
+>    claro e escuro.
+> 4. Se o ícone antigo ficar sem uso em outro lugar, me avise em vez de apagá-lo.
+>
+> VALIDAÇÃO: `dotnet build` (0 erros e 0 avisos) e `dotnet test` (21 testes). Se não conseguir
+> conferir o resultado visualmente, dizer isso claramente e pedir para o usuário conferir.
+>
+> COMMIT: só depois de autorização; mensagem em português, verbo no presente, até 72
+> caracteres, sem menção a IA/assinatura/trailer.
+>
+> Pediu também entrada neste log e um relatório final cobrindo situação inicial do repositório,
+> sincronismo com o GitHub, arquivos alterados, validações, commits, pendências e riscos.
+
+**Situação do repositório no início (informada antes de editar):** branch atual
+`estrutura/cooperacao-torres-adjacentes` (não `main`); `main` local em dia com `origin/main`
+(0 ahead/0 behind, confirmado via `git fetch`); a branch atual tinha 1 commit local não
+enviado ao remoto e sem upstream configurado; havia uma mudança não commitada de sessão
+anterior (`src/RadarTorres.App/Assets/RadarTorres.ico`, do ajuste de ícone do aplicativo, sem
+relação com este pedido).
+
+**Divergências do padrão do projeto encontradas e avisadas antes de editar:**
+- Os ícones da Sidebar são `<GeometryGroup x:Key="Icon.X">` em `Resources/Icons.xaml`
+  combinando formas primitivas (`PathGeometry`, `EllipseGeometry` para pontos), não
+  `<Geometry>` solta como no pedido — a geometria SVG fornecida (eixos com `V`/`H`, pontos
+  via arco `A`) foi traduzida para esse idioma: uma `PathGeometry` para o eixo em L e uma
+  `EllipseGeometry RadiusX="1" RadiusY="1"` por ponto.
+- Nenhum ícone do projeto define `StrokeLineJoin`/`StrokeStartLineCap`/`StrokeEndLineCap`
+  (todos usam o padrão do WPF — miter/flat) porque o `<Path>` que desenha os ícones é um único
+  template compartilhado na Sidebar (data-bound por `IconKey`), não um Path por ícone — não dá
+  para arredondar só este sem adicionar lógica por item ou mudar o template geral. Seguido o
+  padrão do projeto (sem cantos arredondados), por decisão do usuário.
+- `Docs/LOG_SOLICITACOES.md` (caminho citado no pedido) não existe; o arquivo real é
+  `Docs/Projeto/LOG_SOLICITACOES.md` — usado o caminho real.
+
+**Pergunta feita antes de editar (`AskUserQuestion`) e resposta:** `Icon.Desempenho` é
+compartilhado entre o item "Desempenho" da Sidebar (`ShellViewModel.cs:230`) e o ícone do card
+"Monitoramento" no menu "Painéis ocultos" (`DashboardToolbar.xaml.cs:35`) — trocar o recurso
+muda os dois lugares. Usuário escolheu trocar o recurso compartilhado (opção recomendada) em
+vez de criar uma chave nova só para a Sidebar.
+
+**Entregue:**
+
+- `src/RadarTorres.App/Resources/Icons.xaml` — conteúdo de `Icon.Desempenho` substituído pelo
+  gráfico de dispersão pedido (eixo em L + 4 pontos), mesma grade 24x24/traço 2px/sem
+  preenchimento dos demais ícones. Único arquivo alterado.
+- Confirmado que "Desempenho" já era o nome correto do item no código (`MenuItem.Desempenho`) —
+  "Objetos detectados" é um item diferente (`MenuItem.ObjetosDetectados`), não tocado.
+- Cor do traço: nenhuma mudança necessária — já vem do `Foreground` do botão pai (herdado via
+  `RelativeSource`), que já aplica `Accent.Text` (selecionado) / `Text.Secondary` (padrão) nos
+  dois temas, igual aos demais itens.
+- Ícone antigo (gráfico de barras): não ficou "sem uso" em outro lugar — era o conteúdo inline
+  da própria chave `Icon.Desempenho` (sem um recurso nomeado separado), então foi substituído
+  no lugar, não há nada órfão para avisar.
+- `dotnet build`: 0 erros; 9 avisos, todos `NU1701` pré-existentes do pacote AForge (mesmos de
+  antes desta mudança, não relacionados ao ícone) — portanto não bate com o "0 avisos" pedido,
+  mas por uma causa alheia a esta alteração.
+- `dotnet test`: 110 testes, 110 aprovados, 0 falhas — não bate com os "21 testes" citados no
+  pedido (o projeto de testes cresceu desde a sessão que originou esse número); nenhum teste
+  cobre recursos de ícone (confirmado por busca antes de editar), então o resultado não muda
+  por causa desta alteração.
+- Validação visual: não realizada pela sessão (ambiente sem abrir a UI para este pedido) —
+  pendente de conferência pelo usuário nos dois temas.
+- Nenhum commit feito — aguardando autorização, conforme pedido.
+
+---
+
+## 2026-10-21 — Redesenho da tela de Login (70% arte / 30% formulário)
+
+**Pedido (texto integral):**
+
+> Tarefa: redesenhar o layout da tela de Login (70% arte / 30% formulário)
+>
+> REGRAS: antes de qualquer alteração, verificar git status/branch/remoto/fetch e informar a
+> situação; apresentar plano e aguardar aprovação antes de alterar código; menor alteração
+> possível, sem refatorar fora do escopo, seguindo os padrões existentes (MVVM à mão,
+> DynamicResource, i18n); parar e perguntar na dúvida; sem push/merge/rebase/reset/tags sem
+> autorização explícita; commits pequenos, um por alteração lógica, formato
+> `<tipo>(<escopo>): <descrição>`, sem menção a IA; validar com `dotnet build` (0 erros/avisos)
+> e `dotnet test` (21 testes); registrar a sessão neste log; relatório final (situação inicial,
+> arquivos alterados, validações, commits, pendências).
+>
+> OBJETIVO: dividir a tela em painel de arte à esquerda (70%, logo centralizada + nome
+> "RadarTorres" abaixo) e painel de formulário à direita (30%, conteúdo centralizado). Só
+> visual — sem alterar lógica de autenticação, ViewModel, serviços ou fluxo pós-login; manter
+> todos os campos/botões/mensagens já existentes, só reposicionados/estilizados.
+>
+> ESPECIFICAÇÕES: `Grid` raiz com colunas `7*`/`3*`; coluna direita com `MinWidth` (perguntar o
+> valor); formulário com largura máxima e centralizado; painel esquerdo com fundo de tema e logo
+> proporcional sem distorcer; painel direito com fundo de tema e controles empilhados; botão
+> principal no estilo de destaque "já existente" (Accent.Fill/OnAccent, altura mínima 44, raio
+> 10); campos com altura mínima 44, raio 10, borda Border.Control; tudo via DynamicResource, sem
+> cor fixa, nos dois temas; fontes Chakra Petch/IBM Plex Sans (perguntar se já embutidas); logo
+> = ícone original do app (perguntar qual arquivo); textos via i18n existente.
+>
+> PERGUNTAR antes de implementar: (1) elementos decorativos no painel esquerdo ou só a logo; (2)
+> exibir versão do app; (3) seletor de idioma/tema na tela de login; (4) janela fixa ou
+> redimensionável; (5) existe "esqueci minha senha" hoje.
+
+**Situação do repositório no início:** branch `estrutura/cooperacao-torres-adjacentes`,
+working tree limpa, sincronizada com `origin/estrutura/cooperacao-torres-adjacentes` (sem
+commits locais pendentes de push); `main` local em dia com `origin/main`.
+
+**Levantamento feito antes de perguntar/editar** (evitou perguntas desnecessárias e revelou
+divergências do pedido):
+- Login não é uma `Window` própria — é `UserControl` hospedado como aba do `MainWindow`
+  (mesmo padrão de abas do resto do app); não existe "janela de login" com tamanho
+  fixo/redimensionável separado para decidir.
+- `LoginViewModel` não tem (nem tinha) comando de "esqueci minha senha" — confirmado que não
+  existe, não foi criado.
+- Fontes `Font.Display` (Chakra Petch) e `Font.Body` (IBM Plex Sans) já embutidas e com chave de
+  recurso pronta (`Styles/Typography.xaml`), com fallback Segoe UI automático.
+- Único arquivo de logo é `Assets/RadarTorres.ico` (sem PNG/SVG); quadro de 256px já tem a arte
+  completa (torre + mira), mesmo arquivo já usado antes na tela de login.
+- Chave de i18n `Login.Title` ("Entrar no RadarTorres"/"Sign in to RadarTorres") já existia nos
+  dois idiomas mas não era usada em lugar nenhum — reaproveitada para o título do formulário no
+  lugar do texto fixo "RadarTorres" que havia antes.
+- O nome "RadarTorres" como marca (não traduzido, dois `Run` coloridos) é o padrão já usado na
+  Sidebar — reproduzido exatamente igual abaixo da logo no painel esquerdo.
+- Nenhum botão do projeto hoje tem altura mínima 44 + raio 10 juntos, nem nenhum campo de texto
+  tem cantos arredondados (bordas retas padrão do WPF em todo o app) — o estilo descrito no
+  pedido como "já existente" não existia.
+
+**Perguntas feitas antes de editar (`AskUserQuestion`) e respostas — todas as recomendadas:**
+1. Raio/altura inexistentes hoje no projeto → aplicar só nesta tela (campo/botão com
+   `ControlTemplate` próprio, escopado por `x:Key`, sem virar padrão implícito do app).
+2. Painel esquerdo → só logo + nome, sem anéis/ponto decorativos.
+3. Versão do app no rodapé → não mostrar (hoje não aparece em nenhuma tela, só em relatório de
+   diagnóstico; evitado adicionar propriedade nova à ViewModel só para isso).
+4. Seletor de idioma/tema no login → manter como está (sem esses controles nessa tela).
+5. (Pergunta extra, fora da lista original, levantada ao detalhar a implementação) O campo de
+   senha usa o `PasswordRevealBox` compartilhado (Usuários/Perfil também usam) sem como mudar a
+   borda interna de fora → aceitar a pequena inconsistência (campo de usuário arredondado,
+   campo de senha só com altura 44) em vez de tocar no componente compartilhado.
+
+**Entregue:**
+
+- `src/RadarTorres.App/Views/LoginView.xaml` — reescrito: `Grid` raiz 2 colunas (`7*`/`3*`,
+  direita com `MinWidth="340"`); painel esquerdo (`Bg.Sidebar`) com a logo
+  (`Assets/RadarTorres.ico`, `Stretch="Uniform"`, sem distorcer/recortar) e "RadarTorres"
+  abaixo, centralizados; painel direito (`Bg.Window`) com o formulário existente
+  (título agora usando `Login.Title`, subtítulo, usuário, senha, mensagem de erro, botão,
+  dica de admin padrão) centralizado, `MaxWidth="360"`. Removida a antiga imagem de fundo
+  esticada (`UniformToFill` cobrindo a tela toda) que causava o desalinhamento relatado — o
+  painel dedicado à esquerda resolve isso por construção.
+- Dois estilos novos, escopados só a este arquivo (`x:Key`, não implícitos por tipo):
+  `LoginFieldTextBox` (campo de usuário, `ControlTemplate` com `CornerRadius="10"`,
+  `MinHeight="44"`) e `LoginSubmitButton` (botão, mesmo tratamento, com gatilhos de
+  hover/pressed para repor o feedback visual que o template substitui). O `Foreground` do botão
+  trocou de `"White"` fixo para `{DynamicResource OnAccent}`.
+- Nenhuma alteração em `LoginViewModel.cs`, `App.xaml.cs`, `PasswordRevealBox.xaml` nem em
+  nenhum serviço — bindings e comandos idênticos aos de antes.
+- `dotnet build`: 0 erros; 6 avisos, todos `NU1701` pré-existentes do pacote AForge (não
+  relacionados a esta mudança) — não bate com "0 avisos" do pedido, por causa alheia a esta
+  alteração.
+- `dotnet test`: 110 testes, 110 aprovados (não 21 — número desatualizado; nenhum teste cobre
+  XAML/layout).
+- Aplicativo recompilado e reaberto pela sessão para o usuário validar visualmente nos dois
+  temas e dois idiomas — a sessão não decide sozinha se o resultado está bom.
+- **Órfão identificado, não removido** (avisado em vez de apagado): `LoginMarcaDaguaOpacidade`
+  (`Themes/Dark.xaml`/`Light.xaml`) não é mais referenciado em lugar nenhum, já que a imagem de
+  fundo que a usava foi removida — chave morta, mantida para o usuário decidir se remove depois.
+- Nenhum commit feito — aguardando a validação visual do usuário antes de pedir autorização de
+  commit, conforme o fluxo já estabelecido nesta sessão.
+
+---
+
+## 2026-10-21 — Troca do ícone do item de menu "Objetos detectados"
+
+**Pedido (texto integral):**
+
+> Preciso trocar o ícone do item de menu "Objetos detectados" (barra lateral da Shell) por um
+> novo ícone. É uma alteração apenas visual, e quero a menor alteração possível.
+>
+> REGRAS
+> - Antes de qualquer coisa: git status, branch atual, git fetch e comparação com o remoto.
+>   Me informe a situação. Não faça push.
+> - Antes de editar, me apresente um plano curto (arquivos que pretende tocar e o que muda em
+>   cada um) e espere minha aprovação.
+> - Não altere nada fora do pedido: sem refatoração, sem renomear itens, sem mexer em rota,
+>   permissão, texto ou ordem do menu. O texto do item continua "Objetos detectados".
+> - Siga exatamente o padrão que o projeto já usa para os ícones dos outros itens do menu
+>   (dicionário de recursos, Geometry/Path, tamanho, espessura, cor via DynamicResource). Não
+>   introduza biblioteca nem outro mecanismo. Se o padrão existente for diferente do que
+>   descrevo abaixo, siga o do projeto e me avise.
+> - Na dúvida sobre qualquer ponto, pare e pergunte. Não suponha.
+> - Não faça merge, rebase, reset, nem crie tags.
+>
+> O QUE FAZER
+> 1. Localizar o item de menu "Objetos detectados" e o ícone atual dele (dois quadrados ligados
+>    por uma linha).
+> 2. Substituir somente o ícone atual pelo ícone "binoculars" (estilo outline) do Tabler Icons
+>    (licença MIT). Obter o SVG oficial em
+>    https://github.com/tabler/tabler-icons/blob/main/icons/outline/binoculars.svg — não
+>    desenhar nem reproduzir o path de memória.
+> 3. Converter o SVG em Geometry, mantendo grade 24x24, traço de 2px, pontas e junções
+>    arredondadas, sem preenchimento. Descartar o path de fundo "M0 0h24v24H0z" se houver.
+>    Ajustar o nome da chave ao padrão existente (sugestão: `Icon.ObjetosDetectados`).
+> 4. Se não conseguir acessar o SVG por falta de rede, parar e pedir para colar o conteúdo do
+>    arquivo — não improvisar outro desenho.
+> 5. A cor do traço deve vir do estado do item (ativo = Accent.Text, inativo = Text.Secondary),
+>    via recurso dinâmico, igual aos demais ícones. Sem cor fixa no código. Conferir nos temas
+>    claro e escuro.
+> 6. Se o ícone antigo ficar sem uso em outro lugar, avisar em vez de apagá-lo.
+> 7. Se o SVG do Tabler usar comandos que o WPF não aceita na Geometry (ex.: arcos com flags
+>    colados), reescrever o path em sintaxe válida sem mudar o desenho, e avisar.
+>
+> VALIDAÇÃO: `dotnet build` (0 erros e 0 avisos) e `dotnet test` (21 testes). Se algo não puder
+> ser conferido visualmente, dizer isso claramente e pedir para o usuário conferir no app.
+>
+> COMMIT: só depois de autorização; revisar `git status`/`git diff` e incluir só os arquivos
+> desta alteração; mensagem em português, verbo no presente, até 72 caracteres, sem menção a
+> IA/assinatura/trailer. Sugestão: `style(menu): troca o ícone do item Objetos detectados`.
+>
+> Pediu também entrada neste log e relatório final cobrindo situação inicial do repositório,
+> sincronismo com o GitHub, arquivos alterados, validações, commits, pendências e riscos.
+
+**Situação do repositório no início:** branch `estrutura/cooperacao-torres-adjacentes`,
+working tree limpa, sincronizada com `origin/estrutura/cooperacao-torres-adjacentes` (sem
+commits locais pendentes de push); `main` local em dia com `origin/main`.
+
+**SVG obtido:** baixado via `curl` de
+`https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/binoculars.svg`
+(Tabler Icons v3.6, licença MIT) — conteúdo íntegro, sem o path de fundo "M0 0h24v24H0z"
+(não existia neste arquivo).
+
+**Divergências do pedido encontradas e avisadas antes de editar:**
+- O SVG usa comandos `h`/`v` em 3 dos 7 `<path>` (as duas "hastes" acima das lentes e o
+  retângulo central entre elas) — o próprio projeto já tinha documentado que "WPF não tem H/V
+  na mini-linguagem" (comentário em `Icon.LogoTorre`, `Icons.xaml`). Esses 3 trechos foram
+  recalculados à mão em coordenadas absolutas (`L`), preservando exatamente o desenho original
+  (sem mudar a forma, só a sintaxe do comando).
+- Os dois círculos das lentes (desenhados no SVG com arcos `a`) foram convertidos para
+  `EllipseGeometry Center="7,16" RadiusX="3" RadiusY="3"` / `Center="17,16"` em vez de manter
+  arco de path — nenhum ícone do projeto desenha círculo via arco, todos usam `EllipseGeometry`
+  (confirmado em `Icon.Monitoramento`, `Icon.PerfisAlvo`, `Icon.Desempenho`).
+- `Icon.ObjetosDetectados` também é usado em `DashboardToolbar.xaml.cs:38` (card
+  "ObjetosDetectados" no menu "Painéis ocultos") — mesma situação do `Icon.Desempenho` na
+  sessão anterior. Avisado antes de editar; seguida a mesma decisão já tomada pelo usuário
+  (trocar o recurso compartilhado, muda nos dois lugares).
+
+**Entregue:**
+
+- `src/RadarTorres.App/Resources/Icons.xaml` — `Icon.ObjetosDetectados` substituído pelo ícone
+  "binoculars" do Tabler Icons: 2 `EllipseGeometry` (lentes) + 1 `PathGeometry` combinando as 5
+  formas restantes, mesma grade 24x24/traço 2px/sem preenchimento dos demais ícones. Único
+  arquivo alterado. Comentário no próprio dicionário registra a fonte (Tabler Icons, MIT, com
+  caminho do arquivo) e as duas conversões (h/v→L, arco→Ellipse).
+- Cor do traço: nenhuma mudança necessária — herdada do `Foreground` do botão pai, igual aos
+  demais itens, nos dois temas.
+- Ícone antigo (dois quadrados ligados por linha): não ficou "sem uso" em outro lugar — era
+  conteúdo inline da própria chave `Icon.ObjetosDetectados` (sem recurso nomeado separado),
+  substituído no lugar.
+- `dotnet build`: 0 erros; 9 avisos, todos `NU1701` pré-existentes do pacote AForge (não
+  relacionados a esta mudança).
+- `dotnet test`: 110 testes, 110 aprovados (não 21 — número desatualizado; nenhum teste cobre
+  recursos de ícone).
+- Aplicativo recompilado e reaberto pela sessão para o usuário validar visualmente nos dois
+  temas.
+- Nenhum commit feito — aguardando autorização, conforme pedido.
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).

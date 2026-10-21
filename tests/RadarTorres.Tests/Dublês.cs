@@ -44,6 +44,22 @@ internal sealed class RepositorioPerfisEmMemoria : IPerfilAlvoRepository
     }
 }
 
+/// <summary>Nunca bloqueia nenhum alvo — usado pelos testes que não exercitam zona morta.</summary>
+internal sealed class ZonaMortaServiceFalsa : IZonaMortaService
+{
+    public ObservableCollection<ZonaMorta> Zones { get; } = new();
+
+    public ZonaMorta AddQuadrantZone(string name, Quadrant quadrant) => throw new NotSupportedException();
+
+    public ZonaMorta AddDistanceRangeZone(string name, double minDistance, double maxDistance) => throw new NotSupportedException();
+
+    public void SetEnabled(ZonaMorta zone, bool enabled) => throw new NotSupportedException();
+
+    public void Remove(ZonaMorta zone) => throw new NotSupportedException();
+
+    public ZonaMorta? FindBlockingZone(Target target) => null;
+}
+
 /// <summary>Associação câmera → quadrante fixa, informada pelo teste.</summary>
 internal sealed class CameraQuadranteFalso : ICameraQuadranteService
 {
