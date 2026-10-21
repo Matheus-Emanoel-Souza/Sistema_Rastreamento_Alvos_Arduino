@@ -3,6 +3,10 @@
 % SEM \documentclass, \begin{document}/\end{document} nem título —
 % pensado para ser reaproveitado via \input{} tanto no documento
 % modular quanto, futuramente, no TCC principal.
+%
+% Fonte do conteúdo: Modelo_Banco_de_Dados.md e schema.sql (nesta
+% mesma pasta), que descrevem o estado atual da persistência
+% (SQLite) — já migrada a partir do antigo modelo CSV/JSON.
 % ============================================================
 
 \section{Apresentação do Modelo de Dados}
@@ -11,98 +15,118 @@ O RadarTorres é um protótipo que detecta alvos por sensoriamento, seleciona au
 torre mais adequada e permite o acionamento manual ou automático de um indicador demonstrativo.
 Para cumprir esse papel, o sistema precisa preservar, entre execuções, dados de naturezas
 distintas: contas de usuário e seus perfis de acesso, o histórico de objetos detectados pelo
-radar, a auditoria de toda ação de acionamento e de toda troca de modo de operação, e os
-chamados de suporte abertos pelos operadores.
-
-Além dos dados de auditoria, o sistema mantém preferências de interface por usuário (idioma,
-tema, tela inicial), o layout personalizado dos painéis (posição, tamanho e visibilidade de cada
-card), as zonas mortas configuradas por um administrador e as configurações de ambiente do
-Arduino (porta serial, placa, sketch). Cada grupo tem finalidade e ciclo de vida próprios, mas
-todos precisam sobreviver ao fechamento da aplicação.
+radar, a auditoria de toda ação de acionamento e de toda troca de modo de operação, e as
+preferências de interface de cada usuário.
 
 Por não depender de um servidor de banco de dados, o protótipo prioriza simplicidade de
 instalação e execução local/offline — coerente com o estágio atual do projeto (protótipo
 acadêmico, uso demonstrativo). As seções seguintes descrevem a tecnologia de persistência
-empregada, suas vantagens e limitações, as principais entidades identificadas no código e o
-modelo proposto para uma futura migração relacional.
+empregada, por que essa escolha foi feita, as especificações técnicas do SGBD e as entidades
+e relacionamentos do modelo atual.
 
 \section{Tecnologia e Implementação}
 
-O protótipo atual \textbf{não utiliza um Sistema Gerenciador de Banco de Dados relacional}. A
-persistência é realizada localmente por meio de arquivos CSV e JSON, sem servidor e sem
-instalação adicional — portanto não há uma \textit{versão de SGBD} a declarar.
+O protótipo utiliza \textbf{SQLite} como único mecanismo de persistência. O contêiner de injeção
+de dependência (\texttt{App.xaml.cs:141--146}) registra uma implementação \texttt{Sqlite*Repository}
+para cada uma das 5 tabelas do sistema (\texttt{Usuario}, \texttt{ObjetoDetectado},
+\texttt{AcaoRealizada}, \texttt{ModoAtualTorre}, \texttt{PreferenciasUsuario}). Não existem mais
+classes de persistência em CSV no repositório — a migração CSV~$\rightarrow$~SQLite, antes
+descrita como plano futuro, já foi concluída.
 
-Seis entidades usam arquivos \textbf{CSV}, um por tabela, em
-\texttt{\%AppData\%}\allowbreak\texttt{\textbackslash RadarTorres}\allowbreak\texttt{\textbackslash
-Data\textbackslash} (pasta do usuário do Windows, sem privilégio de administrador) — ver
-Tabela~\ref{tab:entidades}. Cada arquivo é criado com cabeçalho na
-primeira execução por \texttt{CsvTableStore<T>}; não há \textit{migration} tradicional — o
-próprio código (modelo + mapeamento de colunas) define o schema.
+O arquivo de dados reside em \texttt{\%AppData\%}\allowbreak\texttt{\textbackslash
+RadarTorres}\allowbreak\texttt{\textbackslash Data\textbackslash radartorres.db} (pasta do
+usuário do Windows, sem exigir privilégio de administrador). Falhas de escrita são enfileiradas
+em \texttt{pending-writes.sql} (\texttt{PendingWriteQueue.cs}) e reaplicadas automaticamente na
+próxima inicialização, evitando perda silenciosa de dados.
 
-Outras três entidades usam arquivos \textbf{JSON} individuais em
-\texttt{\%LocalAppData\%}\allowbreak\texttt{\textbackslash RadarTorres\textbackslash}: um único
-arquivo por instalação para zonas mortas e para configurações do Arduino, e um arquivo por tela e
-por usuário para o layout dos painéis (nome com o padrão
-\texttt{dashboard-}\allowbreak\texttt{layout-\{tela\}-\{usuário\}.json}). Cada entidade é
-acessada exclusivamente por uma interface de repositório dedicada (ex.:
-\texttt{IUsuario}\allowbreak\texttt{Repository}, \texttt{IZonaMorta}\allowbreak\texttt{Repository}),
-isolando ViewModels e Services do formato de armazenamento.
-
-\textbf{Implementação futura proposta:} existe um plano documentado de migração para um banco
-relacional (SQLite ou Entity Framework Core), trocando apenas a implementação de cada
-repositório sem alterar ViewModels/Services. Essa tecnologia \emph{ainda não foi implementada} —
-não há arquivo de banco, tabela SQL ou \textit{migration} no repositório hoje.
-
-\section{Vantagens e Limitações da Solução Atual}
+\subsection{Especificações técnicas do SGBD}
 
 \begin{table}[htbp]
   \centering
-  \caption{Vantagens e limitações da persistência atual (CSV/JSON)}
-  \label{tab:vantagens}
+  \caption{Especificações técnicas da persistência}
+  \label{tab:specs}
   \small
   \renewcommand{\arraystretch}{1.25}
-  \begin{tabular}{p{6.6cm}p{6.6cm}}
+  \begin{tabular}{p{3.8cm}p{9.4cm}}
     \hline
-    \textbf{Vantagens} & \textbf{Limitações} \\
+    \textbf{Item} & \textbf{Valor} \\
     \hline
-    Simplicidade de instalação, sem servidor & Sem integridade referencial imposta pelo
-    armazenamento \\
-    Funcionamento local/offline & Consultas limitadas (sem SQL; filtragem em memória) \\
-    Baixo acoplamento via interfaces de repositório & Tende a não escalar bem para grande
-    volume de dados \\
-    Fácil distribuição (basta copiar a pasta de dados) & Sem controle de concorrência/transações
-    reais \\
-    Adequado ao estágio atual de protótipo & Relacionamentos garantidos só pelo código da
-    aplicação \\
+    SGBD & SQLite (embarcado, arquivo único, sem servidor) \\
+    Driver/linguagem de acesso & \texttt{Microsoft.Data.Sqlite} versão \textbf{9.0.0}, consumido em
+    C\#/.NET~9 \\
+    Versão do engine & Embutida no pacote via \texttt{SQLitePCLRaw}; não pinada separadamente pelo
+    projeto \\
+    Codificação & UTF-8 (padrão SQLite para colunas \texttt{TEXT}) \\
+    Collation & \texttt{BINARY} (padrão; nenhuma coluna usa \texttt{COLLATE} customizado) \\
+    Integridade referencial & \texttt{PRAGMA foreign\_keys = ON} \\
+    Modelo de concorrência & Single-writer / multi-reader (padrão SQLite, arquivo local) \\
     \hline
   \end{tabular}
 \end{table}
 
-Essas limitações não indicam uma decisão equivocada: CSV/JSON atendem plenamente ao escopo de um
-protótipo de uso demonstrativo. A Seção~\ref{sec:proposto} apresenta o modelo pensado para quando
-a evolução do projeto exigir um SGBD relacional.
+\subsection{Por que SQLite: argumento de segurança e leveza}
+\label{sec:justificativa}
 
-\section{Principais Dados do Sistema}
+A escolha do SQLite para o RadarTorres não é um atalho de conveniência — decorre diretamente do
+perfil de execução do sistema: um aplicativo desktop único, instalado na máquina do operador,
+sem rede corporativa, sem múltiplos servidores concorrentes e com volume de dados compatível com
+um protótipo demonstrativo. Dentro desse perfil, SQLite oferece a combinação de
+\textbf{segurança} e \textbf{leveza} que um SGBD cliente-servidor (PostgreSQL, SQL Server, MySQL)
+não justificaria:
+
+\begin{itemize}
+  \item \textbf{Superfície de ataque menor:} por não expor porta de rede nem processo de servidor
+  separado, o SQLite elimina uma classe inteira de riscos (varredura de porta, autenticação de
+  rede, man-in-the-middle entre aplicação e banco) — o banco só é acessível por quem já tem acesso
+  ao arquivo local, no próprio disco do usuário.
+  \item \textbf{Integridade garantida mesmo sendo leve:} \texttt{PRAGMA foreign\_keys = ON} aplica
+  chaves estrangeiras reais, e o mecanismo ACID nativo do SQLite (transações atômicas por arquivo)
+  evita corrupção parcial em caso de queda de energia ou encerramento abrupto — sem exigir o
+  processo e a configuração de um SGBD completo para obter essa garantia.
+  \item \textbf{Senhas nunca em texto puro:} a camada de aplicação usa PBKDF2-HMACSHA256
+  (100.000 iterações, salt de 128 bits por usuário), independente do SGBD escolhido — mas a
+  ausência de um servidor de rede reduz também a superfície onde esse hash poderia ser
+  interceptado em trânsito.
+  \item \textbf{Zero instalação, zero administração:} não há usuário de banco, senha de
+  administrador de SGBD, porta a abrir no firewall ou serviço do Windows a manter — o único
+  artefato é um arquivo \texttt{.db} na pasta do próprio usuário, reduzindo pontos de falha e de
+  configuração incorreta (más práticas de hardening de servidor não se aplicam a um banco que não
+  existe como servidor).
+  \item \textbf{Leveza compatível com o hardware do protótipo:} o motor SQLite é embutido no
+  processo da aplicação (\texttt{Microsoft.Data.Sqlite}), sem overhead de IPC/rede e sem consumo
+  de memória de um processo de SGBD separado — adequado ao uso em uma estação de operação única,
+  sem exigir infraestrutura dedicada de banco de dados.
+  \item \textbf{Resiliência a falhas sem complexidade adicional:} a fila de escritas pendentes
+  (\texttt{PendingWriteQueue.cs}) cobre o único cenário de falha relevante para um arquivo local
+  (banco temporariamente indisponível/bloqueado), sem precisar de um cluster ou réplica para
+  alta disponibilidade — desnecessário na topologia de nó único do RadarTorres.
+\end{itemize}
+
+Em resumo: para o escopo atual do RadarTorres — uma aplicação local, de usuário único por
+instalação, sem exposição a rede — o SQLite entrega as garantias de integridade e auditoria que
+o sistema exige, com a menor superfície de ataque e o menor custo operacional possíveis. Caso o
+projeto evolua para múltiplos usuários concorrentes em rede, essa decisão seria revisitada em
+favor de um SGBD cliente-servidor.
+
+\section{Principais Entidades do Sistema}
 
 \begin{table}[htbp]
   \centering
-  \caption{Entidades persistidas identificadas no código-fonte}
+  \caption{Tabelas do schema atual (SQLite)}
   \label{tab:entidades}
   \small
   \renewcommand{\arraystretch}{1.2}
-  \begin{tabular}{p{4cm}p{8cm}}
+  \begin{tabular}{p{3.6cm}p{8.4cm}}
     \hline
-    \textbf{Entidade} & \textbf{Finalidade} \\
+    \textbf{Tabela} & \textbf{Finalidade} \\
     \hline
-    Usuario & Conta de acesso, perfil e autenticação \\
-    PreferenciasUsuario & Preferências de interface por usuário \\
-    ObjetoDetectado & Histórico de detecções do radar \\
-    AcaoRealizada & Auditoria de acionamentos (só inserção) \\
-    ModoAtualTorre & Auditoria de troca de modo de operação \\
-    ChamadoAjuda & Chamados de suporte dos usuários \\
-    ZonaMorta & Áreas onde alvos são ignorados pelo sistema \\
-    Dashboard\allowbreak CardLayout & Layout dos cards do painel, por tela/usuário \\
-    ArduinoSettings & Configurações de ambiente do Arduino \\
+    usuarios & Contas de acesso, perfil (Administrador/Operador/Visualizador) e autenticação \\
+    objetos\_detectados & Histórico de ocorrências de detecção (radar e câmera, por quadrante) \\
+    ocorrencia\_estados & Auditoria das transições de estado de cada ocorrência (só inserção) \\
+    cameras & Câmera responsável por cada quadrante (Q1--Q4) \\
+    acoes\_realizadas & Auditoria de acionamentos efetivamente executados (só inserção) \\
+    modo\_atual\_torre & Auditoria de troca de modo de operação (só inserção) \\
+    preferencias\_usuario & Preferências de interface por usuário (tema, idioma, sidebar) \\
     \hline
   \end{tabular}
 \end{table}
@@ -110,62 +134,73 @@ a evolução do projeto exigir um SGBD relacional.
 \section{Modelo e Relacionamentos}
 \label{sec:modelo}
 
-A Figura~\ref{fig:atual} reproduz o Diagrama Entidade-Relacionamento já levantado para as seis
-entidades em CSV (arquivo \texttt{Modelo\_Banco\_de\_Dados.md}, nesta mesma pasta).
+A Figura~\ref{fig:der} reproduz o Diagrama Entidade-Relacionamento do schema atual (arquivo
+\texttt{Modelo\_Banco\_de\_Dados.md} e \texttt{schema.sql}, nesta mesma pasta).
 
-\texttt{Usuario} se relaciona 1:1 com \texttt{PreferenciasUsuario} (chave \texttt{UsuarioId},
-igual a \texttt{Usuario.Id}) e 1:N com \texttt{AcaoRealizada} e \texttt{ModoAtualTorre} — nesses
-dois últimos casos por \textbf{Login} (texto), sem chave estrangeira real — e com
-\texttt{ChamadoAjuda}, por \texttt{Id} numérico. \texttt{ObjetoDetectado} \textbf{não possui
-nenhum vínculo persistido} com \texttt{AcaoRealizada}, \texttt{Usuario} ou qualquer outra
-entidade — são registros independentes, como o próprio diagrama mostra (sem linha de
-relacionamento).
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{figuras/DER_Atual.png}
-  \caption{Modelo de dados atual (persistência em CSV) — diagrama entidade-relacionamento já
-  levantado a partir do código-fonte do projeto.}
-  \label{fig:atual}
-\end{figure}
-
-{\sloppy
-Três entidades adicionais usam arquivos JSON e não aparecem no diagrama acima, por não
-fazerem parte do levantamento original de CSV (ver Tabela~\ref{tab:entidades}):
-\texttt{ZonaMorta}, \texttt{Dash\-board\-Card\-Layout} e \texttt{ArduinoSettings}. Nenhuma delas tem
-relacionamento persistido com \texttt{Usuario} ou entre si: \texttt{ZonaMorta} e
-\texttt{ArduinoSettings} são configurações únicas por instalação, e \texttt{Dash\-board\-Card\-Layout}
-se associa a um usuário apenas pelo \emph{nome do arquivo} (\texttt{tela-idUsuario}) — uma
-convenção de nomenclatura, não uma chave estrangeira — por isso não são representadas em um
-diagrama ER à parte.\par}
-
-\section{Modelo Relacional Proposto}
-\label{sec:proposto}
-
-\textbf{Esta seção descreve uma proposta de migração futura, não o banco atual} — nenhuma dessas
-tabelas, chaves ou \textit{migrations} existe hoje no repositório. A estrutura de dados seria a
-mesma da Figura~\ref{fig:atual}, mas as referências textuais por \texttt{Login} passariam a ser
-chaves estrangeiras íntegras por \texttt{Id} numérico, com integridade garantida pelo próprio
-SGBD (Figura~\ref{fig:proposto}). \texttt{ObjetosDetectados} permanece sem chave estrangeira, pelo
-mesmo motivo já explicado na Seção~\ref{sec:modelo}.
+\texttt{usuarios} se relaciona 1:1 com \texttt{preferencias\_usuario} (chave \texttt{UsuarioId},
+igual a \texttt{usuarios.Id}) e 1:N com \texttt{modo\_atual\_torre} — agora por chave estrangeira
+real (\texttt{ID\_USER} $\rightarrow$ \texttt{usuarios.Id}), com \texttt{PRAGMA foreign\_keys =
+ON} garantindo a integridade. \texttt{objetos\_detectados} se relaciona 1:N com
+\texttt{acoes\_realizadas} (quando há alvo associado ao acionamento) e com
+\texttt{ocorrencia\_estados} (histórico de transição); \texttt{cameras} se relaciona 1:N com
+\texttt{objetos\_detectados} pelo quadrante monitorado. \texttt{objetos\_detectados} não possui
+relacionamento persistido com \texttt{usuarios} — o campo \texttt{Dispositivo} identifica a fonte
+da detecção (ex.: ``Arduino'', ``Simulador''), não um usuário.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{figuras/DER_Proposto.png}
-  \caption{Modelo relacional proposto para a migração futura de persistência (CSV/JSON
-  $\rightarrow$ SQL) — mesmo levantamento já documentado em
-  \texttt{Modelo\_Banco\_de\_Dados.md} (nesta mesma pasta).}
-  \label{fig:proposto}
+  \includegraphics[width=\textwidth]{figuras/DER_SQLite.png}
+  \caption{Modelo de dados atual (SQLite) — diagrama entidade-relacionamento levantado a partir
+  do schema em produção (\texttt{schema.sql}).}
+  \label{fig:der}
 \end{figure}
+
+\section{Índices}
+
+Além das chaves primárias e das restrições \texttt{UNIQUE} (\texttt{usuarios.Login},
+\texttt{preferencias\_usuario.UsuarioId}), o schema define os índices da Tabela~\ref{tab:indices}
+para as consultas mais frequentes da aplicação (ordenação por data/hora, filtragem por torre e
+por usuário).
+
+\begin{table}[htbp]
+  \centering
+  \caption{Índices definidos em \texttt{schema.sql}}
+  \label{tab:indices}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{5.2cm}p{4.2cm}p{2.4cm}}
+    \hline
+    \textbf{Índice} & \textbf{Tabela / coluna(s)} & \textbf{Tipo} \\
+    \hline
+    idx\_acoes\_realizadas\_torre & acoes\_realizadas (ID\_TORRE) & normal \\
+    idx\_objetos\_detectados\_datahora & objetos\_detectados (DataHora) & normal \\
+    idx\_acoes\_realizadas\_datahora & acoes\_realizadas (DH\_ACAO) & normal \\
+    idx\_modo\_atual\_torre\_usuario & modo\_atual\_torre (ID\_USER) & normal \\
+    idx\_objetos\_detectados\_perfil & objetos\_detectados (PerfilAlvoId) & normal \\
+    idx\_ocorrencia\_estados\_objeto & ocorrencia\_estados (ObjetoDetectadoId) & normal \\
+    idx\_objetos\_detectados\_rastreamento & objetos\_detectados (RastreamentoId, Quadrante) &
+    único, parcial \\
+    idx\_cameras\_dispositivo & cameras (DispositivoId) & único \\
+    idx\_cameras\_quadrante & cameras (Quadrante) & único \\
+    \hline
+  \end{tabular}
+\end{table}
+
+O índice único parcial \texttt{idx\_objetos\_detectados\_rastreamento} (\texttt{WHERE
+RastreamentoId IS NOT NULL}) é o que impede duplicar a ocorrência do mesmo acompanhamento num
+mesmo quadrante, inclusive quando várias câmeras processam em paralelo — sem restringir o radar,
+que não gera \texttt{RastreamentoId} e pode repetir quadrante legitimamente.
 
 \section{Conclusão}
 
-A persistência atual, baseada em arquivos CSV e JSON, atende plenamente ao estágio de protótipo
-do RadarTorres, mantendo a instalação simples e o funcionamento totalmente local. O uso de uma
-interface de repositório dedicada para cada entidade mantém a camada de dados desacoplada das
-demais camadas da aplicação, o que viabiliza uma futura migração para um banco relacional de
-forma incremental, sem exigir mudanças em ViewModels ou Services. O modelo atual já preserva as
-informações necessárias de operação, auditoria e configuração exigidas pelo sistema.
+A persistência atual, baseada em SQLite, atende ao estágio de protótipo do RadarTorres com
+integridade referencial real, auditoria consistente e instalação/execução totalmente locais. A
+escolha do SGBD — detalhada na Seção~\ref{sec:justificativa} — equilibra segurança (menor
+superfície de ataque, ausência de servidor exposto) e leveza (sem instalação ou administração de
+infraestrutura de banco), dentro do perfil de uso de nó único do sistema. O uso de uma interface
+de repositório dedicada para cada entidade mantém a camada de dados desacoplada das demais
+camadas da aplicação, viabilizando uma eventual migração futura para um SGBD cliente-servidor
+sem exigir mudanças em ViewModels ou Services.
 
 \section*{REFERÊNCIAS}
 \small
