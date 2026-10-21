@@ -6,8 +6,9 @@
 %
 % Fonte do conteúdo: Diagrama_de_Implantacao.md e
 % Implantacao_RadarTorres.puml (nesta mesma pasta), levantados a
-% partir de installer/RadarTorres.iss, src/RadarTorres.App/App.xaml.cs
-% e Docs/Tecnica/COMUNICACAO_ARDUINO.md.
+% partir de installer/RadarTorres.iss, src/RadarTorres.App/App.xaml.cs,
+% src/RadarTorres.App/RadarTorres.App.csproj e
+% Docs/Tecnica/COMUNICACAO_ARDUINO.md.
 % ============================================================
 
 \section{Apresentação}
@@ -19,7 +20,7 @@ sensores e pelo acionamento das torres demonstrativas. Complementa o \emph{Diagr
 (estrutura estática) e o \emph{Modelo de Banco de Dados} (persistência), mostrando onde cada
 parte do sistema efetivamente executa e como os nós se comunicam.
 
-O sistema representa apenas dois nós físicos reais — computador do usuário e Arduino —, sem
+O sistema representa apenas dois nós físicos reais --- computador do usuário e Arduino ---, sem
 nenhum componente de servidor, web ou nuvem: trata-se de uma aplicação desktop única e
 autocontida, comunicando-se com um único microcontrolador externo via porta serial.
 
@@ -40,7 +41,7 @@ autocontida, comunicando-se com um único microcontrolador externo via porta ser
   \endfoot
   \small
   Computador do Usuário (Windows 10/11, 64-bit) & \texttt{RadarTorres.App} (.exe) & Único
-  processo, self-contained, instalado por \texttt{installer/RadarTorres.iss}. \\
+  processo, self-contained (.NET 9), instalado por \texttt{installer/RadarTorres.iss}. \\
   \quad\llap{$\hookrightarrow$~}dentro do processo & Apresentação (\texttt{Views} +
   \texttt{ViewModels}) & Captura interação do operador, \emph{binding} declarativo
   (\texttt{ViewModelBase}, \texttt{RelayCommand}). \\
@@ -48,17 +49,17 @@ autocontida, comunicando-se com um único microcontrolador externo via porta ser
   \texttt{ISerialCommunicationService}, \texttt{ITargetTrackingService},
   \texttt{ITowerSelectionService}, \texttt{IFireControlService}, \texttt{IZonaMortaService},
   \texttt{IAuthService}, \texttt{IPermissionService}. \\
-  \quad\llap{$\hookrightarrow$~}dentro do processo & Persistência local & Leitura/escrita dos
-  arquivos CSV/JSON de dados e preferências. \\
+  \quad\llap{$\hookrightarrow$~}dentro do processo & Persistência local & Leitura/escrita do
+  banco SQLite via \texttt{Microsoft.Data.Sqlite} (\texttt{SqliteConnectionFactory} /
+  \texttt{Sqlite*Repository}). \\
   \quad\llap{$\hookrightarrow$~}dentro do processo & .NET 9 Desktop Runtime & Embutido pelo
   instalador --- sem dependência externa a instalar. \\
   Arduino (microcontrolador) & Firmware & Lê sensores, envia leituras de alvo, recebe comandos e
   aciona as torres demonstrativas. \\
-  Armazenamento local (disco do usuário) &
-  \texttt{\%AppData\%\allowbreak\textbackslash RadarTorres\allowbreak\textbackslash
-  Data\allowbreak\textbackslash *.csv} /
-  \texttt{\%LocalAppData\%\allowbreak\textbackslash RadarTorres\allowbreak\textbackslash *.json}
-  & Usuários, auditoria, objetos detectados, layout, zonas mortas, preferências. \\
+  Armazenamento local (disco do usuário) & \texttt{\%AppData\%\allowbreak\textbackslash
+  RadarTorres\allowbreak\textbackslash Data\allowbreak\textbackslash radartorres.db} (SQLite) &
+  Usuários, auditoria, objetos detectados, preferências e demais dados cadastrais; CSV permanece
+  apenas como exportação manual da tela de Objetos Detectados. \\
   Sensores de detecção & --- & Ângulo + distância, alimentam o Arduino. \\
   Torres demonstrativas / indicador & --- & Laser de baixa potência ou LED, nunca armamento
   real. \\
@@ -67,9 +68,8 @@ autocontida, comunicando-se com um único microcontrolador externo via porta ser
 \section{Diagrama de Implantação}
 
 O diagrama representa apenas dois nós físicos reais: o computador do usuário e o Arduino,
-conectados exclusivamente por USB/Serial (protocolo texto \texttt{TIPO;CHAVE=VALOR;\ldots} para
-comandos, \texttt{TARGET;ID=;ANGLE=;DIST=} para leituras). Fonte:
-\texttt{Implantacao\_RadarTorres.puml} (PlantUML), nesta mesma pasta.
+conectados exclusivamente por USB/Serial. Fonte: \texttt{Implantacao\_RadarTorres.puml}
+(PlantUML), nesta mesma pasta.
 
 \begin{figure}[htbp]
   \centering
@@ -78,19 +78,54 @@ comandos, \texttt{TARGET;ID=;ANGLE=;DIST=} para leituras). Fonte:
   \label{fig:implantacao}
 \end{figure}
 
+\section{Protocolo de Comunicação (USB/Serial)}
+
+O único canal entre os dois nós físicos é a porta serial sobre USB, com mensagens em texto
+simples (ver \texttt{Docs/Tecnica/COMUNICACAO\_ARDUINO.md} para a especificação completa) ---
+Tabela~\ref{tab:protocolo}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Mensagens trocadas no link serial}
+  \label{tab:protocolo}
+  \small
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular}{p{3.2cm}p{4.6cm}p{5.2cm}}
+    \hline
+    \textbf{Direção} & \textbf{Formato} & \textbf{Finalidade} \\
+    \hline
+    Computador $\rightarrow$ Arduino & \texttt{TIPO;CHAVE=VALOR;...} & Comandos (troca de modo,
+    acionamento, configuração) \\
+    Arduino $\rightarrow$ Computador & \texttt{TARGET;ID=;ANGLE=;DIST=} & Leituras de alvo
+    (ângulo + distância detectados) \\
+    \hline
+  \end{tabular}
+\end{table}
+
+Não há reconhecimento criptográfico nem autenticação no link serial --- a segurança do sistema
+depende do controle de acesso físico ao cabo USB e do fato de o Arduino ser um periférico
+dedicado, sem acesso a rede.
+
 \section{Explicação}
 
-Dentro do nó do computador, o diagrama usa caixas aninhadas (computador $\rightarrow$ sistema
-operacional $\rightarrow$ processo \texttt{.exe}, com destaque em azul) para deixar explícito que
-Apresentação, Serviços, Persistência local e o .NET 9 Runtime são apenas quatro blocos lógicos do
-mesmo processo \texttt{RadarTorres.App.exe} --- não componentes distribuídos em máquinas ou
-processos separados. Os dois acoplamentos mais relevantes desse processo saem da caixa para fora:
-Serviços comunica-se com o Arduino pela porta serial, e a camada de Persistência lê/grava o
-armazenamento local em disco.
+O diagrama usa a notação UML padrão de implantação: \texttt{Computador do Usuário} e
+\texttt{Arduino} são nós físicos marcados com o estereótipo \textbf{«device»}; dentro do nó do
+computador, o processo \texttt{RadarTorres.App.exe} é um nó de ambiente de execução que contém
+quatro \textbf{«artifact»} (Apresentação, Serviços, Persistência local, .NET 9 Runtime) ---
+artefatos de software do mesmo processo, não componentes distribuídos em máquinas ou processos
+separados. O banco de dados (\texttt{radartorres.db}) é representado com o ícone de cilindro
+(\textbf{database}), reservado para dados persistidos pelo sistema. Os dois acoplamentos mais
+relevantes do processo saem da caixa para fora: Serviços comunica-se com o Arduino pela porta
+serial, e a camada de Persistência lê/grava o banco SQLite local em disco.
 
 Do lado do Arduino, o Firmware concentra as quatro responsabilidades físicas do dispositivo: ler
 os sensores de ângulo/distância, enviar leituras de alvo ao computador, receber comandos e
 acionar as torres demonstrativas.
+
+A escolha por um único processo desktop self-contained, sem servidor, é coerente com o argumento
+de segurança/leveza já discutido para o SGBD (ver documento \emph{Modelo de Banco de Dados}):
+menor superfície de ataque (nenhuma porta de rede exposta), zero administração de infraestrutura
+e instalação totalmente local, adequadas ao perfil de nó único do protótipo.
 
 \section{Conclusão}
 
@@ -98,13 +133,14 @@ O diagrama de implantação evidencia a natureza autocontida do RadarTorres: um 
 software (a aplicação desktop, self-contained sobre o .NET 9) comunicando-se com um único
 microcontrolador externo via porta serial, sem qualquer dependência de infraestrutura de
 servidor, web ou nuvem. Toda a persistência ocorre localmente, no próprio computador do usuário,
-e a segregação em blocos internos (Apresentação/Serviços/Persistência/Runtime) é apenas didática
---- não representa componentes fisicamente distribuídos.
+via SQLite, e a segregação em blocos internos (Apresentação/Serviços/Persistência/Runtime) é
+apenas didática --- não representa componentes fisicamente distribuídos.
 
 \section{Validação}
 
 Nós, artefatos e protocolo confirmados em \texttt{installer/RadarTorres.iss},
-\texttt{App.xaml.cs} e \texttt{Docs/Tecnica/COMUNICACAO\_ARDUINO.md}. A segregação em quatro
-blocos internos (Apresentação/Serviços/Persistência/Runtime) é didática, não uma leitura de
-componentes fisicamente distribuídos --- ver Seção 6 de \texttt{UML\_RadarTorres.md} (nesta mesma
-pasta).
+\texttt{App.xaml.cs} e \texttt{Docs/Tecnica/COMUNICACAO\_ARDUINO.md}. Driver de persistência
+(\texttt{Microsoft.Data.Sqlite} 9.0.0) confirmado em
+\texttt{src/RadarTorres.App/RadarTorres.App.csproj:50}. A segregação em quatro blocos internos
+(Apresentação/Serviços/Persistência/Runtime) é didática, não uma leitura de componentes
+fisicamente distribuídos --- ver Seção 6 de \texttt{UML\_RadarTorres.md} (pasta \texttt{UML/}).
