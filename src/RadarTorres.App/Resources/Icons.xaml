@@ -28,10 +28,18 @@
         <EllipseGeometry Center="19,6" RadiusX="1" RadiusY="1"/>
     </GeometryGroup>
 
+    <!-- "Binoculars" (Tabler Icons, outline, MIT), icons/outline/binoculars.svg.
+         Lentes como EllipseGeometry (padrão do projeto para círculo, não arco de path);
+         demais traços (pontes/alças) convertidos de h/v (SVG) para L absoluto, pois o WPF não
+         aceita h/v na mini-linguagem de Geometry (mesmo motivo do Icon.LogoTorre abaixo). -->
     <GeometryGroup x:Key="Icon.ObjetosDetectados">
-        <RectangleGeometry Rect="5,5,5,5"/>
-        <RectangleGeometry Rect="14,14,5,5"/>
-        <PathGeometry Figures="M12,12 L4,20"/>
+        <EllipseGeometry Center="7,16" RadiusX="3" RadiusY="3"/>
+        <EllipseGeometry Center="17,16" RadiusX="3" RadiusY="3"/>
+        <PathGeometry Figures="M16.346,9.17 L15.617,7.909 C15.457,7.661 14.561,7.706 14.5,8 L14.323,9.38
+                                M19.761,14.813 L16.921,9.68 C16.732,9.37 16.329,9 15.5,9 C14.672,9 14,9.448 14,10 L14,16
+                                M7.654,9.17 L8.383,7.909 C8.543,7.66 9.439,7.706 9.5,8 L9.677,9.38
+                                M4.239,14.813 L7.079,9.68 C7.268,9.37 7.671,9 8.5,9 C9.328,9 10,9.448 10,10 L10,16
+                                M10,12 L14,12 L14,14 L10,14 L10,12"/>
     </GeometryGroup>
 
     <PathGeometry x:Key="Icon.AcoesRealizadas" Figures="M5,12 L10,17 L20,7"/>
