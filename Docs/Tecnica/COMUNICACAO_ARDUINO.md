@@ -57,6 +57,7 @@ com defeito sem que isso afete os demais alvos.
 | `SET;MIN_DISTANCE=` | `SET;MIN_DISTANCE=1.50` | Define a distância mínima de segurança (metros). |
 | `SET;MAX_DISTANCE=` | `SET;MAX_DISTANCE=6.00` | Define a distância máxima de detecção (metros). |
 | `FIRE;TOWER=;TARGET=` | `FIRE;TOWER=2;TARGET=1` | Solicita acionamento demonstrativo da torre indicada sobre o alvo indicado. |
+| `AIM;TOWER=;ANGLE=` | `AIM;TOWER=2;ANGLE=133.0` | Gira o eixo PAN da torre indicada para o ângulo de bússola informado (0°-360°, 0°=Norte, sentido horário — mesma convenção de `TARGET.ANGLE`). Enviado pelo `TowerSelectionService` sempre que uma torre é designada para um alvo, inclusive quando está cobrindo um alvo de outro quadrante (ver [[ALGORITMO_SELECAO_TORRE]], seção 4 — cooperação entre torres adjacentes). |
 
 Esses comandos são gerados por `SerialProtocolParser.Build*` — **nunca** montados como
 strings soltas em outras partes do código, para manter o protocolo centralizado em um único
@@ -76,6 +77,8 @@ PC   -> SET;MIN_DISTANCE=1.50
 ARD  -> ACK;CMD=SET;MIN_DISTANCE=1.50
 PC   -> FIRE;TOWER=1;TARGET=1
 ARD  -> ACK;CMD=FIRE;TOWER=1;TARGET=1
+PC   -> AIM;TOWER=2;ANGLE=133.0
+ARD  -> ACK;CMD=AIM;TOWER=2;ANGLE=133.0
 ```
 
 ## 5. Tratamento de erros de comunicação

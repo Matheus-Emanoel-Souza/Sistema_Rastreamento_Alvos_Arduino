@@ -93,18 +93,24 @@ flowchart TD
     Q --> T{"Existe alvo com esse ID?"}
     T -- Sim --> U["Atualizar alvo existente"]
     T -- Não --> N["Criar novo alvo"]
-    U --> AV["Filtrar torres disponíveis (IsAvailable)"]
+    U --> AV["Filtrar torres disponíveis (IsAvailable) e não comprometidas com outro alvo"]
     N --> AV
-    AV --> AVN{"Alguma disponível?"}
+    AV --> AVN{"Alguma livre?"}
     AVN -- Não --> ERR["Registrar: NENHUMA TORRE DISPONÍVEL"]
-    AVN -- Sim --> PREF["Priorizar torres do mesmo quadrante do alvo"]
-    PREF --> HASPREF{"Há torre preferencial disponível?"}
-    HASPREF -- Sim --> CAND["Candidatas = torres do quadrante"]
-    HASPREF -- Não --> CANDALL["Candidatas = todas as disponíveis (fallback)"]
-    CAND --> DIST["Calcular distância Euclidiana alvo↔cada candidata"]
-    CANDALL --> DIST
+    AVN -- Sim --> HOME{"Torre do próprio quadrante livre?"}
+    HOME -- Sim --> CANDHOME["Candidatas = torre(s) do quadrante — camada 'casa'"]
+    HOME -- Não --> ADJ{"Torre adjacente livre, com o PRÓPRIO quadrante sem alvo concorrente?"}
+    ADJ -- Sim --> CANDADJ["Candidatas = torre(s) adjacente(s) — camada 'adjacente' (cooperação)"]
+    ADJ -- Não --> COV{"Alguma torre livre restante (mesmo diagonal)?"}
+    COV -- Sim --> CANDCOV["Candidatas = torre sobressalente — camada 'cobertura'"]
+    COV -- Não --> CANDOVER["Candidatas = todas as disponíveis, mesmo comprometidas — 'sobrecarregada'"]
+    CANDHOME --> DIST["Calcular distância Euclidiana alvo↔cada candidata"]
+    CANDADJ --> DIST
+    CANDCOV --> DIST
+    CANDOVER --> DIST
     DIST --> MIN["Selecionar a candidata de menor distância"]
-    MIN --> REG["Registrar decisão no console de eventos"]
+    MIN --> AIMCALC["Calcular ângulo de mira (BearingCalculator.AngleTo) e enviar AIM;TOWER=;ANGLE="]
+    AIMCALC --> REG["Registrar decisão no console de eventos"]
     REG --> UI["Atualizar radar (torre destacada + linha até o alvo)"]
     UI --> MODE{"Modo do sistema"}
     MODE -- "Localização + Torre" --> FIM1["Apenas informa a seleção"]
@@ -118,19 +124,31 @@ flowchart TD
 1. Filtra torres com `IsAvailable == true` e estado diferente de `Offline`/`Unavailable`.
 2. Se nenhuma torre estiver disponível → decisão = "NENHUMA TORRE DISPONÍVEL", registrada e
    exibida; o alvo fica sem torre associada.
-3. Entre as disponíveis, filtra as cujo `PreferredQuadrant` (calculado a partir da própria
-   posição da torre) é igual ao quadrante do alvo.
-4. Se existir ao menos uma torre preferencial disponível, as candidatas são só essas;
-   caso contrário, **todas** as torres disponíveis viram candidatas (para nunca deixar um
-   alvo sem cobertura só porque a torre "natural" do quadrante está ocupada).
-5. Calcula a distância Euclidiana do alvo até cada candidata.
-6. Escolhe a candidata de menor distância.
-7. Atualiza `Target.SelectedTower` e `Target.DistanceToSelectedTower`, registra a decisão no
-   console de eventos (`LoggingService`) e atualiza o estado visual das torres
-   (`RecomputeTowerStates`).
-8. Se o modo de operação for "Localização + Acionamento Automático", o
-   `FireControlService` reavalia a regra de segurança antes de enviar (ou simular) o comando
-   `FIRE`.
+3. **Exclusividade**: entre as alvos ativos, remove das candidatas qualquer torre já
+   selecionada para OUTRO alvo neste instante — uma torre só aponta para um lugar por vez.
+4. **Camada "casa"**: torres livres cujo `PreferredQuadrant` é igual ao do alvo. Se houver
+   pelo menos uma, as candidatas são só essas.
+5. **Camada "adjacente" (cooperação entre torres)**: se a camada "casa" estiver vazia (torre
+   natural ocupada com outro alvo do mesmo quadrante, ou indisponível), considera torres de
+   quadrante geometricamente **adjacente** (`QuadrantHelper.AreAdjacent` — vizinhos de eixo,
+   nunca diagonal) que estejam livres **e** cujo próprio quadrante não tenha nenhum alvo
+   concorrente no momento (só ajuda quem não precisa de si mesma em casa).
+6. **Camada "cobertura"**: se nem "casa" nem "adjacente" renderam candidatas, qualquer torre
+   livre restante (inclusive de quadrante diagonal) — a torre que sobrar cobre o que puder.
+7. **Último recurso ("sobrecarregada")**: se mesmo assim não houver torre livre, reusa a
+   torre disponível mais próxima mesmo que já comprometida, para nunca deixar um alvo
+   totalmente sem cobertura — e registra aviso de sobrecarga.
+8. Dentro da camada escolhida, calcula a distância Euclidiana do alvo até cada candidata e
+   escolhe a de menor distância.
+9. Atualiza `Target.SelectedTower`, `Target.DistanceToSelectedTower` e `Tower.AimAngleDegrees`
+   (via `BearingCalculator.AngleTo`), registra a decisão (com a camada usada) no console de
+   eventos (`LoggingService`) e atualiza o estado visual das torres (`RecomputeTowerStates`).
+   O ângulo de mira é enviado ao Arduino como `AIM;TOWER=x;ANGLE=y` (ver
+   [[COMUNICACAO_ARDUINO]]), girando fisicamente o eixo PAN da torre escolhida — inclusive
+   quando ela está cobrindo um alvo de outro quadrante.
+10. Se o modo de operação for "Localização + Acionamento Automático", o
+    `FireControlService` reavalia a regra de segurança antes de enviar (ou simular) o comando
+    `FIRE`.
 
 ### Exemplo numérico completo
 
@@ -145,9 +163,29 @@ Torres (configuração padrão):
 | Torre 3 | (−1.75, −1.75) | Q3 | √((1.98+1.75)²+(1.98+1.75)²) ≈ 5.28 m |
 | Torre 4 | (1.75, −1.75) | Q4 | √((1.98−1.75)²+(1.98+1.75)²) ≈ 3.74 m |
 
-Como a Torre 1 pertence ao mesmo quadrante do alvo (Q1) e está disponível, ela já seria a
-única candidata do passo 4 — e, coincidentemente, também é a de menor distância entre todas.
-Resultado: **Torre 1 selecionada**, distância registrada = 0.33 m.
+Como a Torre 1 pertence ao mesmo quadrante do alvo (Q1), está disponível e livre, ela já seria a
+única candidata da camada "casa" — e, coincidentemente, também é a de menor distância entre todas.
+Resultado: **Torre 1 selecionada** (camada "casa"), distância registrada = 0.33 m, mira =
+`BearingCalculator.AngleTo(Torre 1, Alvo #1)` = 45.0° (a torre está exatamente na mesma direção
+da base até o alvo, nesse exemplo).
+
+### Exemplo numérico — cooperação entre torres adjacentes
+
+Dois alvos aparecem ao mesmo tempo em Q1: Alvo #1 em `(1.98, 1.98)` (já tratado acima) e Alvo #2
+em `(0.50, 3.00)` — também Q1, pois X≥0 e Y≥0.
+
+1. Alvo #1 é processado primeiro: Torre 1 (única torre de Q1) fica **comprometida** com ele.
+2. Alvo #2 é processado: camada "casa" (Torre 1) está vazia — ela já está comprometida. Vai
+   para a camada "adjacente": `QuadrantHelper.AreAdjacent(Q1, •)` é verdadeiro para Q2 e Q4.
+   Nenhum alvo ativo está em Q2 nem em Q4 agora, então a Torre 2 (Q2) e a Torre 4 (Q4) são
+   candidatas. Torre 4 (1.75, −1.75) está mais perto de (0.50, 3.00) do que Torre 2? Calculando:
+   `d(Torre2, Alvo#2) = √((0.50+1.75)²+(3.00−1.75)²) ≈ 2.53 m`;
+   `d(Torre4, Alvo#2) = √((0.50−1.75)²+(3.00+1.75)²) ≈ 4.94 m`.
+   Torre 2 é a mais próxima → **Torre 2 selecionada** para o Alvo #2 (camada "adjacente —
+   cobrindo Q1"), mesmo Q2 não tendo nenhum alvo seu no momento.
+3. Se um terceiro alvo aparecesse em Q3 (diagonal a Q1, não adjacente) enquanto Q2 e Q4
+   também estivessem ocupados ajudando Q1, a Torre 3 (a única restante) ainda cobriria esse
+   alvo normalmente — ela está livre em sua própria camada "casa" (Q3).
 
 ## 5. Regra de segurança de acionamento
 
