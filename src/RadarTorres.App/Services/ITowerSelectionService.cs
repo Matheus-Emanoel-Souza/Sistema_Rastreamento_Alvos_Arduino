@@ -16,7 +16,13 @@ public interface ITowerSelectionService
     /// Executa o algoritmo de seleção de torre (ver Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md) para o
     /// alvo informado, atualiza <see cref="Target.SelectedTower"/> e retorna o resultado da decisão.
     /// </summary>
-    TowerSelectionResult SelectTowerFor(Target target);
+    /// <param name="target">Alvo para o qual uma torre deve ser escolhida.</param>
+    /// <param name="activeTargets">
+    /// Todos os alvos ativos no momento (incluindo <paramref name="target"/>) — necessário para saber
+    /// quais torres já estão comprometidas com outro alvo e quais quadrantes estão livres, condições
+    /// da cooperação entre torres adjacentes.
+    /// </param>
+    TowerSelectionResult SelectTowerFor(Target target, IEnumerable<Target> activeTargets);
 
     /// <summary>
     /// Recalcula o <see cref="Tower.State"/> de todas as torres com base no conjunto de alvos

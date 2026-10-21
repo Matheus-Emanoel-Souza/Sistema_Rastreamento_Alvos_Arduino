@@ -51,7 +51,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
         }
     }
 
-    public TowerSelectionResult SelectTowerFor(Target target)
+    public TowerSelectionResult SelectTowerFor(Target target, IEnumerable<Target> activeTargets)
     {
         ZonaMorta? blockingZone = _zonaMortaService.FindBlockingZone(target);
         if (blockingZone is not null)
@@ -74,11 +74,43 @@ public sealed class TowerSelectionService : ITowerSelectionService
             return new TowerSelectionResult(false, null, 0, reason);
         }
 
-        // Passo 1: prioriza torres do mesmo quadrante do alvo.
-        List<Tower> preferred = available.Where(t => t.PreferredQuadrant == target.Quadrant).ToList();
-        List<Tower> candidates = preferred.Count > 0 ? preferred : available;
+        List<Target> others = activeTargets.Where(t => t.IsActive && t.Id != target.Id).ToList();
 
-        // Passo 2: dentre as candidatas, calcula a distância Euclidiana e escolhe a menor.
+        // Exclusividade: uma torre só aponta para um lugar por vez, então não pode ser escolhida
+        // para dois alvos simultaneamente — a torre já comprometida com OUTRO alvo sai das candidatas.
+        HashSet<int> committed = others
+            .Where(t => t.SelectedTower is not null)
+            .Select(t => t.SelectedTower!.Id)
+            .ToHashSet();
+
+        List<Tower> free = available.Where(t => !committed.Contains(t.Id)).ToList();
+
+        // Quadrantes com pelo menos um alvo ativo que NÃO seja este — usado para saber se a torre
+        // "de casa" de um quadrante vizinho está livre para ajudar (não precisa ficar na própria área).
+        HashSet<Quadrant> quadrantsWithOtherTargets = others.Select(t => t.Quadrant).ToHashSet();
+
+        // Camada 1: torre(s) do próprio quadrante do alvo, livres.
+        List<Tower> home = free.Where(t => t.PreferredQuadrant == target.Quadrant).ToList();
+
+        // Camada 2: torres de quadrante adjacente, livres, cujo próprio quadrante não tem alvo
+        // concorrente agora (só ajudam quem não precisa delas em casa).
+        List<Tower> adjacent = home.Count > 0
+            ? []
+            : free.Where(t =>
+                QuadrantHelper.AreAdjacent(t.PreferredQuadrant, target.Quadrant) &&
+                !quadrantsWithOtherTargets.Contains(t.PreferredQuadrant)).ToList();
+
+        // Camada 3: qualquer torre livre restante (inclusive diagonal) — a que sobrar cobre.
+        List<Tower> coverage = home.Count == 0 && adjacent.Count == 0 ? free : [];
+
+        (List<Tower> candidates, string layerLabel) = home.Count > 0
+            ? (home, "torre do próprio quadrante")
+            : adjacent.Count > 0
+                ? (adjacent, $"torre adjacente cobrindo {QuadrantHelper.ToDisplayLabel(target.Quadrant)}")
+                : coverage.Count > 0
+                    ? (coverage, "cobertura — torre sobressalente")
+                    : (available, "sobrecarregada — nenhuma torre livre");
+
         Tower? best = null;
         double bestDistance = double.MaxValue;
         foreach (Tower candidate in candidates)
@@ -104,11 +136,11 @@ public sealed class TowerSelectionService : ITowerSelectionService
 
         target.SelectedTower = best;
         target.DistanceToSelectedTower = bestDistance;
+        best.AimAngleDegrees = BearingCalculator.AngleTo(best, target);
 
-        string usedFallback = preferred.Count > 0 ? "quadrante compatível" : "fallback (fora do quadrante preferencial)";
-        _logger.Info($"{best.Name} selecionada para o alvo #{target.Id:D2} ({usedFallback}, dist={bestDistance:0.00} m)");
+        _logger.Info($"{best.Name} selecionada para o alvo #{target.Id:D2} ({layerLabel}, dist={bestDistance:0.00} m, mira={best.AimAngleDegrees:0.0}°)");
 
-        return new TowerSelectionResult(true, best, bestDistance, "OK");
+        return new TowerSelectionResult(true, best, bestDistance, $"OK ({layerLabel})");
     }
 
     public void RecomputeTowerStates(IEnumerable<Target> activeTargets)
