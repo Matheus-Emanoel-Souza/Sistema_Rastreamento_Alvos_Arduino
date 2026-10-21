@@ -10,71 +10,121 @@
 
     <UserControl.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="8,7"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
+
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="0,10"/>
+
+        <!-- Estilo exclusivo do campo de usuário desta tela (x:Key, não implícito por tipo):
+             dá altura mínima 44 e cantos arredondados via ControlTemplate — TextBox não tem
+             propriedade CornerRadius nativa, só dá pra conseguir isso retemplando. Escopado só
+             a este campo (em vez de um Style implícito TargetType="TextBox") para não vazar para
+             o TextBox interno do PasswordRevealBox compartilhado (Usuários/Perfil usam o mesmo
+             controle sem este visual). -->
+        <Style x:Key="LoginFieldTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinHeight" Value="44"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Mesma lógica do campo acima: Button não tem CornerRadius nativo, só via template.
+             Também exclusivo desta tela (x:Key) — nenhum outro botão do app usa altura
+             mínima 44/raio 10 hoje. -->
+        <Style x:Key="LoginSubmitButton" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinHeight" Value="44"/>
+            <Setter Property="Margin" Value="0,20,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Feedback de hover/pressed: o template substitui o chrome padrão do
+                                 Button, que já dava esse retorno visual sozinho — sem isto o botão
+                                 ficaria sem nenhuma reação ao mouse. -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
-    <!-- ClipToBounds: a marca d'água abaixo é escalada para COBRIR a área (UniformToFill), o
-         que significa que ela sempre sobra em uma das direções — sem o recorte, esse excesso
-         vazaria para fora da aba. -->
-    <Grid ClipToBounds="True">
-        <!--
-            Marca d'água com o ícone do aplicativo (mesmo arquivo do ícone do .exe, exposto
-            como Resource no .csproj). UniformToFill, e não Uniform: o ícone é quadrado e a
-            área de login é larga, então "preencher e recortar" deixa a torre centralizada
-            ocupando o fundo inteiro, enquanto "caber inteiro" deixaria duas faixas vazias e
-            traria o wordmark do ícone para a tela — repetindo o título "RadarTorres" que o
-            cartão já exibe logo acima do formulário.
+    <!-- Layout 70/30: painel de arte (logo + nome) à esquerda, formulário à direita — substitui
+         a antiga marca d'água esticada sobre a tela inteira (que não ficava bem centralizada em
+         janelas largas) por um painel dedicado, com a logo exibida inteira (Stretch="Uniform",
+         sem recorte/distorção). -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="7*"/>
+            <ColumnDefinition Width="3*" MinWidth="340"/>
+        </Grid.ColumnDefinitions>
 
-            DecodePixelWidth=256 escolhe explicitamente o maior quadro do .ico (ele tem 7, de
-            16 a 256 px): sem isso o decodificador pode pegar um quadro pequeno e a ampliação
-            fica visivelmente serrilhada. A opacidade vem do tema (ver Themes/Dark.xaml), e
-            IsHitTestVisible=False garante que a imagem não roube cliques do formulário.
-        -->
-        <Image Stretch="UniformToFill" IsHitTestVisible="False"
-               Opacity="{DynamicResource LoginMarcaDaguaOpacidade}"
-               RenderOptions.BitmapScalingMode="HighQuality">
-            <Image.Source>
-                <BitmapImage UriSource="pack://application:,,,/Assets/RadarTorres.ico" DecodePixelWidth="256"/>
-            </Image.Source>
-        </Image>
+        <!-- Painel de arte -->
+        <Grid Grid.Column="0" Background="{DynamicResource Bg.Sidebar}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40">
+                <Image Width="200" Height="200" Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="HighQuality">
+                    <Image.Source>
+                        <BitmapImage UriSource="pack://application:,,,/Assets/RadarTorres.ico" DecodePixelWidth="256"/>
+                    </Image.Source>
+                </Image>
+                <TextBlock HorizontalAlignment="Center" Margin="0,16,0,0"
+                           FontFamily="{DynamicResource Font.Display}" FontWeight="Bold" FontSize="28">
+                    <Run Text="Radar" Foreground="{DynamicResource Text.Primary}"/>
+                    <Run Text="Torres" Foreground="{DynamicResource Accent.Text}"/>
+                </TextBlock>
+            </StackPanel>
+        </Grid>
 
-        <Border VerticalAlignment="Center" HorizontalAlignment="Center"
-                Background="{DynamicResource Bg.Card}"
-                BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
-                CornerRadius="10" Padding="32" Width="340">
-            <StackPanel>
-                <TextBlock Text="RadarTorres" FontSize="22" FontWeight="Bold"
+        <!-- Painel do formulário -->
+        <Grid Grid.Column="1" Background="{DynamicResource Bg.Window}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="360" Margin="32">
+                <TextBlock Text="{loc:Loc Login.Title}" FontSize="22" FontWeight="Bold"
                            HorizontalAlignment="Center" Foreground="{DynamicResource Accent.Fill}"/>
                 <TextBlock Text="{loc:Loc Login.Subtitle}" FontSize="11" TextWrapping="Wrap"
                            HorizontalAlignment="Center" TextAlignment="Center"
                            Foreground="{DynamicResource Text.Secondary}" Margin="0,4,0,24"/>
 
                 <TextBlock Text="{loc:Loc Login.Username}" Style="{StaticResource FieldLabel}"/>
-                <TextBox x:Name="LoginTextBox" Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBox x:Name="LoginTextBox" Style="{StaticResource LoginFieldTextBox}"
+                         Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <TextBlock Text="{loc:Loc Login.Password}" Style="{StaticResource FieldLabel}"/>
-                <shared:PasswordRevealBox Password="{Binding Senha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
+                <shared:PasswordRevealBox Password="{Binding Senha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                           MinHeight="44" Margin="0,0,0,4"/>
 
                 <TextBlock Text="{Binding ErrorMessage}"
                            Foreground="{DynamicResource Danger.Fill}" FontSize="12"
@@ -82,12 +132,12 @@
                            Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibilityConverter}}"/>
 
                 <Button Content="{loc:Loc Login.Submit}" Command="{Binding LoginCommand}"
-                        IsDefault="True" Margin="0,20,0,0"/>
+                        Style="{StaticResource LoginSubmitButton}" IsDefault="True"/>
 
                 <TextBlock Text="{loc:Loc Login.DefaultAdminHint}" FontSize="10"
                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
                            Foreground="{DynamicResource Text.Secondary}" Margin="0,16,0,0"/>
             </StackPanel>
-        </Border>
+        </Grid>
     </Grid>
 </UserControl>
