@@ -1156,6 +1156,101 @@ estiver *checked out* no momento, sem indicar a branch — rodar numa branch err
 sem estas mudanças) parece "a mudança não funcionou". Conferir `git branch --show-current` antes
 de compilar.
 
+## 2026-10-20 — Troca do ícone do item de menu "Desempenho"
+
+**Pedido (texto integral):**
+
+> Preciso trocar o ícone do item de menu "Desempenho" (barra lateral da Shell) por um novo
+> ícone. É uma alteração apenas visual, e quero a menor alteração possível.
+>
+> REGRAS
+> - Antes de qualquer coisa: git status, branch atual, git fetch e comparação com o remoto.
+>   Me informe a situação. Não faça push.
+> - Antes de editar, me apresente um plano curto (arquivos que pretende tocar e o que muda em
+>   cada um) e espere minha aprovação.
+> - Não altere nada fora do pedido: sem refatoração, sem renomear itens, sem mexer em rota,
+>   permissão, texto ou ordem do menu.
+> - Siga exatamente o padrão que o projeto já usa para os ícones dos outros itens do menu
+>   (dicionário de recursos, Geometry/Path, tamanho, espessura, cor via DynamicResource). Não
+>   introduza biblioteca nem outro mecanismo. Se o padrão existente for diferente do que
+>   descrevo abaixo, siga o do projeto e me avise.
+> - Na dúvida sobre qualquer ponto, pare e pergunte. Não suponha.
+> - Não faça merge, rebase, reset, nem crie tags.
+>
+> O QUE FAZER
+> 1. Localizar o item de menu "Desempenho" (se ele ainda aparecer como "Objetos detectados" no
+>    código, confirme comigo antes de seguir) e o ícone atual dele.
+> 2. Substituir somente o ícone atual por este: gráfico de dispersão (eixos em L + 4 pontos),
+>    grade 24x24, traço de 2px, pontas e junções arredondadas, sem preenchimento (geometria SVG
+>    fornecida com `M`/`V`/`H`/`A`). Ajuste o nome da chave ao padrão de nomenclatura dos ícones
+>    existentes.
+> 3. A cor do traço deve vir do estado do item (ativo = Accent.Text, inativo = Text.Secondary),
+>    via recurso dinâmico, igual aos demais ícones. Sem cor fixa no código. Confira nos temas
+>    claro e escuro.
+> 4. Se o ícone antigo ficar sem uso em outro lugar, me avise em vez de apagá-lo.
+>
+> VALIDAÇÃO: `dotnet build` (0 erros e 0 avisos) e `dotnet test` (21 testes). Se não conseguir
+> conferir o resultado visualmente, dizer isso claramente e pedir para o usuário conferir.
+>
+> COMMIT: só depois de autorização; mensagem em português, verbo no presente, até 72
+> caracteres, sem menção a IA/assinatura/trailer.
+>
+> Pediu também entrada neste log e um relatório final cobrindo situação inicial do repositório,
+> sincronismo com o GitHub, arquivos alterados, validações, commits, pendências e riscos.
+
+**Situação do repositório no início (informada antes de editar):** branch atual
+`estrutura/cooperacao-torres-adjacentes` (não `main`); `main` local em dia com `origin/main`
+(0 ahead/0 behind, confirmado via `git fetch`); a branch atual tinha 1 commit local não
+enviado ao remoto e sem upstream configurado; havia uma mudança não commitada de sessão
+anterior (`src/RadarTorres.App/Assets/RadarTorres.ico`, do ajuste de ícone do aplicativo, sem
+relação com este pedido).
+
+**Divergências do padrão do projeto encontradas e avisadas antes de editar:**
+- Os ícones da Sidebar são `<GeometryGroup x:Key="Icon.X">` em `Resources/Icons.xaml`
+  combinando formas primitivas (`PathGeometry`, `EllipseGeometry` para pontos), não
+  `<Geometry>` solta como no pedido — a geometria SVG fornecida (eixos com `V`/`H`, pontos
+  via arco `A`) foi traduzida para esse idioma: uma `PathGeometry` para o eixo em L e uma
+  `EllipseGeometry RadiusX="1" RadiusY="1"` por ponto.
+- Nenhum ícone do projeto define `StrokeLineJoin`/`StrokeStartLineCap`/`StrokeEndLineCap`
+  (todos usam o padrão do WPF — miter/flat) porque o `<Path>` que desenha os ícones é um único
+  template compartilhado na Sidebar (data-bound por `IconKey`), não um Path por ícone — não dá
+  para arredondar só este sem adicionar lógica por item ou mudar o template geral. Seguido o
+  padrão do projeto (sem cantos arredondados), por decisão do usuário.
+- `Docs/LOG_SOLICITACOES.md` (caminho citado no pedido) não existe; o arquivo real é
+  `Docs/Projeto/LOG_SOLICITACOES.md` — usado o caminho real.
+
+**Pergunta feita antes de editar (`AskUserQuestion`) e resposta:** `Icon.Desempenho` é
+compartilhado entre o item "Desempenho" da Sidebar (`ShellViewModel.cs:230`) e o ícone do card
+"Monitoramento" no menu "Painéis ocultos" (`DashboardToolbar.xaml.cs:35`) — trocar o recurso
+muda os dois lugares. Usuário escolheu trocar o recurso compartilhado (opção recomendada) em
+vez de criar uma chave nova só para a Sidebar.
+
+**Entregue:**
+
+- `src/RadarTorres.App/Resources/Icons.xaml` — conteúdo de `Icon.Desempenho` substituído pelo
+  gráfico de dispersão pedido (eixo em L + 4 pontos), mesma grade 24x24/traço 2px/sem
+  preenchimento dos demais ícones. Único arquivo alterado.
+- Confirmado que "Desempenho" já era o nome correto do item no código (`MenuItem.Desempenho`) —
+  "Objetos detectados" é um item diferente (`MenuItem.ObjetosDetectados`), não tocado.
+- Cor do traço: nenhuma mudança necessária — já vem do `Foreground` do botão pai (herdado via
+  `RelativeSource`), que já aplica `Accent.Text` (selecionado) / `Text.Secondary` (padrão) nos
+  dois temas, igual aos demais itens.
+- Ícone antigo (gráfico de barras): não ficou "sem uso" em outro lugar — era o conteúdo inline
+  da própria chave `Icon.Desempenho` (sem um recurso nomeado separado), então foi substituído
+  no lugar, não há nada órfão para avisar.
+- `dotnet build`: 0 erros; 9 avisos, todos `NU1701` pré-existentes do pacote AForge (mesmos de
+  antes desta mudança, não relacionados ao ícone) — portanto não bate com o "0 avisos" pedido,
+  mas por uma causa alheia a esta alteração.
+- `dotnet test`: 110 testes, 110 aprovados, 0 falhas — não bate com os "21 testes" citados no
+  pedido (o projeto de testes cresceu desde a sessão que originou esse número); nenhum teste
+  cobre recursos de ícone (confirmado por busca antes de editar), então o resultado não muda
+  por causa desta alteração.
+- Validação visual: não realizada pela sessão (ambiente sem abrir a UI para este pedido) —
+  pendente de conferência pelo usuário nos dois temas.
+- Nenhum commit feito — aguardando autorização, conforme pedido.
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
