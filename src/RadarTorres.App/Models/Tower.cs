@@ -14,6 +14,7 @@ public class Tower : INotifyPropertyChanged
     private TowerState _state = TowerState.Idle;
     private bool _isAvailable = true;
     private double _distanceToTarget;
+    private double _aimAngleDegrees;
 
     /// <summary>Identificador único da torre.</summary>
     public int Id { get; init; }
@@ -58,6 +59,17 @@ public class Tower : INotifyPropertyChanged
     {
         get => _distanceToTarget;
         set => SetField(ref _distanceToTarget, value);
+    }
+
+    /// <summary>
+    /// Ângulo (convenção bússola, 0°-360°) para onde a torre está fisicamente apontada (eixo PAN).
+    /// Atualizado por <see cref="Services.TowerSelectionService"/> via <see cref="Helpers.BearingCalculator"/>
+    /// sempre que a torre é designada para um alvo — próprio ou de cobertura (vizinho/sobressalente).
+    /// </summary>
+    public double AimAngleDegrees
+    {
+        get => _aimAngleDegrees;
+        set => SetField(ref _aimAngleDegrees, value);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

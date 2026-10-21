@@ -11,7 +11,7 @@ public sealed class BoolToFoundBrushConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        string resourceKey = value is true ? "AccentBrush" : "DangerBrush";
+        string resourceKey = value is true ? "Accent.Fill" : "Danger.Fill";
         return Application.Current.TryFindResource(resourceKey) as SolidColorBrush ?? Brushes.Gray;
     }
 

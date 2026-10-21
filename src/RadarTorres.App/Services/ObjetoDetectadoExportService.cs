@@ -20,7 +20,7 @@ public sealed class ObjetoDetectadoExportService : IObjetoDetectadoExportService
 
     public void ExportCsv(IEnumerable<ObjetoDetectado> itens, string filePath)
     {
-        var store = new CsvTableStore<ObjetoDetectado>(filePath, CsvObjetoDetectadoRepository.BuildColumns());
+        var store = new CsvTableStore<ObjetoDetectado>(filePath, CsvObjetoDetectadoColumns.BuildColumns());
         store.WriteAll(itens);
     }
 
@@ -38,19 +38,26 @@ public sealed class ObjetoDetectadoExportService : IObjetoDetectadoExportService
 
     private static readonly (string Header, double Width, Func<ObjetoDetectado, string> Value)[] Columns =
     [
-        ("Id", 30, o => o.Id.ToString()),
-        ("Tipo", 95, o => o.Tipo),
-        ("X (m)", 55, o => o.X.ToString("0.00")),
-        ("Y (m)", 55, o => o.Y.ToString("0.00")),
-        ("Quad.", 40, o => o.Quadrante),
-        ("Data/Hora", 115, o => o.DataHora.ToString("dd/MM/yyyy HH:mm:ss")),
-        ("Dispositivo", 80, o => o.Dispositivo),
-        ("Observação", 140, o => string.IsNullOrEmpty(o.Observacao) ? "—" : o.Observacao),
+        ("Id", 28, o => o.Id.ToString()),
+        ("Tipo", 85, o => o.Tipo),
+        ("X (m)", 48, o => o.X.ToString("0.00")),
+        ("Y (m)", 48, o => o.Y.ToString("0.00")),
+        ("Quad.", 38, o => o.Quadrante),
+        ("Câmera", 85, o => string.IsNullOrEmpty(o.CameraNome) ? "—" : o.CameraNome),
+        ("Estado", 72, o => o.Estado.ToString()),
+        ("Data/Hora", 105, o => o.DataHora.ToString("dd/MM/yyyy HH:mm:ss")),
+        ("Dispositivo", 70, o => o.Dispositivo),
+        ("Observação", 110, o => string.IsNullOrEmpty(o.Observacao) ? "—" : o.Observacao),
     ];
 
     public void ExportPdf(IEnumerable<ObjetoDetectado> itens, string filePath)
     {
         List<ObjetoDetectado> lista = itens.ToList();
+
+        // O PDFsharp 6 não traz fonte nem consulta o sistema sozinho: sem um resolvedor
+        // registrado, a criação da primeira XFont abaixo lança e a exportação nunca chegava a
+        // gerar arquivo (ver ResolvedorFontesPdf).
+        ResolvedorFontesPdf.Registrar();
 
         var document = new PdfDocument();
         document.Info.Title = "Objetos Detectados";

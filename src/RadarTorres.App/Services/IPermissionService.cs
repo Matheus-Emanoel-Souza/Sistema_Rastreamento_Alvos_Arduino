@@ -7,6 +7,9 @@ public enum MenuItem
 {
     PainelPrincipal,
     Monitoramento,
+
+    /// <summary>Aba "Desempenho" — métricas operacionais em tempo de execução (ver DesempenhoView).</summary>
+    Desempenho,
     ObjetosDetectados,
     AcoesRealizadas,
     HistoricoModos,
@@ -15,10 +18,14 @@ public enum MenuItem
     /// <summary>Módulo "Câmeras" — visualização em tempo real das webcams conectadas (ver CamerasView).</summary>
     Cameras,
 
-    Configuracoes,
-
     /// <summary>Aba "Configurações do Arduino" — ambiente/compilação/monitor serial (ver ArduinoSettingsView).</summary>
-    ConfiguracoesArduino
+    ConfiguracoesArduino,
+
+    /// <summary>Tela "Perfis de Alvo" — cor/formato/tamanho que a detecção deve travar (ver PerfilAlvoView).</summary>
+    PerfilAlvo,
+
+    /// <summary>Tela "Configurações" — preferências desta máquina: janela, idioma, tema, comportamento (ver ConfiguracoesView).</summary>
+    Configuracoes
 }
 
 /// <summary>
@@ -43,4 +50,10 @@ public interface IPermissionService
     /// <summary>Se o perfil pode criar/ativar/desativar/remover zonas mortas. Demais perfis
     /// continuam vendo a lista (transparência de onde o sistema não vai atirar), só não editam.</summary>
     bool PodeGerenciarZonasMortas(PerfilUsuario perfil);
+
+    /// <summary>Se o perfil pode criar/selecionar/remover perfis de alvo (cor/formato/tamanho
+    /// a travar). Mesmo critério de <see cref="PodeExecutarAcoes"/> — é uma decisão
+    /// operacional do dia a dia, não uma configuração administrativa restrita (diferente de
+    /// <see cref="PodeGerenciarZonasMortas"/>/<see cref="PodeGerenciarUsuarios"/>).</summary>
+    bool PodeGerenciarPerfisAlvo(PerfilUsuario perfil);
 }

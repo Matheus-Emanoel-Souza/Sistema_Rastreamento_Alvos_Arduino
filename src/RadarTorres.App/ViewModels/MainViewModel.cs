@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -35,7 +36,10 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly IModoAtualTorreRepository _modoAtualTorreRepository;
     private readonly IAuthService _authService;
     private readonly IPermissionService _permissionService;
+    private readonly IDesempenhoMonitorService _desempenhoMonitorService;
     private readonly Dispatcher _dispatcher;
+
+    public DeteccaoCameraViewModel DeteccaoCamera { get; }
 
     public MainViewModel(
         ILoggingService logger,
@@ -48,7 +52,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         IObjetoDetectadoRepository objetoRepository,
         IModoAtualTorreRepository modoAtualTorreRepository,
         IAuthService authService,
-        IPermissionService permissionService)
+        IPermissionService permissionService,
+        IDesempenhoMonitorService desempenhoMonitorService,
+        DeteccaoCameraViewModel deteccaoCameraViewModel)
     {
         _logger = logger;
         _serialService = serialService;
@@ -61,7 +67,11 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _modoAtualTorreRepository = modoAtualTorreRepository;
         _authService = authService;
         _permissionService = permissionService;
+        _desempenhoMonitorService = desempenhoMonitorService;
+        DeteccaoCamera = deteccaoCameraViewModel;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+
+        DeteccaoCamera.AtualizarModoAtual(_currentMode);
 
         _minDistance = AppConfig.Current.RadarSettings.MinSafetyDistanceMeters;
         _maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
@@ -107,7 +117,11 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     /// <summary>Chamado pelo NavigationService toda vez que o usuário volta a esta tela.
     /// Nenhum dado precisa ser recarregado aqui (a tela já reage a eventos em tempo real) — só
     /// avisa a View para recarregar o layout salvo do usuário atual.</summary>
-    public void OnNavigatedTo() => ScreenActivated?.Invoke(this, EventArgs.Empty);
+    public void OnNavigatedTo()
+    {
+        ScreenActivated?.Invoke(this, EventArgs.Empty);
+        DeteccaoCamera.RetomarCamera();
+    }
 
     // ---------------------------------------------------------------- Coleções expostas
 
@@ -283,13 +297,14 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
             }
 
             // Requisito "Histórico de alteração dos modos": confirma com o usuário antes de
-            // aplicar qualquer troca de modo, e audita tanto sucesso quanto cancelamento.
+            // aplicar qualquer troca de modo. Cancelamento na confirmação só gera log — sem
+            // coluna de resultado no schema acadêmico para distingui-lo de uma troca real.
             string pergunta = $"Confirma a troca do modo \"{DescribeMode(old)}\" para \"{DescribeMode(value)}\"?";
             bool confirmado = MessageBox.Show(pergunta, "Confirmar alteração de modo", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
             if (!confirmado)
             {
-                RegistrarModoAtualTorre(old, value, ResultadoModoAtualTorre.Erro, "Alteração cancelada pelo usuário na confirmação.");
+                _logger.Info("Alteração de modo cancelada pelo usuário na confirmação.");
                 OnPropertyChanged(nameof(CurrentMode)); // garante que o RadioButton volte ao valor anterior na UI
                 return;
             }
@@ -299,7 +314,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 OnPropertyChanged(nameof(SystemStatusText));
                 OnPropertyChanged(nameof(OutrosModos));
                 OnModeChanged(old, value);
-                RegistrarModoAtualTorre(old, value, ResultadoModoAtualTorre.Sucesso, null);
+                RegistrarModoAtualTorre(old, value);
+                DeteccaoCamera.AtualizarModoAtual(value);
             }
         }
     }
@@ -497,7 +513,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private async Task ManualFireAsync()
     {
         if (SelectedTarget is null) return;
-        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Manual, _authService.CurrentUser?.Login);
+        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
     }
 
     private void ClearRadar()
@@ -527,20 +543,16 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _ => mode.ToString()
     };
 
-    private void RegistrarModoAtualTorre(SystemMode anterior, SystemMode novo, ResultadoModoAtualTorre resultado, string? observacao)
+    private void RegistrarModoAtualTorre(SystemMode anterior, SystemMode novo)
     {
         try
         {
-            DateTime agora = DateTime.Now;
             _modoAtualTorreRepository.Add(new ModoAtualTorre
             {
                 ModoAnterior = DescribeMode(anterior),
                 NovoModo = DescribeMode(novo),
-                DataHoraSolicitacao = agora,
-                DataHoraExecucao = resultado == ResultadoModoAtualTorre.Sucesso ? agora : null,
-                Resultado = resultado,
-                Observacao = observacao,
-                UsuarioResponsavel = _authService.CurrentUser?.Login
+                UsuarioId = _authService.CurrentUser?.Id,
+                DataHora = DateTime.Now,
             });
         }
         catch (Exception ex)
@@ -610,7 +622,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         {
             case TargetMessage targetMessage:
                 if (IsPaused) return;
-                _trackingService.ProcessReading(new SensorReading
+                ProcessReadingMeasured(new SensorReading
                 {
                     TargetId = targetMessage.Id,
                     Angle = targetMessage.Angle,
@@ -640,19 +652,41 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private void OnSimulationReadingGenerated(object? sender, SensorReading reading)
     {
         if (IsPaused) return;
+        ProcessReadingMeasured(reading);
+    }
+
+    /// <summary>
+    /// Encaminha a leitura para <see cref="ITargetTrackingService.ProcessReading"/> medindo o
+    /// tempo de ciclo completo (tela de Desempenho): como o evento <c>TargetCreated</c>/
+    /// <c>TargetUpdated</c> é disparado de forma síncrona dentro de <c>ProcessReading</c>
+    /// (ver <see cref="TargetTrackingService"/>), este único <see cref="Stopwatch"/> já cobre
+    /// todo o pipeline reativo — rastreamento, seleção de torre e atualização do estado das
+    /// torres, disparados a partir de <see cref="OnTargetCreatedOrUpdated"/>.
+    /// </summary>
+    private void ProcessReadingMeasured(SensorReading reading)
+    {
+        long inicio = Stopwatch.GetTimestamp();
         _trackingService.ProcessReading(reading);
+        _desempenhoMonitorService.RecordCycleTime(Stopwatch.GetElapsedTime(inicio).TotalMilliseconds);
     }
 
     private void OnTargetCreatedOrUpdated(object? sender, Target target)
     {
         if (CurrentMode == SystemMode.AcompanharAlvos || CurrentMode == SystemMode.Disparar)
         {
-            TowerSelectionResult result = _towerService.SelectTowerFor(target);
+            long inicioDecisao = Stopwatch.GetTimestamp();
+            TowerSelectionResult result = _towerService.SelectTowerFor(target, Targets.Where(t => t.IsActive));
+            _desempenhoMonitorService.RecordDecisionTime(Stopwatch.GetElapsedTime(inicioDecisao).TotalMilliseconds);
+
             _towerService.RecomputeTowerStates(Targets.Where(t => t.IsActive));
 
             if (result.Success)
             {
                 _logger.Info($"Torre {result.SelectedTower!.Name} selecionada para o alvo #{target.Id:D2}");
+
+                // Reposiciona fisicamente (pan) a torre escolhida para encarar o alvo — inclusive
+                // quando ela está cobrindo um alvo de outro quadrante (adjacente ou sobressalente).
+                _ = SendCommandSafeAsync(SerialProtocolParser.BuildAim(result.SelectedTower!.Id, result.SelectedTower.AimAngleDegrees));
             }
 
             if (CurrentMode == SystemMode.Disparar && result.Success)
@@ -660,7 +694,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 FireAuthorizationResult auth = _fireControlService.Authorize(target, MinDistance);
                 if (auth.Authorized)
                 {
-                    _ = _fireControlService.TryFireAsync(target, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance, OrigemAcao.Automatica);
+                    _ = _fireControlService.TryFireAsync(target, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
                 }
                 else
                 {
@@ -718,5 +752,6 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _trackingService.TargetRemoved -= OnTargetRemoved;
         _simulationService.ReadingGenerated -= OnSimulationReadingGenerated;
         _authService.SessionChanged -= OnAuthSessionChanged;
+        DeteccaoCamera.Dispose();
     }
 }

@@ -23,4 +23,10 @@ public interface IDashboardLayoutRepository
 
     /// <summary>Remove o layout salvo de <paramref name="layoutKey"/>.</summary>
     void Clear(string layoutKey);
+
+    /// <summary>Layout "padrão do sistema" de <paramref name="screen"/> (ex.: "monitoramento"),
+    /// embutido no instalador (Resources/DefaultLayouts) — usado quando o usuário nunca salvou
+    /// um layout pessoal e por "Retornar ao padrão do sistema". Retorna <c>null</c> se a tela
+    /// não tiver um padrão embutido (cai no arranjo automático de DashboardCanvas).</summary>
+    Dictionary<string, DashboardCardLayout>? LoadSystemDefault(string screen);
 }

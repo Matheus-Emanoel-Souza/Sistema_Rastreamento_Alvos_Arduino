@@ -134,8 +134,8 @@ dotnet run
 Ou abra `RadarTorres.sln` (na raiz do projeto) no Visual Studio 2022+ e pressione F5.
 
 Ou, a partir da raiz do repositório, rode `build.bat` — compila a solução inteira (`dotnet restore`
-+ `dotnet build -c Release`) com um único comando, sem precisar entrar na pasta do projeto. Depois
-de compilar, rode `run.bat` para abrir o aplicativo (`RadarTorres.App.exe` do build Release).
++ `dotnet build -c Release`) com um único comando, sem precisar entrar na pasta do projeto, e já
+abre o aplicativo em seguida (chama `run.bat` automaticamente ao final).
 
 ### 💡 Dicas — rodar sem ser administrador do computador
 
@@ -363,8 +363,9 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── README.md                          (este arquivo)
 ├── LICENSE
 ├── RadarTorres.sln
-├── build.bat                          (compila a solução em Release — dotnet restore + build)
+├── build.bat                          (compila a solução em Release e já abre o app — chama run.bat)
 ├── run.bat                            (abre o RadarTorres.App.exe já compilado em Release)
+├── instalar.bat                       (atalho para build\publish.ps1 — gera dist\Setup.exe)
 ├── Arduino/
 │   └── ArduinoSimulation.ino          (firmware de teste, sem sensores reais)
 ├── build/
@@ -374,8 +375,9 @@ Sistema_Rastreamento_Alvos_Arduino/
 ├── dist/                              (gerado pelo build — Setup.exe; não versionado)
 ├── site/                              (site oficial de documentação/TCC/portfólio — React + TypeScript)
 ├── Docs/
+│   ├── README.md                       (guia de onde procurar cada tipo de documento)
 │   ├── Tecnica/                        (arquitetura, protocolo Arduino, modelo de dados, algoritmo, referência de classes)
-│   ├── Projeto/                        (contexto do TCC, etapas, instalador, log de solicitações)
+│   ├── Projeto/                        (contexto do TCC, etapas, notas de apoio, log de solicitações)
 │   ├── Embasamento_Teorico/            (conceitos teóricos de apoio ao artigo — ex.: UML)
 │   └── Documentos_Entregaveis/         (documentos acadêmicos entregáveis do TCC)
 │       ├── Requisitos_de_Sistema/      (requisitos funcionais/não funcionais, matriz de rastreabilidade)
@@ -383,9 +385,8 @@ Sistema_Rastreamento_Alvos_Arduino/
 │       ├── Diagrama_de_Classes/        (diagrama de classes)
 │       ├── Banco_de_Dados/             (modelo de dados lógico/proposto)
 │       ├── Diagrama_Eletrico/          (diagrama elétrico conceitual do protótipo)
+│       ├── Controle_de_Sessoes/        (atas/anexos de acompanhamento de orientação do TCC)
 │       └── Artigo/                     (artigo acadêmico do TCC)
-├── tests/
-│   └── RadarTorres.Tests/             (xUnit — Arduino CLI, compilação, persistência, portas)
 └── src/
     ├── RadarTorres.App/
     │   ├── RadarTorres.App.csproj
@@ -422,18 +423,11 @@ Sistema_Rastreamento_Alvos_Arduino/
 | Empacotamento/instalador | [Inno Setup 6](https://jrsoftware.org/isinfo.php) |
 | Firmware de teste | Arduino (C/C++, Arduino IDE) |
 
-### ✅ Testes automatizados
+### ⚠️ Testes automatizados
 
-```powershell
-dotnet restore
-dotnet build RadarTorres.sln
-dotnet test RadarTorres.sln
-```
-
-O projeto `tests/RadarTorres.Tests` (xUnit) cobre hoje a aba **Configurações do Arduino**:
-localização do Arduino CLI, montagem segura dos argumentos de compilação, interpretação do
-código de saída, cancelamento, persistência das preferências e limite de linhas dos consoles,
-além da disputa pelo uso da porta serial compartilhada com a tela de Monitoramento.
+O projeto ainda **não possui** um projeto de testes (xUnit ou outro) na solução — item
+pendente no roteiro de melhorias. Validação hoje é manual (modo de simulação, ver seção
+[Modo de simulação](#modo-de-simulação)).
 
 **Por que WPF em vez de WinForms?** WPF foi escolhido por oferecer data-binding real, gráficos
 vetoriais 2D de alta qualidade (essenciais para o radar circular), separação MVVM natural e

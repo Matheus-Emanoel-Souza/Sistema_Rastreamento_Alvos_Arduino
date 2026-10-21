@@ -10,13 +10,13 @@ documentação estão sinalizados como **inferência** nos respectivos arquivos.
 
 | Arquivo | Conteúdo |
 |---|---|
-| [`Diagrama_de_Classes.md`](Diagrama_de_Classes.md) | Classes/módulos principais (Models, Services, Repositories, ViewModels, Helpers, e o firmware Arduino representado como módulo/struct) + diagrama Mermaid |
+| Diagrama de Classes — *removido* | O artefato de diagrama de classes (antigo `Diagrama_de_Classes/`) foi removido do repositório e ainda não foi regenerado; ver observação em `UML_RadarTorres.md`, Seção 5 |
 | [`Diagrama_de_Pacotes.md`](Diagrama_de_Pacotes.md) | Organização em pacotes/namespaces reais do repositório + diagrama Mermaid de dependências |
-| [`Modelo_Banco_de_Dados.md`](Modelo_Banco_de_Dados.md) | Modelo de dados atual (CSV) com DER, e modelo proposto/inferido para migração futura a SQL |
+| [`../Banco_de_Dados/Modelo_Banco_de_Dados.md`](../Banco_de_Dados/Modelo_Banco_de_Dados.md) | Modelo de dados atual (SQLite) com DER |
 | [`Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`](../Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | RF01–RF32 e RNF01–RNF30 consolidados em um único documento, com prioridade/categoria e status |
 | [`Decisoes_Arquiteturais.md`](Decisoes_Arquiteturais.md) | Escolhas internas de implementação (persistência, MVVM manual, protocolo serial, UX de cards) — não são requisitos do produto |
 | [`Limitacoes_Conhecidas.md`](Limitacoes_Conhecidas.md) | Funcionalidades ainda não implementadas e divergências entre a especificação revisada e o código atual |
-| [`Matriz_de_Rastreabilidade.md`](Matriz_de_Rastreabilidade.md) | Requisito/decisão/limitação → arquivo/classe/função → status |
+| [`../Requisitos_de_Sistema/Matriz_de_Rastreabilidade.md`](../Requisitos_de_Sistema/Matriz_de_Rastreabilidade.md) | Requisito/decisão/limitação → arquivo/classe/função → status |
 | [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml) | Diagrama de Casos de Uso (PlantUML) — atores, 28 casos de uso agrupados, `<<include>>`/`<<extend>>` |
 | [`Casos_de_Uso.md`](Casos_de_Uso.md) | Especificação textual de cada caso de uso (objetivo, atores, fluxos, status) e matriz Caso de Uso × Requisito |
 
@@ -41,24 +41,25 @@ permanece nos `.md` para permitir edição futura.
 * Responsabilidade de `ILocalizationService`, `IThemeService`, `INavigationService` e
   `IZonaMortaService` — assinaturas completas não foram lidas nesta varredura; a responsabilidade
   foi inferida do nome da interface e do uso descrito em `Docs/Tecnica/ARQUITETURA.md`.
-* RF16, RF17 (Ações Realizadas, Histórico de Modos) — **confirmado na revisão de 2026-08-30**:
-  o registro de dados já funciona, a tela de consulta dedicada não existe (`Status: Parcial`).
-* RF18, RF23 (Usuários, tratamento administrativo de chamados) — **confirmado na revisão de
-  2026-08-30**: nenhuma tela consome `IUsuarioRepository`/`IChamadoAjudaRepository.Update`
-  hoje (`Status: Planejado`).
-* Modelo de banco "proposto" em `Modelo_Banco_de_Dados.md` — é a extrapolação do plano de
-  migração já documentado pelo próprio projeto (`TODO(SQL)`), não uma implementação existente.
+* RF16, RF17 (Ações Realizadas, Histórico de Modos) — as telas dedicadas
+  (`AcoesRealizadasView`/`ViewModel`, `HistoricoModosView`/`ViewModel`) existem e estão roteadas
+  em `Services/NavigationService.cs` (`Status: Implementado`).
+* RF18 (Usuários) — a tela `UsuariosView`/`UsuariosViewModel` existe e está roteada em
+  `Services/NavigationService.cs` (`Status: Implementado`). O módulo de Chamados de Ajuda
+  (antigo RF19/RF20) foi removido do código-fonte — não há mais `IChamadoAjudaRepository` nem
+  qualquer tela associada.
+* O modelo de banco de `Modelo_Banco_de_Dados.md` descreve o estado **atual** de persistência:
+  SQLite (`RadarTorres.db`), via `SqliteConnectionFactory` e os repositórios `Sqlite*Repository`
+  — não é mais uma proposta/extrapolação, a migração já foi concluída.
 
-## Revisão de 2026-08-30
+## Revisão de 2026-09
 
-Os documentos desta pasta foram revisados para separar corretamente RF, RNF, decisões
-arquiteturais e limitações conhecidas — ver `Docs/Projeto/LOG_SOLICITACOES.md`, entrada
-"2026-08-30 — Revisão dos documentos de Requisitos". O ponto abaixo, deixado em aberto na
-versão anterior deste README, foi confirmado nessa revisão.
+Os documentos desta pasta foram revisados para refletir a migração de persistência para SQLite e
+a remoção do módulo de Chamados de Ajuda, além de corrigir referências cruzadas defasadas (ver
+histórico de revisão anterior de 2026-08-30 em `Docs/Projeto/LOG_SOLICITACOES.md`).
 
-**Confirmado:** as telas de Ações Realizadas, Histórico de Modos, Usuários e Gestão/listagem de
-Chamados de Ajuda (RF16–RF18, RF23) **continuam em `PlaceholderView`** — lido diretamente em
-`Services/NavigationService.cs`. RF16/RF17 têm o registro de dados já funcionando (falta só a
-tela de consulta); RF18/RF23 não têm nenhuma interface, nem de consulta nem de gestão. Ver
-`Limitacoes_Conhecidas.md`, item L02, e o campo `Status` de cada requisito em
+**Situação atual:** as telas de Ações Realizadas, Histórico de Modos e Usuários (RF15–RF17)
+estão **implementadas e roteadas** em `Services/NavigationService.cs` — não existe mais nenhuma
+classe `PlaceholderView` no código-fonte. O módulo de Chamados de Ajuda (RF19/RF20) foi removido
+do sistema. Ver `Limitacoes_Conhecidas.md`, item L02, e o campo `Status` de cada requisito em
 `Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`.
