@@ -1,0 +1,33 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+.vs/
+
+## Instalador (artefatos gerados por build\publish.ps1 - não versionar)
+dist/
+release/
+
+## Rider / VS Code
+.idea/
+*.suo
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Claude Code (config local, não do projeto)
+.claude
+.claude/
+CLAUDE.md
+
+## LaTeX (artefatos de build - só os .tex/.pdf finais são versionados)
+*.aux
+*.log
+*.synctex.gz
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+Docs/Documentos_Entregaveis/**/b[0-9]*.log
+Docs/Documentos_Entregaveis/**/build*.log

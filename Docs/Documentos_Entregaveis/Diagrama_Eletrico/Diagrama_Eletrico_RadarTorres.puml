@@ -1,0 +1,115 @@
+@startuml Diagrama_Eletrico_RadarTorres
+
+' RadarTorres — Diagrama Elétrico (conceitual/funcional)
+' Objetivo: mostrar como os componentes de hardware serão conectados ao microcontrolador,
+' complementando o Diagrama de Implantação (Docs/Documentos_Entregaveis/UML/Implantacao_RadarTorres.puml)
+' e o protocolo serial (Docs/Tecnica/COMUNICACAO_ARDUINO.md).
+'
+' Hardware assumido (confirmado com o autor em 2026-09-19):
+'   - Placa: Arduino Uno (ATmega328P, lógica 5V)
+'   - Varredura/detecção: 1x servo motor (ex.: SG90) + 1x sensor ultrassônico HC-SR04
+'   - Indicação de torre selecionada: 1 LED por torre, uma torre por quadrante (Q1..Q4)
+'
+' Este diagrama é funcional (mostra QUAIS sinais ligam a QUAIS pinos), não um esquemático
+' elétrico completo com footprints/trilhas — para isso, usar uma ferramenta dedicada
+' (ex.: Fritzing/KiCad) na etapa de montagem física.
+
+skinparam shadowing false
+skinparam rectangle {
+  BackgroundColor White
+  BorderColor Black
+}
+skinparam arrow {
+  Color Black
+}
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+}
+
+node "PC (RadarTorres.App)" as PC
+
+rectangle "Arduino Uno" as UNO {
+  rectangle "5V" as UNO_5V
+  rectangle "GND" as UNO_GND
+  rectangle "D7 (digital)" as UNO_D7
+  rectangle "D8 (digital)" as UNO_D8
+  rectangle "D9 (PWM)" as UNO_D9
+  rectangle "D2 (digital)" as UNO_D2
+  rectangle "D3 (digital)" as UNO_D3
+  rectangle "D4 (digital)" as UNO_D4
+  rectangle "D5 (digital)" as UNO_D5
+}
+
+rectangle "Servo motor\n(ex.: SG90)\nvarredura do ângulo" as SERVO {
+  rectangle "VCC (vermelho)" as SERVO_VCC
+  rectangle "GND (marrom)" as SERVO_GND
+  rectangle "Sinal (laranja)" as SERVO_SIG
+}
+
+rectangle "Sensor ultrassônico\nHC-SR04\nmede distância" as HCSR04 {
+  rectangle "VCC" as HC_VCC
+  rectangle "GND" as HC_GND
+  rectangle "Trig" as HC_TRIG
+  rectangle "Echo" as HC_ECHO
+}
+
+rectangle "LED Torre Q1" as LED1
+rectangle "LED Torre Q2" as LED2
+rectangle "LED Torre Q3" as LED3
+rectangle "LED Torre Q4" as LED4
+
+rectangle "Resistor 220Ω\n(Q1)" as R1
+rectangle "Resistor 220Ω\n(Q2)" as R2
+rectangle "Resistor 220Ω\n(Q3)" as R3
+rectangle "Resistor 220Ω\n(Q4)" as R4
+
+PC -down-> UNO : USB\n(alimentação 5V + serial,\nprotocolo TIPO;CHAVE=VALOR)
+
+UNO_5V -right-> SERVO_VCC : 5V
+UNO_GND -right-> SERVO_GND : GND
+UNO_D9 -right-> SERVO_SIG : PWM (ângulo)
+
+UNO_5V --> HC_VCC : 5V
+UNO_GND --> HC_GND : GND
+UNO_D7 --> HC_TRIG : Trig
+HC_ECHO --> UNO_D8 : Echo
+
+UNO_D2 --> R1
+R1 --> LED1 : anodo
+LED1 --> UNO_GND : catodo
+
+UNO_D3 --> R2
+R2 --> LED2 : anodo
+LED2 --> UNO_GND : catodo
+
+UNO_D4 --> R3
+R3 --> LED3 : anodo
+LED3 --> UNO_GND : catodo
+
+UNO_D5 --> R4
+R4 --> LED4 : anodo
+LED4 --> UNO_GND : catodo
+
+note right of SERVO
+  Se o servo apresentar tremulação/reset do Arduino
+  ao mover, alimentar o servo por fonte externa 5V
+  separada, com GND comum ao Arduino — o pino 5V
+  do Uno tem corrente limitada (~500mA via USB).
+end note
+
+note bottom of LED4
+  4 LEDs = 1 por torre/quadrante (Q1–Q4), conforme
+  enum Quadrant em src/RadarTorres.App/Models/SystemState.cs.
+  Ajustar a quantidade se o número real de torres
+  físicas for diferente.
+end note
+
+note bottom of HCSR04
+  Echo do HC-SR04 opera em 5V, compatível com a
+  lógica 5V do Arduino Uno — não é necessário
+  divisor de tensão (seria preciso apenas se o
+  microcontrolador fosse de lógica 3.3V, ex.: ESP32).
+end note
+
+@enduml

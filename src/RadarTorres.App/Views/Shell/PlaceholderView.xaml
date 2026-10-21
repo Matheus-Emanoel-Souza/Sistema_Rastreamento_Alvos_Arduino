@@ -1,0 +1,19 @@
+<UserControl x:Class="RadarTorres.App.Views.Shell.PlaceholderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:RadarTorres.App.Localization">
+    <!--
+        Tela provisória para os itens da barra lateral cujas telas completas (com tabela,
+        filtros, paginação etc.) chegam na próxima etapa deste trabalho — objetivo aqui é só
+        garantir que a navegação/permissões já funcionem ponta a ponta (Requisito 2:
+        "preparada para receber novas funcionalidades").
+    -->
+    <Grid>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="380">
+            <TextBlock x:Name="TituloTextBlock" FontSize="20" FontWeight="Bold"
+                       Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+            <TextBlock Text="{loc:Loc Common.EmConstrucao}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>
