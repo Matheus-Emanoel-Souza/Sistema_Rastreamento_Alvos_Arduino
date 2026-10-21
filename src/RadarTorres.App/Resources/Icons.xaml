@@ -21,7 +21,11 @@
     </GeometryGroup>
 
     <GeometryGroup x:Key="Icon.Desempenho">
-        <PathGeometry Figures="M4,20 L4,14 M10,20 L10,9 M16,20 L16,5 M20,20 L20,11"/>
+        <PathGeometry Figures="M3,3 L3,21 L21,21"/>
+        <EllipseGeometry Center="8,15" RadiusX="1" RadiusY="1"/>
+        <EllipseGeometry Center="12,10" RadiusX="1" RadiusY="1"/>
+        <EllipseGeometry Center="16,13" RadiusX="1" RadiusY="1"/>
+        <EllipseGeometry Center="19,6" RadiusX="1" RadiusY="1"/>
     </GeometryGroup>
 
     <GeometryGroup x:Key="Icon.ObjetosDetectados">
