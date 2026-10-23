@@ -82,6 +82,20 @@ CREATE TABLE modo_atual_torre (
     DHALTERACAO   TEXT    NOT NULL
 );
 
+-- Buffer circular com o comportamento do melhor indivíduo de cada geração treinada na tela
+-- "Treinamento do Controlador" (neuroevolução do controlador híbrido heurística+rede neural —
+-- ver src/RadarTorres.App/NeuralEvolution/). Limitado a 300 linhas: ao inserir a 301ª, o
+-- registro de ID mais antigo é descartado (ver SqliteHistoricoTreinamentoRepository.Registrar).
+CREATE TABLE historico_treinamento_geracoes (
+    ID              INTEGER PRIMARY KEY AUTOINCREMENT,
+    GERACAO         INTEGER NOT NULL,
+    MELHOR_FITNESS  REAL    NOT NULL,
+    FITNESS_MEDIO   REAL    NOT NULL,
+    ALVOS_ABATIDOS  INTEGER NOT NULL,
+    ALVOS_ESCAPADOS INTEGER NOT NULL,
+    DH_REGISTRO     TEXT    NOT NULL
+);
+
 CREATE TABLE preferencias_usuario (
     UsuarioId          INTEGER PRIMARY KEY REFERENCES usuarios (Id) ON DELETE CASCADE,
     Idioma             TEXT    NOT NULL DEFAULT 'pt-BR',
@@ -97,6 +111,7 @@ CREATE INDEX idx_acoes_realizadas_datahora ON acoes_realizadas (DH_ACAO);
 CREATE INDEX idx_modo_atual_torre_usuario ON modo_atual_torre (ID_USER);
 CREATE INDEX idx_objetos_detectados_perfil ON objetos_detectados (PerfilAlvoId);
 CREATE INDEX idx_ocorrencia_estados_objeto ON ocorrencia_estados (ObjetoDetectadoId);
+CREATE INDEX idx_historico_treinamento_geracao ON historico_treinamento_geracoes (GERACAO);
 
 -- É esta restrição que torna impossível duplicar a ocorrência do mesmo acompanhamento num
 -- mesmo quadrante, inclusive quando várias câmeras processam em paralelo. Parcial (WHERE NOT

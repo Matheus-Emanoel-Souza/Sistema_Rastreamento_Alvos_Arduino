@@ -107,7 +107,31 @@
          pessoal (ver DashboardLayoutRepository.LoadSystemDefault). -->
     <EmbeddedResource Include="Resources\DefaultLayouts\monitoramento.json"
                       LogicalName="RadarTorres.App.Resources.DefaultLayouts.monitoramento.json" />
+
+    <!-- Controlador treinado (neuroevolução, ver NeuralEvolution/) embutido no executável — o
+         target "EmbutirGenomaTreinado" abaixo substitui este arquivo pelo genoma mais
+         recentemente exportado da tela "Treinamento do Controlador" ANTES de cada build, então
+         o conteúdo commitado aqui é só o padrão de fábrica (zerado = equivale à heurística pura
+         até alguém treinar e exportar um genoma nesta máquina). Carregado em runtime por
+         ControladorTreinadoProvider. -->
+    <EmbeddedResource Include="Resources\ControladorTreinado\genoma-controlador.json"
+                      LogicalName="RadarTorres.App.Resources.ControladorTreinado.genoma-controlador.json" />
   </ItemGroup>
+
+  <!-- Antes de cada build, procura o genoma mais recentemente exportado da tela "Treinamento do
+       Controlador" (%AppData%\RadarTorres\Treinamento, ver AppDataPaths.TreinamentoFolder) e o
+       copia para Resources\ControladorTreinado\genoma-controlador.json, que o ItemGroup acima
+       embute no executável. Só atua se a pasta/arquivos existirem nesta máquina — numa build
+       limpa (CI, outra máquina, ninguém treinou ainda) mantém o genoma já commitado, sem falhar
+       o build (ContinueOnError). -->
+  <Target Name="EmbutirGenomaTreinado" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <PastaTreinamentoExportado>$(AppData)\RadarTorres\Treinamento</PastaTreinamentoExportado>
+      <GenomaEmbutidoDestino>$(MSBuildProjectDirectory)\Resources\ControladorTreinado\genoma-controlador.json</GenomaEmbutidoDestino>
+    </PropertyGroup>
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Scripts\EmbutirGenomaTreinado.ps1&quot; -PastaOrigem &quot;$(PastaTreinamentoExportado)&quot; -Destino &quot;$(GenomaEmbutidoDestino)&quot;"
+          ContinueOnError="WarnAndContinue" />
+  </Target>
 
   <ItemGroup>
     <None Update="appsettings.json">
