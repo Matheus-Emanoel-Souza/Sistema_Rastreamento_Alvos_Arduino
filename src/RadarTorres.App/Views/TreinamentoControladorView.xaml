@@ -122,6 +122,12 @@
 
                         <TextBlock Text="Máximo de alvos simultâneos" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding MaxAlvosSimultaneos, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Style="{StaticResource ParametroLabel}" TextWrapping="Wrap" FontStyle="Italic">
+                            <Run Text="Alcance de mira e certeza mínima de disparo usados aqui são os mesmos ajustados em "/>
+                            <Run Text="Configurações → Radar e mira / Disparo" FontWeight="SemiBold"/>
+                            <Run Text=" — valem a partir do próximo &quot;Iniciar&quot; ou &quot;Resetar&quot;."/>
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 
