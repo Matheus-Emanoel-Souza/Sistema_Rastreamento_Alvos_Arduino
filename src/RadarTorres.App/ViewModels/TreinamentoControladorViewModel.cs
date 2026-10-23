@@ -186,12 +186,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private double _fitnessMedio;
     public double FitnessMedio { get => _fitnessMedio; private set => SetProperty(ref _fitnessMedio, value); }
 
-    /// <summary>Disparado a cada geração concluída — a View usa para atualizar o gráfico de evolução (ver code-behind).</summary>
-    public event EventHandler<ResultadoGeracao>? GeracaoConcluida;
-
-    /// <summary>Disparado por <see cref="Resetar"/> — a View usa para limpar o histórico bruto do gráfico de evolução (ver code-behind).</summary>
-    public event EventHandler? Resetado;
-
     // ---------------------------------------------------------------- Comandos
 
     private void Iniciar()
@@ -271,7 +265,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         RegrasAprendidas.Clear();
 
         MostrarStatus("Treinamento reiniciado — geração, fitness e genoma voltaram ao zero.", sucesso: true);
-        Resetado?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -367,7 +360,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                 GeracaoAtual = resultado.Geracao;
                 MelhorFitness = resultado.MelhorFitness;
                 FitnessMedio = resultado.FitnessMedio;
-                GeracaoConcluida?.Invoke(this, resultado);
             });
         }
     }
@@ -718,8 +710,30 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     private double ParaCanvasY(double y) => (TamanhoCanvas / 2.0) - y * PixelsPorMetro;
 
+    /// <summary>Raio (m) do mundo simulado — fronteira onde os alvos nascem (círculo externo do Canvas).</summary>
+    public double RaioMundoMetros => _ambiente.Parametros.RaioMundoMetros;
+
+    /// <summary>Alcance de engajamento (m) — limite até onde as torres conseguem mirar/disparar (círculo interno do Canvas).</summary>
+    public double DistanciaEngajamentoMetros => _ambiente.Parametros.DistanciaEngajamentoMetros;
+
+    /// <summary>Diâmetro em pixels do círculo interno (alcance de engajamento), já na escala atual do Canvas.</summary>
+    public double DiametroEngajamentoPx => DistanciaEngajamentoMetros * 2 * PixelsPorMetro;
+
+    /// <summary>Deslocamento (Canvas.Left/Top) do círculo interno para ficar centralizado no mundo.</summary>
+    public double OffsetEngajamentoPx => (TamanhoCanvas - DiametroEngajamentoPx) / 2.0;
+
+    private void NotificarGeometriaDoMundoAlterada()
+    {
+        OnPropertyChanged(nameof(RaioMundoMetros));
+        OnPropertyChanged(nameof(DistanciaEngajamentoMetros));
+        OnPropertyChanged(nameof(DiametroEngajamentoPx));
+        OnPropertyChanged(nameof(OffsetEngajamentoPx));
+    }
+
     private void DesenharTorresFixas()
     {
+        NotificarGeometriaDoMundoAlterada();
+
         TorresVisuais.Clear();
         CamposDeVisaoVisuais.Clear();
 
@@ -731,7 +745,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                 CanvasX = ParaCanvasX(torre.X),
                 CanvasY = ParaCanvasY(torre.Y),
                 Tamanho = 16,
-                Cor = "#334155"
+                Cor = "#334155",
+                AnguloGraus = AnguloPadraoDaTorre(torre)
             });
 
             CamposDeVisaoVisuais.Add(ConstruirSetorDeVisao(torre));
@@ -797,6 +812,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                 : AnguloPadraoDaTorre(torre);
 
             PreencherPontosDoSetor(setor, torre, anguloCentralGraus);
+
+            // O cano do canhão (ver DataTemplate de TorresVisuais) gira junto com o campo de
+            // visão — mesma torre, mesmo ângulo.
+            PontoVisualTreinamento? torreVisualCanhao = TorresVisuais.FirstOrDefault(t => t.Id == torre.Id);
+            if (torreVisualCanhao is not null) torreVisualCanhao.AnguloGraus = anguloCentralGraus;
         }
     }
 

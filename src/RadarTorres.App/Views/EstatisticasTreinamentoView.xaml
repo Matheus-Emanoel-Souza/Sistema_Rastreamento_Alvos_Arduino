@@ -112,6 +112,21 @@
                         </Border>
                     </Grid>
 
+                    <!-- Gráfico geração a geração (até as últimas 300), mesma fonte e desenho da
+                         tela "Treinamento do Controlador" (ver EstatisticasTreinamentoView.xaml.cs) —
+                         granularidade fina, complementar ao gráfico por bloco de 500 abaixo. -->
+                    <Border Style="{StaticResource Card}" Height="220">
+                        <Grid>
+                            <TextBlock Text="EVOLUÇÃO DO FITNESS (ÚLTIMAS GERAÇÕES)" Style="{StaticResource CardTitle}" VerticalAlignment="Top"/>
+                            <TextBlock Text="— Melhor fitness     ⋯ Fitness médio" VerticalAlignment="Top" HorizontalAlignment="Right"
+                                       Foreground="{DynamicResource Text.Secondary}" FontSize="11"/>
+                            <Canvas x:Name="GraficoGeracaoCanvas" Margin="0,24,0,0">
+                                <Polyline x:Name="LinhaMelhorFitnessGeracao" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2"/>
+                                <Polyline x:Name="LinhaFitnessMedioGeracao" Stroke="{DynamicResource Text.Secondary}" StrokeThickness="1"/>
+                            </Canvas>
+                        </Grid>
+                    </Border>
+
                     <!-- Gráfico: fitness médio do bloco (linha cheia) e melhor fitness do bloco (linha fina) por marco de 500 gerações. -->
                     <Border Style="{StaticResource Card}" Height="260">
                         <Grid>
