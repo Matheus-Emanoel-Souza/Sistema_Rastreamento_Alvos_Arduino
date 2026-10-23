@@ -261,6 +261,13 @@ ORDER BY ID DESC LIMIT 300)`) — não é um TTL por data, é estritamente "os 3
 Uma linha por **geração** (não por indivíduo da população), com `ALVOS_ABATIDOS`/
 `ALVOS_ESCAPADOS` do melhor genoma daquela geração.
 
+### `classificacoes_alvo`
+Auditoria de mudança de grau de perigosidade (`Baixo`/`Medio`/`Alto`/`Critico`) conforme a
+velocidade estimada do alvo — `Helpers/ClassificadorPerigoAlvo.cs`. Só inserção, e só quando o
+grau MUDA (`MainViewModel.RegistrarClassificacaoDePerigoSeMudou`), não a cada leitura do
+sensor — senão seria uma linha por quadro. `ObjetoDetectadoId` referencia `objetos_detectados.Id`
+quando já houver (pode ser `NULL` nas primeiras leituras do radar, antes do primeiro registro).
+
 ### `preferencias_usuario`
 Uma linha por usuário (Requisito 8) — idioma, tema, sidebar recolhida/expandida. Colunas de
 personalização mais granular (ordem dos cartões, colunas por tabela) ficam reservadas para a

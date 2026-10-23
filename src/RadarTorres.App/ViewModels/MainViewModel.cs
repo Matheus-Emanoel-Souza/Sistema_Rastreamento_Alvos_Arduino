@@ -39,6 +39,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly IDesempenhoMonitorService _desempenhoMonitorService;
     private readonly IOcorrenciaDeteccaoService _ocorrenciaService;
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
+    private readonly IClassificacaoPerigoRepository _classificacaoPerigoRepository;
+    private readonly Dictionary<int, GrauPerigoAlvo> _ultimoGrauPorAlvo = new();
     private readonly Dispatcher _dispatcher;
 
     public DeteccaoCameraViewModel DeteccaoCamera { get; }
@@ -58,6 +60,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         IDesempenhoMonitorService desempenhoMonitorService,
         IOcorrenciaDeteccaoService ocorrenciaService,
         IConfiguracoesAplicativoRepository configuracoes,
+        IClassificacaoPerigoRepository classificacaoPerigoRepository,
         DeteccaoCameraViewModel deteccaoCameraViewModel)
     {
         _logger = logger;
@@ -74,6 +77,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _desempenhoMonitorService = desempenhoMonitorService;
         _ocorrenciaService = ocorrenciaService;
         _configuracoes = configuracoes;
+        _classificacaoPerigoRepository = classificacaoPerigoRepository;
         DeteccaoCamera = deteccaoCameraViewModel;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
@@ -600,6 +604,32 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         }
     }
 
+    /// <summary>
+    /// Grava uma linha em <c>classificacoes_alvo</c> só quando o grau de perigosidade do alvo
+    /// muda (não a cada leitura) — ver <see cref="Helpers.ClassificadorPerigoAlvo"/>.
+    /// </summary>
+    private void RegistrarClassificacaoDePerigoSeMudou(Target target)
+    {
+        if (_ultimoGrauPorAlvo.TryGetValue(target.Id, out GrauPerigoAlvo anterior) && anterior == target.GrauPerigo) return;
+
+        _ultimoGrauPorAlvo[target.Id] = target.GrauPerigo;
+
+        try
+        {
+            _classificacaoPerigoRepository.Add(new ClassificacaoPerigoAlvo
+            {
+                ObjetoDetectadoId = target.ObjetoDetectadoId,
+                VelocidadeMetrosPorSegundo = target.SpeedMetersPerSecond,
+                Grau = target.GrauPerigo,
+                DataHora = DateTime.Now
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível gravar a classificação de perigo do alvo #{target.Id:D2}: {ex.Message}");
+        }
+    }
+
     private async Task SendCommandSafeAsync(string command)
     {
         if (IsSimulationMode)
@@ -697,6 +727,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     private void OnTargetCreatedOrUpdated(object? sender, Target target)
     {
+        RegistrarClassificacaoDePerigoSeMudou(target);
+
         if (CurrentMode == SystemMode.AcompanharAlvos || CurrentMode == SystemMode.Disparar)
         {
             long inicioDecisao = Stopwatch.GetTimestamp();
@@ -753,6 +785,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     {
         _towerService.RecomputeTowerStates(Targets.Where(t => t.IsActive));
         if (SelectedTarget == target) SelectedTarget = null;
+        _ultimoGrauPorAlvo.Remove(target.Id);
     }
 
     private void OnTargetsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
