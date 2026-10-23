@@ -10,7 +10,7 @@ namespace RadarTorres.App.ViewModels;
 
 /// <summary>
 /// ViewModel da tela "Estatísticas de Treinamento" (exclusiva do Administrador — ver
-/// <see cref="IPermissionService"/>): evolução de longo prazo do fitness médio a cada 1.000
+/// <see cref="IPermissionService"/>): evolução de longo prazo do fitness médio a cada 500
 /// gerações (<see cref="IMarcoFitnessTreinamentoRepository"/>), separada da tela "Treinamento do
 /// Controlador" porque ali o foco é acompanhar o treinamento RODANDO agora (geração a geração,
 /// até 300 no histórico recente); aqui é analisar a tendência de longuíssimo prazo sem ruído
@@ -59,7 +59,7 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
     public bool TemDados => Marcos.Count > 0;
 
     public string MensagemSemDados =>
-        "Nenhum marco registrado ainda — o primeiro aparece ao completar a geração 1.000 na tela \"Treinamento do Controlador\" (um marco a cada 1.000 gerações).";
+        "Nenhum marco registrado ainda — o primeiro aparece ao completar a geração 500 na tela \"Treinamento do Controlador\" (um marco a cada 500 gerações).";
 
     public MarcoFitnessTreinamento? UltimoMarco => Marcos.Count > 0 ? Marcos[^1] : null;
 

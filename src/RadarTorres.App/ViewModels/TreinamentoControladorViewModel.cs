@@ -31,8 +31,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Abertura angular do campo de visão de cada torre/canhão — fixa, voltada para fora da base (ver DesenharTorresFixas).</summary>
     public const double AnguloCampoDeVisaoGraus = 90.0;
 
-    /// <summary>Tamanho do bloco de gerações para cada marco registrado em <see cref="IMarcoFitnessTreinamentoRepository"/> (Requisito "fitness médio a cada 1.000 gerações").</summary>
-    private const int TamanhoBlocoMarco = 1000;
+    /// <summary>Tamanho do bloco de gerações para cada marco registrado em <see cref="IMarcoFitnessTreinamentoRepository"/> (Requisito "fitness médio a cada 500 gerações").</summary>
+    private const int TamanhoBlocoMarco = 500;
 
     private readonly ILoggingService _logger;
     private readonly IHistoricoTreinamentoRepository _historicoRepository;
@@ -40,7 +40,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly DispatcherTimer _timerPreview;
     private readonly Random _randomGenomaInicial = new();
 
-    // Acumulador do bloco de 1.000 gerações em andamento — zerado a cada marco registrado (ver
+    // Acumulador do bloco de 500 gerações em andamento — zerado a cada marco registrado (ver
     // RegistrarMarcoFitnessSeCompletouBloco) e também em Iniciar/Resetar, para não misturar
     // gerações de sessões diferentes no mesmo marco.
     private double _somaFitnessMedioBloco;
@@ -362,7 +362,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Acumula o fitness médio desta geração no bloco de 1.000 em andamento e, ao completar o
+    /// Acumula o fitness médio desta geração no bloco de 500 em andamento e, ao completar o
     /// bloco (geração múltipla de <see cref="TamanhoBlocoMarco"/>), grava um marco em
     /// <see cref="IMarcoFitnessTreinamentoRepository"/> com a média do bloco — não da geração
     /// mais recente só, para o painel de longo prazo mostrar a tendência, não ruído geração a

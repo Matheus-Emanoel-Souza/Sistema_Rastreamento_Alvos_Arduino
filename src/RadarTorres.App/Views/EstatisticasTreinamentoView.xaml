@@ -6,7 +6,7 @@
              FontFamily="{DynamicResource Font.Body}">
     <!--
         Tela "Estatísticas de Treinamento" — exclusiva do Administrador (ver PermissionService).
-        Mostra a evolução de LONGO prazo do fitness médio a cada 1.000 gerações
+        Mostra a evolução de LONGO prazo do fitness médio a cada 500 gerações
         (IMarcoFitnessTreinamentoRepository), complementar à tela "Treinamento do Controlador"
         (que foca no treinamento rodando agora, geração a geração). Reaproveita os mesmos estilos
         de cartão/título usados nela e em ConfiguracoesView.
@@ -60,7 +60,7 @@
                     <TextBlock Text="ESTATÍSTICAS DE TREINAMENTO" FontSize="20" FontWeight="Bold"
                                Foreground="{DynamicResource Text.Primary}"/>
                     <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="Fitness médio a cada 1.000 gerações de neuroevolução (marcos em 1.000, 2.000, 3.000...) — visão de longo prazo, sem o ruído geração a geração. Tela exclusiva do perfil Administrador."/>
+                               Text="Fitness médio a cada 500 gerações de neuroevolução (marcos em 500, 1.000, 1.500...) — visão de longo prazo, sem o ruído geração a geração. Tela exclusiva do perfil Administrador."/>
                 </StackPanel>
                 <Button Content="Atualizar" Command="{Binding AtualizarCommand}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
             </Grid>
@@ -69,7 +69,7 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
 
-                <!-- Sem dados ainda: nenhum marco completou 1.000 gerações nesta base. -->
+                <!-- Sem dados ainda: nenhum marco completou 500 gerações nesta base. -->
                 <Border Style="{StaticResource SemDadosCard}">
                     <TextBlock Text="{Binding MensagemSemDados}" TextWrapping="Wrap" Foreground="{DynamicResource Text.Secondary}"/>
                 </Border>
@@ -99,7 +99,7 @@
                             <StackPanel>
                                 <TextBlock Text="FITNESS MÉDIO GERAL" Style="{StaticResource CardTitle}"/>
                                 <TextBlock Text="{Binding FitnessMedioGeral, StringFormat={}{0:0.0}}" Style="{StaticResource CardValue}"/>
-                                <TextBlock Text="Média dos fitness médios de todos os blocos de 1.000 gerações." Style="{StaticResource CardTitle}" Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap"/>
+                                <TextBlock Text="Média dos fitness médios de todos os blocos de 500 gerações." Style="{StaticResource CardTitle}" Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
 
@@ -112,10 +112,10 @@
                         </Border>
                     </Grid>
 
-                    <!-- Gráfico: fitness médio do bloco (linha cheia) e melhor fitness do bloco (linha fina) por marco de 1.000 gerações. -->
+                    <!-- Gráfico: fitness médio do bloco (linha cheia) e melhor fitness do bloco (linha fina) por marco de 500 gerações. -->
                     <Border Style="{StaticResource Card}" Height="260">
                         <Grid>
-                            <TextBlock Text="EVOLUÇÃO DO FITNESS POR BLOCO DE 1.000 GERAÇÕES" Style="{StaticResource CardTitle}" VerticalAlignment="Top"/>
+                            <TextBlock Text="EVOLUÇÃO DO FITNESS POR BLOCO DE 500 GERAÇÕES" Style="{StaticResource CardTitle}" VerticalAlignment="Top"/>
                             <TextBlock Text="— Fitness médio do bloco     ⋯ Melhor fitness do bloco" VerticalAlignment="Top" HorizontalAlignment="Right"
                                        Foreground="{DynamicResource Text.Secondary}" FontSize="11"/>
                             <Canvas x:Name="GraficoCanvas" Margin="0,24,0,20">
