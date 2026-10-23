@@ -1447,6 +1447,153 @@ commits locais pendentes de push); `main` local em dia com `origin/main`.
 
 ---
 
+## 2026-10-23 — Remoção do card "Radar ao vivo (prévia)" do Painel Principal
+
+**Pedido (texto integral):**
+
+> Remova o radar ao vivo previa da tela painel principal.
+
+**Entregue:**
+
+- `src/RadarTorres.App/Views/PainelPrincipalView.xaml` — removido o `DashboardCard`
+  "RadarAoVivo" (mini `RadarControl` + contagem de alvos no raio + link "Abrir Monitoramento");
+  removido o `xmlns:local` (sem mais uso na view).
+- `src/RadarTorres.App/Views/PainelPrincipalView.xaml.cs` — removido o handler
+  `AbrirMonitoramentoLink_MouseLeftButtonUp` (exclusivo do card removido).
+- `src/RadarTorres.App/ViewModels/PainelPrincipalViewModel.cs` — removidos `Targets`/`Towers`,
+  `AlvosNoRaio`/`AlvosNoRaioTexto`, `AbrirMonitoramentoCommand`, o handler da coleção de alvos e
+  as dependências `ITargetTrackingService`/`ITowerSelectionService` (só existiam para este
+  card) — a tela volta a ser puramente de leitura de auditoria/estado, sem ligação com o
+  rastreamento ao vivo.
+- `src/RadarTorres.App/Views/Shared/DashboardToolbar.xaml.cs` — removida a entrada
+  `"RadarAoVivo"` do dicionário de ícones do menu "painéis ocultos" (card não existe mais, não
+  há como reabrir).
+- `Resources/Localization/pt-BR.json` e `en-US.json` — removidas as chaves
+  `Dashboard.RadarAoVivo`, `Dashboard.AlvosNoRaio` e `Dashboard.AbrirMonitoramento` (sem uso em
+  nenhum outro lugar).
+- `dotnet build`: 0 erros. `dotnet test`: 128 testes, 128 aprovados.
+- Nenhum commit feito — aguardando autorização.
+
+---
+
+## 2026-10-23 — Embutir o genoma treinado no build e usá-lo no controlador real
+
+**Pedido (texto integral):**
+
+> Agora quero que sempre que for buildado, pege o genoma que foi antes exportado
+
+**Esclarecido com o usuário (duas perguntas):** (1) "buildado" = no momento do build/publish
+(não a cada abertura do app); (2) o genoma carregado deve reger a decisão real do sistema (qual
+torre engaja), não só ficar disponível.
+
+**Entregue:**
+
+- `src/RadarTorres.App/Scripts/EmbutirGenomaTreinado.ps1` + target MSBuild
+  `EmbutirGenomaTreinado` (`BeforeTargets="BeforeBuild"`) em `RadarTorres.App.csproj`: antes de
+  cada build, procura em `%AppData%\RadarTorres\Treinamento\genoma-geracao-*.json` o arquivo
+  com maior `MelhorFitness` (empate: mais recente) e o copia para
+  `Resources\ControladorTreinado\genoma-controlador.json`, que é embutido no executável
+  (`EmbeddedResource`). Sem pasta/arquivos (build limpo, CI, outra máquina): mantém o que já
+  está commitado, sem falhar o build.
+- Baseline commitado: genoma zerado (74 pesos/bias a zero, arquitetura `[6,8,2]`) — equivale
+  matematicamente à heurística pura (ver próximo item), então uma instalação nova nunca se
+  comporta de forma "não treinada e aleatória".
+- `src/RadarTorres.App/Services/ControladorTreinadoProvider.cs` (+ `IControladorTreinadoProvider`):
+  carrega o JSON embutido em `RedeNeural` uma única vez, no mesmo padrão de
+  `DashboardLayoutRepository.LoadSystemDefault`.
+- `src/RadarTorres.App/Services/TowerSelectionService.cs`: dentro de cada camada da heurística
+  (próprio quadrante → adjacente → sobressalente), a escolha entre candidatas agora usa
+  `ControladorHibrido.Pontuar` (heurística+rede) em vez de só "menor distância" — cai para a
+  heurística pura se não houver controlador treinado embutido. Extraído `ConstruirEntradas` e
+  `Pontuar` como métodos `static` em `ControladorHibrido` para a MESMA fórmula valer no
+  treinamento e em produção (sem isso o genoma treinado não transferiria corretamente).
+- **Limite de segurança deliberado, não pedido explicitamente mas necessário:** o disparo
+  continua 100% manual (`FireControlService`/`MainViewModel.ManualFireAsync`, só reage a clique
+  do operador) — a rede neural decide SÓ qual torre persegue o alvo, nunca aciona nada por
+  conta própria. `ControladorHibrido.DecidirDisparo` (usado no treinamento) não foi ligado a
+  nenhum caminho automático do sistema real.
+- Limitação conhecida, documentada no código: o sistema real não mede velocidade do alvo (só
+  posição), então essa entrada da rede usa um valor neutro fixo em produção — a mesma rede foi
+  treinada com velocidade real do ambiente simulado.
+- Testes: `TowerSelectionServiceTests` ganhou um teste que prova que um genoma zerado produz
+  exatamente a mesma escolha que a heurística antiga; `ControladorTreinadoProviderTests` novo.
+  `dotnet build`: 0 erros. `dotnet test`: 131 testes, 131 aprovados (inclui validação real do
+  pipeline: nesta máquina já havia um genoma exportado, geração 20130, e o build o embutiu
+  automaticamente).
+- Nenhum commit feito — aguardando autorização.
+
+---
+
+## 2026-10-23 — Campos de visão das torres, torre de vigilância central e mensagem de exportação
+
+**Pedido (texto integral):**
+
+> Primeiro quero que mostre o campo de visão de cada canhão. e o campo de monitoramento do
+> sensores do centro da torre de vigilancia central.
+>
+> Dê a mensagem de genoma exportado com sucesso quando for em exportar.
+
+**Esclarecido com o usuário (três perguntas):** (1) tela = Treinamento do Controlador (2D), não
+o radar real; (2) campo de visão = setor/cone angular (não círculo de alcance puro); (3) "torre
+de vigilância central" = o sensor/base já existente na origem (0,0), não uma entidade nova.
+
+**Entregue:**
+
+- `ViewModels/SetorVisualTreinamento.cs` (novo) + `CamposDeVisaoVisuais` em
+  `TreinamentoControladorViewModel`: um leque de 90° (`AnguloCampoDeVisaoGraus`) por torre,
+  voltado para fora da base (mesmo ângulo da torre vista da origem), raio = alcance de
+  engajamento. Estático — calculado uma única vez em `DesenharTorresFixas` (as torres não se
+  movem durante o episódio), desenhado como `Polygon` no Canvas.
+- Círculo de limite do mundo (já existia) estilizado como o campo de monitoramento da torre de
+  vigilância central: preenchimento translúcido + tooltip; adicionado um marcador visual (ponto
+  azul) no centro (0,0) representando a própria torre central.
+- `TreinamentoControladorViewModel.ExportarMelhorGenoma`: além do log (`_logger.Success`, que
+  só aparece no console da tela de Monitoramento), agora mostra uma mensagem visível na própria
+  tela de Treinamento (`StatusMensagem`/`StatusSucesso`, banner verde/vermelho abaixo do botão
+  Exportar) — antes, exportar não dava nenhum feedback visível para quem estivesse nessa tela.
+- `dotnet build`: 0 erros. `dotnet test`: 131 testes, 131 aprovados.
+- Nenhum commit feito — aguardando autorização. Validação visual não foi feita (não abro o
+  aplicativo sem pedido explícito) — pedido ao usuário testar na tela "Treinamento do
+  Controlador".
+
+---
+
+## 2026-10-23 — Tabela de histórico no esquema documentado, tela responsiva, cone acompanhando o alvo
+
+**Pedido (texto integral):**
+
+> Faça uma tabela no banco de dados para os dados do histórico de gerações. Deixe essa tela de
+> histórico de gerações responsivo. coloque a visulização do cone de visão acompanhando o alvo.
+
+**Entregue:**
+
+- **Tabela documentada**: `historico_treinamento_geracoes` (criada programaticamente desde a
+  rodada anterior) agora também está nos documentos oficiais do modelo de dados —
+  `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql` e `Modelo_Banco_de_Dados.dbml`, e no
+  diagrama/detalhe técnico em `Docs/Tecnica/MODELO_DADOS.md`. Adicionado também o índice
+  `idx_historico_treinamento_geracao` (coluna `GERACAO`) ao repositório real, para o schema.sql
+  continuar espelhando exatamente o código. **Não regenerados**: `Modelo_Banco_de_Dados.md`/
+  `.tex`/`.pdf` e os diagramas DER em PNG (entregáveis acadêmicos formatados, fora do alcance
+  desta sessão) — avisar se quiser que eu atualize esses também.
+- **Tela responsiva**: layout raiz da tela "Treinamento do Controlador" trocado de `DockPanel`
+  fixo para `Grid` com linhas `Auto`/`*`/`Auto`/`220 (min 120, max 420)` + `GridSplitter`
+  arrastável entre o conteúdo principal e o histórico — o usuário pode redimensionar a tabela de
+  histórico puxando a barra. Colunas do `DataGrid` com larguras proporcionais (`1*`/`2*` nas que
+  fazem sentido crescer, fixas só nas numéricas estreitas) e `HorizontalScrollBarVisibility=Auto`,
+  em vez de larguras fixas em pixel que deixavam espaço vazio ou cortavam em janelas menores.
+- **Cone de visão acompanhando o alvo**: o leque de cada torre (antes estático, sempre voltado
+  para fora da base) agora gira a cada quadro para apontar para o alvo que a torre está mirando
+  — direção = mesmo ângulo da linha de mira (`BearingCalculator`-equivalente) — e volta para a
+  direção padrão quando a torre fica livre. `SetorVisualTreinamento.Pontos` passou a ser mutado
+  no lugar (em vez de recriado) para o `Polygon` redesenhar sem precisar de
+  `INotifyPropertyChanged`.
+- `dotnet build`: 0 erros. `dotnet test`: 131 testes, 131 aprovados.
+- Nenhum commit feito — aguardando autorização. Validação visual não foi feita — pedido ao
+  usuário testar na tela "Treinamento do Controlador" (iniciar treinamento ou rodar 1 episódio,
+  arrastar a divisória da tabela de histórico, observar os cones girando atrás dos alvos).
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).

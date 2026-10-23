@@ -4,33 +4,58 @@ using System.Linq;
 using RadarTorres.App.Configuration;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
+using RadarTorres.App.NeuralEvolution;
 
 namespace RadarTorres.App.Services;
 
 /// <summary>
 /// Implementa o algoritmo de seleção de torre descrito no enunciado do TCC:
 /// 1) considera apenas torres disponíveis; 2) prioriza torres cujo quadrante de cobertura
-/// coincide com o do alvo; 3) dentre as candidatas, escolhe a de menor distância Euclidiana
-/// até o alvo; 4) se nenhuma torre do quadrante preferencial estiver disponível, cai para
-/// qualquer torre disponível do sistema (para não deixar um alvo sem cobertura).
+/// coincide com o do alvo; 3) dentre as candidatas, escolhe a melhor avaliada; 4) se nenhuma
+/// torre do quadrante preferencial estiver disponível, cai para qualquer torre disponível do
+/// sistema (para não deixar um alvo sem cobertura).
 /// </summary>
 /// <remarks>
 /// Deliberadamente livre de qualquer referência a WPF/XAML — é pura lógica de negócio,
 /// testável isoladamente e reaproveitável caso a interface mude no futuro.
 /// A quantidade de torres não é fixa: é lida de <see cref="AppSettings.Towers"/>, então
 /// adicionar/remover torres é apenas uma questão de editar o appsettings.json.
+///
+/// <para>
+/// Dentro de cada camada, a escolha entre candidatas é feita por
+/// <see cref="ControladorHibrido.Pontuar"/> — a mesma combinação heurística+rede neural
+/// treinada por neuroevolução na tela "Treinamento do Controlador" (ver
+/// <see cref="IControladorTreinadoProvider"/>) — e cai para a heurística pura (menor distância)
+/// se nenhum controlador treinado estiver embutido. Isto decide SÓ qual torre persegue o alvo;
+/// o disparo em si continua exclusivamente manual (<see cref="IFireControlService"/>), por
+/// decisão de projeto — a rede neural não aciona nada por conta própria.
+/// </para>
+/// <para>
+/// Limitação conhecida: o sistema real não mede a velocidade do alvo (só posição), então a
+/// entrada "velocidade do alvo" da rede usa um valor neutro fixo
+/// (<see cref="VelocidadeAlvoDesconhecidaMetrosPorSegundo"/>) em vez de uma medição real — é a
+/// mesma rede treinada no ambiente de simulação, que tinha essa informação.
+/// </para>
 /// </remarks>
 public sealed class TowerSelectionService : ITowerSelectionService
 {
+    /// <summary>Ver nota de limitação na documentação da classe.</summary>
+    private const double VelocidadeAlvoDesconhecidaMetrosPorSegundo = 1.25;
+
+    /// <summary>Mesmo padrão usado como velocidade máxima no ambiente de treinamento (ver <see cref="ParametrosTreinamento"/>) — só normaliza a entrada acima.</summary>
+    private const double VelocidadeMaximaAlvoMetrosPorSegundo = 2.5;
+
     private readonly ILoggingService _logger;
     private readonly IZonaMortaService _zonaMortaService;
+    private readonly IControladorTreinadoProvider _controladorTreinado;
 
     public ObservableCollection<Tower> Towers { get; } = new();
 
-    public TowerSelectionService(ILoggingService logger, IZonaMortaService zonaMortaService)
+    public TowerSelectionService(ILoggingService logger, IZonaMortaService zonaMortaService, IControladorTreinadoProvider controladorTreinado)
     {
         _logger = logger;
         _zonaMortaService = zonaMortaService;
+        _controladorTreinado = controladorTreinado;
         LoadTowersFromConfig();
     }
 
@@ -111,19 +136,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
                     ? (coverage, "cobertura — torre sobressalente")
                     : (available, "sobrecarregada — nenhuma torre livre");
 
-        Tower? best = null;
-        double bestDistance = double.MaxValue;
-        foreach (Tower candidate in candidates)
-        {
-            double distance = DistanceCalculator.Between(target, candidate);
-            candidate.DistanceToTarget = distance;
-
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                best = candidate;
-            }
-        }
+        (Tower? best, double bestDistance) = EscolherMelhorCandidata(candidates, target, fatorCamada: home.Count > 0 ? 1.0 : adjacent.Count > 0 ? 0.5 : coverage.Count > 0 ? 0.0 : -1.0);
 
         if (best is null)
         {
@@ -141,6 +154,59 @@ public sealed class TowerSelectionService : ITowerSelectionService
         _logger.Info($"{best.Name} selecionada para o alvo #{target.Id:D2} ({layerLabel}, dist={bestDistance:0.00} m, mira={best.AimAngleDegrees:0.0}°)");
 
         return new TowerSelectionResult(true, best, bestDistance, $"OK ({layerLabel})");
+    }
+
+    /// <summary>
+    /// Escolhe a melhor torre dentro de UMA camada já definida (própria/adjacente/sobressalente)
+    /// — usa a rede treinada quando disponível (<see cref="ControladorHibrido.Pontuar"/>, mesma
+    /// combinação heurística+rede da tela de treinamento), senão a heurística pura de menor
+    /// distância (comportamento anterior, idêntico ao que a rede produz quando o genoma embutido
+    /// é o zerado de fábrica).
+    /// </summary>
+    private (Tower? Best, double BestDistance) EscolherMelhorCandidata(List<Tower> candidates, Target target, double fatorCamada)
+    {
+        RedeNeural? rede = _controladorTreinado.Rede;
+        double raioMundoMetros = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+
+        Tower? best = null;
+        double bestDistance = double.MaxValue;
+        double melhorPontuacao = double.NegativeInfinity;
+
+        foreach (Tower candidate in candidates)
+        {
+            double distance = DistanceCalculator.Between(target, candidate);
+            candidate.DistanceToTarget = distance;
+
+            if (rede is null)
+            {
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+                continue;
+            }
+
+            double[] entradas = ControladorHibrido.ConstruirEntradas(
+                distanciaMetros: distance,
+                raioMundoMetros: raioMundoMetros,
+                mesmoQuadrante: candidate.PreferredQuadrant == target.Quadrant,
+                quadranteAdjacente: QuadrantHelper.AreAdjacent(candidate.PreferredQuadrant, target.Quadrant),
+                anguloGraus: BearingCalculator.AngleTo(candidate, target),
+                velocidadeMetrosPorSegundo: VelocidadeAlvoDesconhecidaMetrosPorSegundo,
+                velocidadeMaximaMetrosPorSegundo: VelocidadeMaximaAlvoMetrosPorSegundo,
+                fatorCamada: fatorCamada);
+
+            double pontuacao = ControladorHibrido.Pontuar(rede, entradas, fatorCamada);
+            if (pontuacao > melhorPontuacao)
+            {
+                melhorPontuacao = pontuacao;
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+
+        return (best, bestDistance);
     }
 
     public void RecomputeTowerStates(IEnumerable<Target> activeTargets)

@@ -25,7 +25,10 @@ public enum MenuItem
     PerfilAlvo,
 
     /// <summary>Tela "Configurações" — preferências desta máquina: janela, idioma, tema, comportamento (ver ConfiguracoesView).</summary>
-    Configuracoes
+    Configuracoes,
+
+    /// <summary>Tela "Treinamento do Controlador" — neuroevolução do controlador híbrido heurística+rede neural (ver TreinamentoControladorView).</summary>
+    TreinamentoControlador
 }
 
 /// <summary>

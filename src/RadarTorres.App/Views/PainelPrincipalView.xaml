@@ -3,8 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="clr-namespace:RadarTorres.App.Localization"
              xmlns:conv="clr-namespace:RadarTorres.App.Converters"
-             xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
-             xmlns:local="clr-namespace:RadarTorres.App.Views">
+             xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared">
 
     <UserControl.Resources>
         <conv:ConnectionStateToBrushConverter x:Key="ConnectionStateToBrushConverter"/>
@@ -186,34 +185,6 @@
                     <TextBlock Text="{Binding UltimaAtualizacaoTexto}" FontFamily="{DynamicResource Font.Mono}"
                                FontWeight="Medium" FontSize="20" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
-            </shared:DashboardCard>
-
-            <!-- ==================== RADAR AO VIVO (PRÉVIA) ==================== -->
-            <!-- Mini radar com os MESMOS dados ao vivo do Monitoramento (ITargetTrackingService/
-                 ITowerSelectionService injetados na PainelPrincipalViewModel — ver comentário da
-                 classe), reaproveitando o próprio RadarControl em escala reduzida, não uma cópia
-                 do desenho. -->
-            <shared:DashboardCard x:Name="CardRadarAoVivo" CardId="RadarAoVivo"
-                                   Title="{loc:Loc Dashboard.RadarAoVivo}"
-                                   Canvas.Left="0" Canvas.Top="348" Width="556" Height="230">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" Width="190" Height="190" CornerRadius="14" ClipToBounds="True">
-                        <local:RadarControl Targets="{Binding Targets}" Towers="{Binding Towers}" IsHitTestVisible="False"/>
-                    </Border>
-
-                    <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding AlvosNoRaioTexto}"
-                                   FontFamily="{DynamicResource Font.Display}" FontWeight="Bold" FontSize="24"
-                                   Foreground="{DynamicResource Text.Primary}" TextWrapping="Wrap"/>
-                        <TextBlock Text="{loc:Loc Dashboard.AbrirMonitoramento}" Style="{StaticResource CardLink}"
-                                   MouseLeftButtonUp="AbrirMonitoramentoLink_MouseLeftButtonUp"/>
-                    </StackPanel>
-                </Grid>
             </shared:DashboardCard>
         </shared:DashboardCanvas>
     </Grid>

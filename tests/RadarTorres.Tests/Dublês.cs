@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using RadarTorres.App.Models;
+using RadarTorres.App.NeuralEvolution;
 using RadarTorres.App.Repositories;
 using RadarTorres.App.Services;
 
@@ -58,6 +59,12 @@ internal sealed class ZonaMortaServiceFalsa : IZonaMortaService
     public void Remove(ZonaMorta zone) => throw new NotSupportedException();
 
     public ZonaMorta? FindBlockingZone(Target target) => null;
+}
+
+/// <summary>Sem controlador treinado embutido — força a heurística pura (comportamento anterior à neuroevolução).</summary>
+internal sealed class ControladorTreinadoProviderFalso : IControladorTreinadoProvider
+{
+    public RedeNeural? Rede { get; init; }
 }
 
 /// <summary>Associação câmera → quadrante fixa, informada pelo teste.</summary>

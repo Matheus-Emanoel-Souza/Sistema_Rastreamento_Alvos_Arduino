@@ -1,6 +1,7 @@
 using RadarTorres.App.Configuration;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
+using RadarTorres.App.NeuralEvolution;
 using RadarTorres.App.Services;
 using Xunit;
 
@@ -29,7 +30,7 @@ public sealed class TowerSelectionServiceTests : IDisposable
         configuracao.Towers.Add(new TowerDefinition { Id = 4, Name = "Torre 4", X = 1.75, Y = -1.75 });  // Q4
         AppConfig.Current = configuracao;
 
-        _service = new TowerSelectionService(_logger, new ZonaMortaServiceFalsa());
+        _service = new TowerSelectionService(_logger, new ZonaMortaServiceFalsa(), new ControladorTreinadoProviderFalso());
     }
 
     public void Dispose() => AppConfig.Current = _configuracaoAnterior;
@@ -116,5 +117,34 @@ public sealed class TowerSelectionServiceTests : IDisposable
         Assert.True(resultado.Success);
         double esperado = BearingCalculator.AngleTo(resultado.SelectedTower!, alvo);
         Assert.Equal(esperado, resultado.SelectedTower!.AimAngleDegrees, precision: 6);
+    }
+
+    /// <summary>
+    /// Garante a premissa de compatibilidade do controlador treinado: um genoma zerado (padrão
+    /// de fábrica, antes de qualquer treinamento) produz EXATAMENTE a mesma escolha que a
+    /// heurística pura — porque com pesos/bias zerados a rede sempre devolve ajuste 0, e dentro
+    /// de uma camada o fator heurístico é igual para todas as candidatas, então a pontuação
+    /// final continua ordenada só pela distância (ver ControladorHibrido.Pontuar).
+    /// </summary>
+    [Fact]
+    public void ComGenomaZeradoEmbutido_EscolheAMesmaTorreQueAHeuristicaPura()
+    {
+        var redeZerada = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)]);
+        var servicoComRede = new TowerSelectionService(_logger, new ZonaMortaServiceFalsa(), new ControladorTreinadoProviderFalso { Rede = redeZerada });
+
+        Target alvo1 = AlvoEm(1, 1.98, 1.98);  // Q1
+        Target alvo2 = AlvoEm(2, 0.50, 3.00);  // também Q1 — precisa de ajuda (camada adjacente com 2 candidatas)
+        var ativos = new[] { alvo1, alvo2 };
+
+        servicoComRede.SelectTowerFor(alvo1, ativos);
+        TowerSelectionResult comRede = servicoComRede.SelectTowerFor(alvo2, ativos);
+
+        Target alvo1Puro = AlvoEm(1, 1.98, 1.98);
+        Target alvo2Puro = AlvoEm(2, 0.50, 3.00);
+        var ativosPuro = new[] { alvo1Puro, alvo2Puro };
+        _service.SelectTowerFor(alvo1Puro, ativosPuro);
+        TowerSelectionResult puro = _service.SelectTowerFor(alvo2Puro, ativosPuro);
+
+        Assert.Equal(puro.SelectedTower!.Id, comRede.SelectedTower!.Id);
     }
 }

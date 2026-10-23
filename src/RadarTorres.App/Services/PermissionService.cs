@@ -10,6 +10,11 @@ public sealed class PermissionService : IPermissionService
         // "Usuários" é exclusivo do Administrador — os demais itens são visíveis para
         // qualquer perfil autenticado (o controle fino de ação fica em PodeExecutarAcoes).
         MenuItem.Usuarios => perfil == PerfilUsuario.Administrador,
+
+        // Ferramenta de pesquisa/engenharia do controlador (neuroevolução), não uma operação do
+        // dia a dia — mesmo critério de "Usuários".
+        MenuItem.TreinamentoControlador => perfil == PerfilUsuario.Administrador,
+
         _ => true
     };
 

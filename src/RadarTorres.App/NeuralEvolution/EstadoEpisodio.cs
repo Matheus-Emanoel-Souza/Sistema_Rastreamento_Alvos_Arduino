@@ -1,0 +1,39 @@
+using System;
+using System.Collections.Generic;
+
+namespace RadarTorres.App.NeuralEvolution;
+
+/// <summary>
+/// Estado mutável de um episódio de treinamento em andamento — torres, alvos vivos, relógio
+/// interno e estatísticas acumuladas. Uma mesma instância é avançada passo a passo por
+/// <see cref="AmbienteTreinamento.Avancar"/>, seja numa avaliação rápida (sem desenhar nada,
+/// para o algoritmo genético) ou numa reprodução visual lenta (tela de treinamento).
+/// </summary>
+public sealed class EstadoEpisodio
+{
+    public List<TorreTreinamento> Torres { get; } = new();
+    public List<AlvoTreinamento> Alvos { get; } = new();
+
+    public double TempoDecorridoSegundos { get; set; }
+    public double FitnessAcumulado { get; set; }
+
+    public int AlvosAbatidos { get; set; }
+    public int AlvosEscapados { get; set; }
+
+    public bool Finalizado { get; set; }
+
+    /// <summary>Instante (em <see cref="TempoDecorridoSegundos"/>) do próximo surgimento de alvo.</summary>
+    public double ProximoSpawnSegundos { get; set; }
+
+    /// <summary>Gerador de números aleatórios próprio do episódio — permite reproduzir o mesmo episódio com uma seed fixa.</summary>
+    public Random Rng { get; }
+
+    private int _proximoIdAlvo;
+
+    public EstadoEpisodio(Random rng)
+    {
+        Rng = rng;
+    }
+
+    public int ProximoIdAlvo() => ++_proximoIdAlvo;
+}
