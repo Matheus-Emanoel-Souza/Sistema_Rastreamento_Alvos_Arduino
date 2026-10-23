@@ -170,6 +170,27 @@ escolha de ampliar o desempenho do controlador pelo ajuste dos hiperparâmetros 
 recompensa) em vez de aumentar o número de camadas ou neurônios sem evidência de que a capacidade
 atual da rede seja o fator limitante.
 
+O impacto do treinamento virtual sobre a execução física do controlador é atenuado por uma decisão
+de projeto central: a mesma classe que decide no episódio simulado (\texttt{ControladorHibrido}) é
+a que decide em produção, consultada por \texttt{TowerSelectionService} a partir das leituras do
+Arduino real -- não há conversão para um formato intermediário (ONNX, TensorFlow Lite) nem
+reimplementação em outra linguagem ou plataforma, fontes comuns de divergência entre o
+comportamento treinado e o executado em sistemas de aprendizado por reforço aplicados a robótica. O
+genoma evoluído é um vetor plano de pesos e vieses, embutido diretamente na aplicação
+(\texttt{EmbutirGenomaTreinado.ps1}, \texttt{IControladorTreinadoProvider}); o que muda do ambiente
+de treino para a operação real é apenas a origem dos dados de entrada (leitura simulada ou leitura
+do Arduino), nunca a função de decisão em si. Os parâmetros que definem o episódio simulado --
+alcance de engajamento e certeza mínima para autorizar disparo -- também deixaram de ser constantes
+fixas no código e passaram a ser lidos das mesmas configurações usadas pelo sistema real
+(\texttt{ConfiguracoesAplicativo.AlcanceMiraMetros}, \texttt{LimiarConfiancaDisparoPercentual}), de
+modo que recalibrar o alcance da câmera ou o limiar de certeza no painel de Configurações recalibra
+também o mundo de treino, reduzindo a divergência entre o que foi aprendido e o que será executado.
+Por fim, a rede neural nunca decide isoladamente: ela apenas pondera a escolha dentro do que a
+camada heurística determinística já considera válida (nunca uma torre ocupada, nunca fora de
+alcance, nunca dentro de uma zona morta), o que limita o pior caso de uma generalização imperfeita
+do treino virtual para a física -- no limite, o sistema regride ao comportamento puramente
+heurístico, nunca a uma decisão arbitrária.
+
 % PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
 % computacional clássica (a ser informada pelo autor).
 
@@ -206,6 +227,25 @@ usado para observar o comportamento do sistema durante este trabalho, o que imp�
 ao escopo dos resultados relatados: eles atestam a corretude da lógica de decisão implementada em
 software, mas não substituem uma validação de campo com sensores e torres físicas, deixada como
 trabalho futuro.
+
+A mesma ressalva se aplica, com reforço adicional, ao controlador treinado por neuroevolução: o
+mundo simulado em que os genomas são avaliados (\texttt{AmbienteTreinamento}) é uma aproximação
+idealizada do ambiente físico -- os alvos nascem na borda de um círculo e avançam de forma quase
+radial, sem o ruído típico de leituras ultrassônicas reais; a certeza de identificação do alvo pela
+câmera é modelada como uma função sintética que cresce com o tempo de observação, e a probabilidade
+de errar o disparo é uma função assumida, crescente com a velocidade do alvo -- nenhuma delas
+calibrada com dados de campo, já que o hardware ainda não foi montado. Essa distância entre
+simulação e realidade física não é apenas teórica: durante este trabalho, identificou-se e
+corrigiu-se uma falha em que a certeza de identificação do alvo era sorteada uma única vez, no
+nascimento, e nunca era atualizada -- cerca de 70\% dos alvos simulados nasciam permanentemente
+abaixo do limiar mínimo de disparo e jamais podiam ser abatidos, independentemente da qualidade do
+genoma, mascarando qualquer evolução real do controlador sob a aparência de estagnação. O episódio
+é citado aqui como evidência concreta de que uma premissa equivocada na simulação pode invalidar
+silenciosamente o processo de treinamento sem que isso seja percebido pelas métricas agregadas,
+reforçando a necessidade de validação cruzada entre o comportamento do genoma treinado e o
+comportamento observado em campo, com hardware físico, antes de se confiar no controlador em um
+cenário de operação real -- validação que permanece como trabalho futuro, nos mesmos termos já
+apontados para o restante do protótipo.
 
 \subsection{Projeto e implementação}
 
