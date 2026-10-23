@@ -96,6 +96,32 @@ CREATE TABLE historico_treinamento_geracoes (
     DH_REGISTRO     TEXT    NOT NULL
 );
 
+-- Marcos agregados de fitness a cada 500 gerações de treinamento (neuroevolução) — nunca
+-- descarta linhas (diferente de historico_treinamento_geracoes acima).
+CREATE TABLE marcos_fitness_treinamento (
+    Id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+    GeracaoMarco               INTEGER NOT NULL,
+    FitnessMedioDoBloco        REAL    NOT NULL,
+    MelhorFitnessDoBloco       REAL    NOT NULL,
+    DataHora                   TEXT    NOT NULL
+);
+
+-- Retrato completo (decisões/acertos/erros/genoma) do melhor genoma a cada 1.000 gerações —
+-- histórico comparativo marco a marco, também sem descarte de linhas, para estudar caso a caso
+-- se a evolução do treinamento é real.
+CREATE TABLE instantaneos_comportamento_melhor_gene (
+    Id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    GeracaoMarco    INTEGER NOT NULL,
+    Fitness         REAL    NOT NULL,
+    AlvosAbatidos   INTEGER NOT NULL,
+    AlvosEscapados  INTEGER NOT NULL,
+    TirosErrados    INTEGER NOT NULL,
+    TaxaDeAcerto    REAL,
+    TaxaDeCobertura REAL,
+    GenomaJson      TEXT    NOT NULL,
+    DataHora        TEXT    NOT NULL
+);
+
 -- Auditoria de mudança de grau de perigosidade de um alvo (ver ClassificadorPerigoAlvo) —
 -- só grava uma linha quando o grau MUDA, não a cada leitura do sensor.
 CREATE TABLE classificacoes_alvo (
@@ -123,6 +149,8 @@ CREATE INDEX idx_objetos_detectados_perfil ON objetos_detectados (PerfilAlvoId);
 CREATE INDEX idx_ocorrencia_estados_objeto ON ocorrencia_estados (ObjetoDetectadoId);
 CREATE INDEX idx_historico_treinamento_geracao ON historico_treinamento_geracoes (GERACAO);
 CREATE INDEX idx_classificacoes_alvo_objeto ON classificacoes_alvo (ObjetoDetectadoId);
+CREATE UNIQUE INDEX idx_marcos_fitness_geracao ON marcos_fitness_treinamento (GeracaoMarco);
+CREATE UNIQUE INDEX idx_instantaneos_comportamento_geracao ON instantaneos_comportamento_melhor_gene (GeracaoMarco);
 
 -- É esta restrição que torna impossível duplicar a ocorrência do mesmo acompanhamento num
 -- mesmo quadrante, inclusive quando várias câmeras processam em paralelo. Parcial (WHERE NOT

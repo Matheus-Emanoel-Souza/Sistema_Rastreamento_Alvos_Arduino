@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using RadarTorres.App.Configuration;
 using RadarTorres.App.NeuralEvolution;
 using Xunit;
@@ -63,5 +64,36 @@ public sealed class AmbienteTreinamentoTests
 
         Assert.Empty(estado.Alvos);
         Assert.All(estado.Torres, t => Assert.True(t.Livre));
+    }
+
+    [Fact]
+    public void AvaliarFitness_ComMesmasSeeds_EDeterministico()
+    {
+        var ambiente = new AmbienteTreinamento(new ParametrosTreinamento { DuracaoEpisodioSegundos = 8 }, SemTorresConfiguradas);
+        double[] genoma = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+        int[] seeds = [10, 11, 12];
+
+        double primeiro = ambiente.AvaliarFitness(genoma, seeds);
+        double segundo = ambiente.AvaliarFitness(genoma, seeds);
+
+        Assert.Equal(primeiro, segundo, precision: 10);
+    }
+
+    /// <summary>
+    /// <see cref="AmbienteTreinamento.AvaliarFitness"/> existe para reduzir o ruído de um único
+    /// episódio sorteado — tem que ser de fato a média dos episódios individuais, não outra
+    /// agregação (soma, melhor caso etc.) que mudaria a escala do fitness sem avisar.
+    /// </summary>
+    [Fact]
+    public void AvaliarFitness_EAMediaAritmeticaDosEpisodiosIndividuais()
+    {
+        var ambiente = new AmbienteTreinamento(new ParametrosTreinamento { DuracaoEpisodioSegundos = 8 }, SemTorresConfiguradas);
+        double[] genoma = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+        int[] seeds = [20, 21, 22];
+
+        double mediaEsperada = seeds.Average(seed => ambiente.ExecutarEpisodioRapido(genoma, seed).FitnessTotal);
+        double mediaObtida = ambiente.AvaliarFitness(genoma, seeds);
+
+        Assert.Equal(mediaEsperada, mediaObtida, precision: 10);
     }
 }
