@@ -30,7 +30,7 @@ public enum MenuItem
     /// <summary>Tela "Treinamento do Controlador" — neuroevolução do controlador híbrido heurística+rede neural (ver TreinamentoControladorView).</summary>
     TreinamentoControlador,
 
-    /// <summary>Tela "Estatísticas de Treinamento" — exclusiva do Administrador: evolução do fitness médio a cada 1.000 gerações (ver EstatisticasTreinamentoView).</summary>
+    /// <summary>Tela "Estatísticas de Treinamento" — exclusiva do Administrador: evolução do fitness médio a cada 500 gerações (ver EstatisticasTreinamentoView).</summary>
     EstatisticasTreinamento
 }
 
