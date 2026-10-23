@@ -71,7 +71,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="3*" MinHeight="260"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="220" MinHeight="120" MaxHeight="420"/>
+            <RowDefinition x:Name="LinhaHistorico" Height="220" MinHeight="120" MaxHeight="420"/>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
@@ -93,7 +93,9 @@
                             <Button Content="Parar" Command="{Binding PararCommand}"/>
                         </StackPanel>
                         <Button Content="Rodar 1 episódio" Command="{Binding RodarEpisodioUnicoCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
-                        <Button Content="Exportar melhor genoma" Command="{Binding ExportarMelhorGenomaCommand}" HorizontalAlignment="Stretch"/>
+                        <Button Content="Exportar melhor genoma" Command="{Binding ExportarMelhorGenomaCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                        <Button Content="Resetar treinamento" Command="{Binding ResetarCommand}" HorizontalAlignment="Stretch"
+                                Background="#7F1D1D" ToolTip="Para o treinamento (se estiver rodando) e volta tudo ao estado inicial — geração, fitness, genoma e visualizações. Não apaga o histórico já salvo no banco."/>
 
                         <TextBlock Text="{Binding StatusMensagem}" Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap"
                                    Visibility="{Binding StatusMensagem, Converter={StaticResource NullToVisibilityConverter}}">
@@ -167,6 +169,55 @@
                 </Border>
             </StackPanel>
         </ScrollViewer>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel HorizontalAlignment="Center">
+
+        <!-- Diagrama da rede neural evoluída: entradas (verde) -> camada oculta (azul) -> saídas
+             (amarelo). Passe o mouse sobre um neurônio para ver qual "decisão" ele representa
+             (entradas/saídas tem significado fixo; neurônios ocultos mostram a ativação atual e
+             quais entradas mais os influenciam — ver ConstruirTooltipDoNeuronio). -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="REDE NEURAL DO CONTROLADOR (PASSE O MOUSE SOBRE UM NEURÔNIO)" Style="{StaticResource CardTitle}"/>
+                <Canvas Width="620" Height="280">
+                    <ItemsControl ItemsSource="{Binding ConexoesVisuais}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                      Stroke="{Binding Cor}" StrokeThickness="{Binding Espessura}" Opacity="0.55"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding NeuroniosVisuais}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+                                <Setter Property="Canvas.Top" Value="{Binding CanvasY}"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Ellipse Width="{Binding Raio}" Height="{Binding Raio}" Fill="{Binding Cor}"
+                                         Stroke="{DynamicResource Border.Control}" StrokeThickness="1.5"
+                                         ToolTip="{Binding Rotulo}" Cursor="Hand">
+                                    <Ellipse.RenderTransform>
+                                        <TranslateTransform X="-7" Y="-7"/>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Canvas>
+            </StackPanel>
+        </Border>
 
         <!-- Canvas 2D: torres fixas + alvos em movimento do melhor genoma atual -->
         <Border Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -242,17 +293,25 @@
                 </ItemsControl>
             </Canvas>
         </Border>
+
+        </StackPanel>
+        </ScrollViewer>
         </DockPanel>
 
-        <!-- Arraste para redimensionar o histórico de gerações -->
-        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Height="6" Background="{DynamicResource Border.Control}"
+        <!-- Arraste para redimensionar o histórico de gerações (desativado enquanto minimizado) -->
+        <GridSplitter x:Name="DivisoriaHistorico" Grid.Row="2" HorizontalAlignment="Stretch" Height="6" Background="{DynamicResource Border.Control}"
                       ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" Cursor="SizeNS"/>
 
         <!-- Histórico de gerações (até 300 registros, mais antigo removido ao estourar — ver IHistoricoTreinamentoRepository) -->
         <Border Grid.Row="3" Style="{StaticResource Card}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="HISTÓRICO DE GERAÇÕES (ÚLTIMOS 300 REGISTROS)" Style="{StaticResource CardTitle}"/>
-                <DataGrid ItemsSource="{Binding HistoricoRecente}" AutoGenerateColumns="False" IsReadOnly="True"
+                <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
+                    <TextBlock DockPanel.Dock="Left" Text="HISTÓRICO DE GERAÇÕES (ÚLTIMOS 300 REGISTROS)" Style="{StaticResource CardTitle}" Margin="0" VerticalAlignment="Center"/>
+                    <Button x:Name="BotaoMinimizarMaximizarHistorico" DockPanel.Dock="Right" Content="▾ Minimizar" Margin="0"
+                            Click="BotaoMinimizarMaximizarHistorico_Click"
+                            ToolTip="Minimizar/maximizar o painel de histórico de gerações"/>
+                </DockPanel>
+                <DataGrid x:Name="HistoricoDataGrid" ItemsSource="{Binding HistoricoRecente}" AutoGenerateColumns="False" IsReadOnly="True"
                           CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True"
                           GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"

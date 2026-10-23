@@ -24,6 +24,24 @@ public sealed class ControladorHibrido
 
     public static readonly int[] ArquiteturaPadrao = { QuantidadeEntradas, 8, QuantidadeSaidas };
 
+    /// <summary>Rótulo curto de cada entrada, na mesma ordem de <see cref="ConstruirEntradas(double,double,bool,bool,double,double,double,double)"/> — usado nos nós de entrada do diagrama da rede (ver tela de treinamento).</summary>
+    public static readonly string[] RotulosEntradas =
+    [
+        "Distância até o alvo",
+        "Mesmo quadrante do alvo",
+        "Quadrante adjacente",
+        "Ângulo de mira",
+        "Velocidade do alvo",
+        "Camada heurística"
+    ];
+
+    /// <summary>Rótulo curto de cada saída, na mesma ordem devolvida por <see cref="RedeNeural.Ativar"/> — usado nos nós de saída do diagrama da rede.</summary>
+    public static readonly string[] RotulosSaidas =
+    [
+        "Ajuste de pontuação da torre candidata",
+        "Confiança de disparo"
+    ];
+
     private const double TempoMinimoDeMiraSegundos = 0.3;
 
     private readonly RedeNeural _rede;

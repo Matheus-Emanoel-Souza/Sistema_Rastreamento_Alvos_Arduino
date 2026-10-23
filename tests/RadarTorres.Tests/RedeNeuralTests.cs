@@ -64,4 +64,53 @@ public sealed class RedeNeuralTests
 
         Assert.Throws<ArgumentException>(() => new RedeNeural([2, 2, 1], genomaCurto));
     }
+
+    [Fact]
+    public void AtivarComCamadas_DevolveUmaEntradaPorCamadaIncluindoAsEntradasCrus()
+    {
+        double[] genoma = new double[RedeNeural.TamanhoGenoma([3, 4, 2])];
+        var rede = new RedeNeural([3, 4, 2], genoma);
+
+        double[][] camadas = rede.AtivarComCamadas([0.1, 0.2, 0.3]);
+
+        Assert.Equal(3, camadas.Length); // entrada + oculta + saída
+        Assert.Equal([0.1, 0.2, 0.3], camadas[0]);
+        Assert.Equal(4, camadas[1].Length);
+        Assert.Equal(2, camadas[2].Length);
+    }
+
+    [Fact]
+    public void AtivarComCamadas_UltimaCamadaIgualAoAtivar()
+    {
+        double[] genoma = Enumerable.Range(0, RedeNeural.TamanhoGenoma([6, 8, 2]))
+            .Select(i => (i % 5 - 2) * 0.3)
+            .ToArray();
+        var rede = new RedeNeural([6, 8, 2], genoma);
+        double[] entradas = [0.5, 1, 0, 0.5, 0.5, 1];
+
+        double[] saidaDireta = rede.Ativar(entradas);
+        double[][] camadas = rede.AtivarComCamadas(entradas);
+
+        Assert.Equal(saidaDireta, camadas[^1]);
+    }
+
+    [Fact]
+    public void Peso_DevolveOGeneCorrespondenteNoGenoma()
+    {
+        // Arquitetura [2,2]: genoma = [p00,p01,p10,p11, b0,b1] — Peso(0,1,0) é o 3º gene (índice 2).
+        double[] genoma = [10, 20, 30, 40, 0, 0];
+        var rede = new RedeNeural([2, 2], genoma);
+
+        Assert.Equal(30, rede.Peso(0, 1, 0));
+        Assert.Equal(20, rede.Peso(0, 0, 1));
+    }
+
+    [Fact]
+    public void TamanhosDasCamadas_EQuantidadeDeCamadasDePesos_RefletemAArquitetura()
+    {
+        var rede = new RedeNeural([6, 8, 2], new double[RedeNeural.TamanhoGenoma([6, 8, 2])]);
+
+        Assert.Equal(new[] { 6, 8, 2 }, rede.TamanhosDasCamadas);
+        Assert.Equal(2, rede.QuantidadeDeCamadasDePesos);
+    }
 }
