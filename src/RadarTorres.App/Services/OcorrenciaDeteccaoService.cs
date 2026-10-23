@@ -50,6 +50,8 @@ public sealed class OcorrenciaDeteccaoService : IOcorrenciaDeteccaoService
         _logger = logger;
     }
 
+    public event EventHandler<(Quadrant Quadrante, double Confianca)>? ConfiancaAtualizada;
+
     public ResultadoRegistroOcorrencia RegistrarDeteccao(ContextoDeteccao contexto)
     {
         DateTime agora = DateTime.Now;
@@ -62,6 +64,11 @@ public sealed class OcorrenciaDeteccaoService : IOcorrenciaDeteccaoService
 
         (double x, double y, double anguloGraus) = Posicionar(contexto);
         Quadrant quadrante = ResolverQuadrante(contexto.Camera, x, y);
+
+        // Atualiza a certeza do quadrante a cada rodada (mesmo antes de confirmações
+        // suficientes para abrir ocorrência) — é o que autoriza (ou não) o disparo automático,
+        // então não pode esperar o histórico decidir se vale registrar.
+        ConfiancaAtualizada?.Invoke(this, (quadrante, contexto.Pontuacao));
 
         RastreioVisual rastreio = _rastreamento.ObterOuCriar(
             contexto.Camera.Id, quadrante, contexto.Perfil.Id, caixa, agora);

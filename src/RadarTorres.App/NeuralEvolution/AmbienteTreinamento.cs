@@ -105,6 +105,7 @@ public sealed class AmbienteTreinamento
 
         TalvezNascerAlvo(estado);
         MoverAlvos(estado, dt);
+        AplicarPenalidadeDeProximidade(estado);
         TratarAlvosNaBase(estado);
         SelecionarTorresParaAlvosLivres(estado, controlador);
         DecidirDisparos(estado, controlador);
@@ -148,7 +149,10 @@ public sealed class AmbienteTreinamento
             VelocidadeX = velocidade * Math.Cos(anguloMovimento),
             VelocidadeY = velocidade * Math.Sin(anguloMovimento),
             VelocidadeMetrosPorSegundo = velocidade,
-            Quadrante = QuadrantHelper.Determine(x, y)
+            Quadrante = QuadrantHelper.Determine(x, y),
+            // Simula a variação de confiança da identificação por câmera no sistema real — a
+            // rede precisa aprender a esperar a certeza subir em vez de disparar cedo demais.
+            Certeza = estado.Rng.NextDouble()
         });
     }
 
@@ -164,6 +168,25 @@ public sealed class AmbienteTreinamento
             {
                 alvo.TempoDesdeSelecao += dt;
             }
+        }
+    }
+
+    /// <summary>
+    /// Alvo que chega perto demais da base, mesmo sem ainda ter escapado de fato (ver
+    /// <see cref="TratarAlvosNaBase"/>, que dispara no raio ainda menor da própria base), já
+    /// custa pontos à geração — simula o risco de deixar o alvo se aproximar demais antes de
+    /// decidir. Aplicada uma única vez por alvo (<see cref="AlvoTreinamento.PenalidadeProximidadeAplicada"/>),
+    /// não a cada passo enquanto ele continuar dentro do raio.
+    /// </summary>
+    private void AplicarPenalidadeDeProximidade(EstadoEpisodio estado)
+    {
+        foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo && !a.PenalidadeProximidadeAplicada))
+        {
+            double distanciaBase = DistanceCalculator.Euclidean(alvo.X, alvo.Y, 0, 0);
+            if (distanciaBase > _parametros.DistanciaPerdaPontoMetros) continue;
+
+            alvo.PenalidadeProximidadeAplicada = true;
+            estado.FitnessAcumulado -= _parametros.PenalidadePerdaPonto;
         }
     }
 
@@ -203,10 +226,15 @@ public sealed class AmbienteTreinamento
     {
         foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo && a.TorreSelecionadaId is not null))
         {
+            // Únicos critérios inegociáveis, independente da distância até o alvo: fora de zona
+            // morta e certeza suficiente (mesma regra de Services.FireControlService.Authorize).
+            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante)) continue;
+            if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao) continue;
+
             TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
             if (torre is null) continue;
 
-            if (!controlador.DecidirDisparo(alvo, torre, _parametros.DistanciaEngajamentoMetros)) continue;
+            if (!controlador.DecidirDisparo(alvo, torre)) continue;
 
             alvo.Abatido = true;
             alvo.Ativo = false;

@@ -55,4 +55,12 @@ public interface IOcorrenciaDeteccaoService
     /// abate. Chamada por <see cref="IFireControlService"/>.
     /// </summary>
     bool MarcarAbatePendente(int objetoDetectadoId, string? usuario, string? observacao);
+
+    /// <summary>
+    /// Disparado a cada rodada de <see cref="RegistrarDeteccao"/> com a pontuação de
+    /// identificação (0 a 1) da câmera para o quadrante detectado — é a "certeza de que é um
+    /// alvo" que <see cref="Target.Confidence"/> reflete, usada pela regra de disparo por
+    /// certeza mínima (ver <see cref="IFireControlService"/>).
+    /// </summary>
+    event EventHandler<(Quadrant Quadrante, double Confianca)>? ConfiancaAtualizada;
 }

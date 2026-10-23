@@ -197,6 +197,27 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ============================ DISPARO ============================ -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Disparo" Style="{StaticResource SectionTitle}"/>
+
+                        <TextBlock Style="{StaticResource LabelText}">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="CERTEZA MÍNIMA PARA DISPARO AUTOMÁTICO: {0:0}%">
+                                    <Binding Path="LimiarConfiancaDisparoPercentual"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                        <Slider Minimum="{Binding ConfiancaMinimaDisparoPercentual}" Maximum="100"
+                                Value="{Binding LimiarConfiancaDisparoPercentual}"
+                                TickFrequency="5" IsSnapToTickEnabled="True"
+                                Width="320" HorizontalAlignment="Left"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Fora de zona morta e com o sistema em modo Disparar, a distância até o alvo não impede mais o acionamento — só a certeza da câmera de que é mesmo um alvo decide. Nunca pode ser ajustada abaixo de 40%."/>
+                    </StackPanel>
+                </Border>
+
                 <!-- ========================= DIAGNÓSTICO ========================== -->
                 <Border Style="{StaticResource SectionCard}">
                     <StackPanel>

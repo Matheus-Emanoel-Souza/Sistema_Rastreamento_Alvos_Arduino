@@ -21,4 +21,15 @@ public sealed class AlvoTreinamento
     public double TempoDesdeSelecao { get; set; }
 
     public bool Abatido { get; set; }
+
+    /// <summary>
+    /// Certeza (0 a 1) de que isto é realmente um alvo — sorteada no nascimento, simula a
+    /// variação de confiança da identificação por câmera no sistema real. Só acima do limiar
+    /// configurado (<see cref="ParametrosTreinamento.LimiarConfiancaDisparoFracao"/>) o disparo é
+    /// permitido, pela mesma regra do sistema real.
+    /// </summary>
+    public double Certeza { get; init; } = 1.0;
+
+    /// <summary>Já aplicada a penalidade de "perda de ponto da geração" por ter chegado perto demais da base sem ser abatido nem ter escapado de fato — evita descontar a cada passo enquanto o alvo continua dentro do raio.</summary>
+    public bool PenalidadeProximidadeAplicada { get; set; }
 }
