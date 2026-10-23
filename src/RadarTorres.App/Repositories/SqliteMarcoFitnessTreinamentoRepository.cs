@@ -11,7 +11,7 @@ namespace RadarTorres.App.Repositories;
 /// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>marcos_fitness_treinamento</c>) de
 /// <see cref="IMarcoFitnessTreinamentoRepository"/>. Mesmo padrão de conexão/criação de tabela de
 /// <see cref="SqliteHistoricoTreinamentoRepository"/>, mas sem o descarte por limite — um marco
-/// por 1.000 gerações nunca acumula volume relevante.
+/// por 500 gerações nunca acumula volume relevante.
 /// </summary>
 public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTreinamentoRepository
 {

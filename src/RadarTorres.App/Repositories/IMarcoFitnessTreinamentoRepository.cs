@@ -4,7 +4,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Marcos de fitness a cada 1.000 gerações de treinamento (ver <see cref="MarcoFitnessTreinamento"/>).
+/// Marcos de fitness a cada 500 gerações de treinamento (ver <see cref="MarcoFitnessTreinamento"/>).
 /// Sem limite de linhas — diferente de <see cref="IHistoricoTreinamentoRepository"/>, que é um
 /// buffer circular das últimas 300 gerações.
 /// </summary>
