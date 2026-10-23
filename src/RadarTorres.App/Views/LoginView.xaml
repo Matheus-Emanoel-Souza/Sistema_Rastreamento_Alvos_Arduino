@@ -95,12 +95,36 @@
         <!-- Painel de arte -->
         <Grid Grid.Column="0" Background="{DynamicResource Bg.Sidebar}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40">
-                <Image Width="200" Height="200" Stretch="Uniform"
-                       RenderOptions.BitmapScalingMode="HighQuality">
-                    <Image.Source>
-                        <BitmapImage UriSource="pack://application:,,,/Assets/RadarTorres.ico" DecodePixelWidth="256"/>
-                    </Image.Source>
-                </Image>
+                <!--
+                    Logo vetorial (não mais o .ico raster): o .ico tem o texto "RadarTorres" já
+                    desenhado dentro da imagem, duplicando o TextBlock "Radar Torres" logo abaixo
+                    — e, pior, o WPF decodifica o quadro ERRADO de um .ico multi-resolução (o
+                    menor, 16x16) ao carregar via BitmapImage, então esticar para 200px sempre
+                    saía borrado, não importa o DecodePixelWidth pedido. Sendo vetor (mesmo Path
+                    da torre usado no logo compacto da barra lateral — ver Icon.LogoTorre), este
+                    emblema nunca borra, em nenhum tamanho de tela, e não carrega texto nenhum.
+                -->
+                <Grid Width="200" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Linhas de mira, atravessando todo o emblema (como um reticle de mira). -->
+                    <Line X1="100" Y1="5" X2="100" Y2="195" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2" Opacity="0.55"/>
+                    <Line X1="5" Y1="100" X2="195" Y2="100" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2" Opacity="0.55"/>
+
+                    <!-- Emblema circular com a torre (mesmo Path de Icon.LogoTorre). -->
+                    <Ellipse Width="150" Height="150" Fill="{DynamicResource Accent.Fill}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Path Data="{StaticResource Icon.LogoTorre}" Fill="White" Stretch="Uniform"
+                          Width="64" Height="94" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                    <!-- Cantos de mira (reticle) — três abertos, um fechado (indicador de "alvo travado"). -->
+                    <Rectangle Width="16" Height="16" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2.5"
+                               HorizontalAlignment="Left" VerticalAlignment="Top" Margin="18,18,0,0"/>
+                    <Rectangle Width="16" Height="16" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2.5"
+                               HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="18,0,0,18"/>
+                    <Rectangle Width="16" Height="16" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2.5"
+                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,18,18"/>
+                    <Rectangle Width="16" Height="16" Fill="#F59E0B" RadiusX="2" RadiusY="2"
+                               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,18,0"/>
+                </Grid>
                 <TextBlock HorizontalAlignment="Center" Margin="0,16,0,0"
                            FontFamily="{DynamicResource Font.Display}" FontWeight="Bold" FontSize="28">
                     <Run Text="Radar" Foreground="{DynamicResource Text.Primary}"/>
