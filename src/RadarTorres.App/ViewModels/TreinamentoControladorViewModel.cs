@@ -46,6 +46,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly IHistoricoTreinamentoRepository _historicoRepository;
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
     private readonly IInstantaneoComportamentoRepository _instantaneoRepository;
+    private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly DispatcherTimer _timerPreview;
     private readonly Random _randomGenomaInicial = new();
 
@@ -91,12 +92,14 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         ILoggingService logger,
         IHistoricoTreinamentoRepository historicoRepository,
         IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
-        IInstantaneoComportamentoRepository instantaneoRepository)
+        IInstantaneoComportamentoRepository instantaneoRepository,
+        IConfiguracoesAplicativoRepository configuracoes)
     {
         _logger = logger;
         _historicoRepository = historicoRepository;
         _marcoFitnessRepository = marcoFitnessRepository;
         _instantaneoRepository = instantaneoRepository;
+        _configuracoes = configuracoes;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
         ConstruirDiagramaRedeNeural();
@@ -152,11 +155,23 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _maxAlvosSimultaneos, value);
     }
 
+    /// <summary>
+    /// Lidos de <see cref="ConfiguracoesAplicativo"/> (tela "Configurações") a cada chamada —
+    /// não copiados/cacheados aqui — para ajustar "Radar e mira"/"Disparo" na tela de
+    /// Configurações refletir no próximo treinamento iniciado (ou resetado) sem precisar reabrir
+    /// a tela de Treinamento do Controlador. É a MESMA regra usada pelo sistema real
+    /// (<see cref="Services.TowerSelectionService"/>/<see cref="Services.FireControlService"/>):
+    /// o alcance de mira configurado vira <see cref="ParametrosTreinamento.DistanciaEngajamentoMetros"/>
+    /// e a certeza mínima de disparo vira <see cref="ParametrosTreinamento.LimiarConfiancaDisparoFracao"/>,
+    /// nunca abaixo do piso absoluto (<see cref="ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual"/>).
+    /// </summary>
     private ParametrosTreinamento ParametrosAtuais => new()
     {
         TamanhoPopulacao = Math.Max(4, _tamanhoPopulacao),
         TaxaMutacao = Math.Clamp(_taxaMutacao, 0.0, 1.0),
-        MaxAlvosSimultaneos = Math.Max(1, _maxAlvosSimultaneos)
+        MaxAlvosSimultaneos = Math.Max(1, _maxAlvosSimultaneos),
+        DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
+        LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0
     };
 
     // ---------------------------------------------------------------- Status (mensagem transitória)
