@@ -200,10 +200,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
+        // Elitismo proporcional (10% da população, no mínimo 2): com população menor, elitismo
+        // fixo em 3 vira uma fração grande demais da população (perde diversidade) ou pequena
+        // demais (perde estabilidade) dependendo do tamanho escolhido na tela — proporcional
+        // mantém a mesma garantia de não regressão em qualquer tamanho de população.
+        int elitismoProporcional = Math.Max(2, ParametrosAtuais.TamanhoPopulacao / 10);
         _algoritmoGenetico = new AlgoritmoGenetico(
             tamanhoGenoma: RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao),
             tamanhoPopulacao: ParametrosAtuais.TamanhoPopulacao,
-            taxaMutacao: ParametrosAtuais.TaxaMutacao);
+            taxaMutacao: ParametrosAtuais.TaxaMutacao,
+            elitismo: elitismoProporcional);
 
         GeracaoAtual = 0;
         MelhorFitness = 0;
@@ -337,8 +343,13 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         while (!token.IsCancellationRequested)
         {
+            // Mesma seed para todos os indivíduos desta geração: sem isso, cada genoma enfrentava
+            // um episódio sorteado diferente (spawn/velocidade/ângulo), e o fitness comparava
+            // sorte, não qualidade do genoma — selação quase aleatória, média sem evoluir. A seed
+            // muda de geração para geração para a rede não ficar especializada num único cenário.
+            int seedDaGeracao = algoritmo.GeracaoAtual;
             ResultadoGeracao resultado = algoritmo.EvoluirGeracao(
-                genoma => _ambiente.ExecutarEpisodioRapido(genoma).FitnessTotal);
+                genoma => _ambiente.ExecutarEpisodioRapido(genoma, seedDaGeracao).FitnessTotal);
 
             _melhorGenomaAtual = resultado.MelhorGenoma;
 

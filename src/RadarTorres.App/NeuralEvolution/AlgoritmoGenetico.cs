@@ -74,7 +74,7 @@ public sealed class AlgoritmoGenetico
     /// </summary>
     public ResultadoGeracao EvoluirGeracao(Func<double[], double> avaliarFitness)
     {
-        double[] fitness = _populacao.Select(avaliarFitness).ToArray();
+        double[] fitness = _populacao.AsParallel().Select(avaliarFitness).ToArray();
 
         int[] ordemDecrescente = Enumerable.Range(0, _tamanhoPopulacao)
             .OrderByDescending(i => fitness[i])
