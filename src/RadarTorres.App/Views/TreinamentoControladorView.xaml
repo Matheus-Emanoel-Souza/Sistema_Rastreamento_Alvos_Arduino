@@ -219,12 +219,22 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- Farol da torre de vigilância central: feixe vai-e-vem (180°, -90° a 90°),
-                     nunca para — só decoração/identidade visual, não representa alcance real. -->
-                <Polygon Points="0,0 -9,-205 9,-205" Fill="#2563EB" Opacity="0.18"
-                         Canvas.Left="231" Canvas.Top="35" RenderTransformOrigin="0.5,1" IsHitTestVisible="False">
+                <!--
+                    Farol da torre de vigilância central: dois feixes opostos (180° entre si,
+                    como um farol de verdade ilumina os dois lados) vão e vêm juntos entre -90° e
+                    90° — só decoração/identidade visual, não representa alcance real.
+
+                    Stretch="None" + RotateTransform com CenterX/CenterY=0 (em vez de
+                    RenderTransformOrigin fracionário sobre o bounding box do Polygon, que não
+                    cravava o pivô exatamente no centro do mundo): com Stretch=None o WPF usa as
+                    coordenadas do Points ao pé da letra, então Canvas.Left/Top já É o pivô
+                    (240,240 — mesmo centro do marcador azul abaixo) e a ponta do triângulo
+                    (0,0) nunca sai dali, não importa o ângulo.
+                -->
+                <Polygon Points="0,0 -9,-205 9,-205" Fill="#2563EB" Opacity="0.18" Stretch="None"
+                         Canvas.Left="240" Canvas.Top="240" IsHitTestVisible="False">
                     <Polygon.RenderTransform>
-                        <RotateTransform x:Name="FarolRotacao" Angle="-90"/>
+                        <RotateTransform x:Name="FarolRotacao" Angle="-90" CenterX="0" CenterY="0"/>
                     </Polygon.RenderTransform>
                     <Polygon.Triggers>
                         <EventTrigger RoutedEvent="FrameworkElement.Loaded">
@@ -232,6 +242,24 @@
                                 <Storyboard>
                                     <DoubleAnimation Storyboard.TargetName="FarolRotacao" Storyboard.TargetProperty="Angle"
                                                      From="-90" To="90" Duration="0:0:3" AutoReverse="True" RepeatBehavior="Forever"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Polygon.Triggers>
+                </Polygon>
+
+                <!-- Segundo feixe, sempre 180° oposto ao de cima (mesma duração/início, só desfasado no ângulo) -->
+                <Polygon Points="0,0 -9,-205 9,-205" Fill="#2563EB" Opacity="0.18" Stretch="None"
+                         Canvas.Left="240" Canvas.Top="240" IsHitTestVisible="False">
+                    <Polygon.RenderTransform>
+                        <RotateTransform x:Name="FarolRotacaoOposta" Angle="90" CenterX="0" CenterY="0"/>
+                    </Polygon.RenderTransform>
+                    <Polygon.Triggers>
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="FarolRotacaoOposta" Storyboard.TargetProperty="Angle"
+                                                     From="90" To="270" Duration="0:0:3" AutoReverse="True" RepeatBehavior="Forever"/>
                                 </Storyboard>
                             </BeginStoryboard>
                         </EventTrigger>
