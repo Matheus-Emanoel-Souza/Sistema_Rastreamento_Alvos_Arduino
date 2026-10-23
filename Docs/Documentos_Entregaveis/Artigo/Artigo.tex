@@ -158,6 +158,18 @@ O RadarTorres adota uma abordagem simples, por proximidade, aplicada alvo a alvo
 exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento real); a
 abordagem multiameaça fica como trabalho futuro.
 
+O refinamento dessa escolha por proximidade -- e o instante de disparo -- é feito por uma pequena
+rede neural \textit{feedforward} (6 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
+tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por um algoritmo genético
+próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), auditável e
+sem dependência de biblioteca de aprendizado de máquina. \citeonline{such2017deepneuroevolution}
+mostram que algoritmos genéticos são uma alternativa competitiva ao treino por gradiente em tarefas
+de aprendizado por reforço, inclusive em redes bem maiores que a aqui empregada, o que sustenta a
+escolha de ampliar o desempenho do controlador pelo ajuste dos hiperparâmetros da busca evolutiva
+(tamanho de população, paralelização da avaliação de fitness, enriquecimento do sinal de
+recompensa) em vez de aumentar o número de camadas ou neurônios sem evidência de que a capacidade
+atual da rede seja o fator limitante.
+
 % PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
 % computacional clássica (a ser informada pelo autor).
 
