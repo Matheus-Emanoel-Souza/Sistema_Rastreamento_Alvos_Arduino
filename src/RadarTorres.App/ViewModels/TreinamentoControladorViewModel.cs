@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -54,11 +55,17 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     public ObservableCollection<SetorVisualTreinamento> CamposDeVisaoVisuais { get; } = new();
     public ObservableCollection<string> RegrasAprendidas { get; } = new();
     public ObservableCollection<HistoricoGeracaoTreinamento> HistoricoRecente { get; } = new();
+    public ObservableCollection<NeuronioVisualTreinamento> NeuroniosVisuais { get; } = new();
+    public ObservableCollection<ConexaoVisualTreinamento> ConexoesVisuais { get; } = new();
+
+    /// <summary>Mesma ordem de iteração de <see cref="RedeNeural"/> (camada → entrada → saída) — alinha cada <see cref="ConexaoVisualTreinamento"/> com o peso correspondente na hora de atualizar.</summary>
+    private readonly List<(int Camada, int Entrada, int Saida)> _chavesDasConexoes = new();
 
     public RelayCommand IniciarCommand { get; }
     public RelayCommand PararCommand { get; }
     public RelayCommand RodarEpisodioUnicoCommand { get; }
     public RelayCommand ExportarMelhorGenomaCommand { get; }
+    public RelayCommand ResetarCommand { get; }
 
     public TreinamentoControladorViewModel(ILoggingService logger, IHistoricoTreinamentoRepository historicoRepository)
     {
@@ -66,11 +73,13 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _historicoRepository = historicoRepository;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
+        ConstruirDiagramaRedeNeural();
 
         IniciarCommand = new RelayCommand(Iniciar, () => !EmExecucao);
         PararCommand = new RelayCommand(Parar, () => EmExecucao);
         RodarEpisodioUnicoCommand = new RelayCommand(RodarEpisodioUnico, () => !EmExecucao);
         ExportarMelhorGenomaCommand = new RelayCommand(ExportarMelhorGenoma, () => _melhorGenomaAtual.Length > 0);
+        ResetarCommand = new RelayCommand(Resetar);
 
         _timerPreview = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _timerPreview.Tick += (_, _) => AvancarPreview();
@@ -165,6 +174,9 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Disparado a cada geração concluída — a View usa para atualizar o gráfico de evolução (ver code-behind).</summary>
     public event EventHandler<ResultadoGeracao>? GeracaoConcluida;
 
+    /// <summary>Disparado por <see cref="Resetar"/> — a View usa para limpar o histórico bruto do gráfico de evolução (ver code-behind).</summary>
+    public event EventHandler? Resetado;
+
     // ---------------------------------------------------------------- Comandos
 
     private void Iniciar()
@@ -204,6 +216,38 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Para o treinamento (se estiver rodando) e volta tudo ao estado inicial: geração, fitness,
+    /// genoma, diagrama da rede, visualizações no Canvas e mensagem de status. NÃO apaga o
+    /// histórico já gravado em <see cref="IHistoricoTreinamentoRepository"/> — é um reinício da
+    /// sessão atual na tela, não uma limpeza de dados persistidos.
+    /// </summary>
+    private void Resetar()
+    {
+        _cts?.Cancel();
+        _timerPreview.Stop();
+        EmExecucao = false;
+
+        _ambiente = new AmbienteTreinamento(ParametrosAtuais);
+        _algoritmoGenetico = null;
+        _melhorGenomaAtual = [];
+        _episodioPreview = null;
+        _previewContinuo = true;
+
+        GeracaoAtual = 0;
+        MelhorFitness = 0;
+        FitnessMedio = 0;
+
+        DesenharTorresFixas();
+        ConstruirDiagramaRedeNeural();
+        AlvosVisuais.Clear();
+        MirasVisuais.Clear();
+        RegrasAprendidas.Clear();
+
+        MostrarStatus("Treinamento reiniciado — geração, fitness e genoma voltaram ao zero.", sucesso: true);
+        Resetado?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
     /// Roda exatamente um episódio do melhor genoma atual (ou, se o treinamento nunca rodou,
     /// de um genoma aleatório) de forma visível e para — sem reiniciar outro episódio
     /// automaticamente. Útil para inspecionar um comportamento específico sem o treinamento em
@@ -217,6 +261,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         {
             _melhorGenomaAtual = GerarGenomaAleatorio();
             AtualizarRegras(_melhorGenomaAtual);
+            AtualizarDiagramaRedeNeural(_melhorGenomaAtual);
         }
 
         _previewContinuo = false;
@@ -282,6 +327,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             EpisodioResultado comportamento = _ambiente.ExecutarEpisodioRapido(resultado.MelhorGenoma, seed: resultado.Geracao);
             RegistrarHistorico(resultado, comportamento);
             AtualizarRegras(resultado.MelhorGenoma);
+            AtualizarDiagramaRedeNeural(resultado.MelhorGenoma);
 
             RunOnUi(() =>
             {
@@ -332,6 +378,155 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             RegrasAprendidas.Clear();
             foreach (string frase in regras.Frases) RegrasAprendidas.Add(frase);
         });
+    }
+
+    // ---------------------------------------------------------------- Diagrama da rede neural
+
+    private const double DiagramaLargura = 620.0;
+    private const double DiagramaAltura = 280.0;
+    private const double DiagramaMargemHorizontal = 60.0;
+
+    /// <summary>
+    /// Cenário de referência usado para "ligar" a rede e mostrar as ativações no diagrama —
+    /// mesmo ponto típico (torre do próprio quadrante, alvo a meia distância, velocidade média)
+    /// usado por <see cref="ExtratorDeRegras"/>. É fixo de propósito: assim o que muda no
+    /// diagrama geração a geração são os PESOS evoluindo, não ruído de um cenário diferente a
+    /// cada atualização.
+    /// </summary>
+    private static readonly double[] EntradaDeReferenciaParaDiagrama = [0.5, 1.0, 0.0, 0.5, 0.5, 1.0];
+
+    /// <summary>Monta os nós e conexões do diagrama uma única vez — a ARQUITETURA da rede (quantidade de neurônios por camada) nunca muda, só os pesos.</summary>
+    private void ConstruirDiagramaRedeNeural()
+    {
+        NeuroniosVisuais.Clear();
+        ConexoesVisuais.Clear();
+        _chavesDasConexoes.Clear();
+
+        int[] camadas = ControladorHibrido.ArquiteturaPadrao;
+        var posicoes = new Dictionary<(int Camada, int Indice), (double X, double Y)>();
+
+        for (int c = 0; c < camadas.Length; c++)
+        {
+            double x = camadas.Length == 1
+                ? DiagramaLargura / 2.0
+                : DiagramaMargemHorizontal + (DiagramaLargura - 2 * DiagramaMargemHorizontal) * c / (camadas.Length - 1);
+
+            int quantidade = camadas[c];
+            for (int n = 0; n < quantidade; n++)
+            {
+                double y = DiagramaAltura * (n + 1) / (quantidade + 1);
+                posicoes[(c, n)] = (x, y);
+
+                string rotulo = c == 0 ? ControladorHibrido.RotulosEntradas[n]
+                    : c == camadas.Length - 1 ? ControladorHibrido.RotulosSaidas[n]
+                    : $"Neurônio oculto #{n + 1}";
+
+                string corBase = c == 0 ? "#86EFAC" : c == camadas.Length - 1 ? "#FDE68A" : "#93C5FD";
+
+                NeuroniosVisuais.Add(new NeuronioVisualTreinamento
+                {
+                    Camada = c,
+                    Indice = n,
+                    CanvasX = x,
+                    CanvasY = y,
+                    Raio = c == 0 || c == camadas.Length - 1 ? 16 : 13,
+                    Cor = corBase,
+                    Rotulo = rotulo
+                });
+            }
+        }
+
+        for (int c = 0; c < camadas.Length - 1; c++)
+        {
+            for (int e = 0; e < camadas[c]; e++)
+            {
+                for (int s = 0; s < camadas[c + 1]; s++)
+                {
+                    (double x1, double y1) = posicoes[(c, e)];
+                    (double x2, double y2) = posicoes[(c + 1, s)];
+
+                    ConexoesVisuais.Add(new ConexaoVisualTreinamento { X1 = x1, Y1 = y1, X2 = x2, Y2 = y2 });
+                    _chavesDasConexoes.Add((c, e, s));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recalcula cor/espessura das conexões (a partir dos pesos atuais) e ativação/tooltip dos
+    /// neurônios (propagando <see cref="EntradaDeReferenciaParaDiagrama"/>) — chamado a cada
+    /// geração concluída e sempre que um novo genoma é escolhido para a prévia.
+    /// </summary>
+    private void AtualizarDiagramaRedeNeural(double[] genoma)
+    {
+        if (genoma.Length == 0) return;
+
+        var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, genoma);
+        double[][] ativacoesPorCamada = rede.AtivarComCamadas(EntradaDeReferenciaParaDiagrama);
+
+        RunOnUi(() =>
+        {
+            for (int i = 0; i < ConexoesVisuais.Count; i++)
+            {
+                (int camada, int entrada, int saida) = _chavesDasConexoes[i];
+                double peso = rede.Peso(camada, entrada, saida);
+
+                ConexaoVisualTreinamento conexao = ConexoesVisuais[i];
+                conexao.Cor = peso >= 0 ? "#3B82F6" : "#EF4444";
+                conexao.Espessura = Math.Clamp(0.5 + Math.Abs(peso) * 1.5, 0.5, 4.0);
+            }
+
+            foreach (NeuronioVisualTreinamento neuronio in NeuroniosVisuais)
+            {
+                double ativacao = ativacoesPorCamada[neuronio.Camada][neuronio.Indice];
+                neuronio.Rotulo = ConstruirTooltipDoNeuronio(neuronio, ativacao, rede);
+                neuronio.Cor = CorComIntensidade(CorBaseDaCamada(neuronio.Camada), Math.Abs(ativacao));
+            }
+        });
+    }
+
+    private string CorBaseDaCamada(int camada) =>
+        camada == 0 ? "86EFAC" : camada == ControladorHibrido.ArquiteturaPadrao.Length - 1 ? "FDE68A" : "93C5FD";
+
+    /// <summary>Usa o canal alfa para mostrar a intensidade da ativação (0 = quase transparente/neutro, 1 = cor cheia) sem precisar de uma segunda escala de cor.</summary>
+    private static string CorComIntensidade(string corBaseRgbHex, double intensidade01)
+    {
+        int alfa = 60 + (int)Math.Round(Math.Clamp(intensidade01, 0, 1) * 195);
+        return $"#{alfa:X2}{corBaseRgbHex}";
+    }
+
+    private string ConstruirTooltipDoNeuronio(NeuronioVisualTreinamento neuronio, double ativacao, RedeNeural rede)
+    {
+        int ultimaCamada = ControladorHibrido.ArquiteturaPadrao.Length - 1;
+
+        if (neuronio.Camada == 0)
+        {
+            return $"ENTRADA — {ControladorHibrido.RotulosEntradas[neuronio.Indice]}\nValor no cenário de referência: {ativacao:0.00}";
+        }
+
+        if (neuronio.Camada == ultimaCamada)
+        {
+            string descricao = neuronio.Indice == 0
+                ? "Soma à pontuação heurística para decidir qual torre persegue o alvo."
+                : "Decide o instante do disparo dentro do alcance de engajamento — nunca aciona nada por conta própria no sistema real.";
+            return $"SAÍDA — {ControladorHibrido.RotulosSaidas[neuronio.Indice]}\nAtivação atual: {ativacao:0.00}\n{descricao}";
+        }
+
+        // Neurônio oculto: sem significado individual fixo (é uma matriz de pesos, não uma
+        // regra) — mostramos a ativação no cenário de referência e, por análise de sensibilidade
+        // dos pesos de entrada, quais entradas mais pesam nele, como aproximação honesta de
+        // "responsável por quê" em vez de inventar um rótulo fixo.
+        var influencias = new List<(string Entrada, double Peso)>();
+        for (int i = 0; i < ControladorHibrido.QuantidadeEntradas; i++)
+        {
+            influencias.Add((ControladorHibrido.RotulosEntradas[i], rede.Peso(0, i, neuronio.Indice)));
+        }
+
+        var maisInfluentes = influencias.OrderByDescending(x => Math.Abs(x.Peso)).Take(2).ToList();
+
+        return $"NEURÔNIO OCULTO #{neuronio.Indice + 1}\nAtivação atual: {ativacao:0.00} (cenário de referência)\n" +
+               $"Mais influenciado por: {maisInfluentes[0].Entrada} (peso {maisInfluentes[0].Peso:+0.00;-0.00}), " +
+               $"{maisInfluentes[1].Entrada} (peso {maisInfluentes[1].Peso:+0.00;-0.00})";
     }
 
     // ---------------------------------------------------------------- Prévia visual (thread de UI)
@@ -488,8 +683,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         const int segmentosDoArco = 16;
         double raioMetros = _ambiente.Parametros.DistanciaEngajamentoMetros;
 
-        setor.Pontos.Clear();
-        setor.Pontos.Add(new Point(ParaCanvasX(torre.X), ParaCanvasY(torre.Y)));
+        var pontos = new PointCollection { new Point(ParaCanvasX(torre.X), ParaCanvasY(torre.Y)) };
 
         for (int i = 0; i <= segmentosDoArco; i++)
         {
@@ -499,8 +693,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             double x = torre.X + raioMetros * Math.Sin(anguloRad);
             double y = torre.Y + raioMetros * Math.Cos(anguloRad);
 
-            setor.Pontos.Add(new Point(ParaCanvasX(x), ParaCanvasY(y)));
+            pontos.Add(new Point(ParaCanvasX(x), ParaCanvasY(y)));
         }
+
+        // Substitui a coleção inteira (não só o conteúdo) — ver nota em SetorVisualTreinamento
+        // sobre por que mutar no lugar não é garantia de redesenho via binding.
+        setor.Pontos = pontos;
     }
 
     /// <summary>

@@ -10,14 +10,21 @@ namespace RadarTorres.App.ViewModels;
 /// fora da base) quando livre — ver <see cref="TreinamentoControladorViewModel.AtualizarCamposDeVisao"/>.
 /// </summary>
 /// <remarks>
-/// <see cref="Pontos"/> é mutado no lugar (<c>Clear</c>+<c>Add</c>), nunca substituído — é assim
-/// que o <c>Polygon</c> ligado a ele percebe a mudança sem precisar de
-/// <c>INotifyPropertyChanged</c>: <see cref="PointCollection"/> é um <c>Freezable</c> que
-/// invalida o desenho sozinho quando seu conteúdo muda.
+/// <see cref="Pontos"/> é SUBSTITUÍDO (nunca mutado no lugar) a cada atualização — mutar uma
+/// <see cref="PointCollection"/> já atribuída a um <c>Polygon</c> via <c>{Binding}</c> não é
+/// garantia de redesenho (mesmo motivo por que o gráfico de fitness, no code-behind desta tela,
+/// também troca a coleção inteira em vez de só adicionar pontos). Por isso implementa
+/// <c>INotifyPropertyChanged</c> (via <see cref="ViewModelBase"/>), diferente de
+/// <see cref="LinhaVisualTreinamento"/>/<see cref="PontoVisualTreinamento"/>, cujas propriedades
+/// são valores simples (double/string) que já notificam normalmente.
 /// </remarks>
-public sealed class SetorVisualTreinamento
+public sealed class SetorVisualTreinamento : ViewModelBase
 {
     public int Id { get; init; }
-    public PointCollection Pontos { get; } = new();
-    public string Cor { get; set; } = "#3B82F6";
+
+    private PointCollection _pontos = new();
+    public PointCollection Pontos { get => _pontos; set => SetProperty(ref _pontos, value); }
+
+    private string _cor = "#3B82F6";
+    public string Cor { get => _cor; set => SetProperty(ref _cor, value); }
 }
