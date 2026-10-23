@@ -112,6 +112,20 @@ public class Target : INotifyPropertyChanged
     /// <summary>Distância entre a torre selecionada e o alvo, em metros (0 se nenhuma torre selecionada).</summary>
     public double DistanceToSelectedTower { get; set; }
 
+    /// <summary>
+    /// Velocidade estimada (m/s) nos eixos X/Y, calculada por <see cref="Services.TargetTrackingService"/>
+    /// a partir da diferença de posição entre esta leitura e a anterior — zero na primeira
+    /// leitura (sem histórico ainda) ou se o tempo entre leituras for zero/inválido. Usada pela
+    /// heurística de predição de trajetória (<see cref="Services.TowerSelectionService"/>) e
+    /// como entrada real da rede neural treinada, no lugar do valor fixo usado antes.
+    /// </summary>
+    public double VelocityXMetersPerSecond { get; set; }
+
+    public double VelocityYMetersPerSecond { get; set; }
+
+    /// <summary>Módulo da velocidade (m/s) — conveniência para quem só precisa da magnitude.</summary>
+    public double SpeedMetersPerSecond => Math.Sqrt(VelocityXMetersPerSecond * VelocityXMetersPerSecond + VelocityYMetersPerSecond * VelocityYMetersPerSecond);
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

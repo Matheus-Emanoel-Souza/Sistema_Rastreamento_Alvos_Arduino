@@ -162,6 +162,41 @@
                     </StackPanel>
                 </Border>
 
+                <!-- =============== HEURÍSTICAS DO CONTROLADOR ================ -->
+                <!-- Cada regra refina a escolha de torre feita por TowerSelectionService, além
+                     da heurística em camadas + rede neural treinada. Todas ligadas por padrão;
+                     desligar uma volta ao comportamento sem ela, sem precisar recompilar. -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Heurísticas do controlador (seleção de torre)" Style="{StaticResource SectionTitle}"/>
+
+                        <CheckBox IsChecked="{Binding HeuristicaAntiOscilacaoAtiva}"
+                                  Content="Anti-oscilação: evitar trocar de torre por uma diferença irrelevante"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Sem isto, um alvo perto da fronteira entre duas torres pode fazer a seleção oscilar entre elas a cada leitura do sensor."/>
+
+                        <CheckBox IsChecked="{Binding HeuristicaPriorizacaoPorUrgenciaAtiva}"
+                                  Content="Priorização por urgência: alvo perto da distância mínima pode tomar a torre de outro bem mais longe"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Sem isto, a ordem de chegada do sensor decide quem fica com a torre, mesmo que outro alvo esteja muito mais próximo da base."/>
+
+                        <CheckBox IsChecked="{Binding HeuristicaCorredorDeTiroAtiva}"
+                                  Content="Corredor de tiro: não escolher uma torre cuja linha até o alvo cruze uma zona morta ativa"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Sem isto, só a posição do ALVO é checada contra zonas mortas — nunca o caminho entre a torre escolhida e ele."/>
+
+                        <CheckBox IsChecked="{Binding HeuristicaBalanceamentoDeCargaAtiva}"
+                                  Content="Balanceamento de carga: distribuir o uso entre torres praticamente empatadas"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Sem isto, entre duas torres quase igualmente boas, a mesma é sempre escolhida."/>
+
+                        <CheckBox IsChecked="{Binding HeuristicaPredicaoDeTrajetoriaAtiva}"
+                                  Content="Predição de trajetória: mirar para onde o alvo estará, não para onde está agora"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Usa a velocidade estimada do alvo para antecipar o ângulo de mira — só afeta a mira, nunca qual torre é escolhida."/>
+                    </StackPanel>
+                </Border>
+
                 <!-- ========================= DIAGNÓSTICO ========================== -->
                 <Border Style="{StaticResource SectionCard}">
                     <StackPanel>

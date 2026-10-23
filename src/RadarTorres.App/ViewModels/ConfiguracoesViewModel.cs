@@ -222,6 +222,68 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         }
     }
 
+    // ---------------------------------------------------------------- Heurísticas do controlador (seleção de torre)
+
+    public bool HeuristicaAntiOscilacaoAtiva
+    {
+        get => _edicao.HeuristicaAntiOscilacaoAtiva;
+        set
+        {
+            if (_edicao.HeuristicaAntiOscilacaoAtiva == value) return;
+            _edicao.HeuristicaAntiOscilacaoAtiva = value;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
+    public bool HeuristicaPriorizacaoPorUrgenciaAtiva
+    {
+        get => _edicao.HeuristicaPriorizacaoPorUrgenciaAtiva;
+        set
+        {
+            if (_edicao.HeuristicaPriorizacaoPorUrgenciaAtiva == value) return;
+            _edicao.HeuristicaPriorizacaoPorUrgenciaAtiva = value;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
+    public bool HeuristicaCorredorDeTiroAtiva
+    {
+        get => _edicao.HeuristicaCorredorDeTiroAtiva;
+        set
+        {
+            if (_edicao.HeuristicaCorredorDeTiroAtiva == value) return;
+            _edicao.HeuristicaCorredorDeTiroAtiva = value;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
+    public bool HeuristicaBalanceamentoDeCargaAtiva
+    {
+        get => _edicao.HeuristicaBalanceamentoDeCargaAtiva;
+        set
+        {
+            if (_edicao.HeuristicaBalanceamentoDeCargaAtiva == value) return;
+            _edicao.HeuristicaBalanceamentoDeCargaAtiva = value;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
+    public bool HeuristicaPredicaoDeTrajetoriaAtiva
+    {
+        get => _edicao.HeuristicaPredicaoDeTrajetoriaAtiva;
+        set
+        {
+            if (_edicao.HeuristicaPredicaoDeTrajetoriaAtiva == value) return;
+            _edicao.HeuristicaPredicaoDeTrajetoriaAtiva = value;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
     // ---------------------------------------------------------------- Estado da tela
 
     private bool _temAlteracoesNaoSalvas;
@@ -357,5 +419,10 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         OnPropertyChanged(nameof(MostrarCaixasDeteccao));
         OnPropertyChanged(nameof(AlertaSonoroHabilitado));
         OnPropertyChanged(nameof(GerarRelatorioDesempenho));
+        OnPropertyChanged(nameof(HeuristicaAntiOscilacaoAtiva));
+        OnPropertyChanged(nameof(HeuristicaPriorizacaoPorUrgenciaAtiva));
+        OnPropertyChanged(nameof(HeuristicaCorredorDeTiroAtiva));
+        OnPropertyChanged(nameof(HeuristicaBalanceamentoDeCargaAtiva));
+        OnPropertyChanged(nameof(HeuristicaPredicaoDeTrajetoriaAtiva));
     }
 }

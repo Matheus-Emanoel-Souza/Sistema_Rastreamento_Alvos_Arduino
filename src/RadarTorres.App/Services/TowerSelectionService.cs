@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -31,31 +32,52 @@ namespace RadarTorres.App.Services;
 /// decisão de projeto — a rede neural não aciona nada por conta própria.
 /// </para>
 /// <para>
-/// Limitação conhecida: o sistema real não mede a velocidade do alvo (só posição), então a
-/// entrada "velocidade do alvo" da rede usa um valor neutro fixo
-/// (<see cref="VelocidadeAlvoDesconhecidaMetrosPorSegundo"/>) em vez de uma medição real — é a
-/// mesma rede treinada no ambiente de simulação, que tinha essa informação.
+/// Além da camada heurística+rede, cinco regras adicionais (anti-oscilação, priorização por
+/// urgência, corredor de tiro, balanceamento de carga e predição de trajetória) refinam a
+/// decisão — cada uma independentemente desligável em <see cref="ConfiguracoesAplicativo"/>
+/// (tela de Configurações), para o usuário poder isolar o efeito de cada regra ou voltar ao
+/// comportamento anterior sem recompilar.
 /// </para>
 /// </remarks>
 public sealed class TowerSelectionService : ITowerSelectionService
 {
-    /// <summary>Ver nota de limitação na documentação da classe.</summary>
-    private const double VelocidadeAlvoDesconhecidaMetrosPorSegundo = 1.25;
-
-    /// <summary>Mesmo padrão usado como velocidade máxima no ambiente de treinamento (ver <see cref="ParametrosTreinamento"/>) — só normaliza a entrada acima.</summary>
+    /// <summary>Mesmo padrão usado como velocidade máxima no ambiente de treinamento (ver <see cref="ParametrosTreinamento"/>) — só normaliza a entrada da rede.</summary>
     private const double VelocidadeMaximaAlvoMetrosPorSegundo = 2.5;
+
+    /// <summary>Diferença de pontuação (ou de distância, quando não há rede embutida) abaixo da qual duas candidatas são consideradas "empatadas" — usada tanto pela regra 1 (anti-oscilação) quanto pela 4 (balanceamento de carga).</summary>
+    private const double MargemEmpateDistanciaMetros = 0.3;
+    private const double MargemEmpatePontuacaoRede = 0.1;
+
+    /// <summary>Regra 2 (priorização por urgência): um alvo é "urgente" até esta distância (múltiplo da distância mínima de segurança) — e só rouba a torre de outro alvo que esteja claramente mais longe que isso.</summary>
+    private const double MultiplicadorZonaDeUrgencia = 1.5;
+    private const double MargemParaRouboDeTorreMetros = 1.0;
+
+    /// <summary>Regra 5 (predição de trajetória): quanto tempo à frente a mira aponta, com base na velocidade estimada do alvo.</summary>
+    private const double TempoDePredicaoSegundos = 0.3;
+
+    /// <summary>Regra 3 (corredor de tiro): pontos amostrados ao longo do segmento torre→alvo (excluindo as pontas) para checar se cruza uma zona morta ativa.</summary>
+    private const int AmostrasDoCorredorDeTiro = 12;
 
     private readonly ILoggingService _logger;
     private readonly IZonaMortaService _zonaMortaService;
     private readonly IControladorTreinadoProvider _controladorTreinado;
+    private readonly IConfiguracoesAplicativoRepository _configuracoes;
+
+    /// <summary>Regra 4 (balanceamento de carga): quantas vezes cada torre já foi escolhida nesta sessão — reinicia ao reiniciar o aplicativo, de propósito (é só um critério de desempate do momento, não uma métrica persistida).</summary>
+    private readonly Dictionary<int, int> _usoPorTorre = new();
 
     public ObservableCollection<Tower> Towers { get; } = new();
 
-    public TowerSelectionService(ILoggingService logger, IZonaMortaService zonaMortaService, IControladorTreinadoProvider controladorTreinado)
+    public TowerSelectionService(
+        ILoggingService logger,
+        IZonaMortaService zonaMortaService,
+        IControladorTreinadoProvider controladorTreinado,
+        IConfiguracoesAplicativoRepository configuracoes)
     {
         _logger = logger;
         _zonaMortaService = zonaMortaService;
         _controladorTreinado = controladorTreinado;
+        _configuracoes = configuracoes;
         LoadTowersFromConfig();
     }
 
@@ -102,11 +124,34 @@ public sealed class TowerSelectionService : ITowerSelectionService
         List<Target> others = activeTargets.Where(t => t.IsActive && t.Id != target.Id).ToList();
 
         // Exclusividade: uma torre só aponta para um lugar por vez, então não pode ser escolhida
-        // para dois alvos simultaneamente — a torre já comprometida com OUTRO alvo sai das candidatas.
-        HashSet<int> committed = others
-            .Where(t => t.SelectedTower is not null)
-            .Select(t => t.SelectedTower!.Id)
-            .ToHashSet();
+        // para dois alvos simultaneamente — a torre já comprometida com OUTRO alvo sai das
+        // candidatas. EXCEÇÃO (regra 2 — priorização por urgência, se ativa): um alvo claramente
+        // mais urgente (perto da distância mínima de segurança) pode tomar a torre de um alvo
+        // bem menos urgente — o alvo "roubado" simplesmente procura outra torre na próxima
+        // leitura (ele não fica sem cobertura permanentemente, só perde a vez desta rodada).
+        double distanciaMinimaSeguranca = AppConfig.Current.RadarSettings.MinSafetyDistanceMeters;
+        double limiarUrgencia = distanciaMinimaSeguranca * MultiplicadorZonaDeUrgencia;
+        bool alvoEhUrgente = target.Distance <= limiarUrgencia;
+        bool priorizacaoPorUrgenciaAtiva = _configuracoes.Atual.HeuristicaPriorizacaoPorUrgenciaAtiva;
+
+        var committed = new HashSet<int>();
+        foreach (Target outro in others)
+        {
+            if (outro.SelectedTower is not { } torreDoOutro) continue;
+
+            bool podeRoubar = priorizacaoPorUrgenciaAtiva
+                && alvoEhUrgente
+                && outro.Distance > limiarUrgencia
+                && outro.Distance > target.Distance + MargemParaRouboDeTorreMetros;
+
+            if (podeRoubar)
+            {
+                _logger.Info($"Alvo #{target.Id:D2} (urgente, {target.Distance:0.00} m) tomou a torre {torreDoOutro.Name} do alvo #{outro.Id:D2} (menos urgente, {outro.Distance:0.00} m)");
+                continue;
+            }
+
+            committed.Add(torreDoOutro.Id);
+        }
 
         List<Tower> free = available.Where(t => !committed.Contains(t.Id)).ToList();
 
@@ -149,7 +194,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
 
         target.SelectedTower = best;
         target.DistanceToSelectedTower = bestDistance;
-        best.AimAngleDegrees = BearingCalculator.AngleTo(best, target);
+        best.AimAngleDegrees = CalcularAnguloDeMira(best, target);
 
         _logger.Info($"{best.Name} selecionada para o alvo #{target.Id:D2} ({layerLabel}, dist={bestDistance:0.00} m, mira={best.AimAngleDegrees:0.0}°)");
 
@@ -161,52 +206,143 @@ public sealed class TowerSelectionService : ITowerSelectionService
     /// — usa a rede treinada quando disponível (<see cref="ControladorHibrido.Pontuar"/>, mesma
     /// combinação heurística+rede da tela de treinamento), senão a heurística pura de menor
     /// distância (comportamento anterior, idêntico ao que a rede produz quando o genoma embutido
-    /// é o zerado de fábrica).
+    /// é o zerado de fábrica). Depois de achar a vencedora "crua", aplica a regra 4
+    /// (balanceamento de carga) e a regra 1 (anti-oscilação), cada uma só se estiver ativa.
     /// </summary>
-    private (Tower? Best, double BestDistance) EscolherMelhorCandidata(List<Tower> candidates, Target target, double fatorCamada)
+    private (Tower? Best, double BestDistance) EscolherMelhorCandidata(List<Tower> candidatasOriginais, Target target, double fatorCamada)
     {
+        ConfiguracoesAplicativo config = _configuracoes.Atual;
         RedeNeural? rede = _controladorTreinado.Rede;
         double raioMundoMetros = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
 
-        Tower? best = null;
-        double bestDistance = double.MaxValue;
+        // Regra 3 — corredor de tiro: descarta candidatas cuja linha até o alvo atravesse uma
+        // zona morta ativa. Nunca deixa o alvo sem NENHUMA candidata só por causa disto — melhor
+        // arriscar com a torre menos ideal do que deixar de cobrir o alvo inteiramente.
+        List<Tower> candidatas = candidatasOriginais;
+        if (config.HeuristicaCorredorDeTiroAtiva)
+        {
+            List<Tower> semCorredorBloqueado = candidatasOriginais.Where(t => !LinhaDeTiroCruzaZonaMorta(t, target)).ToList();
+            if (semCorredorBloqueado.Count > 0) candidatas = semCorredorBloqueado;
+        }
+
+        var pontuacoes = new Dictionary<int, double>();
+        Tower? melhor = null;
         double melhorPontuacao = double.NegativeInfinity;
 
-        foreach (Tower candidate in candidates)
+        foreach (Tower candidate in candidatas)
         {
             double distance = DistanceCalculator.Between(target, candidate);
             candidate.DistanceToTarget = distance;
 
+            // Pontuação unificada: sem rede, "quanto menor a distância, melhor" se torna
+            // -distância, na MESMA escala (metros) que a margem de empate abaixo usa.
+            double pontuacao;
             if (rede is null)
             {
-                if (distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    best = candidate;
-                }
-                continue;
+                pontuacao = -distance;
+            }
+            else
+            {
+                double[] entradas = ControladorHibrido.ConstruirEntradas(
+                    distanciaMetros: distance,
+                    raioMundoMetros: raioMundoMetros,
+                    mesmoQuadrante: candidate.PreferredQuadrant == target.Quadrant,
+                    quadranteAdjacente: QuadrantHelper.AreAdjacent(candidate.PreferredQuadrant, target.Quadrant),
+                    anguloGraus: BearingCalculator.AngleTo(candidate, target),
+                    velocidadeMetrosPorSegundo: target.SpeedMetersPerSecond,
+                    velocidadeMaximaMetrosPorSegundo: VelocidadeMaximaAlvoMetrosPorSegundo,
+                    fatorCamada: fatorCamada);
+
+                pontuacao = ControladorHibrido.Pontuar(rede, entradas, fatorCamada);
             }
 
-            double[] entradas = ControladorHibrido.ConstruirEntradas(
-                distanciaMetros: distance,
-                raioMundoMetros: raioMundoMetros,
-                mesmoQuadrante: candidate.PreferredQuadrant == target.Quadrant,
-                quadranteAdjacente: QuadrantHelper.AreAdjacent(candidate.PreferredQuadrant, target.Quadrant),
-                anguloGraus: BearingCalculator.AngleTo(candidate, target),
-                velocidadeMetrosPorSegundo: VelocidadeAlvoDesconhecidaMetrosPorSegundo,
-                velocidadeMaximaMetrosPorSegundo: VelocidadeMaximaAlvoMetrosPorSegundo,
-                fatorCamada: fatorCamada);
-
-            double pontuacao = ControladorHibrido.Pontuar(rede, entradas, fatorCamada);
+            pontuacoes[candidate.Id] = pontuacao;
             if (pontuacao > melhorPontuacao)
             {
                 melhorPontuacao = pontuacao;
-                bestDistance = distance;
-                best = candidate;
+                melhor = candidate;
             }
         }
 
-        return (best, bestDistance);
+        if (melhor is null) return (null, 0);
+
+        double margemEmpate = rede is null ? MargemEmpateDistanciaMetros : MargemEmpatePontuacaoRede;
+
+        // Regra 4 — balanceamento de carga: entre as candidatas praticamente empatadas com a
+        // vencedora, prefere a usada com menos frequência nesta sessão em vez de sempre a mesma.
+        if (config.HeuristicaBalanceamentoDeCargaAtiva)
+        {
+            List<Tower> empatadas = candidatas.Where(t => melhorPontuacao - pontuacoes[t.Id] <= margemEmpate).ToList();
+            if (empatadas.Count > 1)
+            {
+                melhor = empatadas.OrderBy(t => _usoPorTorre.GetValueOrDefault(t.Id)).ThenBy(t => t.Id).First();
+            }
+        }
+
+        // Regra 1 — anti-oscilação: se a torre já comprometida com este alvo ainda é uma
+        // candidata válida e está dentro da margem de empate da vencedora, mantém — evita
+        // trocar de torre por uma diferença irrelevante causada por ruído na leitura.
+        if (config.HeuristicaAntiOscilacaoAtiva
+            && target.SelectedTower is { } torreAtual
+            && candidatas.FirstOrDefault(t => t.Id == torreAtual.Id) is { } aindaCandidata
+            && melhorPontuacao - pontuacoes[aindaCandidata.Id] <= margemEmpate)
+        {
+            melhor = aindaCandidata;
+        }
+
+        _usoPorTorre[melhor.Id] = _usoPorTorre.GetValueOrDefault(melhor.Id) + 1;
+
+        return (melhor, DistanceCalculator.Between(target, melhor));
+    }
+
+    /// <summary>
+    /// Regra 3 (corredor de tiro): verdadeiro se o segmento entre a torre e o alvo atravessa
+    /// alguma zona morta ativa — amostra pontos ao longo do segmento (excluindo as pontas, já
+    /// cobertas por outras checagens) e testa cada um contra as zonas como
+    /// <see cref="IZonaMortaService.FindBlockingZone"/> testaria um alvo ali.
+    /// </summary>
+    private bool LinhaDeTiroCruzaZonaMorta(Tower torre, Target alvo)
+    {
+        for (int i = 1; i < AmostrasDoCorredorDeTiro; i++)
+        {
+            double t = (double)i / AmostrasDoCorredorDeTiro;
+            double x = torre.X + (alvo.X - torre.X) * t;
+            double y = torre.Y + (alvo.Y - torre.Y) * t;
+            double distanciaDaBase = DistanceCalculator.Euclidean(0, 0, x, y);
+            Quadrant quadrante = QuadrantHelper.Determine(x, y);
+
+            foreach (ZonaMorta zona in _zonaMortaService.Zones)
+            {
+                if (!zona.Enabled) continue;
+
+                bool bloqueado = zona.Type == ZonaMortaType.Quadrant
+                    ? zona.Quadrant == quadrante
+                    : distanciaDaBase >= zona.MinDistance && distanciaDaBase <= zona.MaxDistance;
+
+                if (bloqueado) return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Regra 5 (predição de trajetória): aponta para onde o alvo estará
+    /// <see cref="TempoDePredicaoSegundos"/> à frente, com base na velocidade estimada — não
+    /// quando desativada, ou quando não há velocidade estimada ainda (alvo recém-detectado).
+    /// </summary>
+    private double CalcularAnguloDeMira(Tower torre, Target alvo)
+    {
+        double x = alvo.X;
+        double y = alvo.Y;
+
+        if (_configuracoes.Atual.HeuristicaPredicaoDeTrajetoriaAtiva)
+        {
+            x += alvo.VelocityXMetersPerSecond * TempoDePredicaoSegundos;
+            y += alvo.VelocityYMetersPerSecond * TempoDePredicaoSegundos;
+        }
+
+        return (Math.Atan2(x - torre.X, y - torre.Y) * 180.0 / Math.PI + 360.0) % 360.0;
     }
 
     public void RecomputeTowerStates(IEnumerable<Target> activeTargets)
