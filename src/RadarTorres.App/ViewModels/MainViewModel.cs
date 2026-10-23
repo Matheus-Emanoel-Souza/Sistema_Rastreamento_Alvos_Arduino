@@ -85,7 +85,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _ocorrenciaService.ConfiancaAtualizada += OnConfiancaAtualizada;
 
         _minDistance = AppConfig.Current.RadarSettings.MinSafetyDistanceMeters;
-        _maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+        _maxDistance = _configuracoes.Atual.AlcanceMiraMetros;
         SelectedBaudRate = AppConfig.Current.SerialSettings.DefaultBaudRate;
 
         Targets.CollectionChanged += OnTargetsCollectionChanged;

@@ -116,6 +116,25 @@ public sealed class ConfiguracoesAplicativo
     /// </summary>
     public bool HeuristicaPredicaoDeTrajetoriaAtiva { get; set; } = true;
 
+    // ------------------------------------------------------------------ Radar / mira
+
+    /// <summary>Piso aceito para <see cref="AlcanceMiraMetros"/> — abaixo disso nenhuma torre teria alcance útil para engajar um alvo.</summary>
+    public const double AlcanceMiraMinimoMetros = 0.5;
+
+    /// <summary>Teto aceito para <see cref="AlcanceMiraMetros"/> — acima disso nenhuma câmera do projeto detecta com confiabilidade.</summary>
+    public const double AlcanceMiraMaximoMetros = 10.0;
+
+    /// <summary>
+    /// Alcance máximo (m) até onde uma torre considera um alvo "visível" para fins de
+    /// engajamento — usado por <see cref="Services.TowerSelectionService"/> (decide se a torre
+    /// pode assumir o alvo), pelo anel visual do radar e pelo modo de simulação sem Arduino
+    /// (teto de distância gerada). Substitui, como fonte em tempo de execução, o antigo valor
+    /// fixo <see cref="RadarSettings.MaxDetectionDistanceMeters"/> do appsettings.json — o
+    /// valor de fábrica abaixo é o mesmo (2,5m) para não mudar o comportamento de quem nunca
+    /// tocou nesta tela.
+    /// </summary>
+    public double AlcanceMiraMetros { get; set; } = 2.5;
+
     // ------------------------------------------------------------------ Disparo
 
     /// <summary>Piso absoluto de <see cref="LimiarConfiancaDisparoPercentual"/> — por mais que o

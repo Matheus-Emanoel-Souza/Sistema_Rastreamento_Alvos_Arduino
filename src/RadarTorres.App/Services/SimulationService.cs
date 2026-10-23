@@ -31,6 +31,7 @@ public sealed class SimulationService : ISimulationService, IDisposable
 
     private readonly ConcurrentDictionary<int, SimulatedTarget> _simulated = new();
     private readonly ILoggingService _logger;
+    private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private Timer? _timer;
     private int _nextId = 1;
 
@@ -40,9 +41,10 @@ public sealed class SimulationService : ISimulationService, IDisposable
 
     public event EventHandler<SensorReading>? ReadingGenerated;
 
-    public SimulationService(ILoggingService logger)
+    public SimulationService(ILoggingService logger, IConfiguracoesAplicativoRepository configuracoes)
     {
         _logger = logger;
+        _configuracoes = configuracoes;
     }
 
     public void Start(int? initialTargetCount = null)
@@ -82,7 +84,7 @@ public sealed class SimulationService : ISimulationService, IDisposable
             return -1;
         }
 
-        double maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+        double maxDistance = _configuracoes.Atual.AlcanceMiraMetros;
         var target = new SimulatedTarget
         {
             Id = _nextId++,
@@ -102,7 +104,7 @@ public sealed class SimulationService : ISimulationService, IDisposable
 
     private void Tick()
     {
-        double maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+        double maxDistance = _configuracoes.Atual.AlcanceMiraMetros;
 
         foreach (SimulatedTarget target in _simulated.Values)
         {
