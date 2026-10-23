@@ -99,4 +99,53 @@ public sealed class RedeNeural
 
         return valores;
     }
+
+    /// <summary>Tamanho de cada camada (entrada, ocultas, saída), na ordem passada ao construtor.</summary>
+    public int[] TamanhosDasCamadas => _camadas;
+
+    /// <summary>Quantidade de camadas de pesos (= <see cref="TamanhosDasCamadas"/>.Length - 1).</summary>
+    public int QuantidadeDeCamadasDePesos => _pesos.Length;
+
+    /// <summary>Peso da conexão entre o neurônio <paramref name="indiceEntrada"/> da camada <paramref name="indiceCamada"/> e o neurônio <paramref name="indiceSaida"/> da camada seguinte.</summary>
+    public double Peso(int indiceCamada, int indiceEntrada, int indiceSaida) => _pesos[indiceCamada][indiceEntrada, indiceSaida];
+
+    /// <summary>
+    /// Mesma propagação de <see cref="Ativar"/>, mas devolve a ativação de TODAS as camadas
+    /// (índice 0 = entradas cruas, até o índice <see cref="TamanhosDasCamadas"/>.Length-1 =
+    /// saída) — usado só para visualização (ver <c>DiagramaRedeNeuralViewModel</c>), nunca no
+    /// laço de treinamento/avaliação (custo extra de alocar e devolver cada camada
+    /// intermediária, desnecessário fora da tela).
+    /// </summary>
+    public double[][] AtivarComCamadas(double[] entradas)
+    {
+        if (entradas.Length != _camadas[0])
+            throw new ArgumentException($"Esperadas {_camadas[0]} entradas, recebidas {entradas.Length}.", nameof(entradas));
+
+        var todasAsCamadas = new double[_camadas.Length][];
+        todasAsCamadas[0] = entradas;
+
+        double[] valores = entradas;
+        for (int i = 0; i < _pesos.Length; i++)
+        {
+            double[,] pesosCamada = _pesos[i];
+            double[] biasCamada = _bias[i];
+            int entradasCamada = pesosCamada.GetLength(0);
+            int saidasCamada = pesosCamada.GetLength(1);
+
+            var proximos = new double[saidasCamada];
+            for (int s = 0; s < saidasCamada; s++)
+            {
+                double soma = biasCamada[s];
+                for (int e = 0; e < entradasCamada; e++)
+                {
+                    soma += valores[e] * pesosCamada[e, s];
+                }
+                proximos[s] = Math.Tanh(soma);
+            }
+            valores = proximos;
+            todasAsCamadas[i + 1] = proximos;
+        }
+
+        return todasAsCamadas;
+    }
 }

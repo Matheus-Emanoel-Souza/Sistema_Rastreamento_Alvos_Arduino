@@ -1594,6 +1594,107 @@ de vigilância central" = o sensor/base já existente na origem (0,0), não uma 
 
 ---
 
+## 2026-10-23 — Diagrama interativo da rede neural (visualização + dúvidas respondidas)
+
+**Contexto**: antes do pedido abaixo, o usuário fez três perguntas sobre o treinamento
+(tamanho da população = 60; o que o JSON exportado contém; o que são "melhor fitness" e
+"evolução do fitness") — respondidas em texto, sem alteração de código.
+
+**Pedido (texto integral):**
+
+> Quero visulizar essa rede neural enquanto as gerações forem rodando.
+> "C:\Users\mathe\Downloads\Neural_network.svg" próximo deste modelo e ao passar o mouse por
+> cima quero que mostre qual tomada de atitude aquele neurônio é responsável
+
+**Entregue:**
+
+- `NeuralEvolution/RedeNeural.cs`: novos métodos de só-leitura para visualização —
+  `AtivarComCamadas` (ativação de TODAS as camadas, não só a saída final) e `Peso`/
+  `TamanhosDasCamadas`/`QuantidadeDeCamadasDePesos` (acesso aos pesos). `Ativar` (usado no laço
+  de treinamento/avaliação) não foi tocado — o custo extra de alocar cada camada intermediária
+  só existe quando a tela pede.
+- `ControladorHibrido.RotulosEntradas`/`RotulosSaidas`: nomes fixos das 6 entradas e 2 saídas,
+  reaproveitados tanto no diagrama quanto (implicitamente) em `ExtratorDeRegras`.
+- `ViewModels/NeuronioVisualTreinamento.cs` e `ConexaoVisualTreinamento.cs` (novos): nó e
+  conexão do diagrama, no mesmo padrão dos outros visuais da tela (mutados no lugar, sem
+  recriar a coleção).
+- `TreinamentoControladorViewModel`: `ConstruirDiagramaRedeNeural` monta o layout (3 colunas —
+  entrada/oculta/saída — nas posições da arquitetura `[6,8,2]`) uma única vez;
+  `AtualizarDiagramaRedeNeural` recalcula cor/espessura de cada conexão (peso atual: azul
+  positivo, vermelho negativo, espessura ∝ |peso|) e ativação/tooltip de cada neurônio a cada
+  geração concluída (e ao rodar um episódio único) — propagando um **cenário de referência
+  fixo** (torre do próprio quadrante, alvo a meia distância e velocidade média) para que o que
+  muda no diagrama geração a geração sejam os PESOS evoluindo, não ruído de cenários diferentes.
+- **Tooltip por neurônio** (o pedido central): entrada mostra seu nome + valor no cenário de
+  referência; saída mostra seu nome + ativação + o que ela realmente faz no sistema; neurônio
+  oculto mostra a ativação atual e, por não ter um "significado" fixo (é uma matriz de pesos,
+  não uma regra simbólica), as 2 entradas que mais o influenciam por peso — uma aproximação
+  honesta em vez de inventar um rótulo que a rede não tem.
+- XAML inspirado no SVG de referência (`C:\Users\mathe\Downloads\Neural_network.svg`): nós
+  verdes (entrada) → azuis (oculta) → amarelos (saída), conexões como linhas finas, tudo dentro
+  de um novo card acima do Canvas de simulação.
+- Testes novos em `RedeNeuralTests` para `AtivarComCamadas`/`Peso`/`TamanhosDasCamadas`.
+  `dotnet build`: 0 erros. `dotnet test`: 135 testes, 135 aprovados.
+- Nenhum commit feito — aguardando autorização. Validação visual não foi feita — pedido ao
+  usuário abrir a tela e passar o mouse sobre os neurônios para confirmar que o layout e os
+  tooltips ficaram como esperado.
+
+---
+
+## 2026-10-23 — Botão de reset e histórico de gerações minimizável/maximizável
+
+**Pedido (texto integral):**
+
+> Coloque um botão de reset, na tela de treinamento do controlador.
+>
+> ajusta a tela histórico de gerações para minimizar e maximizar
+
+**Entregue:**
+
+- **Botão "Resetar treinamento"**: `TreinamentoControladorViewModel.Resetar` — para o
+  treinamento/prévia se estiverem rodando e zera geração, fitness, genoma atual, diagrama da
+  rede, Canvas (alvos/miras/regras aprendidas). **Decisão deliberada**: não apaga o histórico
+  já salvo em `historico_treinamento_geracoes` — reset é da sessão na tela, não uma limpeza de
+  dados persistidos; o botão tem tooltip explicando isso. Se quiser um botão separado para
+  também limpar o histórico do banco, é só pedir.
+- **Histórico de gerações minimizável/maximizável**: botão "▾ Minimizar"/"▸ Maximizar" no
+  cabeçalho do card — minimizado, o card encolhe para só o título (36px) e a tabela fica
+  oculta; maximizado, volta para a altura que estava antes de minimizar (lembrada, padrão
+  220px). A divisória arrastável (`GridSplitter`, adicionada na rodada anterior) é desativada
+  enquanto minimizado. Evento novo `TreinamentoControladorViewModel.Resetado` avisa a View para
+  também limpar o histórico bruto do gráfico de evolução do fitness quando o reset é acionado.
+- `dotnet build`: 0 erros. `dotnet test`: 135 testes, 135 aprovados (sem testes novos — mudança
+  é só de UI/code-behind, sem lógica nova em classes testáveis isoladamente).
+- Nenhum commit feito — aguardando autorização. Validação visual não foi feita.
+
+---
+
+## 2026-10-23 — Correção: cone de visão não acompanhava o alvo
+
+**Relato do usuário:**
+
+> Ainda não testei mas visualizar o treinamento do controlador, não estou vendo o cone de
+> visão das torres acompanharem os alvos
+
+**Causa**: `SetorVisualTreinamento.Pontos` era mutado NO LUGAR (`Clear()`+`Add()` na mesma
+`PointCollection`) a cada quadro, em vez de a propriedade ser substituída — mutar uma
+`PointCollection` já atribuída a um `Polygon` via `{Binding}` não garante redesenho (o
+`Polygon` só reage de forma confiável quando a propriedade é efetivamente trocada, disparando
+`PropertyChanged`). Por isso o cone aparecia na posição inicial (desenhado uma vez, ao montar o
+episódio) mas nunca girava atrás do alvo depois. O próprio gráfico de evolução do fitness,
+nesta mesma tela, já evitava esse padrão trocando a coleção inteira a cada redesenho — o cone
+de visão foi a única peça que ficou com a versão "mutar no lugar".
+
+**Correção**: `SetorVisualTreinamento` passou a herdar de `ViewModelBase`
+(`INotifyPropertyChanged`) com `Pontos` como propriedade normal (`SetProperty`);
+`PreencherPontosDoSetor` agora monta uma `PointCollection` nova e a atribui via `setor.Pontos =
+pontos` em vez de mutar a existente.
+
+- `dotnet build`: 0 erros. `dotnet test`: 135 testes, 135 aprovados.
+- Nenhum commit feito — aguardando autorização. Pedido ao usuário testar de novo.
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
