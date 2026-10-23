@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using RadarTorres.App.NeuralEvolution;
 using RadarTorres.App.ViewModels;
 
 namespace RadarTorres.App.Views;
@@ -24,7 +23,6 @@ public partial class TreinamentoControladorView : UserControl
     private const double AlturaPadraoExpandidaHistorico = 220.0;
 
     private readonly TreinamentoControladorViewModel _viewModel;
-    private readonly List<ResultadoGeracao> _historico = new();
 
     private bool _historicoMinimizado;
     private double _ultimaAlturaExpandidaHistorico = AlturaPadraoExpandidaHistorico;
@@ -36,28 +34,19 @@ public partial class TreinamentoControladorView : UserControl
         _viewModel = viewModel;
         DataContext = _viewModel;
 
-        _viewModel.GeracaoConcluida += OnGeracaoConcluida;
-        _viewModel.Resetado += OnResetado;
-        Unloaded += (_, _) =>
-        {
-            _viewModel.GeracaoConcluida -= OnGeracaoConcluida;
-            _viewModel.Resetado -= OnResetado;
-        };
-    }
+        // Fonte dos pontos do gráfico é HistoricoRecente (ObservableCollection da ViewModel,
+        // carregada do banco e persistente entre trocas de tela) — NÃO um histórico local do
+        // code-behind: uma lista local era recriada vazia toda vez que esta View era
+        // reconstruída (troca de tela, reabertura do app), fazendo o gráfico "esquecer" tudo
+        // enquanto os números (ligados direto à ViewModel) continuavam certos — esse descompasso
+        // era o motivo do gráfico aparecer vazio mesmo com o treinamento rodando normalmente.
+        _viewModel.HistoricoRecente.CollectionChanged += OnHistoricoAlterado;
+        Unloaded += (_, _) => _viewModel.HistoricoRecente.CollectionChanged -= OnHistoricoAlterado;
 
-    private void OnGeracaoConcluida(object? sender, ResultadoGeracao resultado)
-    {
-        _historico.Add(resultado);
         RedesenharGrafico();
     }
 
-    /// <summary>Reinício pedido pelo botão "Resetar treinamento" — o gráfico de evolução acumula pontos num histórico próprio (fora da ViewModel), então precisa ser zerado aqui também.</summary>
-    private void OnResetado(object? sender, EventArgs e)
-    {
-        _historico.Clear();
-        LinhaMelhorFitness.Points.Clear();
-        LinhaFitnessMedio.Points.Clear();
-    }
+    private void OnHistoricoAlterado(object? sender, NotifyCollectionChangedEventArgs e) => RedesenharGrafico();
 
     /// <summary>
     /// Alterna o painel de histórico de gerações entre minimizado (só o título + botão visíveis)
@@ -117,22 +106,28 @@ public partial class TreinamentoControladorView : UserControl
 
     private void RedesenharGrafico()
     {
-        if (_historico.Count < 2) return;
+        var historico = _viewModel.HistoricoRecente;
+        if (historico.Count < 2)
+        {
+            LinhaMelhorFitness.Points.Clear();
+            LinhaFitnessMedio.Points.Clear();
+            return;
+        }
 
         double largura = GraficoCanvas.ActualWidth > 0 ? GraficoCanvas.ActualWidth : 220;
         double altura = GraficoCanvas.ActualHeight > 0 ? GraficoCanvas.ActualHeight : 120;
 
-        double maiorFitness = _historico.Max(r => r.MelhorFitness);
-        double menorFitness = _historico.Min(r => r.FitnessMedio);
+        double maiorFitness = historico.Max(r => r.MelhorFitness);
+        double menorFitness = historico.Min(r => r.FitnessMedio);
         double amplitude = System.Math.Max(1.0, maiorFitness - menorFitness);
 
-        double EixoX(int indice) => (indice / (double)(_historico.Count - 1)) * largura;
+        double EixoX(int indice) => (indice / (double)(historico.Count - 1)) * largura;
         double EixoY(double valor) => altura - ((valor - menorFitness) / amplitude * altura);
 
-        LinhaMelhorFitness.Points = new PointCollection(_historico
+        LinhaMelhorFitness.Points = new PointCollection(historico
             .Select((r, i) => new Point(EixoX(i), EixoY(r.MelhorFitness))));
 
-        LinhaFitnessMedio.Points = new PointCollection(_historico
+        LinhaFitnessMedio.Points = new PointCollection(historico
             .Select((r, i) => new Point(EixoX(i), EixoY(r.FitnessMedio))));
     }
 }

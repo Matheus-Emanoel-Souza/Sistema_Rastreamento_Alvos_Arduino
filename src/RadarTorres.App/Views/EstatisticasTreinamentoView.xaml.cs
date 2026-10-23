@@ -25,12 +25,46 @@ public partial class EstatisticasTreinamentoView : UserControl
         DataContext = _viewModel;
 
         _viewModel.Marcos.CollectionChanged += OnMarcosAlterados;
-        SizeChanged += (_, _) => Redesenhar();
-        Unloaded += (_, _) => _viewModel.Marcos.CollectionChanged -= OnMarcosAlterados;
-        Loaded += (_, _) => Redesenhar();
+        _viewModel.HistoricoRecente.CollectionChanged += OnHistoricoRecenteAlterado;
+        SizeChanged += (_, _) => { Redesenhar(); RedesenharGeracaoAGeracao(); };
+        Unloaded += (_, _) =>
+        {
+            _viewModel.Marcos.CollectionChanged -= OnMarcosAlterados;
+            _viewModel.HistoricoRecente.CollectionChanged -= OnHistoricoRecenteAlterado;
+        };
+        Loaded += (_, _) => { Redesenhar(); RedesenharGeracaoAGeracao(); };
     }
 
     private void OnMarcosAlterados(object? sender, NotifyCollectionChangedEventArgs e) => Redesenhar();
+
+    private void OnHistoricoRecenteAlterado(object? sender, NotifyCollectionChangedEventArgs e) => RedesenharGeracaoAGeracao();
+
+    private void RedesenharGeracaoAGeracao()
+    {
+        var historico = _viewModel.HistoricoRecente.ToList();
+        if (historico.Count < 2)
+        {
+            LinhaMelhorFitnessGeracao.Points.Clear();
+            LinhaFitnessMedioGeracao.Points.Clear();
+            return;
+        }
+
+        double largura = GraficoGeracaoCanvas.ActualWidth > 0 ? GraficoGeracaoCanvas.ActualWidth : 600;
+        double altura = GraficoGeracaoCanvas.ActualHeight > 0 ? GraficoGeracaoCanvas.ActualHeight : 160;
+
+        double maior = historico.Max(r => r.MelhorFitness);
+        double menor = historico.Min(r => r.FitnessMedio);
+        double amplitude = Math.Max(1.0, maior - menor);
+
+        double EixoX(int indice) => indice / (double)(historico.Count - 1) * largura;
+        double EixoY(double valor) => altura - (valor - menor) / amplitude * altura;
+
+        LinhaMelhorFitnessGeracao.Points = new PointCollection(
+            historico.Select((r, i) => new Point(EixoX(i), EixoY(r.MelhorFitness))));
+
+        LinhaFitnessMedioGeracao.Points = new PointCollection(
+            historico.Select((r, i) => new Point(EixoX(i), EixoY(r.FitnessMedio))));
+    }
 
     private void Redesenhar()
     {

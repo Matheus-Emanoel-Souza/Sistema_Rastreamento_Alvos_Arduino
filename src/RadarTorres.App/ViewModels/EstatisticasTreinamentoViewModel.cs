@@ -19,15 +19,23 @@ namespace RadarTorres.App.ViewModels;
 public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
 {
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
+    private readonly IHistoricoTreinamentoRepository _historicoRepository;
     private readonly ILoggingService _logger;
 
     public ObservableCollection<MarcoFitnessTreinamento> Marcos { get; } = new();
 
+    /// <summary>Últimas gerações (até 300), geração a geração — mesma fonte da tela "Treinamento do Controlador" (ver IHistoricoTreinamentoRepository), para o gráfico granular também aparecer aqui.</summary>
+    public ObservableCollection<HistoricoGeracaoTreinamento> HistoricoRecente { get; } = new();
+
     public RelayCommand AtualizarCommand { get; }
 
-    public EstatisticasTreinamentoViewModel(IMarcoFitnessTreinamentoRepository marcoFitnessRepository, ILoggingService logger)
+    public EstatisticasTreinamentoViewModel(
+        IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
+        IHistoricoTreinamentoRepository historicoRepository,
+        ILoggingService logger)
     {
         _marcoFitnessRepository = marcoFitnessRepository;
+        _historicoRepository = historicoRepository;
         _logger = logger;
 
         AtualizarCommand = new RelayCommand(Carregar);
@@ -42,6 +50,12 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
             foreach (MarcoFitnessTreinamento marco in _marcoFitnessRepository.ObterTodos())
             {
                 Marcos.Add(marco);
+            }
+
+            HistoricoRecente.Clear();
+            foreach (HistoricoGeracaoTreinamento registro in _historicoRepository.ObterUltimos())
+            {
+                HistoricoRecente.Add(registro);
             }
 
             OnPropertyChanged(nameof(TemDados));

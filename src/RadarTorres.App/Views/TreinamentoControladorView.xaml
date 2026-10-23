@@ -188,11 +188,24 @@
                     <Canvas.RenderTransform>
                         <ScaleTransform x:Name="ZoomMundoTransform" ScaleX="1" ScaleY="1"/>
                     </Canvas.RenderTransform>
-                <!-- Campo de monitoramento da torre de vigilância central: sensor na origem
-                     (0,0), raio = alcance máximo de detecção do mundo simulado. -->
+                <!-- Círculo externo: fronteira do mundo — é onde os alvos nascem (ver
+                     AmbienteTreinamento.TalvezNascerAlvo), não um alcance de sensor. -->
                 <Ellipse Width="460" Height="460" Canvas.Left="10" Canvas.Top="10"
                          Fill="#142563EB" Stroke="{DynamicResource Border.Control}" StrokeThickness="1" StrokeDashArray="4,3"
-                         ToolTip="Torre de Vigilância Central — campo de monitoramento dos sensores"/>
+                         ToolTip="Fronteira do mundo — onde os alvos nascem"/>
+                <TextBlock Text="{Binding RaioMundoMetros, StringFormat={}{0:0} m · nascimento dos alvos}"
+                           Canvas.Left="245" Canvas.Top="14" FontSize="9" Foreground="{DynamicResource Text.Secondary}"
+                           FontFamily="{DynamicResource Font.Mono}" IsHitTestVisible="False"/>
+
+                <!-- Círculo interno: alcance de engajamento — limite até onde as torres conseguem
+                     mirar/disparar (mesmo raio do cone de cada torre, ver ConstruirSetorDeVisao). -->
+                <Ellipse Width="{Binding DiametroEngajamentoPx}" Height="{Binding DiametroEngajamentoPx}"
+                         Canvas.Left="{Binding OffsetEngajamentoPx}" Canvas.Top="{Binding OffsetEngajamentoPx}"
+                         Stroke="#F59E0B" StrokeThickness="1.5" StrokeDashArray="3,3" Opacity="0.7"
+                         ToolTip="Alcance de engajamento — limite até onde as torres conseguem mirar"/>
+                <TextBlock Text="{Binding DistanciaEngajamentoMetros, StringFormat={}{0:0} m · alcance de mira}"
+                           Canvas.Left="245" Canvas.Top="{Binding OffsetEngajamentoPx}" FontSize="9" Foreground="#F59E0B"
+                           FontFamily="{DynamicResource Font.Mono}" IsHitTestVisible="False"/>
 
                 <!-- Campos de visão (cone) de cada torre/canhão — ver ConstruirSetorDeVisao -->
                 <ItemsControl ItemsSource="{Binding CamposDeVisaoVisuais}">
@@ -206,10 +219,29 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <!-- Farol da torre de vigilância central: feixe vai-e-vem (180°, -90° a 90°),
+                     nunca para — só decoração/identidade visual, não representa alcance real. -->
+                <Polygon Points="0,0 -9,-205 9,-205" Fill="#2563EB" Opacity="0.18"
+                         Canvas.Left="231" Canvas.Top="35" RenderTransformOrigin="0.5,1" IsHitTestVisible="False">
+                    <Polygon.RenderTransform>
+                        <RotateTransform x:Name="FarolRotacao" Angle="-90"/>
+                    </Polygon.RenderTransform>
+                    <Polygon.Triggers>
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="FarolRotacao" Storyboard.TargetProperty="Angle"
+                                                     From="-90" To="90" Duration="0:0:3" AutoReverse="True" RepeatBehavior="Forever"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Polygon.Triggers>
+                </Polygon>
+
                 <!-- Marcador da torre de vigilância central, no centro do mundo -->
                 <Ellipse Width="10" Height="10" Canvas.Left="235" Canvas.Top="235"
                          Fill="#2563EB" Stroke="White" StrokeThickness="1"
-                         ToolTip="Torre de Vigilância Central"/>
+                         ToolTip="Torre de Vigilância Central — farol decorativo, sem alcance real"/>
 
                 <!-- Linhas de mira (âmbar) e de disparo (vermelho, flash curto) — ver AtualizarMiras -->
                 <ItemsControl ItemsSource="{Binding MirasVisuais}">
@@ -224,6 +256,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <!-- Torres como canhões: base circular + cano que gira junto com o campo de
+                     visão (AnguloGraus, atualizado em AtualizarCamposDeVisao). -->
                 <ItemsControl ItemsSource="{Binding TorresVisuais}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
@@ -236,7 +270,30 @@
                     </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Rectangle Width="{Binding Tamanho}" Height="{Binding Tamanho}" Fill="{Binding Cor}" RadiusX="2" RadiusY="2"/>
+                            <Grid Width="26" Height="26" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <Grid.ToolTip>
+                                    <TextBlock>
+                                        <Run Text="Torre #"/><Run Text="{Binding Id}"/>
+                                    </TextBlock>
+                                </Grid.ToolTip>
+                                <Grid.RenderTransform>
+                                    <TranslateTransform X="-13" Y="-13"/>
+                                </Grid.RenderTransform>
+
+                                <!-- Cano, gira em torno da base da torre (pivô no próprio centro do Grid). -->
+                                <Rectangle Width="5" Height="15" Fill="#64748B" RadiusX="1.5" RadiusY="1.5"
+                                           HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,13"
+                                           RenderTransformOrigin="0.5,1">
+                                    <Rectangle.RenderTransform>
+                                        <RotateTransform Angle="{Binding AnguloGraus}"/>
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
+
+                                <!-- Base do canhão. -->
+                                <Ellipse Width="18" Height="18" Fill="{Binding Cor}"
+                                         Stroke="{DynamicResource Border.Control}" StrokeThickness="1.5"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -259,6 +316,19 @@
                 </ItemsControl>
                 </Canvas>
                 </Border>
+
+                <!-- Legenda — mesmo padrão da legenda da rede neural ao lado. -->
+                <TextBlock Style="{StaticResource ParametroLabel}" Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap" Width="480">
+                    <Run Text="● " Foreground="#64748B"/><Run Text="Torre (canhão)  "/>
+                    <Run Text="▲ " Foreground="#2563EB"/><Run Text="Campo de visão/alcance  "/>
+                    <Run Text="— " Foreground="#F59E0B"/><Run Text="Linha de mira  "/>
+                    <Run Text="— " Foreground="#EF4444"/><Run Text="Disparo (flash)  "/>
+                    <Run Text="● " Foreground="#60A5FA"/><Run Text="Alvo  "/>
+                    <Run Text="● " Foreground="#2563EB"/><Run Text="Torre de vigilância central (farol decorativo)"/>
+                    <LineBreak/>
+                    <Run Text="⊙ " Foreground="{DynamicResource Text.Secondary}"/><Run Text="Círculo externo = onde os alvos nascem   "/>
+                    <Run Text="⊙ " Foreground="#F59E0B"/><Run Text="Círculo interno (tracejado) = alcance de mira das torres"/>
+                </TextBlock>
             </StackPanel>
         </Border>
 
