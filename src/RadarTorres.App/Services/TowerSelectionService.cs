@@ -214,9 +214,9 @@ public sealed class TowerSelectionService : ITowerSelectionService
     /// diferentes podem identificar e disparar no MESMO alvo ao mesmo tempo. Fica de fora quem
     /// tiver outro canhão literalmente na frente da linha de tiro.
     /// </summary>
-    private static List<Tower> ComputarTorresEngajando(Target target, List<Tower> available)
+    private List<Tower> ComputarTorresEngajando(Target target, List<Tower> available)
     {
-        double alcanceCameraMetros = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+        double alcanceCameraMetros = _configuracoes.Atual.AlcanceMiraMetros;
 
         List<Tower> candidatas = available.Where(t =>
             t.PreferredQuadrant == target.Quadrant ||
@@ -269,7 +269,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
     {
         ConfiguracoesAplicativo config = _configuracoes.Atual;
         RedeNeural? rede = _controladorTreinado.Rede;
-        double raioMundoMetros = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+        double raioMundoMetros = config.AlcanceMiraMetros;
 
         // Regra 3 — corredor de tiro: descarta candidatas cuja linha até o alvo atravesse uma
         // zona morta ativa. Nunca deixa o alvo sem NENHUMA candidata só por causa disto — melhor

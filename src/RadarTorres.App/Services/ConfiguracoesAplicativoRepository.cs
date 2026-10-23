@@ -32,6 +32,13 @@ public interface IConfiguracoesAplicativoRepository
 /// </summary>
 public sealed class ConfiguracoesAplicativoRepository : IConfiguracoesAplicativoRepository
 {
+    /// <summary>
+    /// Bridge estático para código instanciado via XAML sem DI (ver <see cref="Views.RadarControl"/>
+    /// e o mesmo padrão em <see cref="LocalizationService.Current"/>/<see cref="DesempenhoMonitorService.Current"/>)
+    /// — atribuído em <c>App.OnStartup</c> depois do container pronto.
+    /// </summary>
+    public static IConfiguracoesAplicativoRepository? Current { get; set; }
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
@@ -79,6 +86,8 @@ public sealed class ConfiguracoesAplicativoRepository : IConfiguracoesAplicativo
                 ?? ConfiguracoesAplicativo.Padrao();
             configuracoes.LimiarConfiancaDisparoPercentual = Math.Max(
                 ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual, configuracoes.LimiarConfiancaDisparoPercentual);
+            configuracoes.AlcanceMiraMetros = Math.Clamp(
+                configuracoes.AlcanceMiraMetros, ConfiguracoesAplicativo.AlcanceMiraMinimoMetros, ConfiguracoesAplicativo.AlcanceMiraMaximoMetros);
             return configuracoes;
         }
         catch (Exception ex)
@@ -123,6 +132,8 @@ public sealed class ConfiguracoesAplicativoRepository : IConfiguracoesAplicativo
     {
         configuracoes.LimiarConfiancaDisparoPercentual = Math.Max(
             ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual, configuracoes.LimiarConfiancaDisparoPercentual);
+        configuracoes.AlcanceMiraMetros = Math.Clamp(
+            configuracoes.AlcanceMiraMetros, ConfiguracoesAplicativo.AlcanceMiraMinimoMetros, ConfiguracoesAplicativo.AlcanceMiraMaximoMetros);
         _atual = configuracoes;
 
         try

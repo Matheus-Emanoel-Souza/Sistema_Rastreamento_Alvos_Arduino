@@ -284,6 +284,26 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         }
     }
 
+    // ---------------------------------------------------------------- Radar / mira
+
+    public double AlcanceMiraMinimoMetros => ConfiguracoesAplicativo.AlcanceMiraMinimoMetros;
+    public double AlcanceMiraMaximoMetros => ConfiguracoesAplicativo.AlcanceMiraMaximoMetros;
+
+    /// <summary>Alcance (m) até onde uma torre considera um alvo engajável — ver <see cref="ConfiguracoesAplicativo.AlcanceMiraMetros"/>.</summary>
+    public double AlcanceMiraMetros
+    {
+        get => _edicao.AlcanceMiraMetros;
+        set
+        {
+            double ajustado = Math.Clamp(value, ConfiguracoesAplicativo.AlcanceMiraMinimoMetros, ConfiguracoesAplicativo.AlcanceMiraMaximoMetros);
+            if (Math.Abs(_edicao.AlcanceMiraMetros - ajustado) < 0.05) return;
+
+            _edicao.AlcanceMiraMetros = ajustado;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
     // ---------------------------------------------------------------- Disparo
 
     public double ConfiancaMinimaDisparoPercentual => ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual;
@@ -444,5 +464,6 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         OnPropertyChanged(nameof(HeuristicaBalanceamentoDeCargaAtiva));
         OnPropertyChanged(nameof(HeuristicaPredicaoDeTrajetoriaAtiva));
         OnPropertyChanged(nameof(LimiarConfiancaDisparoPercentual));
+        OnPropertyChanged(nameof(AlcanceMiraMetros));
     }
 }
