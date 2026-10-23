@@ -78,6 +78,14 @@
         <PathGeometry Figures="M7,6 L11,11 M7,18 L11,13 M15,11 L18,8 M15,13 L18,16"/>
     </GeometryGroup>
 
+    <!-- Gráfico de barras ascendentes — distinto do Icon.Desempenho (linha+pontos) para não
+         confundir "desempenho operacional em tempo real" com "estatísticas históricas". -->
+    <GeometryGroup x:Key="Icon.EstatisticasTreinamento">
+        <RectangleGeometry Rect="4,14,4,7" RadiusX="1" RadiusY="1"/>
+        <RectangleGeometry Rect="10,8,4,13" RadiusX="1" RadiusY="1"/>
+        <RectangleGeometry Rect="16,3,4,18" RadiusX="1" RadiusY="1"/>
+    </GeometryGroup>
+
     <GeometryGroup x:Key="Icon.Configuracoes">
         <EllipseGeometry Center="12,12" RadiusX="3" RadiusY="3"/>
         <PathGeometry Figures="M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M5,5 L7,7 M17,17 L19,19 M19,5 L17,7 M7,17 L5,19"/>

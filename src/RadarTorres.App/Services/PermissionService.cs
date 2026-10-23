@@ -15,6 +15,9 @@ public sealed class PermissionService : IPermissionService
         // dia a dia — mesmo critério de "Usuários".
         MenuItem.TreinamentoControlador => perfil == PerfilUsuario.Administrador,
 
+        // Painel de análise de longo prazo do treinamento — mesmo critério/motivo do item acima.
+        MenuItem.EstatisticasTreinamento => perfil == PerfilUsuario.Administrador,
+
         _ => true
     };
 

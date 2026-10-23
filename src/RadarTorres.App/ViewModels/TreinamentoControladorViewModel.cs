@@ -31,10 +31,21 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Abertura angular do campo de visão de cada torre/canhão — fixa, voltada para fora da base (ver DesenharTorresFixas).</summary>
     public const double AnguloCampoDeVisaoGraus = 90.0;
 
+    /// <summary>Tamanho do bloco de gerações para cada marco registrado em <see cref="IMarcoFitnessTreinamentoRepository"/> (Requisito "fitness médio a cada 1.000 gerações").</summary>
+    private const int TamanhoBlocoMarco = 1000;
+
     private readonly ILoggingService _logger;
     private readonly IHistoricoTreinamentoRepository _historicoRepository;
+    private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
     private readonly DispatcherTimer _timerPreview;
     private readonly Random _randomGenomaInicial = new();
+
+    // Acumulador do bloco de 1.000 gerações em andamento — zerado a cada marco registrado (ver
+    // RegistrarMarcoFitnessSeCompletouBloco) e também em Iniciar/Resetar, para não misturar
+    // gerações de sessões diferentes no mesmo marco.
+    private double _somaFitnessMedioBloco;
+    private double _melhorFitnessBloco;
+    private int _contagemGeracoesNoBloco;
 
     private AmbienteTreinamento _ambiente;
     private AlgoritmoGenetico? _algoritmoGenetico;
@@ -67,10 +78,14 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     public RelayCommand ExportarMelhorGenomaCommand { get; }
     public RelayCommand ResetarCommand { get; }
 
-    public TreinamentoControladorViewModel(ILoggingService logger, IHistoricoTreinamentoRepository historicoRepository)
+    public TreinamentoControladorViewModel(
+        ILoggingService logger,
+        IHistoricoTreinamentoRepository historicoRepository,
+        IMarcoFitnessTreinamentoRepository marcoFitnessRepository)
     {
         _logger = logger;
         _historicoRepository = historicoRepository;
+        _marcoFitnessRepository = marcoFitnessRepository;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
         ConstruirDiagramaRedeNeural();
@@ -193,6 +208,9 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         GeracaoAtual = 0;
         MelhorFitness = 0;
         FitnessMedio = 0;
+        _somaFitnessMedioBloco = 0;
+        _melhorFitnessBloco = 0;
+        _contagemGeracoesNoBloco = 0;
         _melhorGenomaAtual = [];
         _episodioPreview = null;
         AlvosVisuais.Clear();
@@ -236,6 +254,9 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         GeracaoAtual = 0;
         MelhorFitness = 0;
         FitnessMedio = 0;
+        _somaFitnessMedioBloco = 0;
+        _melhorFitnessBloco = 0;
+        _contagemGeracoesNoBloco = 0;
 
         DesenharTorresFixas();
         ConstruirDiagramaRedeNeural();
@@ -326,6 +347,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // mas esses dois números não são devolvidos por ele.
             EpisodioResultado comportamento = _ambiente.ExecutarEpisodioRapido(resultado.MelhorGenoma, seed: resultado.Geracao);
             RegistrarHistorico(resultado, comportamento);
+            RegistrarMarcoFitnessSeCompletouBloco(resultado);
             AtualizarRegras(resultado.MelhorGenoma);
             AtualizarDiagramaRedeNeural(resultado.MelhorGenoma);
 
@@ -337,6 +359,46 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                 GeracaoConcluida?.Invoke(this, resultado);
             });
         }
+    }
+
+    /// <summary>
+    /// Acumula o fitness médio desta geração no bloco de 1.000 em andamento e, ao completar o
+    /// bloco (geração múltipla de <see cref="TamanhoBlocoMarco"/>), grava um marco em
+    /// <see cref="IMarcoFitnessTreinamentoRepository"/> com a média do bloco — não da geração
+    /// mais recente só, para o painel de longo prazo mostrar a tendência, não ruído geração a
+    /// geração. Acumulador em memória (zera a cada marco e também em Iniciar/Resetar): assim
+    /// como <see cref="AlgoritmoGenetico.GeracaoAtual"/>, não sobrevive a um reinício do
+    /// aplicativo no meio de um bloco — mesma limitação já aceita pelo histórico de 300 linhas.
+    /// </summary>
+    private void RegistrarMarcoFitnessSeCompletouBloco(ResultadoGeracao resultado)
+    {
+        _somaFitnessMedioBloco += resultado.FitnessMedio;
+        _melhorFitnessBloco = Math.Max(_melhorFitnessBloco, resultado.MelhorFitness);
+        _contagemGeracoesNoBloco++;
+
+        if (resultado.Geracao % TamanhoBlocoMarco != 0) return;
+
+        var marco = new MarcoFitnessTreinamento
+        {
+            GeracaoMarco = resultado.Geracao,
+            FitnessMedioDoBloco = _somaFitnessMedioBloco / Math.Max(1, _contagemGeracoesNoBloco),
+            MelhorFitnessDoBloco = _melhorFitnessBloco,
+            DataHora = DateTime.Now
+        };
+
+        try
+        {
+            _marcoFitnessRepository.Registrar(marco);
+            _logger.Success($"Marco de treinamento registrado: geração {marco.GeracaoMarco}, fitness médio do bloco {marco.FitnessMedioDoBloco:0.0}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível registrar o marco de fitness da geração {marco.GeracaoMarco}: {ex.Message}");
+        }
+
+        _somaFitnessMedioBloco = 0;
+        _melhorFitnessBloco = 0;
+        _contagemGeracoesNoBloco = 0;
     }
 
     private void RegistrarHistorico(ResultadoGeracao resultado, EpisodioResultado comportamento)
@@ -423,6 +485,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
                 string corBase = c == 0 ? "#86EFAC" : c == camadas.Length - 1 ? "#FDE68A" : "#93C5FD";
 
+                // Rótulo curto fica sempre visível só em entrada/saída — têm significado fixo.
+                // Oculto não tem (é matriz de pesos), então continua só no tooltip ao passar o mouse.
+                bool temSignificadoFixo = c == 0 || c == camadas.Length - 1;
+
                 NeuroniosVisuais.Add(new NeuronioVisualTreinamento
                 {
                     Camada = c,
@@ -431,7 +497,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                     CanvasY = y,
                     Raio = c == 0 || c == camadas.Length - 1 ? 16 : 13,
                     Cor = corBase,
-                    Rotulo = rotulo
+                    Rotulo = rotulo,
+                    RotuloCurto = temSignificadoFixo ? rotulo : string.Empty
                 });
             }
         }

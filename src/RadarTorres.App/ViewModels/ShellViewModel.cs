@@ -236,6 +236,7 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         (MenuItem.ConfiguracoesArduino, "Sidebar.ConfiguracoesArduino", "Icon.ConfiguracoesArduino", null),
         (MenuItem.Usuarios, "Sidebar.Usuarios", "Icon.Usuarios", "Sidebar.Group.Administracao"),
         (MenuItem.TreinamentoControlador, "Sidebar.TreinamentoControlador", "Icon.TreinamentoControlador", null),
+        (MenuItem.EstatisticasTreinamento, "Sidebar.EstatisticasTreinamento", "Icon.EstatisticasTreinamento", null),
         (MenuItem.Configuracoes, "Sidebar.Configuracoes", "Icon.Configuracoes", null),
     ];
 
