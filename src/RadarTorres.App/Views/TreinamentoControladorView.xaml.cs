@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using RadarTorres.App.NeuralEvolution;
 using RadarTorres.App.ViewModels;
@@ -85,6 +86,33 @@ public partial class TreinamentoControladorView : UserControl
         }
 
         _historicoMinimizado = !_historicoMinimizado;
+    }
+
+    // ---------------------------------------------------------------- Zoom independente por visualização
+    //
+    // Mesma convenção já usada no RadarControl (Ctrl+roda = zoom; roda sozinha continua rolando a
+    // tela pelo ScrollViewer que envolve a coluna). Cada visualização (rede neural e simulação
+    // 2D) tem seu próprio ScaleTransform/estado — ampliar uma nunca afeta a outra.
+
+    private const double ZoomMinimo = 0.5;
+    private const double ZoomMaximo = 2.5;
+    private const double PassoZoom = 0.1;
+
+    private void RedeNeuralViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
+        AplicarZoomComRoda(e, ZoomRedeNeuralTransform, ZoomRedeNeuralLabel);
+
+    private void MundoViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
+        AplicarZoomComRoda(e, ZoomMundoTransform, ZoomMundoLabel);
+
+    private static void AplicarZoomComRoda(MouseWheelEventArgs e, ScaleTransform transform, TextBlock rotulo)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.Control) return;
+
+        double novoZoom = Math.Clamp(transform.ScaleX + (e.Delta > 0 ? PassoZoom : -PassoZoom), ZoomMinimo, ZoomMaximo);
+        transform.ScaleX = novoZoom;
+        transform.ScaleY = novoZoom;
+        rotulo.Text = $"{novoZoom:0%}";
+        e.Handled = true;
     }
 
     private void RedesenharGrafico()

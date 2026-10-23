@@ -179,49 +179,88 @@
              quais entradas mais os influenciam — ver ConstruirTooltipDoNeuronio). -->
         <Border Style="{StaticResource Card}">
             <StackPanel>
-                <TextBlock Text="REDE NEURAL DO CONTROLADOR (PASSE O MOUSE SOBRE UM NEURÔNIO)" Style="{StaticResource CardTitle}"/>
-                <Canvas Width="620" Height="280">
-                    <ItemsControl ItemsSource="{Binding ConexoesVisuais}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
-                                      Stroke="{Binding Cor}" StrokeThickness="{Binding Espessura}" Opacity="0.55"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <Grid>
+                    <TextBlock Text="REDE NEURAL DO CONTROLADOR (PASSE O MOUSE SOBRE UM NEURÔNIO)" Style="{StaticResource CardTitle}"/>
+                    <TextBlock x:Name="ZoomRedeNeuralLabel" Text="100%" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource Text.Secondary}" FontSize="11" FontFamily="{DynamicResource Font.Mono}"/>
+                </Grid>
+                <TextBlock Style="{StaticResource ParametroLabel}" Margin="0,0,0,8" FontSize="11">
+                    <Run Text="● " Foreground="#86EFAC"/><Run Text="Entrada  "/>
+                    <Run Text="● " Foreground="#93C5FD"/><Run Text="Oculta  "/>
+                    <Run Text="● " Foreground="#FDE68A"/><Run Text="Saída  "/>
+                    <Run Text="— " Foreground="#3B82F6"/><Run Text="Peso positivo  "/>
+                    <Run Text="— " Foreground="#EF4444"/><Run Text="Peso negativo (espessura = magnitude)"/>
+                </TextBlock>
+                <Border x:Name="RedeNeuralViewport" ClipToBounds="True" Width="620" Height="320"
+                        PreviewMouseWheel="RedeNeuralViewport_PreviewMouseWheel" Background="Transparent">
+                    <Canvas Width="620" Height="320" RenderTransformOrigin="0.5,0.5">
+                        <Canvas.RenderTransform>
+                            <ScaleTransform x:Name="ZoomRedeNeuralTransform" ScaleX="1" ScaleY="1"/>
+                        </Canvas.RenderTransform>
 
-                    <ItemsControl ItemsSource="{Binding NeuroniosVisuais}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
-                                <Setter Property="Canvas.Top" Value="{Binding CanvasY}"/>
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Ellipse Width="{Binding Raio}" Height="{Binding Raio}" Fill="{Binding Cor}"
-                                         Stroke="{DynamicResource Border.Control}" StrokeThickness="1.5"
-                                         ToolTip="{Binding Rotulo}" Cursor="Hand">
-                                    <Ellipse.RenderTransform>
-                                        <TranslateTransform X="-7" Y="-7"/>
-                                    </Ellipse.RenderTransform>
-                                </Ellipse>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Canvas>
+                        <ItemsControl ItemsSource="{Binding ConexoesVisuais}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                          Stroke="{Binding Cor}" StrokeThickness="{Binding Espessura}" Opacity="0.55"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding NeuroniosVisuais}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+                                    <Setter Property="Canvas.Top" Value="{Binding CanvasY}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Ellipse Width="{Binding Raio}" Height="{Binding Raio}" Fill="{Binding Cor}"
+                                                 Stroke="{DynamicResource Border.Control}" StrokeThickness="1.5"
+                                                 ToolTip="{Binding Rotulo}" Cursor="Hand">
+                                            <Ellipse.RenderTransform>
+                                                <TranslateTransform X="-7" Y="-7"/>
+                                            </Ellipse.RenderTransform>
+                                        </Ellipse>
+                                        <!-- Rótulo permanente de entrada/saída — vazio nos ocultos, que não têm texto fixo (ver RotuloCurto). -->
+                                        <TextBlock Text="{Binding RotuloCurto}" Foreground="{DynamicResource Text.Secondary}"
+                                                   FontSize="9" TextAlignment="Center" TextWrapping="Wrap" Width="90"
+                                                   IsHitTestVisible="False">
+                                            <TextBlock.RenderTransform>
+                                                <TranslateTransform X="-45" Y="12"/>
+                                            </TextBlock.RenderTransform>
+                                        </TextBlock>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Canvas>
+                </Border>
             </StackPanel>
         </Border>
 
         <!-- Canvas 2D: torres fixas + alvos em movimento do melhor genoma atual -->
         <Border Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Canvas Width="480" Height="480" ClipToBounds="True">
+            <StackPanel>
+                <Grid>
+                    <TextBlock Text="SIMULAÇÃO 2D (ROLAR O MOUSE COM CTRL PARA AMPLIAR)" Style="{StaticResource CardTitle}"/>
+                    <TextBlock x:Name="ZoomMundoLabel" Text="100%" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource Text.Secondary}" FontSize="11" FontFamily="{DynamicResource Font.Mono}"/>
+                </Grid>
+                <Border x:Name="MundoViewport" ClipToBounds="True" Width="480" Height="480"
+                        PreviewMouseWheel="MundoViewport_PreviewMouseWheel" Background="Transparent">
+                <Canvas Width="480" Height="480" ClipToBounds="True" RenderTransformOrigin="0.5,0.5">
+                    <Canvas.RenderTransform>
+                        <ScaleTransform x:Name="ZoomMundoTransform" ScaleX="1" ScaleY="1"/>
+                    </Canvas.RenderTransform>
                 <!-- Campo de monitoramento da torre de vigilância central: sensor na origem
                      (0,0), raio = alcance máximo de detecção do mundo simulado. -->
                 <Ellipse Width="460" Height="460" Canvas.Left="10" Canvas.Top="10"
@@ -291,7 +330,9 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            </Canvas>
+                </Canvas>
+                </Border>
+            </StackPanel>
         </Border>
 
         </StackPanel>

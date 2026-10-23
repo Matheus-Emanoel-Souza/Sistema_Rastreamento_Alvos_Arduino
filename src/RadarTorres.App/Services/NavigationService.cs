@@ -41,6 +41,7 @@ public sealed class NavigationService : INavigationService
             [MenuItem.ConfiguracoesArduino] = () => _serviceProvider.GetRequiredService<ArduinoSettingsView>(),
             [MenuItem.Configuracoes] = () => _serviceProvider.GetRequiredService<ConfiguracoesView>(),
             [MenuItem.TreinamentoControlador] = () => _serviceProvider.GetRequiredService<TreinamentoControladorView>(),
+            [MenuItem.EstatisticasTreinamento] = () => _serviceProvider.GetRequiredService<EstatisticasTreinamentoView>(),
         };
     }
 

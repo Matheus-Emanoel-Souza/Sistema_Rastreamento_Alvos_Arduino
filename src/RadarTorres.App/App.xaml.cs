@@ -227,6 +227,7 @@ public partial class App : Application
         services.AddSingleton<IModoAtualTorreRepository, SqliteModoAtualTorreRepository>();
         services.AddSingleton<IPreferenciasUsuarioRepository, SqlitePreferenciasUsuarioRepository>();
         services.AddSingleton<IHistoricoTreinamentoRepository, SqliteHistoricoTreinamentoRepository>();
+        services.AddSingleton<IMarcoFitnessTreinamentoRepository, SqliteMarcoFitnessTreinamentoRepository>();
 
         // --- Layout do painel principal (posição/tamanho dos cards definidos pelo usuário)
         services.AddSingleton<IDashboardLayoutRepository, DashboardLayoutRepository>();
@@ -287,6 +288,11 @@ public partial class App : Application
         // "singleton" (AddScoped com escopo único) que as demais telas do menu.
         services.AddTransient<TreinamentoControladorViewModel>();
         services.AddScoped<TreinamentoControladorView>();
+
+        // Tela "Estatísticas de Treinamento": só leitura de marcos já persistidos — recarrega do
+        // banco a cada navegação (RelayCommand "Atualizar"), sem laço de fundo para preservar.
+        services.AddTransient<EstatisticasTreinamentoViewModel>();
+        services.AddScoped<EstatisticasTreinamentoView>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginView>();
