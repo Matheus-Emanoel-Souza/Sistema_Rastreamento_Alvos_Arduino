@@ -97,15 +97,23 @@ public sealed class AlgoritmoGenetico
             proximaPopulacao[i] = filho;
         }
 
+        // Capturado ANTES de trocar _populacao: com elitismo=0 (nenhum indivíduo copiado sem
+        // alteração), _populacao[0] já seria um FILHO recém-cruzado/mutado da nova geração, não
+        // o melhor genoma desta — devolver o genoma certo não pode depender de elitismo>=1 estar
+        // em vigor.
+        int melhorIndice = ordemDecrescente[0];
+        double[] melhorGenoma = (double[])_populacao[melhorIndice].Clone();
+        double melhorFitness = fitness[melhorIndice];
+        double fitnessMedio = fitness.Average();
+
         _populacao = proximaPopulacao;
         _geracaoAtual++;
 
-        int melhorIndice = ordemDecrescente[0];
         return new ResultadoGeracao(
             Geracao: _geracaoAtual,
-            MelhorFitness: fitness[melhorIndice],
-            FitnessMedio: fitness.Average(),
-            MelhorGenoma: (double[])_populacao[0].Clone());
+            MelhorFitness: melhorFitness,
+            FitnessMedio: fitnessMedio,
+            MelhorGenoma: melhorGenoma);
     }
 
     /// <summary>Torneio de 3: sorteia 3 indivíduos e devolve o de maior fitness entre eles.</summary>

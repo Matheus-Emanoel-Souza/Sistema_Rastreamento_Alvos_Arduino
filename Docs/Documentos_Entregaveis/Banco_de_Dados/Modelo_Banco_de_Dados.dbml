@@ -144,6 +144,31 @@ Table historico_treinamento_geracoes {
   Note: 'Tabela HistoricoTreinamentoGeracoes (SQLite) — SqliteHistoricoTreinamentoRepository. Buffer circular limitado a 300 linhas (descarta o ID mais antigo ao estourar); uma linha por geração treinada na tela "Treinamento do Controlador" (neuroevolução, ver src/RadarTorres.App/NeuralEvolution/).'
 }
 
+Table marcos_fitness_treinamento {
+  id integer [primary key]
+  geracao_marco integer [unique, note: 'a cada 500 gerações — 500, 1000, 1500...']
+  fitness_medio_do_bloco float
+  melhor_fitness_do_bloco float
+  data_hora timestamp
+
+  Note: 'Tabela MarcosFitnessTreinamento (SQLite) — SqliteMarcoFitnessTreinamentoRepository. Só inserção, sem limite de linhas (diferente de historico_treinamento_geracoes).'
+}
+
+Table instantaneos_comportamento_melhor_gene {
+  id integer [primary key]
+  geracao_marco integer [unique, note: 'a cada 1.000 gerações — 1000, 2000, 3000...']
+  fitness float
+  alvos_abatidos integer
+  alvos_escapados integer
+  tiros_errados integer [note: 'disparo autorizado que errou por sorte — ver Helpers/CalculadoraErroDisparo.cs']
+  taxa_de_acerto float [note: 'abatidos / (abatidos + tiros_errados); NULL se nenhum disparo foi tentado']
+  taxa_de_cobertura float [note: 'abatidos / (abatidos + escapados); NULL se nenhum alvo apareceu']
+  genoma_json varchar [note: 'genoma completo (pesos+bias) serializado — permite recarregar e reproduzir o comportamento depois']
+  data_hora timestamp
+
+  Note: 'Tabela InstantaneosComportamentoMelhorGene (SQLite) — SqliteInstantaneoComportamentoRepository. Retrato completo do melhor genoma a cada 1.000 gerações; só inserção, nunca sobrescrito — histórico comparativo marco a marco.'
+}
+
 Table classificacoes_alvo {
   id integer [primary key]
   objeto_detectado_id integer [note: 'FK para objetos_detectados.id; NULL antes da primeira detecção ser gravada']

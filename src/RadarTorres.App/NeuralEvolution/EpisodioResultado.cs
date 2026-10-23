@@ -4,4 +4,5 @@ namespace RadarTorres.App.NeuralEvolution;
 public sealed record EpisodioResultado(
     double FitnessTotal,
     int AlvosAbatidos,
-    int AlvosEscapados);
+    int AlvosEscapados,
+    int TirosErrados = 0);

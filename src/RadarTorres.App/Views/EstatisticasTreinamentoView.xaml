@@ -76,15 +76,10 @@
 
                 <StackPanel Visibility="{Binding TemDados, Converter={StaticResource BooleanToVisibilityConverter}}">
 
-                    <!-- Resumo numérico -->
-                    <Grid Margin="0,0,0,14">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,8,0">
+                    <!-- Resumo numérico — coluna vertical (um card embaixo do outro) em vez de
+                         lado a lado, para os valores ficarem alinhados e fáceis de comparar. -->
+                    <StackPanel Margin="0,0,0,14">
+                        <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="MARCOS REGISTRADOS" Style="{StaticResource CardTitle}"/>
                                 <TextBlock Text="{Binding Marcos.Count}" Style="{StaticResource CardValue}"/>
@@ -95,7 +90,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Column="1" Style="{StaticResource Card}" Margin="4,0,4,0">
+                        <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="FITNESS MÉDIO GERAL" Style="{StaticResource CardTitle}"/>
                                 <TextBlock Text="{Binding FitnessMedioGeral, StringFormat={}{0:0.0}}" Style="{StaticResource CardValue}"/>
@@ -103,14 +98,14 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Column="2" Style="{StaticResource Card}" Margin="8,0,0,0">
+                        <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="MELHOR FITNESS JÁ VISTO" Style="{StaticResource CardTitle}"/>
                                 <TextBlock Text="{Binding MelhorFitnessGeral, StringFormat={}{0:0.0}}" Style="{StaticResource CardValue}"/>
                                 <TextBlock Text="Pico de melhor fitness entre todos os blocos registrados." Style="{StaticResource CardTitle}" Margin="0,8,0,0" FontSize="11" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-                    </Grid>
+                    </StackPanel>
 
                     <!-- Gráfico geração a geração (até as últimas 300), mesma fonte e desenho da
                          tela "Treinamento do Controlador" (ver EstatisticasTreinamentoView.xaml.cs) —
@@ -182,6 +177,63 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
+                    </Border>
+
+                    <!-- Histórico comparativo do comportamento do melhor genoma a cada 1.000
+                         gerações — nunca sobrescrito (ver IInstantaneoComportamentoRepository):
+                         é o que permite estudar caso a caso se a evolução é real (taxa de
+                         acerto/cobertura subindo marco a marco) ou só ruído. -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="COMPORTAMENTO DO MELHOR GENE (A CADA 1.000 GERAÇÕES)" Style="{StaticResource CardTitle}"/>
+                            <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
+                                       Text="Retrato completo (decisões/acertos/erros/genoma) de uma geração específica — compare taxa de acerto e cobertura entre marcos para ver se a evolução é real."/>
+
+                            <TextBlock Text="Nenhum instantâneo registrado ainda — o primeiro aparece ao completar a geração 1.000." Foreground="{DynamicResource Text.Secondary}" TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TemInstantaneos}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <DataGrid ItemsSource="{Binding Instantaneos}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True"
+                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="320"
+                                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding TemInstantaneos, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                      Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
+                                      BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                                      RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
+                                      HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                                        <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+                                        <Setter Property="FontSize" Value="12"/>
+                                        <Setter Property="Padding" Value="8,6"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource Border.Divider}"/>
+                                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Geração" Binding="{Binding GeracaoMarco}" Width="80" MinWidth="70"/>
+                                    <DataGridTextColumn Header="Fitness" Binding="{Binding Fitness, StringFormat={}{0:0.0}}" Width="80" MinWidth="70"/>
+                                    <DataGridTextColumn Header="Abatidos" Binding="{Binding AlvosAbatidos}" Width="80" MinWidth="70"/>
+                                    <DataGridTextColumn Header="Escapados" Binding="{Binding AlvosEscapados}" Width="80" MinWidth="70"/>
+                                    <DataGridTextColumn Header="Tiros errados" Binding="{Binding TirosErrados}" Width="90" MinWidth="80"/>
+                                    <DataGridTextColumn Header="Taxa de acerto" Binding="{Binding TaxaDeAcerto, StringFormat={}{0:P0}}" Width="1*" MinWidth="100"/>
+                                    <DataGridTextColumn Header="Taxa de cobertura" Binding="{Binding TaxaDeCobertura, StringFormat={}{0:P0}}" Width="1*" MinWidth="100"/>
+                                    <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="2*" MinWidth="140"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
                     </Border>
 
                 </StackPanel>

@@ -34,4 +34,15 @@ public sealed record ParametrosTreinamento
 
     public int TamanhoPopulacao { get; init; } = 60;
     public double TaxaMutacao { get; init; } = 0.08;
+
+    /// <summary>
+    /// Quantos episódios independentes (seeds diferentes) são rodados e tirada a MÉDIA para
+    /// chegar ao fitness de um genoma — ver <see cref="AmbienteTreinamento.AvaliarFitness"/>.
+    /// Maior que 1 é necessário porque o ambiente é todo sorteado (nascimento, velocidade,
+    /// certeza): com um único episódio, o mesmo genoma pode tirar um cenário fácil ou difícil só
+    /// por sorte, e esse ruído de ambiente acaba maior que a diferença real de qualidade entre
+    /// genomas — a seleção por torneio e até o elitismo passam a escolher baseado em sorte, não
+    /// em mérito, o que parece (e na prática é) estagnação da evolução.
+    /// </summary>
+    public int EpisodiosPorAvaliacao { get; init; } = 3;
 }

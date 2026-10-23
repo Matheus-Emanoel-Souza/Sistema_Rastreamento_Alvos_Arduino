@@ -74,6 +74,10 @@ public partial class App : Application
         // cada renderização ao monitor de desempenho — ver DesempenhoMonitorService.Current.
         DesempenhoMonitorService.Current = ServiceProvider.GetRequiredService<IDesempenhoMonitorService>();
 
+        // Mesmo motivo do bridge acima: o RadarControl lê o alcance de mira configurável
+        // (ConfiguracoesAplicativo.AlcanceMiraMetros) para desenhar o anel de alcance.
+        ConfiguracoesAplicativoRepository.Current = ServiceProvider.GetRequiredService<IConfiguracoesAplicativoRepository>();
+
         AppDataPaths.EnsureDataFolderExists();
 
         // Resolve o monitor já aqui para o relatório desta execução existir desde o início,
@@ -228,6 +232,7 @@ public partial class App : Application
         services.AddSingleton<IPreferenciasUsuarioRepository, SqlitePreferenciasUsuarioRepository>();
         services.AddSingleton<IHistoricoTreinamentoRepository, SqliteHistoricoTreinamentoRepository>();
         services.AddSingleton<IMarcoFitnessTreinamentoRepository, SqliteMarcoFitnessTreinamentoRepository>();
+        services.AddSingleton<IInstantaneoComportamentoRepository, SqliteInstantaneoComportamentoRepository>();
 
         // --- Layout do painel principal (posição/tamanho dos cards definidos pelo usuário)
         services.AddSingleton<IDashboardLayoutRepository, DashboardLayoutRepository>();

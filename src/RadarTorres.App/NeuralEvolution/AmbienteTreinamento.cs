@@ -93,7 +93,30 @@ public sealed class AmbienteTreinamento
             Avancar(estado, controlador, dt);
         }
 
-        return new EpisodioResultado(estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados);
+        return new EpisodioResultado(estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados);
+    }
+
+    /// <summary>
+    /// Fitness de um genoma, calculado como a MÉDIA de vários episódios com <paramref name="seeds"/>
+    /// fixas — as MESMAS seeds para todos os indivíduos da geração (ver
+    /// <see cref="ViewModels.TreinamentoControladorViewModel.LacoDeTreinamento"/>), então a
+    /// comparação dentro da geração continua justa (todo mundo enfrenta os mesmos cenários), mas
+    /// cada genoma é testado em <paramref name="seeds"/>.Count cenários diferentes em vez de um
+    /// só — um único episódio é barulhento demais para servir de critério de seleção sozinho
+    /// (nascimento, velocidade e certeza dos alvos são sorteados; o MESMO genoma tira um episódio
+    /// fácil ou difícil só por sorte). Com pouco mais de um cenário por avaliação, esse ruído de
+    /// ambiente passa a dominar sobre a diferença real de qualidade entre genomas, e a seleção
+    /// por torneio (e até o elitismo) vira quase um sorteio — exatamente o sintoma de "fitness
+    /// não evolui de verdade" apesar do algoritmo genético em si estar correto.
+    /// </summary>
+    public double AvaliarFitness(double[] genoma, IReadOnlyList<int> seeds)
+    {
+        double soma = 0;
+        foreach (int seed in seeds)
+        {
+            soma += ExecutarEpisodioRapido(genoma, seed).FitnessTotal;
+        }
+        return soma / seeds.Count;
     }
 
     /// <summary>Avança o episódio em <paramref name="dt"/> segundos: nascimento, movimento, seleção de torre e decisão de disparo.</summary>
@@ -150,9 +173,11 @@ public sealed class AmbienteTreinamento
             VelocidadeY = velocidade * Math.Sin(anguloMovimento),
             VelocidadeMetrosPorSegundo = velocidade,
             Quadrante = QuadrantHelper.Determine(x, y),
-            // Simula a variação de confiança da identificação por câmera no sistema real — a
-            // rede precisa aprender a esperar a certeza subir em vez de disparar cedo demais.
-            Certeza = estado.Rng.NextDouble()
+            // Certeza nasce baixa e SOBE com o tempo de observação (ver AlvoTreinamento.Certeza)
+            // — nunca fica presa abaixo do limiar para sempre; só demora mais ou menos conforme
+            // a taxa sorteada aqui.
+            CertezaBase = 0.20 + estado.Rng.NextDouble() * 0.30,
+            TaxaCrescimentoCertezaPorSegundo = 0.08 + estado.Rng.NextDouble() * 0.17
         });
     }
 
@@ -163,6 +188,7 @@ public sealed class AmbienteTreinamento
             alvo.X += alvo.VelocidadeX * dt;
             alvo.Y += alvo.VelocidadeY * dt;
             alvo.Quadrante = QuadrantHelper.Determine(alvo.X, alvo.Y);
+            alvo.TempoDeVidaSegundos += dt;
 
             if (alvo.TorreSelecionadaId is not null)
             {
@@ -239,7 +265,11 @@ public sealed class AmbienteTreinamento
             // Erro probabilístico crescendo com a velocidade do alvo (mesma regra do sistema
             // real — ver CalculadoraErroDisparo): alvo rápido escapando de uma torre sozinha é o
             // sinal de fitness que empurra a rede a não demorar tanto para comprometer/disparar.
-            if (estado.Rng.NextDouble() < CalculadoraErroDisparo.ProbabilidadeDeErro(alvo.VelocidadeMetrosPorSegundo)) continue;
+            if (estado.Rng.NextDouble() < CalculadoraErroDisparo.ProbabilidadeDeErro(alvo.VelocidadeMetrosPorSegundo))
+            {
+                estado.TirosErrados++;
+                continue;
+            }
 
             alvo.Abatido = true;
             alvo.Ativo = false;

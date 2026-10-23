@@ -261,6 +261,22 @@ ORDER BY ID DESC LIMIT 300)`) — não é um TTL por data, é estritamente "os 3
 Uma linha por **geração** (não por indivíduo da população), com `ALVOS_ABATIDOS`/
 `ALVOS_ESCAPADOS` do melhor genoma daquela geração.
 
+### `marcos_fitness_treinamento`
+Fitness agregado (médio e melhor) de cada bloco de 500 gerações de treinamento — complementar a
+`historico_treinamento_geracoes`, mas SEM limite de linhas: um marco a cada 500 gerações nunca
+acumula volume relevante, e é exatamente a tendência de longo prazo (sem o ruído geração a
+geração) que o painel "Estatísticas de Treinamento" (exclusivo do Administrador) precisa. Só
+inserção; `GeracaoMarco` é único.
+
+### `instantaneos_comportamento_melhor_gene`
+Retrato completo do melhor genoma a cada 1.000 gerações — pontuação, decisões (abatidos/
+escapados/tiros errados), taxas derivadas (acerto, cobertura) e o **genoma inteiro serializado**
+em `GenomaJson`, para poder recarregar e reproduzir exatamente aquele comportamento depois. Só
+inserção, sem limite de linhas e `GeracaoMarco` único — nunca sobrescrito por gerações
+seguintes, de propósito: é o histórico comparativo marco a marco que permite estudar caso a caso
+se a evolução do treinamento é real ou só oscilação de ruído (ver
+`TreinamentoControladorViewModel.RegistrarInstantaneoDeComportamentoSeCompletouBloco`).
+
 ### `classificacoes_alvo`
 Auditoria de mudança de grau de perigosidade (`Baixo`/`Medio`/`Alto`/`Critico`) conforme a
 velocidade estimada do alvo — `Helpers/ClassificadorPerigoAlvo.cs`. Só inserção, e só quando o

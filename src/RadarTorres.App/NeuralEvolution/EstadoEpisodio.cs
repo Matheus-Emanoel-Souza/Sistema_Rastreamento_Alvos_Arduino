@@ -20,6 +20,9 @@ public sealed class EstadoEpisodio
     public int AlvosAbatidos { get; set; }
     public int AlvosEscapados { get; set; }
 
+    /// <summary>Disparos autorizados pela heurística/rede que erraram por sorte (ver CalculadoraErroDisparo) — distinto de fuga (nem chegou a disparar) e de abate.</summary>
+    public int TirosErrados { get; set; }
+
     public bool Finalizado { get; set; }
 
     /// <summary>Instante (em <see cref="TempoDecorridoSegundos"/>) do próximo surgimento de alvo.</summary>

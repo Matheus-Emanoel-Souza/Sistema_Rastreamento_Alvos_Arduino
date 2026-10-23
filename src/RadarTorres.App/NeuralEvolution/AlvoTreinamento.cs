@@ -23,12 +23,35 @@ public sealed class AlvoTreinamento
     public bool Abatido { get; set; }
 
     /// <summary>
-    /// Certeza (0 a 1) de que isto é realmente um alvo — sorteada no nascimento, simula a
-    /// variação de confiança da identificação por câmera no sistema real. Só acima do limiar
-    /// configurado (<see cref="ParametrosTreinamento.LimiarConfiancaDisparoFracao"/>) o disparo é
-    /// permitido, pela mesma regra do sistema real.
+    /// Certeza (0 a 1) com que a câmera identificou o alvo no instante do nascimento — ponto de
+    /// partida de <see cref="Certeza"/>, que SOBE com o tempo de observação (ver
+    /// <see cref="TaxaCrescimentoCertezaPorSegundo"/>). Não é a certeza final: usar sempre
+    /// <see cref="Certeza"/> para decidir disparo.
     /// </summary>
-    public double Certeza { get; init; } = 1.0;
+    public double CertezaBase { get; init; }
+
+    /// <summary>
+    /// Velocidade (fração de certeza por segundo) com que a identificação do alvo fica mais
+    /// confiável quanto mais tempo ele é observado — simula a câmera "confirmando" o alvo ao
+    /// longo de vários quadros, como no sistema real
+    /// (<see cref="Services.IOcorrenciaDeteccaoService.ConfiancaAtualizada"/>). Sorteada no
+    /// nascimento (ver <see cref="AmbienteTreinamento"/>) para variar de alvo a alvo.
+    /// </summary>
+    public double TaxaCrescimentoCertezaPorSegundo { get; init; }
+
+    /// <summary>Tempo (s) desde o nascimento deste alvo — incrementado em <see cref="AmbienteTreinamento"/>, alimenta <see cref="Certeza"/>.</summary>
+    public double TempoDeVidaSegundos { get; set; }
+
+    /// <summary>
+    /// Certeza ATUAL (0 a 1) de que isto é realmente um alvo — cresce com <see cref="TempoDeVidaSegundos"/>
+    /// a partir de <see cref="CertezaBase"/>. Diferente de uma certeza fixa sorteada uma vez (que
+    /// deixaria uma fração fixa de alvos permanentemente abaixo do limiar, sem relação nenhuma
+    /// com a qualidade do controlador), crescer com o tempo dá à rede uma decisão real para
+    /// aprender: esperar a certeza subir custa tempo de reação, então vale a pena só até certo
+    /// ponto — ver <see cref="ParametrosTreinamento.LimiarConfiancaDisparoFracao"/>, mesma regra
+    /// de disparo do sistema real.
+    /// </summary>
+    public double Certeza => System.Math.Clamp(CertezaBase + TaxaCrescimentoCertezaPorSegundo * TempoDeVidaSegundos, 0.0, 1.0);
 
     /// <summary>Já aplicada a penalidade de "perda de ponto da geração" por ter chegado perto demais da base sem ser abatido nem ter escapado de fato — evita descontar a cada passo enquanto o alvo continua dentro do raio.</summary>
     public bool PenalidadeProximidadeAplicada { get; set; }

@@ -34,9 +34,18 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Tamanho do bloco de gerações para cada marco registrado em <see cref="IMarcoFitnessTreinamentoRepository"/> (Requisito "fitness médio a cada 500 gerações").</summary>
     private const int TamanhoBlocoMarco = 500;
 
+    /// <summary>
+    /// A cada quantas gerações o comportamento completo do melhor genoma é fotografado e
+    /// persistido (ver <see cref="IInstantaneoComportamentoRepository"/>) — distinto do marco de
+    /// fitness agregado acima: aqui é um retrato detalhado (decisões/acertos/erros/genoma
+    /// inteiro) de uma geração específica, não uma média de bloco, por isso o intervalo maior.
+    /// </summary>
+    private const int TamanhoBlocoInstantaneo = 1000;
+
     private readonly ILoggingService _logger;
     private readonly IHistoricoTreinamentoRepository _historicoRepository;
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
+    private readonly IInstantaneoComportamentoRepository _instantaneoRepository;
     private readonly DispatcherTimer _timerPreview;
     private readonly Random _randomGenomaInicial = new();
 
@@ -81,11 +90,13 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     public TreinamentoControladorViewModel(
         ILoggingService logger,
         IHistoricoTreinamentoRepository historicoRepository,
-        IMarcoFitnessTreinamentoRepository marcoFitnessRepository)
+        IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
+        IInstantaneoComportamentoRepository instantaneoRepository)
     {
         _logger = logger;
         _historicoRepository = historicoRepository;
         _marcoFitnessRepository = marcoFitnessRepository;
+        _instantaneoRepository = instantaneoRepository;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
         ConstruirDiagramaRedeNeural();
@@ -336,13 +347,19 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         while (!token.IsCancellationRequested)
         {
-            // Mesma seed para todos os indivíduos desta geração: sem isso, cada genoma enfrentava
-            // um episódio sorteado diferente (spawn/velocidade/ângulo), e o fitness comparava
-            // sorte, não qualidade do genoma — selação quase aleatória, média sem evoluir. A seed
-            // muda de geração para geração para a rede não ficar especializada num único cenário.
-            int seedDaGeracao = algoritmo.GeracaoAtual;
+            // MESMAS seeds para todos os indivíduos desta geração: sem isso, cada genoma
+            // enfrentava um episódio sorteado diferente (spawn/velocidade/certeza), e o fitness
+            // comparava sorte, não qualidade do genoma — seleção quase aleatória, média sem
+            // evoluir de verdade. Mais de uma seed por geração (ver EpisodiosPorAvaliacao)
+            // reduz ainda mais esse ruído: um único cenário por geração continuava deixando
+            // margem para um genoma "sortudo" vencer um melhor só por calhar de um cenário mais
+            // fácil. As seeds mudam de geração para geração para a rede não ficar especializada
+            // num punhado fixo de cenários.
+            int[] seedsDaGeracao = Enumerable.Range(0, Math.Max(1, _ambiente.Parametros.EpisodiosPorAvaliacao))
+                .Select(i => algoritmo.GeracaoAtual * 1000 + i)
+                .ToArray();
             ResultadoGeracao resultado = algoritmo.EvoluirGeracao(
-                genoma => _ambiente.ExecutarEpisodioRapido(genoma, seedDaGeracao).FitnessTotal);
+                genoma => _ambiente.AvaliarFitness(genoma, seedsDaGeracao));
 
             _melhorGenomaAtual = resultado.MelhorGenoma;
 
@@ -352,6 +369,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             EpisodioResultado comportamento = _ambiente.ExecutarEpisodioRapido(resultado.MelhorGenoma, seed: resultado.Geracao);
             RegistrarHistorico(resultado, comportamento);
             RegistrarMarcoFitnessSeCompletouBloco(resultado);
+            RegistrarInstantaneoDeComportamentoSeCompletouBloco(resultado, comportamento);
             AtualizarRegras(resultado.MelhorGenoma);
             AtualizarDiagramaRedeNeural(resultado.MelhorGenoma);
 
@@ -402,6 +420,47 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _somaFitnessMedioBloco = 0;
         _melhorFitnessBloco = 0;
         _contagemGeracoesNoBloco = 0;
+    }
+
+    /// <summary>
+    /// A cada <see cref="TamanhoBlocoInstantaneo"/> gerações, fotografa o comportamento completo
+    /// do melhor genoma ATUAL (decisões/acertos/erros/genoma inteiro) e persiste — nunca
+    /// sobrescrito por gerações seguintes (ver <see cref="IInstantaneoComportamentoRepository"/>),
+    /// então dá para comparar marco a marco depois e verificar se a evolução é real: se a taxa de
+    /// acerto/cobertura não melhora de um marco para o outro, é sinal de estagnação de verdade,
+    /// não só impressão.
+    /// </summary>
+    private void RegistrarInstantaneoDeComportamentoSeCompletouBloco(ResultadoGeracao resultado, EpisodioResultado comportamento)
+    {
+        if (resultado.Geracao % TamanhoBlocoInstantaneo != 0) return;
+
+        int tentativasDeDisparo = comportamento.AlvosAbatidos + comportamento.TirosErrados;
+        int alvosQueApareceram = comportamento.AlvosAbatidos + comportamento.AlvosEscapados;
+
+        var instantaneo = new InstantaneoComportamentoMelhorGene
+        {
+            GeracaoMarco = resultado.Geracao,
+            Fitness = resultado.MelhorFitness,
+            AlvosAbatidos = comportamento.AlvosAbatidos,
+            AlvosEscapados = comportamento.AlvosEscapados,
+            TirosErrados = comportamento.TirosErrados,
+            TaxaDeAcerto = tentativasDeDisparo > 0 ? (double)comportamento.AlvosAbatidos / tentativasDeDisparo : null,
+            TaxaDeCobertura = alvosQueApareceram > 0 ? (double)comportamento.AlvosAbatidos / alvosQueApareceram : null,
+            GenomaJson = JsonSerializer.Serialize(resultado.MelhorGenoma),
+            DataHora = DateTime.Now
+        };
+
+        try
+        {
+            _instantaneoRepository.Registrar(instantaneo);
+            _logger.Success(
+                $"Instantâneo de comportamento registrado: geração {instantaneo.GeracaoMarco}, " +
+                $"acerto {instantaneo.TaxaDeAcerto:P0}, cobertura {instantaneo.TaxaDeCobertura:P0}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível registrar o instantâneo de comportamento da geração {instantaneo.GeracaoMarco}: {ex.Message}");
+        }
     }
 
     private void RegistrarHistorico(ResultadoGeracao resultado, EpisodioResultado comportamento)

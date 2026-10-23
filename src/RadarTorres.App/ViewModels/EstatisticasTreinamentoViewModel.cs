@@ -20,6 +20,7 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
 {
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
     private readonly IHistoricoTreinamentoRepository _historicoRepository;
+    private readonly IInstantaneoComportamentoRepository _instantaneoRepository;
     private readonly ILoggingService _logger;
 
     public ObservableCollection<MarcoFitnessTreinamento> Marcos { get; } = new();
@@ -27,15 +28,20 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
     /// <summary>Últimas gerações (até 300), geração a geração — mesma fonte da tela "Treinamento do Controlador" (ver IHistoricoTreinamentoRepository), para o gráfico granular também aparecer aqui.</summary>
     public ObservableCollection<HistoricoGeracaoTreinamento> HistoricoRecente { get; } = new();
 
+    /// <summary>Retrato completo do melhor genoma a cada 1.000 gerações (decisões/acertos/erros/genoma) — ver IInstantaneoComportamentoRepository. Nunca sobrescrito; é o histórico comparativo marco a marco.</summary>
+    public ObservableCollection<InstantaneoComportamentoMelhorGene> Instantaneos { get; } = new();
+
     public RelayCommand AtualizarCommand { get; }
 
     public EstatisticasTreinamentoViewModel(
         IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
         IHistoricoTreinamentoRepository historicoRepository,
+        IInstantaneoComportamentoRepository instantaneoRepository,
         ILoggingService logger)
     {
         _marcoFitnessRepository = marcoFitnessRepository;
         _historicoRepository = historicoRepository;
+        _instantaneoRepository = instantaneoRepository;
         _logger = logger;
 
         AtualizarCommand = new RelayCommand(Carregar);
@@ -58,17 +64,26 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
                 HistoricoRecente.Add(registro);
             }
 
+            Instantaneos.Clear();
+            foreach (InstantaneoComportamentoMelhorGene instantaneo in _instantaneoRepository.ObterTodos())
+            {
+                Instantaneos.Add(instantaneo);
+            }
+
             OnPropertyChanged(nameof(TemDados));
             OnPropertyChanged(nameof(UltimoMarco));
             OnPropertyChanged(nameof(FitnessMedioGeral));
             OnPropertyChanged(nameof(MelhorFitnessGeral));
             OnPropertyChanged(nameof(MensagemSemDados));
+            OnPropertyChanged(nameof(TemInstantaneos));
         }
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível carregar os marcos de treinamento: {ex.Message}");
         }
     }
+
+    public bool TemInstantaneos => Instantaneos.Count > 0;
 
     public bool TemDados => Marcos.Count > 0;
 
