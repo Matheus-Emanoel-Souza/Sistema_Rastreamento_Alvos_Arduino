@@ -70,4 +70,24 @@ public sealed class AlgoritmoGeneticoTests
 
         Assert.Equal(13, resultado.MelhorGenoma.Length);
     }
+
+    /// <summary>
+    /// Regressão: <see cref="ResultadoGeracao.MelhorGenoma"/> devolvido precisa ser o genoma que
+    /// REALMENTE tirou <see cref="ResultadoGeracao.MelhorFitness"/> nesta geração — reavaliar o
+    /// genoma devolvido com a mesma função de fitness tem que bater com o valor relatado.
+    /// Pegava "de graça" quando elitismo>=1 (a troca de população acontecia DEPOIS de capturar o
+    /// melhor), mas com elitismo=0 a implementação antiga devolvia um FILHO recém-cruzado da
+    /// população nova, não o melhor de verdade — por isso o teste cobre elitismo=0 também.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    public void EvoluirGeracao_MelhorGenomaDevolvido_ReproduzOMelhorFitnessRelatado(int elitismo)
+    {
+        var algoritmo = new AlgoritmoGenetico(tamanhoGenoma: 8, tamanhoPopulacao: 16, elitismo: elitismo, seed: 55);
+
+        ResultadoGeracao resultado = algoritmo.EvoluirGeracao(FitnessSomaDosGenes);
+
+        Assert.Equal(resultado.MelhorFitness, FitnessSomaDosGenes(resultado.MelhorGenoma), precision: 10);
+    }
 }
