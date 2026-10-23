@@ -284,6 +284,25 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         }
     }
 
+    // ---------------------------------------------------------------- Disparo
+
+    public double ConfiancaMinimaDisparoPercentual => ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual;
+
+    /// <summary>Certeza mínima (%) exigida da câmera para autorizar disparo automático — nunca abaixo de <see cref="ConfiancaMinimaDisparoPercentual"/>.</summary>
+    public double LimiarConfiancaDisparoPercentual
+    {
+        get => _edicao.LimiarConfiancaDisparoPercentual;
+        set
+        {
+            double ajustado = Math.Clamp(value, ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual, 100);
+            if (Math.Abs(_edicao.LimiarConfiancaDisparoPercentual - ajustado) < 0.5) return;
+
+            _edicao.LimiarConfiancaDisparoPercentual = ajustado;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
     // ---------------------------------------------------------------- Estado da tela
 
     private bool _temAlteracoesNaoSalvas;
@@ -424,5 +443,6 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         OnPropertyChanged(nameof(HeuristicaCorredorDeTiroAtiva));
         OnPropertyChanged(nameof(HeuristicaBalanceamentoDeCargaAtiva));
         OnPropertyChanged(nameof(HeuristicaPredicaoDeTrajetoriaAtiva));
+        OnPropertyChanged(nameof(LimiarConfiancaDisparoPercentual));
     }
 }
