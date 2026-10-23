@@ -144,6 +144,16 @@ Table historico_treinamento_geracoes {
   Note: 'Tabela HistoricoTreinamentoGeracoes (SQLite) — SqliteHistoricoTreinamentoRepository. Buffer circular limitado a 300 linhas (descarta o ID mais antigo ao estourar); uma linha por geração treinada na tela "Treinamento do Controlador" (neuroevolução, ver src/RadarTorres.App/NeuralEvolution/).'
 }
 
+Table classificacoes_alvo {
+  id integer [primary key]
+  objeto_detectado_id integer [note: 'FK para objetos_detectados.id; NULL antes da primeira detecção ser gravada']
+  velocidade_metros_por_segundo float
+  grau varchar [note: 'Baixo | Medio | Alto | Critico — ver Helpers/ClassificadorPerigoAlvo.cs']
+  data_hora timestamp
+
+  Note: 'Tabela ClassificacoesAlvo (SQLite) — SqliteClassificacaoPerigoRepository. Só inserção (auditoria); uma linha por MUDANÇA de grau, não por leitura.'
+}
+
 Table arduino_settings {
   id integer [primary key, default: 1, note: 'singleton — sempre 1 linha']
   cli_path varchar
@@ -162,6 +172,8 @@ Ref: dashboard_card_layout.usuario_id > usuarios.id // many-to-one
 Ref: acoes_realizadas.id_objeto > objetos_detectados.id // many-to-one, opcional
 
 Ref: modo_atual_torre.id_user > usuarios.id // many-to-one, opcional
+
+Ref: classificacoes_alvo.objeto_detectado_id > objetos_detectados.id // many-to-one, opcional
 
 // Fora deste espelho — objetos só em memória, nunca persistidos em disco:
 //   Target, Tower, SensorReading, LogEntry, CameraDevice,

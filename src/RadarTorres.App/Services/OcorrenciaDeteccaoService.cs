@@ -65,6 +65,19 @@ public sealed class OcorrenciaDeteccaoService : IOcorrenciaDeteccaoService
         (double x, double y, double anguloGraus) = Posicionar(contexto);
         Quadrant quadrante = ResolverQuadrante(contexto.Camera, x, y);
 
+        // Cada câmera defende seu quadrante olhando PARA FORA, em direção à borda — nunca para
+        // dentro do próprio quadrado junto à base. Uma detecção que caiu aqui é ruído (reflexo,
+        // objeto da própria base, erro de ângulo/distância estimado), não um alvo de verdade se
+        // aproximando: descartada antes até de contar para a certeza do quadrante.
+        double distanciaDaBase = DistanceCalculator.Euclidean(0, 0, x, y);
+        if (distanciaDaBase < AppConfig.Current.RadarSettings.RaioQuadradoDefendidoMetros)
+        {
+            _logger.Warning(
+                $"Detecção da câmera \"{contexto.Camera.Name}\" descartada — caiu a {distanciaDaBase:0.00} m da base, " +
+                $"dentro do quadrado que ela mesma defende (olhando para dentro em vez de para fora).");
+            return new ResultadoRegistroOcorrencia(null, Criada: false, quadrante, AguardandoConfirmacao: false);
+        }
+
         // Atualiza a certeza do quadrante a cada rodada (mesmo antes de confirmações
         // suficientes para abrir ocorrência) — é o que autoriza (ou não) o disparo automático,
         // então não pode esperar o histórico decidir se vale registrar.

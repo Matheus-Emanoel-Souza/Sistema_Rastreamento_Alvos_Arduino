@@ -74,6 +74,7 @@ public sealed class TargetTrackingService : ITargetTrackingService, IDisposable
                 existing.Quadrant = quadrant;
                 existing.LastUpdate = now;
                 existing.IsActive = true;
+                existing.GrauPerigo = ClassificadorPerigoAlvo.Classificar(existing.SpeedMetersPerSecond);
 
                 TargetUpdated?.Invoke(this, existing);
             }

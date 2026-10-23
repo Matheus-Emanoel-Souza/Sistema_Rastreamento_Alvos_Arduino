@@ -42,6 +42,15 @@ public sealed class RadarSettings
     public int TargetTimeoutMs { get; set; } = 5000;
     public int RefreshRateMs { get; set; } = 150;
     public int DistanceRingCount { get; set; } = 8;
+
+    /// <summary>
+    /// Raio (m) do quadrado que cada câmera defende junto à base — uma câmera olha PARA FORA, em
+    /// direção à borda do seu quadrante, nunca para dentro desta área. Uma detecção cujo X/Y
+    /// calculado cai aqui dentro é descartada como ruído (ver
+    /// <see cref="Services.OcorrenciaDeteccaoService.RegistrarDeteccao"/>), não um alvo de verdade
+    /// se aproximando.
+    /// </summary>
+    public double RaioQuadradoDefendidoMetros { get; set; } = 0.5;
 }
 
 /// <summary>Configuração declarativa de uma torre, lida do JSON e usada para instanciar <see cref="Models.Tower"/>.</summary>

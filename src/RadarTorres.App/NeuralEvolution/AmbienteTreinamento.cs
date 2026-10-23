@@ -236,6 +236,11 @@ public sealed class AmbienteTreinamento
 
             if (!controlador.DecidirDisparo(alvo, torre)) continue;
 
+            // Erro probabilístico crescendo com a velocidade do alvo (mesma regra do sistema
+            // real — ver CalculadoraErroDisparo): alvo rápido escapando de uma torre sozinha é o
+            // sinal de fitness que empurra a rede a não demorar tanto para comprometer/disparar.
+            if (estado.Rng.NextDouble() < CalculadoraErroDisparo.ProbabilidadeDeErro(alvo.VelocidadeMetrosPorSegundo)) continue;
+
             alvo.Abatido = true;
             alvo.Ativo = false;
             estado.AlvosAbatidos++;
