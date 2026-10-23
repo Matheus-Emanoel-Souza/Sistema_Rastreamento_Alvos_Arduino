@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using RadarTorres.App.Configuration;
 using RadarTorres.App.Models;
 using RadarTorres.App.NeuralEvolution;
 using RadarTorres.App.Repositories;
@@ -65,6 +66,16 @@ internal sealed class ZonaMortaServiceFalsa : IZonaMortaService
 internal sealed class ControladorTreinadoProviderFalso : IControladorTreinadoProvider
 {
     public RedeNeural? Rede { get; init; }
+}
+
+/// <summary>Em memória, para os testes poderem ligar/desligar as heurísticas de seleção de torre sem tocar o arquivo real do usuário.</summary>
+internal sealed class ConfiguracoesAplicativoRepositorioFalso : IConfiguracoesAplicativoRepository
+{
+    public ConfiguracoesAplicativo Atual { get; set; } = ConfiguracoesAplicativo.Padrao();
+
+    public string CaminhoArquivo => "teste://configuracoes-app.json";
+
+    public void Salvar(ConfiguracoesAplicativo configuracoes) => Atual = configuracoes;
 }
 
 /// <summary>Associação câmera → quadrante fixa, informada pelo teste.</summary>

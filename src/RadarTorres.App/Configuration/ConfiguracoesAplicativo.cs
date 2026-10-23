@@ -77,6 +77,45 @@ public sealed class ConfiguracoesAplicativo
     /// </summary>
     public bool GerarRelatorioDesempenho { get; set; } = true;
 
+    // ------------------------------------------------------------------ Heurísticas do controlador
+
+    /// <summary>
+    /// Evita trocar a torre escolhida para um alvo quando a nova candidata vencedora está
+    /// praticamente empatada com a torre já comprometida (ver
+    /// <see cref="Services.TowerSelectionService"/>) — sem isto, um alvo perto da fronteira
+    /// entre duas torres pode fazer a seleção oscilar entre elas a cada leitura do sensor,
+    /// reenviando comandos de mira (pan) sem necessidade real.
+    /// </summary>
+    public bool HeuristicaAntiOscilacaoAtiva { get; set; } = true;
+
+    /// <summary>
+    /// Permite que um alvo mais urgente (mais perto da distância mínima de segurança) "roube"
+    /// uma torre já comprometida com outro alvo bem menos urgente, em vez de ficar sem nenhuma
+    /// torre disponível enquanto a torre menos crítica continua ocupada.
+    /// </summary>
+    public bool HeuristicaPriorizacaoPorUrgenciaAtiva { get; set; } = true;
+
+    /// <summary>
+    /// Descarta uma torre candidata se a linha entre ela e o alvo atravessar uma zona morta
+    /// ativa — mesmo que o alvo em si não esteja dentro de nenhuma zona (hoje só isso é
+    /// checado). Evita escolher uma torre cujo "tiro" passaria por uma área que o sistema foi
+    /// configurado para nunca atingir.
+    /// </summary>
+    public bool HeuristicaCorredorDeTiroAtiva { get; set; } = true;
+
+    /// <summary>
+    /// Entre candidatas praticamente empatadas, prefere a torre usada com menos frequência
+    /// nesta sessão, em vez de sempre a mesma — distribui o desgaste entre torres equivalentes.
+    /// </summary>
+    public bool HeuristicaBalanceamentoDeCargaAtiva { get; set; } = true;
+
+    /// <summary>
+    /// Calcula o ângulo de mira para onde o alvo estará um instante à frente (com base na
+    /// velocidade estimada), em vez de para a posição atual dele — só afeta o ângulo de mira,
+    /// nunca qual torre é escolhida.
+    /// </summary>
+    public bool HeuristicaPredicaoDeTrajetoriaAtiva { get; set; } = true;
+
     // Nota: "registros por página" NÃO é oferecido aqui de propósito. O campo existe em
     // PreferenciasUsuario desde antes, mas nenhuma tela de histórico pagina de fato — expor o
     // controle daria a impressão de um ajuste que não produz efeito algum. Quando a paginação

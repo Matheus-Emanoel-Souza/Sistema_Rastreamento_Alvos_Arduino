@@ -138,17 +138,69 @@ flowchart TD
 7. **Último recurso ("sobrecarregada")**: se mesmo assim não houver torre livre, reusa a
    torre disponível mais próxima mesmo que já comprometida, para nunca deixar um alvo
    totalmente sem cobertura — e registra aviso de sobrecarga.
-8. Dentro da camada escolhida, calcula a distância Euclidiana do alvo até cada candidata e
-   escolhe a de menor distância.
+8. Dentro da camada escolhida, pontua cada candidata (distância Euclidiana — ou a combinação
+   heurística+rede neural treinada, se houver um controlador embutido, ver
+   [[CONTROLADOR_NEUROEVOLUTIVO]] se existir) e aplica as cinco regras adicionais da seção 7
+   (cada uma independentemente desligável em Configurações) para chegar à vencedora final.
 9. Atualiza `Target.SelectedTower`, `Target.DistanceToSelectedTower` e `Tower.AimAngleDegrees`
-   (via `BearingCalculator.AngleTo`), registra a decisão (com a camada usada) no console de
-   eventos (`LoggingService`) e atualiza o estado visual das torres (`RecomputeTowerStates`).
+   (via `CalcularAnguloDeMira` — `BearingCalculator.AngleTo` com predição de trajetória
+   opcional, regra 7.5), registra a decisão (com a camada usada) no console de eventos
+   (`LoggingService`) e atualiza o estado visual das torres (`RecomputeTowerStates`).
    O ângulo de mira é enviado ao Arduino como `AIM;TOWER=x;ANGLE=y` (ver
    [[COMUNICACAO_ARDUINO]]), girando fisicamente o eixo PAN da torre escolhida — inclusive
    quando ela está cobrindo um alvo de outro quadrante.
 10. Se o modo de operação for "Localização + Acionamento Automático", o
     `FireControlService` reavalia a regra de segurança antes de enviar (ou simular) o comando
     `FIRE`.
+
+## 7. Regras heurísticas adicionais (configuráveis)
+
+Além das camadas da seção 4, cinco regras independentes refinam a decisão final — cada uma
+com um toggle próprio em **Configurações → Heurísticas do controlador**
+(`ConfiguracoesAplicativo`), desligável sem recompilar. Com todas desligadas, o algoritmo volta
+exatamente ao comportamento descrito nas seções 1-6.
+
+### 7.1 Anti-oscilação
+
+Se o alvo já tem uma torre comprometida e ela ainda é candidata válida, e a diferença entre a
+pontuação dela e a da "vencedora crua" é menor que a margem de empate (0.3 m de distância, ou
+0.1 de pontuação quando há rede treinada), **mantém a torre atual** em vez de trocar. Sem isto,
+um alvo perto da fronteira entre duas torres poderia fazer a seleção oscilar a cada leitura do
+sensor, reenviando `AIM` sem necessidade.
+
+### 7.2 Priorização por urgência
+
+Um alvo é considerado **urgente** quando sua distância até a base é ≤ 1,5 × a distância mínima
+de segurança (`RadarSettings.MinSafetyDistanceMeters`). Ao montar o conjunto de torres
+comprometidas com outros alvos, um alvo urgente pode "tomar" a torre de outro alvo que esteja
+claramente mais longe (diferença > 1 m) e que ele próprio não seja urgente — o alvo que perdeu a
+torre simplesmente procura outra na próxima leitura, em vez de ficar com a torre reservada para
+um alvo bem menos crítico.
+
+### 7.3 Corredor de tiro
+
+Para cada torre candidata, amostra 11 pontos ao longo do segmento torre→alvo e testa cada um
+contra as zonas mortas ativas (mesmo critério de `ZonaMortaService.FindBlockingZone`, mas
+aplicado a um ponto do caminho, não só à posição do alvo). Candidatas cujo "tiro" atravessaria
+uma zona morta são descartadas — a menos que isso deixasse a camada sem NENHUMA candidata, caso
+em que a regra recua para não deixar o alvo sem cobertura.
+
+### 7.4 Balanceamento de carga
+
+Entre as candidatas dentro da margem de empate da vencedora, prefere a torre usada com menos
+frequência nesta sessão (contador em memória, reiniciado a cada abertura do aplicativo;
+empate final por `Tower.Id`). Sem isto, a mesma torre é sempre escolhida quando duas opções são
+praticamente equivalentes.
+
+### 7.5 Predição de trajetória
+
+`Target` passou a guardar `VelocityXMetersPerSecond`/`VelocityYMetersPerSecond`, calculados por
+`TargetTrackingService.ProcessReading` por diferença finita entre a leitura atual e a anterior
+(`Δposição / Δtempo`; zero na primeira leitura de cada alvo). Com a regra ativa, o ângulo de
+mira é calculado para a posição prevista 0,3 s à frente (`posição_atual + velocidade × 0,3`),
+em vez da posição atual — só afeta `Tower.AimAngleDegrees`, nunca qual torre é escolhida.
+Essa mesma velocidade real também passou a alimentar a entrada "velocidade do alvo" da rede
+neural treinada (antes um valor fixo, por o sistema não medir velocidade ainda).
 
 ### Exemplo numérico completo
 
