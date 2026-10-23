@@ -107,6 +107,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
             _logger.Warning($"Alvo #{target.Id:D2}: {zoneReason}");
             target.SelectedTower = null;
             target.DistanceToSelectedTower = 0;
+            target.EngagingTowers = [];
             return new TowerSelectionResult(false, null, 0, zoneReason);
         }
 
@@ -118,6 +119,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
             _logger.Warning($"Alvo #{target.Id:D2}: {reason}");
             target.SelectedTower = null;
             target.DistanceToSelectedTower = 0;
+            target.EngagingTowers = [];
             return new TowerSelectionResult(false, null, 0, reason);
         }
 
@@ -189,16 +191,70 @@ public sealed class TowerSelectionService : ITowerSelectionService
             _logger.Warning($"Alvo #{target.Id:D2}: {reason}");
             target.SelectedTower = null;
             target.DistanceToSelectedTower = 0;
+            target.EngagingTowers = [];
             return new TowerSelectionResult(false, null, 0, reason);
         }
 
         target.SelectedTower = best;
         target.DistanceToSelectedTower = bestDistance;
         best.AimAngleDegrees = CalcularAnguloDeMira(best, target);
+        target.EngagingTowers = ComputarTorresEngajando(target, available);
 
         _logger.Info($"{best.Name} selecionada para o alvo #{target.Id:D2} ({layerLabel}, dist={bestDistance:0.00} m, mira={best.AimAngleDegrees:0.0}°)");
 
         return new TowerSelectionResult(true, best, bestDistance, $"OK ({layerLabel})");
+    }
+
+    /// <summary>
+    /// Todas as torres autorizadas a abrir fogo contra este alvo agora — não só a "selecionada"
+    /// (<see cref="Target.SelectedTower"/>, que é só a torre principal/mira). Uma torre entra se
+    /// sua própria câmera consegue ver o alvo: do quadrante do próprio alvo (câmera de casa
+    /// sempre vê), ou de um quadrante vizinho desde que o alvo esteja dentro do alcance máximo
+    /// de detecção da câmera (<see cref="RadarSettings.MaxDetectionDistanceMeters"/>) — câmeras
+    /// diferentes podem identificar e disparar no MESMO alvo ao mesmo tempo. Fica de fora quem
+    /// tiver outro canhão literalmente na frente da linha de tiro.
+    /// </summary>
+    private static List<Tower> ComputarTorresEngajando(Target target, List<Tower> available)
+    {
+        double alcanceCameraMetros = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+
+        List<Tower> candidatas = available.Where(t =>
+            t.PreferredQuadrant == target.Quadrant ||
+            (QuadrantHelper.AreAdjacent(t.PreferredQuadrant, target.Quadrant) && target.Distance <= alcanceCameraMetros))
+            .ToList();
+
+        return candidatas.Where(t => !OutraTorreNaFrenteDoTiro(t, target, available)).ToList();
+    }
+
+    /// <summary>
+    /// Verdadeiro se outra torre qualquer (não só as engajando este alvo) estiver posicionada
+    /// entre <paramref name="torre"/> e o alvo, dentro de um corredor estreito — ela literalmente
+    /// bloquearia o tiro de <paramref name="torre"/> em direção ao alvo.
+    /// </summary>
+    private static bool OutraTorreNaFrenteDoTiro(Tower torre, Target alvo, IReadOnlyList<Tower> todasTorres)
+    {
+        const double larguraCorredorMetros = 0.3;
+
+        double dx = alvo.X - torre.X;
+        double dy = alvo.Y - torre.Y;
+        double comprimentoQuadrado = dx * dx + dy * dy;
+        if (comprimentoQuadrado < 0.0001) return false;
+
+        foreach (Tower outra in todasTorres)
+        {
+            if (outra.Id == torre.Id) continue;
+
+            double t = ((outra.X - torre.X) * dx + (outra.Y - torre.Y) * dy) / comprimentoQuadrado;
+            if (t <= 0.05 || t >= 0.95) continue; // fora do segmento torre→alvo (antes da torre ou depois do alvo)
+
+            double projX = torre.X + dx * t;
+            double projY = torre.Y + dy * t;
+            double distanciaPerpendicular = DistanceCalculator.Euclidean(outra.X, outra.Y, projX, projY);
+
+            if (distanciaPerpendicular <= larguraCorredorMetros) return true;
+        }
+
+        return false;
     }
 
     /// <summary>

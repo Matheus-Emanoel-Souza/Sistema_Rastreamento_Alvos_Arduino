@@ -75,8 +75,11 @@ public sealed class ConfiguracoesAplicativoRepository : IConfiguracoesAplicativo
             }
 
             string json = File.ReadAllText(CaminhoArquivo);
-            return JsonSerializer.Deserialize<ConfiguracoesAplicativo>(json, SerializerOptions)
+            ConfiguracoesAplicativo configuracoes = JsonSerializer.Deserialize<ConfiguracoesAplicativo>(json, SerializerOptions)
                 ?? ConfiguracoesAplicativo.Padrao();
+            configuracoes.LimiarConfiancaDisparoPercentual = Math.Max(
+                ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual, configuracoes.LimiarConfiancaDisparoPercentual);
+            return configuracoes;
         }
         catch (Exception ex)
         {
@@ -118,6 +121,8 @@ public sealed class ConfiguracoesAplicativoRepository : IConfiguracoesAplicativo
 
     public void Salvar(ConfiguracoesAplicativo configuracoes)
     {
+        configuracoes.LimiarConfiancaDisparoPercentual = Math.Max(
+            ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual, configuracoes.LimiarConfiancaDisparoPercentual);
         _atual = configuracoes;
 
         try

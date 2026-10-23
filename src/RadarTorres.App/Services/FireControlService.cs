@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using RadarTorres.App.Models;
@@ -26,6 +27,7 @@ public sealed class FireControlService : IFireControlService
     private readonly IAcaoRealizadaRepository _acaoRepository;
     private readonly IZonaMortaService _zonaMortaService;
     private readonly IOcorrenciaDeteccaoService _ocorrenciaService;
+    private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly Dispatcher _dispatcher;
 
     public FireControlService(
@@ -33,47 +35,57 @@ public sealed class FireControlService : IFireControlService
         IAcaoRealizadaRepository acaoRepository,
         IZonaMortaService zonaMortaService,
         IOcorrenciaDeteccaoService ocorrenciaService,
+        IConfiguracoesAplicativoRepository configuracoes,
         Dispatcher? dispatcher = null)
     {
         _logger = logger;
         _acaoRepository = acaoRepository;
         _zonaMortaService = zonaMortaService;
         _ocorrenciaService = ocorrenciaService;
+        _configuracoes = configuracoes;
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
     }
 
-    public FireAuthorizationResult Authorize(Target target, double minSafetyDistanceMeters)
+    public FireAuthorizationResult Authorize(Target target, Tower tower, SystemMode currentMode)
     {
         if (!target.IsActive)
         {
             return new FireAuthorizationResult(false, "ALVO NÃO ESTÁ MAIS ATIVO");
         }
 
-        // Checado antes/independente da torre selecionada: mesmo que uma torre já tivesse
-        // sido escolhida antes de a zona ser criada/ativada, nenhum acionamento (manual ou
-        // automático) sai enquanto o alvo estiver dentro de uma zona morta ativa.
+        if (currentMode != SystemMode.Disparar)
+        {
+            return new FireAuthorizationResult(false, "ACIONAMENTO BLOQUEADO — MODO DO SISTEMA NÃO PERMITE DISPARO");
+        }
+
+        // Checado independente da torre: mesmo que uma torre já tivesse sido escolhida antes de
+        // a zona ser criada/ativada, nenhum acionamento (manual ou automático) sai enquanto o
+        // alvo estiver dentro de uma zona morta ativa — único critério ligado à posição do
+        // alvo. A distância até o alvo NÃO bloqueia disparo.
         ZonaMorta? blockingZone = _zonaMortaService.FindBlockingZone(target);
         if (blockingZone is not null)
         {
             return new FireAuthorizationResult(false, $"ACIONAMENTO BLOQUEADO — ALVO EM ZONA MORTA ({blockingZone.Name} — {blockingZone.Description})");
         }
 
-        if (target.SelectedTower is null)
+        double limiarPercentual = _configuracoes.Atual.LimiarConfiancaDisparoPercentual;
+        double confiancaPercentual = target.Confidence * 100;
+        if (confiancaPercentual < limiarPercentual)
         {
-            return new FireAuthorizationResult(false, "NENHUMA TORRE SELECIONADA PARA ESTE ALVO");
+            return new FireAuthorizationResult(false, $"ACIONAMENTO BLOQUEADO — CERTEZA INSUFICIENTE ({confiancaPercentual:0}% < {limiarPercentual:0}%)");
         }
 
-        if (target.Distance < minSafetyDistanceMeters)
+        if (!target.EngagingTowers.Any(t => t.Id == tower.Id))
         {
-            return new FireAuthorizationResult(false, "ACIONAMENTO BLOQUEADO — ALVO DENTRO DA DISTÂNCIA MÍNIMA DE SEGURANÇA");
+            return new FireAuthorizationResult(false, $"ACIONAMENTO BLOQUEADO — {tower.Name} SEM LINHA DE TIRO LIVRE PARA ESTE ALVO (OUTRO CANHÃO NA FRENTE OU FORA DE ALCANCE DE CÂMERA)");
         }
 
         return new FireAuthorizationResult(true, "AUTORIZADO");
     }
 
-    public async Task<bool> TryFireAsync(Target target, ISerialCommunicationService? serialService, bool simulationMode, double minSafetyDistanceMeters)
+    public async Task<bool> TryFireAsync(Target target, Tower tower, ISerialCommunicationService? serialService, bool simulationMode, SystemMode currentMode)
     {
-        FireAuthorizationResult authorization = Authorize(target, minSafetyDistanceMeters);
+        FireAuthorizationResult authorization = Authorize(target, tower, currentMode);
 
         if (!authorization.Authorized)
         {
@@ -81,7 +93,6 @@ public sealed class FireControlService : IFireControlService
             return false;
         }
 
-        Tower tower = target.SelectedTower!;
         tower.State = TowerState.Firing;
 
         string command = SerialProtocolParser.BuildFire(tower.Id, target.Id);

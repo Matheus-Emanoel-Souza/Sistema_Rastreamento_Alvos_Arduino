@@ -116,12 +116,16 @@ public partial class RadarControl : UserControl
     private const double MaxZoom = 3.0;
     private const double ZoomStep = 0.25;
 
-    // Alcance efetivo = MaxDetectionDistanceMeters (appsettings.json, hoje 2.5m) * multiplicador.
-    // Limite máximo travado em 1.6x propositalmente: com o alcance real dos sensores (2.5m),
-    // isso trava o "zoom out" em 4.0m no total — não faz sentido "ver mais longe" que uma
-    // distância que o hardware nunca vai detectar. Step bem mais fino (era 0.5, equivalente a
-    // 1.25m por clique) para fracionar mais a faixa entre mínima e máxima, já que a escala
-    // geral encolheu.
+    /// <summary>
+    /// Limite do campo delimitado pelo projeto (Requisito "círculo maior de 5 metros") — é o raio
+    /// externo fixo do radar, independente do alcance real da câmera. O alcance máximo de
+    /// detecção por câmera (<see cref="Configuration.RadarSettings.MaxDetectionDistanceMeters"/>,
+    /// hoje 2,5m) é desenhado como um anel INTERNO a este círculo (ver <see cref="DrawStaticLayer"/>).
+    /// </summary>
+    private const double RaioMundoFixoMetros = 5.0;
+
+    // Alcance efetivo = RaioMundoFixoMetros * multiplicador — zoom out revela até 1.6x o campo
+    // delimitado (8.0m), zoom in até metade (2.5m, mesma escala do anel de alcance da câmera).
     private const double MinRangeMultiplier = 0.5;
     private const double MaxRangeMultiplier = 1.6;
     private const double RangeStep = 0.1;
@@ -171,8 +175,8 @@ public partial class RadarControl : UserControl
     private double _rangeMultiplier = 1.0;
 
     /// <summary>Distância (em metros) representada pela borda externa do radar agora —
-    /// distância configurada em <c>appsettings.json</c> multiplicada pelo alcance atual.</summary>
-    private double EffectiveMaxDistanceMeters => AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters * _rangeMultiplier;
+    /// <see cref="RaioMundoFixoMetros"/> multiplicado pelo zoom de alcance atual.</summary>
+    private double EffectiveMaxDistanceMeters => RaioMundoFixoMetros * _rangeMultiplier;
 
     public RadarControl()
     {
@@ -561,6 +565,43 @@ public partial class RadarControl : UserControl
             Canvas.SetLeft(label, radius + 6);
             Canvas.SetTop(label, radius - ringRadius);
             StaticLayer.Children.Add(label);
+        }
+
+        // Anel do alcance máximo de detecção da câmera (Requisito "círculo menor de 2,5 metros
+        // dentro do maior") — distinto dos anéis de distância genéricos: traço mais grosso e cor
+        // de alerta, para não ser confundido com a grade de fundo. Só desenhado se couber dentro
+        // do círculo externo atual (em zoom "ver mais longe" o alcance da câmera pode ficar bem
+        // menor que o raio visível, continua aparecendo encolhido — nunca maior que o próprio
+        // radar).
+        double alcanceCameraMetros = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+        if (alcanceCameraMetros > 0 && alcanceCameraMetros <= maxDistance)
+        {
+            double alcanceCameraRaioPx = radius * alcanceCameraMetros / maxDistance;
+            var warningBrush = TryFindBrush("Danger.Fill", Brushes.OrangeRed);
+            var alcanceRing = new Ellipse
+            {
+                Width = alcanceCameraRaioPx * 2,
+                Height = alcanceCameraRaioPx * 2,
+                Stroke = warningBrush,
+                StrokeThickness = 1.5,
+                StrokeDashArray = new DoubleCollection { 6, 4 },
+                Opacity = 0.6
+            };
+            Canvas.SetLeft(alcanceRing, radius - alcanceCameraRaioPx);
+            Canvas.SetTop(alcanceRing, radius - alcanceCameraRaioPx);
+            StaticLayer.Children.Add(alcanceRing);
+
+            var alcanceLabel = new TextBlock
+            {
+                Text = $"alcance câmera ({alcanceCameraMetros:0.#} m)",
+                Foreground = warningBrush,
+                FontFamily = monoFont,
+                FontSize = 10,
+                Opacity = 0.8
+            };
+            Canvas.SetLeft(alcanceLabel, radius + 6);
+            Canvas.SetTop(alcanceLabel, radius - alcanceCameraRaioPx);
+            StaticLayer.Children.Add(alcanceLabel);
         }
 
         // Eixos em cruz (passando pelo centro), 1,5px, cor cheia (sem opacidade reduzida —

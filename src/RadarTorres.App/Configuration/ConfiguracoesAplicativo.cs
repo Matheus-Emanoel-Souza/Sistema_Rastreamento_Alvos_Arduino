@@ -116,6 +116,21 @@ public sealed class ConfiguracoesAplicativo
     /// </summary>
     public bool HeuristicaPredicaoDeTrajetoriaAtiva { get; set; } = true;
 
+    // ------------------------------------------------------------------ Disparo
+
+    /// <summary>Piso absoluto de <see cref="LimiarConfiancaDisparoPercentual"/> — por mais que o
+    /// usuário tente baixar mais que isto na tela, o valor salvo não desce daqui (ver
+    /// <see cref="Services.ConfiguracoesAplicativoRepository"/>).</summary>
+    public const double ConfiancaMinimaDisparoPercentual = 40;
+
+    /// <summary>
+    /// Certeza mínima (%) de que a câmera realmente identificou um alvo para que
+    /// <see cref="Services.FireControlService"/> autorize o disparo automático — junto com "fora
+    /// de zona morta" e "modo Disparar", é um dos três únicos critérios que valem, independente
+    /// da distância até o alvo. Nunca pode ficar abaixo de <see cref="ConfiancaMinimaDisparoPercentual"/>.
+    /// </summary>
+    public double LimiarConfiancaDisparoPercentual { get; set; } = 70;
+
     // Nota: "registros por página" NÃO é oferecido aqui de propósito. O campo existe em
     // PreferenciasUsuario desde antes, mas nenhuma tela de histórico pagina de fato — expor o
     // controle daria a impressão de um ajuste que não produz efeito algum. Quando a paginação

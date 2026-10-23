@@ -109,17 +109,16 @@ public sealed class ControladorHibrido
     }
 
     /// <summary>
-    /// Decide se a torre já comprometida com o alvo deve disparar agora. A heurística impõe os
-    /// limites inegociáveis (alcance de engajamento, tempo mínimo de mira); dentro deles, a
-    /// rede neural decide o instante exato — ela pode esperar o alvo ficar mais exposto em vez
-    /// de disparar na primeira oportunidade.
+    /// Decide se a torre já comprometida com o alvo deve disparar agora. A heurística impõe o
+    /// limite inegociável de tempo mínimo de mira; dentro dele, a rede neural decide o instante
+    /// exato — ela pode esperar o alvo ficar mais exposto em vez de disparar na primeira
+    /// oportunidade. A distância até o alvo NÃO é critério aqui: fora de zona morta e com
+    /// certeza suficiente (checados pelo chamador — ver <see cref="AmbienteTreinamento.DecidirDisparos"/>
+    /// e <see cref="Services.FireControlService"/>), qualquer distância é válida.
     /// </summary>
-    public bool DecidirDisparo(AlvoTreinamento alvo, TorreTreinamento torre, double distanciaEngajamentoMetros)
+    public bool DecidirDisparo(AlvoTreinamento alvo, TorreTreinamento torre)
     {
         if (alvo.TempoDesdeSelecao < TempoMinimoDeMiraSegundos) return false;
-
-        double distancia = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
-        if (distancia > distanciaEngajamentoMetros) return false;
 
         double[] entradas = ConstruirEntradas(alvo, torre, fatorCamada: 1.0);
         double confiancaDisparo = _rede.Ativar(entradas)[1];

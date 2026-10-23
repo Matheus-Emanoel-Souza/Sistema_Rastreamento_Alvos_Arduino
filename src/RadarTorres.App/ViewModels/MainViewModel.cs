@@ -37,6 +37,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly IAuthService _authService;
     private readonly IPermissionService _permissionService;
     private readonly IDesempenhoMonitorService _desempenhoMonitorService;
+    private readonly IOcorrenciaDeteccaoService _ocorrenciaService;
+    private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly Dispatcher _dispatcher;
 
     public DeteccaoCameraViewModel DeteccaoCamera { get; }
@@ -54,6 +56,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         IAuthService authService,
         IPermissionService permissionService,
         IDesempenhoMonitorService desempenhoMonitorService,
+        IOcorrenciaDeteccaoService ocorrenciaService,
+        IConfiguracoesAplicativoRepository configuracoes,
         DeteccaoCameraViewModel deteccaoCameraViewModel)
     {
         _logger = logger;
@@ -68,10 +72,13 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _authService = authService;
         _permissionService = permissionService;
         _desempenhoMonitorService = desempenhoMonitorService;
+        _ocorrenciaService = ocorrenciaService;
+        _configuracoes = configuracoes;
         DeteccaoCamera = deteccaoCameraViewModel;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
         DeteccaoCamera.AtualizarModoAtual(_currentMode);
+        _ocorrenciaService.ConfiancaAtualizada += OnConfiancaAtualizada;
 
         _minDistance = AppConfig.Current.RadarSettings.MinSafetyDistanceMeters;
         _maxDistance = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
@@ -427,7 +434,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     private void OnSelectedTargetPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(Target.Distance) or nameof(Target.SelectedTower))
+        if (e.PropertyName is nameof(Target.Distance) or nameof(Target.SelectedTower) or nameof(Target.Confidence))
         {
             RunOnUi(() => OnPropertyChanged(nameof(SelectedTargetSafetyStatus)));
         }
@@ -435,7 +442,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     /// <summary>
     /// Texto de status exibido no painel de resumo ("PRONTO" / "BLOQUEADO — ..." / "—").
-    /// Reflete em tempo real a regra de segurança de distância mínima para o alvo selecionado.
+    /// Reflete em tempo real a certeza mínima exigida para disparo — a distância até o alvo não
+    /// bloqueia mais nada aqui (ver <see cref="IFireControlService.Authorize"/>).
     /// </summary>
     public string SelectedTargetSafetyStatus
     {
@@ -443,8 +451,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         {
             if (SelectedTarget is null) return "—";
             if (!SelectedTarget.IsActive) return "ALVO PERDIDO";
-            if (SelectedTarget.Distance < MinDistance) return "BLOQUEADO (DISTÂNCIA MÍNIMA)";
             if (SelectedTarget.SelectedTower is null) return "SEM TORRE";
+            double limiar = _configuracoes.Atual.LimiarConfiancaDisparoPercentual;
+            if (SelectedTarget.Confidence * 100 < limiar) return $"BLOQUEADO (CERTEZA INSUFICIENTE, {SelectedTarget.Confidence * 100:0}% < {limiar:0}%)";
             return "PRONTO";
         }
     }
@@ -512,8 +521,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
     private async Task ManualFireAsync()
     {
-        if (SelectedTarget is null) return;
-        await _fireControlService.TryFireAsync(SelectedTarget, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
+        if (SelectedTarget?.SelectedTower is not { } tower) return;
+        await _fireControlService.TryFireAsync(SelectedTarget, tower, IsSimulationMode ? null : _serialService, IsSimulationMode, CurrentMode);
     }
 
     private void ClearRadar()
@@ -656,6 +665,22 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     }
 
     /// <summary>
+    /// A câmera atualizou a pontuação de identificação de um quadrante — propaga para
+    /// <see cref="Target.Confidence"/> de todos os alvos ativos ali, já que é por quadrante (não
+    /// por alvo) que a câmera informa a certeza (ver <see cref="IOcorrenciaDeteccaoService.ConfiancaAtualizada"/>).
+    /// </summary>
+    private void OnConfiancaAtualizada(object? sender, (Quadrant Quadrante, double Confianca) e)
+    {
+        RunOnUi(() =>
+        {
+            foreach (Target target in Targets.Where(t => t.IsActive && t.Quadrant == e.Quadrante))
+            {
+                target.Confidence = e.Confianca;
+            }
+        });
+    }
+
+    /// <summary>
     /// Encaminha a leitura para <see cref="ITargetTrackingService.ProcessReading"/> medindo o
     /// tempo de ciclo completo (tela de Desempenho): como o evento <c>TargetCreated</c>/
     /// <c>TargetUpdated</c> é disparado de forma síncrona dentro de <c>ProcessReading</c>
@@ -691,14 +716,20 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
             if (CurrentMode == SystemMode.Disparar && result.Success)
             {
-                FireAuthorizationResult auth = _fireControlService.Authorize(target, MinDistance);
-                if (auth.Authorized)
+                // Mais de uma torre pode engajar o mesmo alvo (câmeras de quadrantes diferentes
+                // identificando-o) — cada uma é autorizada e disparada independentemente; não
+                // ter linha de tiro livre bloqueia só aquela torre, não o alvo inteiro.
+                foreach (Tower engagingTower in target.EngagingTowers)
                 {
-                    _ = _fireControlService.TryFireAsync(target, IsSimulationMode ? null : _serialService, IsSimulationMode, MinDistance);
-                }
-                else
-                {
-                    _logger.Warning(auth.Reason);
+                    FireAuthorizationResult auth = _fireControlService.Authorize(target, engagingTower, CurrentMode);
+                    if (auth.Authorized)
+                    {
+                        _ = _fireControlService.TryFireAsync(target, engagingTower, IsSimulationMode ? null : _serialService, IsSimulationMode, CurrentMode);
+                    }
+                    else
+                    {
+                        _logger.Warning(auth.Reason);
+                    }
                 }
             }
         }
@@ -752,6 +783,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _trackingService.TargetRemoved -= OnTargetRemoved;
         _simulationService.ReadingGenerated -= OnSimulationReadingGenerated;
         _authService.SessionChanged -= OnAuthSessionChanged;
+        _ocorrenciaService.ConfiancaAtualizada -= OnConfiancaAtualizada;
         DeteccaoCamera.Dispose();
     }
 }

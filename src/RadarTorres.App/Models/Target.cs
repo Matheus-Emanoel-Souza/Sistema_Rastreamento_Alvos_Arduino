@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -125,6 +126,31 @@ public class Target : INotifyPropertyChanged
 
     /// <summary>Módulo da velocidade (m/s) — conveniência para quem só precisa da magnitude.</summary>
     public double SpeedMetersPerSecond => Math.Sqrt(VelocityXMetersPerSecond * VelocityXMetersPerSecond + VelocityYMetersPerSecond * VelocityYMetersPerSecond);
+
+    private double _confidence;
+
+    /// <summary>
+    /// Certeza (0 a 1) de que isto é realmente um alvo, conforme a última pontuação de
+    /// identificação por câmera recebida para o quadrante deste alvo (ver
+    /// <see cref="Services.IOcorrenciaDeteccaoService.ConfiancaAtualizada"/>). Começa em 0 — sem
+    /// nenhuma detecção por câmera ainda, o alvo é só um eco do sensor de distância, não algo
+    /// identificado — e só <see cref="Services.FireControlService"/> decide se isso já é
+    /// suficiente para autorizar o disparo.
+    /// </summary>
+    public double Confidence
+    {
+        get => _confidence;
+        set => SetField(ref _confidence, value);
+    }
+
+    /// <summary>
+    /// Todas as torres autorizadas a engajar este alvo agora — pode ter mais de uma quando
+    /// câmeras de quadrantes diferentes identificam o mesmo alvo (ver
+    /// <see cref="Services.TowerSelectionService"/>). <see cref="SelectedTower"/> continua sendo
+    /// a torre "principal" (mira exibida na tela); esta lista é quem <see cref="Services.FireControlService"/>
+    /// percorre para autorizar cada disparo.
+    /// </summary>
+    public List<Tower> EngagingTowers { get; set; } = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
