@@ -573,7 +573,8 @@ public partial class RadarControl : UserControl
         // do círculo externo atual (em zoom "ver mais longe" o alcance da câmera pode ficar bem
         // menor que o raio visível, continua aparecendo encolhido — nunca maior que o próprio
         // radar).
-        double alcanceCameraMetros = AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
+        double alcanceCameraMetros = Services.ConfiguracoesAplicativoRepository.Current?.Atual.AlcanceMiraMetros
+            ?? AppConfig.Current.RadarSettings.MaxDetectionDistanceMeters;
         if (alcanceCameraMetros > 0 && alcanceCameraMetros <= maxDistance)
         {
             double alcanceCameraRaioPx = radius * alcanceCameraMetros / maxDistance;

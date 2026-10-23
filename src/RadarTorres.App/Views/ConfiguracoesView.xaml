@@ -197,6 +197,27 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ========================== RADAR / MIRA ========================= -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Radar e mira" Style="{StaticResource SectionTitle}"/>
+
+                        <TextBlock Style="{StaticResource LabelText}">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="ALCANCE DE MIRA: {0:0.0} m">
+                                    <Binding Path="AlcanceMiraMetros"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                        <Slider Minimum="{Binding AlcanceMiraMinimoMetros}" Maximum="{Binding AlcanceMiraMaximoMetros}"
+                                Value="{Binding AlcanceMiraMetros}"
+                                TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                Width="320" HorizontalAlignment="Left"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Distância máxima até onde uma torre considera um alvo engajável — usada na seleção de torre, no anel visual do radar e no teto de distância da simulação sem Arduino."/>
+                    </StackPanel>
+                </Border>
+
                 <!-- ============================ DISPARO ============================ -->
                 <Border Style="{StaticResource SectionCard}">
                     <StackPanel>
