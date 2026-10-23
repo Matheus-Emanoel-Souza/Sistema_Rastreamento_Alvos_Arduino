@@ -56,6 +56,17 @@ public sealed class TargetTrackingService : ITargetTrackingService, IDisposable
         {
             if (_targetsById.TryGetValue(reading.TargetId, out Target? existing))
             {
+                // Velocidade estimada por diferença finita: guardada ANTES de sobrescrever
+                // X/Y/LastUpdate com a leitura nova, senão a "posição anterior" já teria virado
+                // a atual. dt<=0 (relógio do sistema ajustado, leituras fora de ordem) descarta
+                // a amostra em vez de dividir por zero/inverter o sinal.
+                double dtSegundos = (now - existing.LastUpdate).TotalSeconds;
+                if (dtSegundos > 0)
+                {
+                    existing.VelocityXMetersPerSecond = (x - existing.X) / dtSegundos;
+                    existing.VelocityYMetersPerSecond = (y - existing.Y) / dtSegundos;
+                }
+
                 existing.Angle = reading.Angle;
                 existing.Distance = reading.Distance;
                 existing.X = x;

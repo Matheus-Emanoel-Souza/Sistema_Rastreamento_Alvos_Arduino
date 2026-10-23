@@ -1695,6 +1695,53 @@ pontos` em vez de mutar a existente.
 
 ---
 
+## 2026-10-23 — As 5 regras heurísticas sugeridas, cada uma desligável em Configurações
+
+**Contexto**: na sessão anterior, o usuário perguntou "quais regras heurísticas você acha que
+está faltando no projeto e por quê?" — respondi com 6 lacunas (anti-oscilação, priorização por
+urgência, corredor de tiro, balanceamento de carga, predição de trajetória, e um ajuste no
+sinal de sobrecarga do treinamento). O pedido abaixo manda implementar as 5 primeiras (a 6ª é
+sobre a função de fitness do treinamento, não uma regra do controlador real).
+
+**Pedido (texto integral):**
+
+> Implementa todas as regras, mas coloque a opção de desativa-las em configurações. Antes de
+> tudo commite e faça push em tudo que foi feito
+
+**Entregue:**
+
+- `ConfiguracoesAplicativo`: 5 novos booleanos (`HeuristicaAntiOscilacaoAtiva`,
+  `HeuristicaPriorizacaoPorUrgenciaAtiva`, `HeuristicaCorredorDeTiroAtiva`,
+  `HeuristicaBalanceamentoDeCargaAtiva`, `HeuristicaPredicaoDeTrajetoriaAtiva`), todos `true`
+  por padrão — gravados no mesmo `configuracoes-app.json` já existente, sem precisar de nenhuma
+  tabela/migração nova. Tela de Configurações ganhou uma seção "Heurísticas do controlador"
+  com um `CheckBox` + descrição por regra.
+- **Regra 1 (anti-oscilação)**: se a torre já comprometida com o alvo ainda é candidata válida
+  e está dentro de uma margem de empate da "vencedora crua", mantém — evita trocar de torre por
+  ruído de leitura.
+- **Regra 2 (priorização por urgência)**: um alvo a ≤1,5× a distância mínima de segurança pode
+  tomar a torre de outro alvo claramente mais longe (>1 m de diferença) e que não seja urgente
+  ele mesmo.
+- **Regra 3 (corredor de tiro)**: amostra o segmento torre→alvo e descarta candidatas cuja
+  linha de tiro cruze uma zona morta ativa (antes só a posição do alvo era checada, nunca o
+  caminho até ele).
+- **Regra 4 (balanceamento de carga)**: entre candidatas empatadas, prefere a usada com menos
+  frequência nesta sessão (contador em memória).
+- **Regra 5 (predição de trajetória)**: `Target` ganhou `VelocityXMetersPerSecond`/
+  `VelocityYMetersPerSecond`, calculados por `TargetTrackingService.ProcessReading` por
+  diferença finita entre leituras consecutivas. Com a regra ativa, a mira aponta para a posição
+  prevista 0,3 s à frente em vez da posição atual. **Efeito colateral bom**: essa velocidade
+  real agora também alimenta a entrada "velocidade do alvo" da rede neural treinada, que antes
+  usava um valor fixo (limitação documentada e removida).
+- `Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md` ganhou a seção 7 descrevendo as 5 regras.
+- Testes novos: 10 em `TowerSelectionServiceTests` (2 por regra — ativada e desativada,
+  provando que o toggle realmente muda o resultado). `dotnet build`: 0 erros. `dotnet test`:
+  145 testes, 145 aprovados.
+- Commit e push feitos em duas etapas: primeiro o trabalho pendente da sessão anterior (pedido
+  explícito "antes de tudo"), depois este.
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
