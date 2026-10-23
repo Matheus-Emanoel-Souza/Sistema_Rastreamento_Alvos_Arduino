@@ -127,6 +127,19 @@ public class Target : INotifyPropertyChanged
     /// <summary>Módulo da velocidade (m/s) — conveniência para quem só precisa da magnitude.</summary>
     public double SpeedMetersPerSecond => Math.Sqrt(VelocityXMetersPerSecond * VelocityXMetersPerSecond + VelocityYMetersPerSecond * VelocityYMetersPerSecond);
 
+    private GrauPerigoAlvo _grauPerigo = GrauPerigoAlvo.Baixo;
+
+    /// <summary>
+    /// Grau de perigosidade conforme a velocidade atual (ver <see cref="Helpers.ClassificadorPerigoAlvo"/>),
+    /// recalculado a cada leitura por <see cref="Services.TargetTrackingService"/>. Mudanças de
+    /// valor são gravadas em <c>classificacoes_alvo</c> por <see cref="ViewModels.MainViewModel"/>.
+    /// </summary>
+    public GrauPerigoAlvo GrauPerigo
+    {
+        get => _grauPerigo;
+        set => SetField(ref _grauPerigo, value);
+    }
+
     private double _confidence;
 
     /// <summary>

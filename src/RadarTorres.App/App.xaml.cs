@@ -223,6 +223,7 @@ public partial class App : Application
         services.AddSingleton<IObjetoDetectadoRepository, SqliteObjetoDetectadoRepository>();
         services.AddTransient<IObjetoDetectadoExportService, ObjetoDetectadoExportService>();
         services.AddSingleton<IAcaoRealizadaRepository, SqliteAcaoRealizadaRepository>();
+        services.AddSingleton<IClassificacaoPerigoRepository, SqliteClassificacaoPerigoRepository>();
         services.AddSingleton<IModoAtualTorreRepository, SqliteModoAtualTorreRepository>();
         services.AddSingleton<IPreferenciasUsuarioRepository, SqlitePreferenciasUsuarioRepository>();
         services.AddSingleton<IHistoricoTreinamentoRepository, SqliteHistoricoTreinamentoRepository>();

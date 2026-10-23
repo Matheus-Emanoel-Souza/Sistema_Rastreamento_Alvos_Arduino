@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.Repositories;
 
@@ -116,8 +117,23 @@ public sealed class FireControlService : IFireControlService
             // tratada pela MainViewModel; aqui apenas registramos o envio do comando.
         }
 
-        RegistrarAcao(tower, target.ObjetoDetectadoId);
-        MarcarOcorrenciaPendenteDeAbate(target);
+        // Comando sai de qualquer forma (é o disparo demonstrativo em si); se ACERTA o alvo é
+        // probabilístico — alvo mais rápido tem mais chance de escapar de UM canhão, por isso
+        // TowerSelectionService já autoriza mais de uma torre no mesmo alvo quando a velocidade
+        // dele justifica ajuda (ver Target.EngagingTowers).
+        double probabilidadeDeErro = CalculadoraErroDisparo.ProbabilidadeDeErro(target.SpeedMetersPerSecond);
+        bool acertou = Random.Shared.NextDouble() >= probabilidadeDeErro;
+
+        RegistrarAcao(tower, target.ObjetoDetectadoId, acertou, target.SpeedMetersPerSecond);
+
+        if (acertou)
+        {
+            MarcarOcorrenciaPendenteDeAbate(target);
+        }
+        else
+        {
+            _logger.Warning($"{tower.Name} ERROU o disparo contra o alvo #{target.Id:D2} (velocidade {target.SpeedMetersPerSecond:0.00} m/s, chance de erro {probabilidadeDeErro:P0}).");
+        }
 
         // Mantém o feedback visual de "disparando" por um curto período antes de voltar a "selecionada".
         _ = ResetFiringStateAfterDelay(tower);
@@ -146,7 +162,7 @@ public sealed class FireControlService : IFireControlService
         }
     }
 
-    private void RegistrarAcao(Tower tower, int? objetoDetectadoId)
+    private void RegistrarAcao(Tower tower, int? objetoDetectadoId, bool acertou, double velocidadeAlvoMetrosPorSegundo)
     {
         try
         {
@@ -155,6 +171,9 @@ public sealed class FireControlService : IFireControlService
                 TorreId = tower.Id,
                 ObjetoDetectadoId = objetoDetectadoId,
                 DataHora = DateTime.Now,
+                Observacao = acertou
+                    ? $"Acerto (velocidade do alvo: {velocidadeAlvoMetrosPorSegundo:0.00} m/s)."
+                    : $"Erro (velocidade do alvo: {velocidadeAlvoMetrosPorSegundo:0.00} m/s).",
             });
         }
         catch (Exception ex)

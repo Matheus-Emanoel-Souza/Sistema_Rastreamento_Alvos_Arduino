@@ -96,6 +96,16 @@ CREATE TABLE historico_treinamento_geracoes (
     DH_REGISTRO     TEXT    NOT NULL
 );
 
+-- Auditoria de mudança de grau de perigosidade de um alvo (ver ClassificadorPerigoAlvo) —
+-- só grava uma linha quando o grau MUDA, não a cada leitura do sensor.
+CREATE TABLE classificacoes_alvo (
+    Id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ObjetoDetectadoId           INTEGER REFERENCES objetos_detectados (Id),
+    VelocidadeMetrosPorSegundo  REAL    NOT NULL,
+    Grau                        TEXT    NOT NULL CHECK (Grau IN ('Baixo', 'Medio', 'Alto', 'Critico')),
+    DataHora                    TEXT    NOT NULL
+);
+
 CREATE TABLE preferencias_usuario (
     UsuarioId          INTEGER PRIMARY KEY REFERENCES usuarios (Id) ON DELETE CASCADE,
     Idioma             TEXT    NOT NULL DEFAULT 'pt-BR',
@@ -112,6 +122,7 @@ CREATE INDEX idx_modo_atual_torre_usuario ON modo_atual_torre (ID_USER);
 CREATE INDEX idx_objetos_detectados_perfil ON objetos_detectados (PerfilAlvoId);
 CREATE INDEX idx_ocorrencia_estados_objeto ON ocorrencia_estados (ObjetoDetectadoId);
 CREATE INDEX idx_historico_treinamento_geracao ON historico_treinamento_geracoes (GERACAO);
+CREATE INDEX idx_classificacoes_alvo_objeto ON classificacoes_alvo (ObjetoDetectadoId);
 
 -- É esta restrição que torna impossível duplicar a ocorrência do mesmo acompanhamento num
 -- mesmo quadrante, inclusive quando várias câmeras processam em paralelo. Parcial (WHERE NOT
