@@ -132,6 +132,18 @@ Table dashboard_card_layout {
   Note: 'dashboard-layout-{tela}-{usuário}.json — DashboardLayoutRepository. Hoje é um arquivo JSON por tela+usuário.'
 }
 
+Table historico_treinamento_geracoes {
+  id integer [primary key]
+  geracao integer
+  melhor_fitness float
+  fitness_medio float
+  alvos_abatidos integer
+  alvos_escapados integer
+  dh_registro timestamp
+
+  Note: 'Tabela HistoricoTreinamentoGeracoes (SQLite) — SqliteHistoricoTreinamentoRepository. Buffer circular limitado a 300 linhas (descarta o ID mais antigo ao estourar); uma linha por geração treinada na tela "Treinamento do Controlador" (neuroevolução, ver src/RadarTorres.App/NeuralEvolution/).'
+}
+
 Table arduino_settings {
   id integer [primary key, default: 1, note: 'singleton — sempre 1 linha']
   cli_path varchar

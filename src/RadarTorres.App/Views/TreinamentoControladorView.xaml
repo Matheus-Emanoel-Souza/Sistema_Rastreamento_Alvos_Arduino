@@ -1,0 +1,289 @@
+<UserControl x:Class="RadarTorres.App.Views.TreinamentoControladorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:RadarTorres.App.ViewModels"
+             xmlns:conv="clr-namespace:RadarTorres.App.Converters"
+             Background="{DynamicResource Bg.Window}"
+             Foreground="{DynamicResource Text.Primary}"
+             FontFamily="{DynamicResource Font.Body}">
+    <!--
+        Tela "Treinamento do Controlador": treina, por neuroevolução, a rede neural que combina
+        com a heurística de cooperação entre torres (ver ControladorHibrido/AlgoritmoGenetico em
+        NeuralEvolution). O Canvas à esquerda anima em tempo real o melhor genoma encontrado até
+        agora; as gerações em si rodam em segundo plano, o mais rápido possível (ver
+        TreinamentoControladorViewModel).
+    -->
+    <UserControl.Resources>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,12,12"/>
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="CardValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="26"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+        </Style>
+        <Style x:Key="ParametroLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="Margin" Value="0,8,0,2"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource Bg.Window}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
+
+        <Style x:Key="PontoCanvasStyle" TargetType="ContentPresenter">
+            <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+            <Setter Property="Canvas.Top" Value="{Binding CanvasY}"/>
+        </Style>
+        <Style x:Key="RegraTexto" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="3*" MinHeight="260"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="220" MinHeight="120" MaxHeight="420"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="TREINAMENTO DO CONTROLADOR" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
+            <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                       Text="Evolui, por algoritmo genético (neuroevolução), a rede neural que combina com a heurística de cooperação entre torres adjacentes. Cada geração roda o episódio em segundo plano; o Canvas abaixo mostra em tempo real como o melhor indivíduo atual se comporta."/>
+        </StackPanel>
+
+        <!-- Conteúdo principal: Canvas 2D + painel lateral -->
+        <DockPanel Grid.Row="1">
+        <!-- Painel de controle / estatísticas, à direita -->
+        <ScrollViewer DockPanel.Dock="Right" Width="280" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="CONTROLE" Style="{StaticResource CardTitle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Content="Iniciar" Command="{Binding IniciarCommand}"/>
+                            <Button Content="Parar" Command="{Binding PararCommand}"/>
+                        </StackPanel>
+                        <Button Content="Rodar 1 episódio" Command="{Binding RodarEpisodioUnicoCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                        <Button Content="Exportar melhor genoma" Command="{Binding ExportarMelhorGenomaCommand}" HorizontalAlignment="Stretch"/>
+
+                        <TextBlock Text="{Binding StatusMensagem}" Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap"
+                                   Visibility="{Binding StatusMensagem, Converter={StaticResource NullToVisibilityConverter}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StatusSucesso}" Value="True">
+                                            <Setter Property="Foreground" Value="#4ADE80"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusSucesso}" Value="False">
+                                            <Setter Property="Foreground" Value="#F87171"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <TextBlock Text="Tamanho da população" Style="{StaticResource ParametroLabel}"/>
+                        <TextBox Text="{Binding TamanhoPopulacao, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Taxa de mutação (0-1)" Style="{StaticResource ParametroLabel}"/>
+                        <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="Máximo de alvos simultâneos" Style="{StaticResource ParametroLabel}"/>
+                        <TextBox Text="{Binding MaxAlvosSimultaneos, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="GERAÇÃO ATUAL" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="{Binding GeracaoAtual}" Style="{StaticResource CardValue}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="MELHOR FITNESS" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="{Binding MelhorFitness, StringFormat={}{0:0.0}}" Style="{StaticResource CardValue}"/>
+                        <TextBlock Style="{StaticResource ParametroLabel}" Margin="0,8,0,0">
+                            <Run Text="Fitness médio da população: "/>
+                            <Run Text="{Binding FitnessMedio, StringFormat={}{0:0.0}, Mode=OneWay}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Gráfico de evolução do fitness por geração -->
+                <Border Style="{StaticResource Card}" Height="160">
+                    <Grid>
+                        <TextBlock Text="EVOLUÇÃO DO FITNESS" Style="{StaticResource CardTitle}" VerticalAlignment="Top"/>
+                        <Canvas x:Name="GraficoCanvas" Margin="0,20,0,0">
+                            <Polyline x:Name="LinhaMelhorFitness" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2"/>
+                            <Polyline x:Name="LinhaFitnessMedio" Stroke="{DynamicResource Text.Secondary}" StrokeThickness="1"/>
+                        </Canvas>
+                    </Grid>
+                </Border>
+
+                <!-- "Regras" aproximadas que a rede neural aprendeu (ver ExtratorDeRegras) -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="REGRAS QUE A REDE ESTÁ APRENDENDO" Style="{StaticResource CardTitle}"/>
+                        <ItemsControl ItemsSource="{Binding RegrasAprendidas}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Style="{StaticResource RegraTexto}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Canvas 2D: torres fixas + alvos em movimento do melhor genoma atual -->
+        <Border Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Canvas Width="480" Height="480" ClipToBounds="True">
+                <!-- Campo de monitoramento da torre de vigilância central: sensor na origem
+                     (0,0), raio = alcance máximo de detecção do mundo simulado. -->
+                <Ellipse Width="460" Height="460" Canvas.Left="10" Canvas.Top="10"
+                         Fill="#142563EB" Stroke="{DynamicResource Border.Control}" StrokeThickness="1" StrokeDashArray="4,3"
+                         ToolTip="Torre de Vigilância Central — campo de monitoramento dos sensores"/>
+
+                <!-- Campos de visão (cone) de cada torre/canhão — ver ConstruirSetorDeVisao -->
+                <ItemsControl ItemsSource="{Binding CamposDeVisaoVisuais}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Polygon Points="{Binding Pontos}" Fill="#332563EB" Stroke="{Binding Cor}" StrokeThickness="1"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Marcador da torre de vigilância central, no centro do mundo -->
+                <Ellipse Width="10" Height="10" Canvas.Left="235" Canvas.Top="235"
+                         Fill="#2563EB" Stroke="White" StrokeThickness="1"
+                         ToolTip="Torre de Vigilância Central"/>
+
+                <!-- Linhas de mira (âmbar) e de disparo (vermelho, flash curto) — ver AtualizarMiras -->
+                <ItemsControl ItemsSource="{Binding MirasVisuais}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                  Stroke="{Binding Cor}" StrokeThickness="{Binding Espessura}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding TorresVisuais}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding CanvasY}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Rectangle Width="{Binding Tamanho}" Height="{Binding Tamanho}" Fill="{Binding Cor}" RadiusX="2" RadiusY="2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding AlvosVisuais}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding CanvasY}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Ellipse Width="{Binding Tamanho}" Height="{Binding Tamanho}" Fill="{Binding Cor}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Canvas>
+        </Border>
+        </DockPanel>
+
+        <!-- Arraste para redimensionar o histórico de gerações -->
+        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Height="6" Background="{DynamicResource Border.Control}"
+                      ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" Cursor="SizeNS"/>
+
+        <!-- Histórico de gerações (até 300 registros, mais antigo removido ao estourar — ver IHistoricoTreinamentoRepository) -->
+        <Border Grid.Row="3" Style="{StaticResource Card}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="HISTÓRICO DE GERAÇÕES (ÚLTIMOS 300 REGISTROS)" Style="{StaticResource CardTitle}"/>
+                <DataGrid ItemsSource="{Binding HistoricoRecente}" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                          Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
+                          BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                          RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
+                          HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                            <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Padding" Value="8,6"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource Border.Divider}"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <!-- Larguras proporcionais (exceto as colunas numéricas estreitas) para a
+                         tabela ocupar sempre a largura disponível do card, em vez de deixar
+                         espaço vazio ou cortar colunas quando a janela é redimensionada. -->
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Geração" Binding="{Binding Geracao}" Width="70" MinWidth="60"/>
+                        <DataGridTextColumn Header="Melhor fitness" Binding="{Binding MelhorFitness, StringFormat={}{0:0.0}}" Width="1*" MinWidth="90"/>
+                        <DataGridTextColumn Header="Fitness médio" Binding="{Binding FitnessMedio, StringFormat={}{0:0.0}}" Width="1*" MinWidth="90"/>
+                        <DataGridTextColumn Header="Abatidos" Binding="{Binding AlvosAbatidos}" Width="80" MinWidth="70"/>
+                        <DataGridTextColumn Header="Escapados" Binding="{Binding AlvosEscapados}" Width="80" MinWidth="80"/>
+                        <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="2*" MinWidth="140"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -30,9 +30,18 @@ public static class AppDataPaths
     /// </summary>
     public static string DiagnosticoFolder { get; } = Path.Combine(RootFolder, "Diagnostico");
 
+    /// <summary>
+    /// Pasta com os genomas exportados da tela "Treinamento do Controlador" (ver
+    /// <see cref="ViewModels.TreinamentoControladorViewModel"/>) — arquivos JSON com os pesos
+    /// da <see cref="NeuralEvolution.RedeNeural"/> evoluída, para reaproveitar fora da sessão de treinamento.
+    /// </summary>
+    public static string TreinamentoFolder { get; } = Path.Combine(RootFolder, "Treinamento");
+
     public static string GetCsvPath(string tableName) => Path.Combine(DataFolder, $"{tableName}.csv");
 
     public static void EnsureDataFolderExists() => Directory.CreateDirectory(DataFolder);
 
     public static void EnsureDiagnosticoFolderExists() => Directory.CreateDirectory(DiagnosticoFolder);
+
+    public static void EnsureTreinamentoFolderExists() => Directory.CreateDirectory(TreinamentoFolder);
 }

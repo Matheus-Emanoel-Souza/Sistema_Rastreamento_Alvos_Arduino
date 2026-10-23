@@ -28,7 +28,6 @@ public partial class DashboardToolbar : UserControl
     private static readonly Dictionary<string, string> CardIconKeys = new()
     {
         ["Radar"] = "Icon.Monitoramento",
-        ["RadarAoVivo"] = "Icon.Monitoramento",
         ["ModoOperacao"] = "Icon.HistoricoModos",
         ["ModoAtual"] = "Icon.HistoricoModos",
         ["DeteccaoCamera"] = "Icon.Cameras",

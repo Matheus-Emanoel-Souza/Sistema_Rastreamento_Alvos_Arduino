@@ -132,6 +132,7 @@ public partial class App : Application
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<ISerialCommunicationService, SerialCommunicationService>();
         services.AddSingleton<ITargetTrackingService, TargetTrackingService>();
+        services.AddSingleton<IControladorTreinadoProvider, ControladorTreinadoProvider>();
         services.AddSingleton<ITowerSelectionService, TowerSelectionService>();
         services.AddSingleton<IFireControlService, FireControlService>();
         services.AddSingleton<ISimulationService, SimulationService>();
@@ -224,6 +225,7 @@ public partial class App : Application
         services.AddSingleton<IAcaoRealizadaRepository, SqliteAcaoRealizadaRepository>();
         services.AddSingleton<IModoAtualTorreRepository, SqliteModoAtualTorreRepository>();
         services.AddSingleton<IPreferenciasUsuarioRepository, SqlitePreferenciasUsuarioRepository>();
+        services.AddSingleton<IHistoricoTreinamentoRepository, SqliteHistoricoTreinamentoRepository>();
 
         // --- Layout do painel principal (posição/tamanho dos cards definidos pelo usuário)
         services.AddSingleton<IDashboardLayoutRepository, DashboardLayoutRepository>();
@@ -278,6 +280,12 @@ public partial class App : Application
         // Tela "Desempenho": timer de amostragem iniciado/parado no Loaded/Unloaded da view.
         services.AddTransient<DesempenhoViewModel>();
         services.AddScoped<DesempenhoView>();
+
+        // Tela "Treinamento do Controlador": laço de neuroevolução roda em segundo plano
+        // enquanto a view existir (ver TreinamentoControladorViewModel) — mesmo padrão de view
+        // "singleton" (AddScoped com escopo único) que as demais telas do menu.
+        services.AddTransient<TreinamentoControladorViewModel>();
+        services.AddScoped<TreinamentoControladorView>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginView>();

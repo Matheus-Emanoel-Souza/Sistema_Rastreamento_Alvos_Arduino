@@ -138,6 +138,16 @@ erDiagram
         datetime DHALTERACAO
     }
 
+    HISTORICO_TREINAMENTO_GERACOES {
+        int ID PK
+        int GERACAO
+        double MELHOR_FITNESS
+        double FITNESS_MEDIO
+        int ALVOS_ABATIDOS
+        int ALVOS_ESCAPADOS
+        datetime DH_REGISTRO
+    }
+
     PREFERENCIAS_USUARIO {
         int UsuarioId PK-FK
         string Idioma
@@ -239,6 +249,17 @@ Auditoria de troca de modo (Requisito 6) — também somente inserção, mas só
 confirmada: cancelamento na caixa de confirmação gera apenas log (`MainViewModel.CurrentMode`
 setter), sem coluna de resultado no schema simplificado para diferenciar de uma troca real.
 `ID_USER` referencia `usuarios.Id` (antes era o `Login` em texto).
+
+### `historico_treinamento_geracoes`
+Comportamento do melhor indivíduo de cada geração treinada na tela "Treinamento do
+Controlador" (neuroevolução do controlador híbrido heurística+rede neural —
+`src/RadarTorres.App/NeuralEvolution/`). Diferente das demais tabelas desta lista, é um
+**buffer circular limitado a 300
+linhas**: ao inserir a 301ª, `SqliteHistoricoTreinamentoRepository.Registrar` descarta o
+registro de `ID` mais antigo na mesma transação (`DELETE ... WHERE ID NOT IN (SELECT ID ...
+ORDER BY ID DESC LIMIT 300)`) — não é um TTL por data, é estritamente "os 300 mais recentes".
+Uma linha por **geração** (não por indivíduo da população), com `ALVOS_ABATIDOS`/
+`ALVOS_ESCAPADOS` do melhor genoma daquela geração.
 
 ### `preferencias_usuario`
 Uma linha por usuário (Requisito 8) — idioma, tema, sidebar recolhida/expandida. Colunas de
