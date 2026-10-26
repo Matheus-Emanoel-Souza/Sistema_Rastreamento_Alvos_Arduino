@@ -164,6 +164,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// o alcance de mira configurado vira <see cref="ParametrosTreinamento.DistanciaEngajamentoMetros"/>
     /// e a certeza mínima de disparo vira <see cref="ParametrosTreinamento.LimiarConfiancaDisparoFracao"/>,
     /// nunca abaixo do piso absoluto (<see cref="ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual"/>).
+    /// A velocidade considerada "rápida" (aciona ajuda de torre adjacente) segue a mesma regra.
     /// </summary>
     private ParametrosTreinamento ParametrosAtuais => new()
     {
@@ -171,7 +172,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         TaxaMutacao = Math.Clamp(_taxaMutacao, 0.0, 1.0),
         MaxAlvosSimultaneos = Math.Max(1, _maxAlvosSimultaneos),
         DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
-        LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0
+        LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0,
+        VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo
     };
 
     // ---------------------------------------------------------------- Status (mensagem transitória)
