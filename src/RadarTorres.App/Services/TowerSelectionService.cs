@@ -32,11 +32,12 @@ namespace RadarTorres.App.Services;
 /// decisão de projeto — a rede neural não aciona nada por conta própria.
 /// </para>
 /// <para>
-/// Além da camada heurística+rede, cinco regras adicionais (anti-oscilação, priorização por
-/// urgência, corredor de tiro, balanceamento de carga e predição de trajetória) refinam a
-/// decisão — cada uma independentemente desligável em <see cref="ConfiguracoesAplicativo"/>
-/// (tela de Configurações), para o usuário poder isolar o efeito de cada regra ou voltar ao
-/// comportamento anterior sem recompilar.
+/// Além da camada heurística+rede, seis regras adicionais (anti-oscilação, priorização por
+/// urgência, corredor de tiro, balanceamento de carga, predição de trajetória e ajuda de torre
+/// adjacente contra alvo rápido) refinam a decisão — as cinco primeiras independentemente
+/// desligáveis em <see cref="ConfiguracoesAplicativo"/> (tela de Configurações), para o usuário
+/// poder isolar o efeito de cada regra ou voltar ao comportamento anterior sem recompilar; a
+/// sexta (ajuda de torre adjacente) é sempre ativa, só o limiar de velocidade é ajustável.
 /// </para>
 /// </remarks>
 public sealed class TowerSelectionService : ITowerSelectionService
@@ -57,6 +58,9 @@ public sealed class TowerSelectionService : ITowerSelectionService
 
     /// <summary>Regra 3 (corredor de tiro): pontos amostrados ao longo do segmento torre→alvo (excluindo as pontas) para checar se cruza uma zona morta ativa.</summary>
     private const int AmostrasDoCorredorDeTiro = 12;
+
+    /// <summary>Regra 6 (ajuda de torre adjacente): raio (m) em torno do alvo dentro do qual uma torre de quadrante adjacente passa a engajar um alvo rápido, mesmo fora do alcance normal de câmera.</summary>
+    private const double RaioAjudaTorreAdjacenteMetros = 2.0;
 
     private readonly ILoggingService _logger;
     private readonly IZonaMortaService _zonaMortaService;
@@ -214,6 +218,14 @@ public sealed class TowerSelectionService : ITowerSelectionService
     /// diferentes podem identificar e disparar no MESMO alvo ao mesmo tempo. Fica de fora quem
     /// tiver outro canhão literalmente na frente da linha de tiro.
     /// </summary>
+    /// <remarks>
+    /// Regra 6 (ajuda de torre adjacente): alvos acima de
+    /// <see cref="ConfiguracoesAplicativo.VelocidadeRapidaMetrosPorSegundo"/> puxam para a lista
+    /// qualquer torre de quadrante adjacente a até <see cref="RaioAjudaTorreAdjacenteMetros"/> do
+    /// alvo, mesmo fora do alcance normal de câmera — um segundo canhão reduz a chance de o alvo
+    /// escapar de um disparo único (a chance de errar cresce com a velocidade, ver
+    /// <see cref="Helpers.CalculadoraErroDisparo"/>).
+    /// </remarks>
     private List<Tower> ComputarTorresEngajando(Target target, List<Tower> available)
     {
         double alcanceCameraMetros = _configuracoes.Atual.AlcanceMiraMetros;
@@ -222,6 +234,16 @@ public sealed class TowerSelectionService : ITowerSelectionService
             t.PreferredQuadrant == target.Quadrant ||
             (QuadrantHelper.AreAdjacent(t.PreferredQuadrant, target.Quadrant) && target.Distance <= alcanceCameraMetros))
             .ToList();
+
+        if (target.SpeedMetersPerSecond >= _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo)
+        {
+            IEnumerable<Tower> ajuda = available.Where(t =>
+                candidatas.All(c => c.Id != t.Id) &&
+                QuadrantHelper.AreAdjacent(t.PreferredQuadrant, target.Quadrant) &&
+                DistanceCalculator.Between(target, t) <= RaioAjudaTorreAdjacenteMetros);
+
+            candidatas = candidatas.Concat(ajuda).ToList();
+        }
 
         return candidatas.Where(t => !OutraTorreNaFrenteDoTiro(t, target, available)).ToList();
     }

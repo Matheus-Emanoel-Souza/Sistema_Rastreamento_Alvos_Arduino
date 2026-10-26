@@ -135,6 +135,25 @@ public sealed class ConfiguracoesAplicativo
     /// </summary>
     public double AlcanceMiraMetros { get; set; } = 2.5;
 
+    // ------------------------------------------------------------------ Ajuda entre torres
+
+    /// <summary>Piso aceito para <see cref="VelocidadeRapidaMetrosPorSegundo"/>.</summary>
+    public const double VelocidadeRapidaMinimaMetrosPorSegundo = 0.5;
+
+    /// <summary>Teto aceito para <see cref="VelocidadeRapidaMetrosPorSegundo"/> — mesmo teto de velocidade simulado no treinamento (ver <see cref="NeuralEvolution.ParametrosTreinamento.VelocidadeMaximaAlvoMetrosPorSegundo"/>).</summary>
+    public const double VelocidadeRapidaMaximaMetrosPorSegundo = 2.5;
+
+    /// <summary>
+    /// Velocidade (m/s) a partir da qual um alvo é considerado "rápido" para fins de pedir ajuda:
+    /// uma torre de quadrante adjacente que esteja a até 2 m do alvo passa a também engajá-lo
+    /// (ver <see cref="Services.TowerSelectionService"/>), mesmo fora do alcance normal de câmera —
+    /// um segundo canhão reduz a chance de o alvo escapar de um disparo único (a chance de errar
+    /// cresce com a velocidade, ver <see cref="Helpers.CalculadoraErroDisparo"/>). Valor de
+    /// fábrica (1,2 m/s) é o mesmo limiar já usado para classificar um alvo como perigo "Alto"
+    /// em <see cref="Helpers.ClassificadorPerigoAlvo"/>.
+    /// </summary>
+    public double VelocidadeRapidaMetrosPorSegundo { get; set; } = 1.2;
+
     // ------------------------------------------------------------------ Disparo
 
     /// <summary>Piso absoluto de <see cref="LimiarConfiancaDisparoPercentual"/> — por mais que o

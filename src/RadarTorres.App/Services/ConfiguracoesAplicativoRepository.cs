@@ -88,6 +88,8 @@ public sealed class ConfiguracoesAplicativoRepository : IConfiguracoesAplicativo
                 ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual, configuracoes.LimiarConfiancaDisparoPercentual);
             configuracoes.AlcanceMiraMetros = Math.Clamp(
                 configuracoes.AlcanceMiraMetros, ConfiguracoesAplicativo.AlcanceMiraMinimoMetros, ConfiguracoesAplicativo.AlcanceMiraMaximoMetros);
+            configuracoes.VelocidadeRapidaMetrosPorSegundo = Math.Clamp(
+                configuracoes.VelocidadeRapidaMetrosPorSegundo, ConfiguracoesAplicativo.VelocidadeRapidaMinimaMetrosPorSegundo, ConfiguracoesAplicativo.VelocidadeRapidaMaximaMetrosPorSegundo);
             return configuracoes;
         }
         catch (Exception ex)
@@ -134,6 +136,8 @@ public sealed class ConfiguracoesAplicativoRepository : IConfiguracoesAplicativo
             ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual, configuracoes.LimiarConfiancaDisparoPercentual);
         configuracoes.AlcanceMiraMetros = Math.Clamp(
             configuracoes.AlcanceMiraMetros, ConfiguracoesAplicativo.AlcanceMiraMinimoMetros, ConfiguracoesAplicativo.AlcanceMiraMaximoMetros);
+        configuracoes.VelocidadeRapidaMetrosPorSegundo = Math.Clamp(
+            configuracoes.VelocidadeRapidaMetrosPorSegundo, ConfiguracoesAplicativo.VelocidadeRapidaMinimaMetrosPorSegundo, ConfiguracoesAplicativo.VelocidadeRapidaMaximaMetrosPorSegundo);
         _atual = configuracoes;
 
         try
