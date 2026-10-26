@@ -4,6 +4,7 @@ erDiagram
     OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
     OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
     CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
+    OBJETOS_DETECTADOS ||--o{ CLASSIFICACOES_ALVO : "classificou (velocidade/perigo)"
 
     USUARIOS {
         int Id PK
@@ -77,4 +78,43 @@ erDiagram
         bool SidebarRecolhida
         string TelaInicial "nullable"
         int RegistrosPorPagina
+    }
+
+    CLASSIFICACOES_ALVO {
+        int Id PK
+        int ObjetoDetectadoId FK "nullable"
+        double VelocidadeMetrosPorSegundo
+        string Grau "classificacao de perigo do alvo"
+        datetime DataHora
+    }
+
+    HISTORICO_TREINAMENTO_GERACOES {
+        int ID PK
+        int GERACAO
+        double MELHOR_FITNESS
+        double FITNESS_MEDIO
+        int ALVOS_ABATIDOS
+        int ALVOS_ESCAPADOS
+        datetime DH_REGISTRO
+    }
+
+    MARCOS_FITNESS_TREINAMENTO {
+        int Id PK
+        int GeracaoMarco UK "marco a cada N geracoes"
+        double FitnessMedioDoBloco
+        double MelhorFitnessDoBloco
+        datetime DataHora
+    }
+
+    INSTANTANEOS_COMPORTAMENTO_MELHOR_GENE {
+        int Id PK
+        int GeracaoMarco UK
+        double Fitness
+        int AlvosAbatidos
+        int AlvosEscapados
+        int TirosErrados
+        double TaxaDeAcerto "nullable"
+        double TaxaDeCobertura "nullable"
+        string GenomaJson "vetor de pesos/vieses evoluido"
+        datetime DataHora
     }
