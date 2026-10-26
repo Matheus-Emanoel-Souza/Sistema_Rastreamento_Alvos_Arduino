@@ -304,6 +304,26 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         }
     }
 
+    // ---------------------------------------------------------------- Ajuda entre torres
+
+    public double VelocidadeRapidaMinimaMetrosPorSegundo => ConfiguracoesAplicativo.VelocidadeRapidaMinimaMetrosPorSegundo;
+    public double VelocidadeRapidaMaximaMetrosPorSegundo => ConfiguracoesAplicativo.VelocidadeRapidaMaximaMetrosPorSegundo;
+
+    /// <summary>Velocidade (m/s) a partir da qual um alvo aciona ajuda de torre adjacente — ver <see cref="ConfiguracoesAplicativo.VelocidadeRapidaMetrosPorSegundo"/>.</summary>
+    public double VelocidadeRapidaMetrosPorSegundo
+    {
+        get => _edicao.VelocidadeRapidaMetrosPorSegundo;
+        set
+        {
+            double ajustado = Math.Clamp(value, ConfiguracoesAplicativo.VelocidadeRapidaMinimaMetrosPorSegundo, ConfiguracoesAplicativo.VelocidadeRapidaMaximaMetrosPorSegundo);
+            if (Math.Abs(_edicao.VelocidadeRapidaMetrosPorSegundo - ajustado) < 0.05) return;
+
+            _edicao.VelocidadeRapidaMetrosPorSegundo = ajustado;
+            OnPropertyChanged();
+            MarcarAlterado();
+        }
+    }
+
     // ---------------------------------------------------------------- Disparo
 
     public double ConfiancaMinimaDisparoPercentual => ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual;
@@ -465,5 +485,6 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         OnPropertyChanged(nameof(HeuristicaPredicaoDeTrajetoriaAtiva));
         OnPropertyChanged(nameof(LimiarConfiancaDisparoPercentual));
         OnPropertyChanged(nameof(AlcanceMiraMetros));
+        OnPropertyChanged(nameof(VelocidadeRapidaMetrosPorSegundo));
     }
 }

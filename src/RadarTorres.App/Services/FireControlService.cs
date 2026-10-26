@@ -119,8 +119,11 @@ public sealed class FireControlService : IFireControlService
 
         // Comando sai de qualquer forma (é o disparo demonstrativo em si); se ACERTA o alvo é
         // probabilístico — alvo mais rápido tem mais chance de escapar de UM canhão, por isso
-        // TowerSelectionService já autoriza mais de uma torre no mesmo alvo quando a velocidade
-        // dele justifica ajuda (ver Target.EngagingTowers).
+        // TowerSelectionService.ComputarTorresEngajando já puxa uma torre de quadrante adjacente
+        // (a até 2 m do alvo) para a lista de engajamento quando a velocidade dele passa de
+        // ConfiguracoesAplicativo.VelocidadeRapidaMetrosPorSegundo (ver Target.EngagingTowers).
+        // Nenhuma torre se desvincula do alvo por errar — ela só libera (Target.SelectedTower)
+        // quando o alvo escapa, sai de zona de cobertura, ou é abatido de fato.
         double probabilidadeDeErro = CalculadoraErroDisparo.ProbabilidadeDeErro(target.SpeedMetersPerSecond);
         bool acertou = Random.Shared.NextDouble() >= probabilidadeDeErro;
 

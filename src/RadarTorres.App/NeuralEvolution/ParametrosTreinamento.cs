@@ -32,6 +32,9 @@ public sealed record ParametrosTreinamento
     /// <summary>Penalidade de fitness aplicada uma única vez por alvo ao cruzar <see cref="DistanciaPerdaPontoMetros"/> — menor que <see cref="PenalidadeEscape"/> porque o alvo pode ainda vir a ser abatido depois.</summary>
     public double PenalidadePerdaPonto { get; init; } = 3.0;
 
+    /// <summary>Velocidade (m/s) a partir da qual um alvo aciona ajuda de torre adjacente — mesma regra e mesmo valor de fábrica de <see cref="Configuration.ConfiguracoesAplicativo.VelocidadeRapidaMetrosPorSegundo"/> (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>).</summary>
+    public double VelocidadeRapidaMetrosPorSegundo { get; init; } = 1.2;
+
     public int TamanhoPopulacao { get; init; } = 60;
     public double TaxaMutacao { get; init; } = 0.08;
 

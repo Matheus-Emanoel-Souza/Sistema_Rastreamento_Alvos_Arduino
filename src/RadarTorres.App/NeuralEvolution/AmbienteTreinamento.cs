@@ -248,6 +248,9 @@ public sealed class AmbienteTreinamento
         }
     }
 
+    /// <summary>Regra 6 (ajuda de torre adjacente): mesmo raio usado em produção (ver <see cref="Services.TowerSelectionService"/>).</summary>
+    private const double RaioAjudaTorreAdjacenteMetros = 2.0;
+
     private void DecidirDisparos(EstadoEpisodio estado, ControladorHibrido controlador)
     {
         foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo && a.TorreSelecionadaId is not null))
@@ -262,34 +265,60 @@ public sealed class AmbienteTreinamento
 
             if (!controlador.DecidirDisparo(alvo, torre)) continue;
 
-            // Erro probabilístico crescendo com a velocidade do alvo (mesma regra do sistema
-            // real — ver CalculadoraErroDisparo): alvo rápido escapando de uma torre sozinha é o
-            // sinal de fitness que empurra a rede a não demorar tanto para comprometer/disparar.
-            if (estado.Rng.NextDouble() < CalculadoraErroDisparo.ProbabilidadeDeErro(alvo.VelocidadeMetrosPorSegundo))
+            Disparar(estado, torre, alvo);
+            if (!alvo.Ativo) continue; // abatido pela torre principal — não precisa de ajuda
+
+            // Regra 6 (ajuda de torre adjacente): alvo acima da velocidade considerada rápida
+            // também recebe o disparo de uma torre de quadrante adjacente a até
+            // RaioAjudaTorreAdjacenteMetros dele, mesmo sem ser a torre principal comprometida —
+            // um segundo canhão reduz a chance de o alvo escapar de um disparo único (a chance de
+            // errar cresce com a velocidade, ver CalculadoraErroDisparo).
+            if (alvo.VelocidadeMetrosPorSegundo >= _parametros.VelocidadeRapidaMetrosPorSegundo)
             {
-                estado.TirosErrados++;
-                continue;
+                TorreTreinamento? ajuda = estado.Torres.FirstOrDefault(t =>
+                    t.Id != torre.Id &&
+                    QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante) &&
+                    DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= RaioAjudaTorreAdjacenteMetros);
+
+                if (ajuda is not null) Disparar(estado, ajuda, alvo);
             }
-
-            alvo.Abatido = true;
-            alvo.Ativo = false;
-            estado.AlvosAbatidos++;
-
-            // Guardado antes de liberar a torre: o alvo é removido da lista no fim deste mesmo
-            // passo (ver Avancar/RemoveAll), então sem isto a tela não teria como desenhar o
-            // disparo depois de Avancar retornar.
-            torre.DisparadoEmSegundos = estado.TempoDecorridoSegundos;
-            torre.UltimoAlvoDisparoX = alvo.X;
-            torre.UltimoAlvoDisparoY = alvo.Y;
-
-            // Bônus por abater longe da base (mais tempo de reação sobrando) — incentiva a rede
-            // a não deixar o alvo se aproximar demais antes de decidir disparar.
-            double distanciaBase = DistanceCalculator.Euclidean(alvo.X, alvo.Y, 0, 0);
-            double bonusDistancia = Math.Clamp(distanciaBase / _parametros.RaioMundoMetros, 0, 1);
-            estado.FitnessAcumulado += _parametros.RecompensaAbate * (0.7 + 0.3 * bonusDistancia);
-
-            LiberarTorreDe(estado, alvo);
         }
+    }
+
+    /// <summary>
+    /// Um único disparo contra <paramref name="alvo"/>, pela <paramref name="torre"/> indicada —
+    /// reaproveitada tanto pela torre principal quanto pela torre de ajuda (regra 6), para as
+    /// duas aplicarem exatamente a mesma chance de erro e a mesma recompensa de abate.
+    /// </summary>
+    private void Disparar(EstadoEpisodio estado, TorreTreinamento torre, AlvoTreinamento alvo)
+    {
+        // Erro probabilístico crescendo com a velocidade do alvo (mesma regra do sistema
+        // real — ver CalculadoraErroDisparo): alvo rápido escapando de uma torre sozinha é o
+        // sinal de fitness que empurra a rede a não demorar tanto para comprometer/disparar.
+        if (estado.Rng.NextDouble() < CalculadoraErroDisparo.ProbabilidadeDeErro(alvo.VelocidadeMetrosPorSegundo))
+        {
+            estado.TirosErrados++;
+            return;
+        }
+
+        alvo.Abatido = true;
+        alvo.Ativo = false;
+        estado.AlvosAbatidos++;
+
+        // Guardado antes de liberar a torre: o alvo é removido da lista no fim deste mesmo
+        // passo (ver Avancar/RemoveAll), então sem isto a tela não teria como desenhar o
+        // disparo depois de Avancar retornar.
+        torre.DisparadoEmSegundos = estado.TempoDecorridoSegundos;
+        torre.UltimoAlvoDisparoX = alvo.X;
+        torre.UltimoAlvoDisparoY = alvo.Y;
+
+        // Bônus por abater longe da base (mais tempo de reação sobrando) — incentiva a rede
+        // a não deixar o alvo se aproximar demais antes de decidir disparar.
+        double distanciaBase = DistanceCalculator.Euclidean(alvo.X, alvo.Y, 0, 0);
+        double bonusDistancia = Math.Clamp(distanciaBase / _parametros.RaioMundoMetros, 0, 1);
+        estado.FitnessAcumulado += _parametros.RecompensaAbate * (0.7 + 0.3 * bonusDistancia);
+
+        LiberarTorreDe(estado, alvo);
     }
 
     private static void LiberarTorreDe(EstadoEpisodio estado, AlvoTreinamento alvo)

@@ -218,6 +218,25 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ============================ AJUDA ENTRE TORRES ============================ -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource LabelText}">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="VELOCIDADE CONSIDERADA RÁPIDA: {0:0.0} m/s">
+                                    <Binding Path="VelocidadeRapidaMetrosPorSegundo"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                        <Slider Minimum="{Binding VelocidadeRapidaMinimaMetrosPorSegundo}" Maximum="{Binding VelocidadeRapidaMaximaMetrosPorSegundo}"
+                                Value="{Binding VelocidadeRapidaMetrosPorSegundo}"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                Width="320" HorizontalAlignment="Left"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="A partir desta velocidade, uma torre de quadrante adjacente que esteja a até 2 m do alvo também passa a engajá-lo, além da torre principal — reduz a chance de o alvo escapar de um disparo único."/>
+                    </StackPanel>
+                </Border>
+
                 <!-- ============================ DISPARO ============================ -->
                 <Border Style="{StaticResource SectionCard}">
                     <StackPanel>
