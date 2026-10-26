@@ -27,6 +27,14 @@
  *     SET;MIN_DISTANCE=<metros>
  *     SET;MAX_DISTANCE=<metros>
  *     FIRE;TOWER=<id>;TARGET=<id>
+ *     GENOMA;RESET
+ *     GENOMA;INDICE=<0-73>;VALOR=<float>
+ *     GENOMA;COMMIT
+ *     REDE;ENTRADAS=<d>;<mesmo_quad>;<quad_adj>;<angulo>;<vel>;<fator_camada>
+ *       Rede neural embutida (só diagnóstico, nunca aciona nada — ver
+ *       Docs/Documentos_Entregaveis/Artigo/Como_a_IA_funciona_no_RadarTorres.MD,
+ *       Parte 3, e o mesmo bloco de comentário em RadarTorres_Firmware.ino).
+ *       Arduino -> PC: STATUS;REDE_AJUSTE=<float>;REDE_CONFIANCA=<float>
  *
  *  Baud Rate padrão: 9600 (configurável no app).
  *  Terminador de linha: '\n' (LF) — compatível com Serial.println() do Arduino
@@ -58,6 +66,28 @@ unsigned long lastSendMillis = 0;
 
 String inputBuffer = "";
 
+// ============================================================================
+// REDE NEURAL EMBUTIDA (somente diagnóstico — NUNCA aciona nada sozinha)
+// ----------------------------------------------------------------------------
+// Espelha RedeNeural.cs (lado PC). Ver o mesmo bloco de comentário, completo,
+// em Arduino/RadarTorres_Firmware/RadarTorres_Firmware.ino — implementação
+// idêntica aqui, pra poder testar o protocolo sem hardware real.
+//
+// *** INVARIANTE DE SEGURANÇA: as funções desta seção só calculam e devolvem
+//     números pela serial — nenhuma delas aciona nada (não há atuador real
+//     neste firmware de simulação, mas a regra vale igual: nunca ligar isto
+//     a FIRE/AIM/qualquer efeito). ***
+// ============================================================================
+const uint8_t REDE_QTD_ENTRADAS = 6;
+const uint8_t REDE_QTD_OCULTOS = 8;
+const uint8_t REDE_QTD_SAIDAS = 2;
+const uint8_t REDE_QTD_GENES = 74; // 6*8+8 + 8*2+2 -- ver RedeNeural.TamanhoGenoma (lado PC)
+const float REDE_GENE_VALOR_MAXIMO_ABS = 1000.0; // trava de sanidade, nao e limite de treino
+
+float redeGenomaEmUso[REDE_QTD_GENES];
+float redeGenomaRecebendo[REDE_QTD_GENES];
+bool redeIndiceRecebido[REDE_QTD_GENES];
+
 // --------------------------------------------------------------------------
 // setup()
 // --------------------------------------------------------------------------
@@ -71,7 +101,123 @@ void setup() {
     targets[i].distance = randomFloat(0.5, maxDistance * 0.8);
   }
 
+  inicializarRedeEmbutida();
+
   Serial.println("STATUS;SYSTEM=ONLINE");
+}
+
+void inicializarRedeEmbutida() {
+  for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+    redeGenomaEmUso[i] = 0.0;
+    redeGenomaRecebendo[i] = 0.0;
+    redeIndiceRecebido[i] = false;
+  }
+}
+
+// Extrai o valor de uma chave dentro de uma linha "TIPO;CHAVE=VAL;...",
+// retornando "" se a chave não existir.
+String extrairCampo(const String &linha, const String &chave) {
+  String busca = ";" + chave + "=";
+  int idx = linha.indexOf(busca);
+  if (idx < 0) return "";
+
+  int inicioValor = idx + busca.length();
+  int fim = linha.indexOf(';', inicioValor);
+  if (fim < 0) fim = linha.length();
+  return linha.substring(inicioValor, fim);
+}
+
+// Fiel a RedeNeural.Ativar (lado PC) — ver comentário completo da mesma
+// função em RadarTorres_Firmware.ino.
+void calcularSaidaRedeEmbutida(const float entradas[REDE_QTD_ENTRADAS], float saida[REDE_QTD_SAIDAS]) {
+  float ocultos[REDE_QTD_OCULTOS];
+
+  for (uint8_t s = 0; s < REDE_QTD_OCULTOS; s++) {
+    float soma = redeGenomaEmUso[48 + s];
+    for (uint8_t e = 0; e < REDE_QTD_ENTRADAS; e++) {
+      soma += entradas[e] * redeGenomaEmUso[e * REDE_QTD_OCULTOS + s];
+    }
+    ocultos[s] = tanh(soma);
+  }
+
+  for (uint8_t s = 0; s < REDE_QTD_SAIDAS; s++) {
+    float soma = redeGenomaEmUso[72 + s];
+    for (uint8_t e = 0; e < REDE_QTD_OCULTOS; e++) {
+      soma += ocultos[e] * redeGenomaEmUso[56 + e * REDE_QTD_SAIDAS + s];
+    }
+    saida[s] = tanh(soma);
+  }
+}
+
+void tratarComandoGenoma(const String &linha) {
+  if (linha == "GENOMA;RESET") {
+    for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+      redeGenomaRecebendo[i] = 0.0;
+      redeIndiceRecebido[i] = false;
+    }
+    Serial.println("ACK;CMD=GENOMA;RESET");
+    return;
+  }
+
+  if (linha == "GENOMA;COMMIT") {
+    for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+      if (!redeIndiceRecebido[i]) {
+        Serial.println("ERROR;REASON=GENOMA INCOMPLETO, FALTA INDICE " + String(i) + " - COMMIT RECUSADO");
+        return;
+      }
+    }
+    for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+      redeGenomaEmUso[i] = redeGenomaRecebendo[i];
+    }
+    Serial.println("ACK;CMD=GENOMA;COMMIT;STATUS=OK");
+    return;
+  }
+
+  String sIndice = extrairCampo(linha, "INDICE");
+  String sValor = extrairCampo(linha, "VALOR");
+  if (sIndice.length() == 0 || sValor.length() == 0) {
+    Serial.println("ERROR;REASON=CAMPOS AUSENTES EM GENOMA: " + linha);
+    return;
+  }
+
+  int indice = sIndice.toInt();
+  if (indice < 0 || indice >= REDE_QTD_GENES) {
+    Serial.println("ERROR;REASON=INDICE FORA DA FAIXA 0-73 EM GENOMA: " + linha);
+    return;
+  }
+
+  float valor = constrain(sValor.toFloat(), -REDE_GENE_VALOR_MAXIMO_ABS, REDE_GENE_VALOR_MAXIMO_ABS);
+  redeGenomaRecebendo[indice] = valor;
+  redeIndiceRecebido[indice] = true;
+  Serial.println("ACK;CMD=GENOMA;INDICE=" + String(indice));
+}
+
+void tratarComandoRedeEntradas(const String &linha) {
+  String sValores = linha.substring(String("REDE;ENTRADAS=").length());
+  float entradas[REDE_QTD_ENTRADAS];
+  uint8_t lidos = 0;
+  int inicio = 0;
+  while (lidos < REDE_QTD_ENTRADAS) {
+    int fim = sValores.indexOf(';', inicio);
+    String campo = (fim < 0) ? sValores.substring(inicio) : sValores.substring(inicio, fim);
+    entradas[lidos] = campo.toFloat();
+    lidos++;
+    if (fim < 0) break;
+    inicio = fim + 1;
+  }
+
+  if (lidos != REDE_QTD_ENTRADAS) {
+    Serial.println("ERROR;REASON=REDE;ENTRADAS PRECISA DE EXATAMENTE 6 VALORES: " + linha);
+    return;
+  }
+
+  float saida[REDE_QTD_SAIDAS];
+  calcularSaidaRedeEmbutida(entradas, saida);
+
+  Serial.print("STATUS;REDE_AJUSTE=");
+  Serial.print(saida[0], 6);
+  Serial.print(";REDE_CONFIANCA=");
+  Serial.println(saida[1], 6);
 }
 
 // --------------------------------------------------------------------------
@@ -140,6 +286,12 @@ void handleCommand(const String &line) {
     Serial.println("ACK;CMD=" + line);
     // Em hardware real, aqui seria acionado o indicador/laser de baixa potência
     // correspondente à torre informada. Neste simulador, apenas confirmamos.
+  }
+  else if (line.startsWith("GENOMA;")) {
+    tratarComandoGenoma(line);
+  }
+  else if (line.startsWith("REDE;ENTRADAS=")) {
+    tratarComandoRedeEntradas(line);
   }
   else {
     Serial.println("ERROR;REASON=COMANDO NAO RECONHECIDO: " + line);

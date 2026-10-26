@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace RadarTorres.App.Services;
 
@@ -53,6 +54,11 @@ public static class SerialProtocolParser
                 return TryBuildTargetMessage(fields, line, out message);
 
             case "STATUS":
+                if (fields.TryGetValue("REDE_AJUSTE", out string? redeAjusteStr) &&
+                    fields.TryGetValue("REDE_CONFIANCA", out string? redeConfiancaStr))
+                {
+                    return TryBuildRedeSaidaMessage(redeAjusteStr, redeConfiancaStr, line, out message);
+                }
                 fields.TryGetValue("SYSTEM", out string? systemStatus);
                 message = new StatusMessage(systemStatus ?? "UNKNOWN", line);
                 return true;
@@ -71,6 +77,24 @@ public static class SerialProtocolParser
                 message = new UnknownMessage(line);
                 return false;
         }
+    }
+
+    private static bool TryBuildRedeSaidaMessage(string ajusteStr, string confiancaStr, string rawLine, out SerialMessage message)
+    {
+        if (!double.TryParse(ajusteStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double ajuste) || double.IsNaN(ajuste) || double.IsInfinity(ajuste))
+        {
+            message = new ErrorMessage($"REDE_AJUSTE INVÁLIDO/NaN ('{ajusteStr}')", rawLine);
+            return true;
+        }
+
+        if (!double.TryParse(confiancaStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double confianca) || double.IsNaN(confianca) || double.IsInfinity(confianca))
+        {
+            message = new ErrorMessage($"REDE_CONFIANCA INVÁLIDO/NaN ('{confiancaStr}')", rawLine);
+            return true;
+        }
+
+        message = new RedeSaidaMessage(ajuste, confianca, rawLine);
+        return true;
     }
 
     private static bool TryBuildTargetMessage(Dictionary<string, string> fields, string rawLine, out SerialMessage message)
@@ -140,4 +164,33 @@ public static class SerialProtocolParser
     /// </summary>
     public static string BuildAim(int towerId, double angleDegrees) =>
         $"AIM;TOWER={towerId};ANGLE={angleDegrees.ToString("0.0", CultureInfo.InvariantCulture)}";
+
+    /// <summary>
+    /// Rede neural embutida no Arduino (diagnóstico, nunca aciona nada — ver
+    /// <c>Docs/Documentos_Entregaveis/Artigo/Como_a_IA_funciona_no_RadarTorres.MD</c>, Parte 3).
+    /// Zera o buffer de carregamento de um genoma novo antes de enviar os 74 pesos.
+    /// </summary>
+    public static string BuildGenomaReset() => "GENOMA;RESET";
+
+    /// <summary>Envia UM peso/viés do genoma (mesma ordem de <see cref="NeuralEvolution.RedeNeural"/>).</summary>
+    public static string BuildGenomaIndice(int indice, double valor) =>
+        $"GENOMA;INDICE={indice};VALOR={valor.ToString("0.000000", CultureInfo.InvariantCulture)}";
+
+    /// <summary>Ativa o genoma recebido — o Arduino só aceita se os 74 índices já tiverem chegado.</summary>
+    public static string BuildGenomaCommit() => "GENOMA;COMMIT";
+
+    /// <summary>
+    /// Pede ao Arduino que calcule, de forma independente, a saída da rede embutida para estas 6
+    /// entradas (mesma ordem de <see cref="NeuralEvolution.ControladorHibrido.ConstruirEntradas(double,double,bool,bool,double,double,double,double)"/>).
+    /// </summary>
+    public static string BuildRedeEntradas(IReadOnlyList<double> entradas)
+    {
+        if (entradas.Count != NeuralEvolution.ControladorHibrido.QuantidadeEntradas)
+        {
+            throw new ArgumentException($"Esperadas {NeuralEvolution.ControladorHibrido.QuantidadeEntradas} entradas, recebidas {entradas.Count}.", nameof(entradas));
+        }
+
+        string valores = string.Join(';', entradas.Select(e => e.ToString("0.000000", CultureInfo.InvariantCulture)));
+        return $"REDE;ENTRADAS={valores}";
+    }
 }
