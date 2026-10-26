@@ -30,6 +30,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private readonly ITargetTrackingService _trackingService;
     private readonly ITowerSelectionService _towerService;
     private readonly IFireControlService _fireControlService;
+    private readonly IRedeEmbutidaSincronizadorService _redeEmbutidaSincronizador;
     private readonly ISimulationService _simulationService;
     private readonly IZonaMortaService _zonaMortaService;
     private readonly IObjetoDetectadoRepository _objetoRepository;
@@ -51,6 +52,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         ITargetTrackingService trackingService,
         ITowerSelectionService towerService,
         IFireControlService fireControlService,
+        IRedeEmbutidaSincronizadorService redeEmbutidaSincronizador,
         ISimulationService simulationService,
         IZonaMortaService zonaMortaService,
         IObjetoDetectadoRepository objetoRepository,
@@ -68,6 +70,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         _trackingService = trackingService;
         _towerService = towerService;
         _fireControlService = fireControlService;
+        _redeEmbutidaSincronizador = redeEmbutidaSincronizador;
         _simulationService = simulationService;
         _zonaMortaService = zonaMortaService;
         _objetoRepository = objetoRepository;
@@ -107,6 +110,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
         ManualFireCommand = new RelayCommand(async () => await ManualFireAsync(), () => SelectedTarget is not null && PodeExecutarAcoes);
         ClearRadarCommand = new RelayCommand(ClearRadar);
         TogglePauseCommand = new RelayCommand(() => IsPaused = !IsPaused);
+        SincronizarRedeEmbutidaCommand = new RelayCommand(async () => await _redeEmbutidaSincronizador.SincronizarGenomaAsync(), () => IsConnected);
         SetModeCommand = new RelayCommand(modo => CurrentMode = (SystemMode)modo!, _ => PodeExecutarAcoes);
 
         RemoveZonaMortaCommand = new RelayCommand(zone => { if (zone is ZonaMorta dz) _zonaMortaService.Remove(dz); }, _ => PodeGerenciarZonasMortas);
@@ -481,6 +485,13 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     public RelayCommand ClearRadarCommand { get; }
     public RelayCommand TogglePauseCommand { get; }
 
+    /// <summary>
+    /// Envia o genoma da rede treinada ao Arduino e ativa o cálculo embutido (diagnóstico) — ver
+    /// <see cref="IRedeEmbutidaSincronizadorService"/>. Não participa da seleção de torre nem do
+    /// disparo, que continuam decididos inteiramente pelo app.
+    /// </summary>
+    public RelayCommand SincronizarRedeEmbutidaCommand { get; }
+
     public void SelectTargetById(int id) => SelectedTarget = Targets.FirstOrDefault(t => t.Id == id);
 
     // ---------------------------------------------------------------- Implementação dos comandos
@@ -680,6 +691,13 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
 
             case ErrorMessage errorMessage:
                 _logger.Error($"Erro reportado pelo Arduino: {errorMessage.Reason}");
+                break;
+
+            case RedeSaidaMessage redeSaidaMessage:
+                _logger.Info(
+                    $"Rede embutida no Arduino respondeu: ajuste={redeSaidaMessage.AjustePontuacao:0.000000}, " +
+                    $"confiança={redeSaidaMessage.ConfiancaDisparo:0.000000} — comparar com o valor calculado pelo app, " +
+                    "logado na mensagem anterior a este pedido. Só diagnóstico, não aciona nada.");
                 break;
 
             case UnknownMessage unknownMessage:

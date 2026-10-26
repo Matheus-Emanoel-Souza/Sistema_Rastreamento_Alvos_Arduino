@@ -17,13 +17,14 @@ public sealed class ControladorTreinadoProvider : IControladorTreinadoProvider
     private const string LogicalName = "RadarTorres.App.Resources.ControladorTreinado.genoma-controlador.json";
 
     public RedeNeural? Rede { get; }
+    public double[]? Genoma { get; }
 
     public ControladorTreinadoProvider(ILoggingService logger)
     {
-        Rede = Carregar(logger);
+        (Rede, Genoma) = Carregar(logger);
     }
 
-    private static RedeNeural? Carregar(ILoggingService logger)
+    private static (RedeNeural? Rede, double[]? Genoma) Carregar(ILoggingService logger)
     {
         try
         {
@@ -31,24 +32,24 @@ public sealed class ControladorTreinadoProvider : IControladorTreinadoProvider
             if (stream is null)
             {
                 logger.Warning("Nenhum controlador treinado embutido encontrado — usando heurística pura.");
-                return null;
+                return (null, null);
             }
 
             GenomaExportado? payload = JsonSerializer.Deserialize<GenomaExportado>(stream);
             if (payload is null || payload.Arquitetura.Length == 0 || payload.Genoma.Length == 0)
             {
                 logger.Warning("Controlador treinado embutido está vazio ou corrompido — usando heurística pura.");
-                return null;
+                return (null, null);
             }
 
             var rede = new RedeNeural(payload.Arquitetura, payload.Genoma);
             logger.Info($"Controlador treinado carregado (geração {payload.Geracao}, melhor fitness {payload.MelhorFitness:0.0}).");
-            return rede;
+            return (rede, payload.Genoma);
         }
         catch (Exception ex)
         {
             logger.Warning($"Não foi possível carregar o controlador treinado embutido: {ex.Message}. Usando heurística pura.");
-            return null;
+            return (null, null);
         }
     }
 

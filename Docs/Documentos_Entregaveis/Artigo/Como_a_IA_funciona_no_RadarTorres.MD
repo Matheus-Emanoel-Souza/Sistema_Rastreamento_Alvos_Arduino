@@ -666,6 +666,13 @@ divergência de versão entre o firmware e `RedeNeural.cs`.
 | `src/RadarTorres.App/Services/IRedeEmbutidaSincronizadorService.cs` (novo) | Envia o genoma ativo ao Arduino e pede validação de entradas |
 | `src/RadarTorres.App/ViewModels/MainViewModel.cs` | Comando para disparar a sincronização/validação manualmente; trata `RedeSaidaMessage` recebida |
 
+**[PENDENTE]** O comando `MainViewModel.SincronizarRedeEmbutidaCommand` existe e funciona (chama
+`IRedeEmbutidaSincronizadorService.SincronizarGenomaAsync`), mas **não foi ligado a nenhum botão na
+tela ainda** — faltou confirmar em qual tela/local ele deveria aparecer para o operador (a tela de
+monitoramento usa o padrão de `DashboardCard`, e adivinhar o lugar certo sem conferir visualmente
+seria um risco desnecessário). Até lá, o recurso existe no código mas não é acionável pela
+interface gráfica.
+
 ### O que continua igual (e por quê isso importa)
 
 A seleção de torre e a autorização de disparo **continuam exatamente como antes** — só o app
