@@ -15,7 +15,13 @@
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage[alf]{abntex2cite}
+\usepackage[colorinlistoftodos,textsize=footnotesize]{todonotes}
 \renewcommand{\refname}{Referências}
+
+% ---------- Comentários de revisão coloridos (inline) ----------
+\newcommand{\revmudar}[1]{\todo[inline,color=red!25!white,bordercolor=red]{\textbf{MUDAR:} #1}}
+\newcommand{\revbom}[1]{\todo[inline,color=green!25!white,bordercolor=green!60!black]{\textbf{FICOU BOM:} #1}}
+\newcommand{\revfaltou}[1]{\todo[inline,color=yellow!35!white,bordercolor=orange]{\textbf{FALTOU DETALHE:} #1}}
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.8em}
@@ -104,6 +110,11 @@ incrementally and with low risk.
 
 \noindent\textbf{Keywords}: Sensing; Data model; Persistence; SQL migration; Prototype.
 
+\revmudar{Título, resumo, abstract e palavras-chave só falam de "Modelo de dados", mas o corpo do
+artigo hoje cobre requisitos, projeto elétrico, visão computacional, diagrama de pacotes e
+controlador neuroevolutivo. Reescrever título/resumo/abstract/keywords para o escopo real, ou
+dividir em artigos por entregável.}
+
 \clearpage
 
 % ============================================================
@@ -119,6 +130,9 @@ acessível, como parte central da arquitetura do protótipo. Protótipos didáti
 forma desempenham papel importante nesse processo, por permitirem que esses conceitos sejam
 explorados de forma prática e replicável em laboratório, reproduzindo os princípios de
 sensoriamento, rastreamento e decisão presentes em sistemas mais sofisticados.
+
+\revbom{Introdução contextualiza bem o problema (custo de radar/LIDAR vs. visão computacional +
+hardware acessível) antes de entrar em detalhe técnico -- boa porta de entrada pro leitor leigo.}
 
 % ============================================================
 % 2 DESENVOLVIMENTO
@@ -140,6 +154,11 @@ complementaridade.
 ultrassônico de baixa latência, enquanto um Raspberry Pi processa as imagens da câmera com uma rede
 YOLOv4-tiny, com comunicação serial entre os dois. Essa divisão de papéis é análoga à do
 RadarTorres, em que o Arduino realiza a aquisição e a aplicação desktop concentra o processamento.
+
+\revfaltou{Conferir na fonte original (Majoni et al., 2025) se a divisão "Arduino Mega trata
+ultrassom + Raspberry Pi roda YOLOv4-tiny + comunicação serial" está descrita assim no paper, antes
+de manter a analogia como está.}
+
 A literatura também mostra que sensores ultrassônicos de baixo custo podem complementar câmeras e
 LiDAR em sistemas de rastreamento, com a precisão melhorada por predição baseada em filtro de
 Kalman e fusão com a distância medida pelos ultrassônicos \cite{curbscan}. O mesmo trabalho observa
@@ -153,6 +172,10 @@ rastreamento e identificação, seguidas da avaliação da ameaça e da atribui�
 \cite{naseem_tewa, roux_tewa}. As abordagens são classificadas em ameaça por ameaça, em que as
 armas são atribuídas sequencialmente, e multiameaça, em que o conjunto de ameaças é considerado
 simultaneamente \cite{roux_tewa}.
+
+\revmudar{\texttt{naseem\_tewa} e \texttt{roux\_tewa} em referencias.bib estão com dados
+"PREENCHER" (placeholder) -- o PDF compilado mostra literalmente "PREENCHER PREENCHER" na lista de
+referências. Preencher com dados reais ou remover a citação até ter a fonte.}
 
 O RadarTorres adota uma abordagem simples, por proximidade, aplicada alvo a alvo, com propósito
 exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento real); a
@@ -169,6 +192,16 @@ escolha de ampliar o desempenho do controlador pelo ajuste dos hiperparâmetros 
 (tamanho de população, paralelização da avaliação de fitness, enriquecimento do sinal de
 recompensa) em vez de aumentar o número de camadas ou neurônios sem evidência de que a capacidade
 atual da rede seja o fator limitante.
+
+\revmudar{Such et al. (2017) testam redes de até 4 milhões de parâmetros (Atari/locomoção) --
+escala bem diferente dos 74 parâmetros da rede do RadarTorres. A referência sustenta "GA é
+competitivo com gradiente", não sustenta "logo não vale ampliar a rede aqui". Ajustar a frase pra
+não atribuir essa conclusão específica ao paper.}
+
+\revfaltou{Faltam referências sobre: restrição de ações válidas (action masking) em RL, "shielding"
+em RL seguro (camada de segurança vetando ações de uma política aprendida) e neuroevolução aplicada
+a atribuição de armas/TEWA especificamente -- fundamentariam a arquitetura híbrida
+heurística+rede melhor do que só a referência genérica de neuroevolução hoje citada.}
 
 O impacto do treinamento virtual sobre a execução física do controlador é atenuado por uma decisão
 de projeto central: a mesma classe que decide no episódio simulado (\texttt{ControladorHibrido}) é
@@ -190,6 +223,10 @@ camada heurística determinística já considera válida (nunca uma torre ocupad
 alcance, nunca dentro de uma zona morta), o que limita o pior caso de uma generalização imperfeita
 do treino virtual para a física -- no limite, o sistema regride ao comportamento puramente
 heurístico, nunca a uma decisão arbitrária.
+
+\revmudar{Essa garantia de pior caso é afirmada como fato, mas nunca foi validada em hardware real
+(o próprio artigo admite isso mais adiante). Trocar para condicional: "a arquitetura foi concebida
+para limitar..." em vez de afirmar o efeito como já comprovado.}
 
 % PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
 % computacional clássica (a ser informada pelo autor).
@@ -247,6 +284,14 @@ comportamento observado em campo, com hardware físico, antes de se confiar no c
 cenário de operação real -- validação que permanece como trabalho futuro, nos mesmos termos já
 apontados para o restante do protótipo.
 
+\revbom{Esse episódio (bug da certeza estática mascarando estagnação evolutiva) é a contribuição
+mais original do artigo -- é um achado empírico, replicável, documentado por commit. Bem descrito
+aqui.}
+
+\revfaltou{Falta o número que comprova o achado: gráfico ou tabela de fitness por geração
+antes/depois da correção (commit a02d46a), nº de gerações, tamanho de população e fitness final do
+genoma embutido. Hoje o impacto é só descrito em texto, sem evidência quantitativa.}
+
 \subsection{Projeto e implementação}
 
 \subsubsection{Módulo de detecção de alvos}
@@ -299,6 +344,12 @@ de cabo em vez de anel coletor (\textit{slip ring}), já que o giro é limitado 
 central é cerca de 5 cm mais alta que as torres armadas (cerca de 137,5 mm de altura). As peças
 estruturais são impressas em 3D.
 
+\revfaltou{Falta descrever o formato físico das torres e seus suportes: estrutura em formato de
+torre impressa em 3D, com suportes para motores e câmeras (que funcionam como os "canhões" de
+acionamento demonstrativo) nas torres armadas, e suporte próprio para os sensores ultrassônicos na
+torre central; ambas com suporte para rolamento axial na base, permitindo a rotação da estrutura.
+Texto já redigido em \texttt{Melhoria\_de\_artigo.MD}, falta inserir aqui.}
+
 \subsubsection{Módulo de visão}
 
 % CONFIRMAR: número de câmeras (quatro) e resolução (720p) -- não há registro desses valores no
@@ -340,8 +391,106 @@ acrescenta-se a seleção automática da torre, sem acionamento; no terceiro, ac
 acionamento demonstrativo automático. Quando a regra de segurança reprova um acionamento, ele é
 bloqueado e o motivo é registrado no console de eventos.
 
-% PREENCHER: figura do fluxograma (início, detecção, decisão e ação), a ser gerada sob demanda do
-% autor.
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.55\textwidth]{figuras/Fluxo_Operacional.png}
+  \caption{Fluxograma do fluxo operacional do RadarTorres, da leitura dos sensores ao registro em
+  auditoria (dos autores).}
+\end{figure}
+
+\revbom{Os 7 passos do fluxo operacional estão bem numerados e em ordem lógica -- fácil de seguir
+mesmo sem conhecimento técnico prévio. Fluxograma acima gerado a partir do mesmo texto, reforça
+visualmente o caminho completo do sinal, do sensor até o acionamento.}
+
+\subsubsection{Controlador neuroevolutivo: heurística e rede neural combinadas}
+
+O passo (4) do fluxo operacional -- escolher, entre as torres armadas disponíveis, a mais adequada
+para cada alvo, e decidir o instante do acionamento -- é resolvido no RadarTorres pela combinação
+de dois mecanismos de natureza distinta: uma \textbf{heurística} determinística, escrita como regras
+explícitas de engenharia, e uma \textbf{rede neural} \textit{feedforward}, cujo comportamento é
+aprendido por um algoritmo evolutivo próprio, sem biblioteca de aprendizado de máquina. Ambos
+coexistem na mesma classe, \texttt{ControladorHibrido}, e é essa combinação -- não cada mecanismo
+isoladamente -- que determina tanto o comportamento em produção quanto o que é efetivamente
+treinado.
+
+A heurística é um conjunto de regras fixas, escritas e revisáveis por engenharia, cujo resultado
+para uma mesma entrada é sempre o mesmo. No RadarTorres ela resolve, em cascata, três camadas de
+prioridade na seleção da torre: primeiro considera apenas as torres livres do próprio quadrante do
+alvo; na ausência de candidata, estende-se às torres de quadrante adjacente cujo quadrante de
+origem não tenha outro alvo concorrente; por fim, na ausência de qualquer uma das duas, recorre a
+qualquer torre livre restante, de modo que nenhum alvo fique sem cobertura. Cada camada carrega um
+fator numérico (1,0; 0,5; ou 0,0) que soma-se diretamente à pontuação da candidata. A heurística
+também impõe cinco regras de segurança e refinamento, cada uma ativável individualmente no painel de
+Configurações: anti-oscilação, que evita trocar de torre por uma diferença de pontuação dentro de
+uma margem de empate; priorização por urgência, que permite a um alvo muito próximo da base "tomar"
+a torre de um alvo mais distante; corredor de tiro, que descarta candidatas cuja linha de disparo
+atravesse uma zona morta ativa; balanceamento de carga, que prefere, entre torres empatadas, a
+usada com menor frequência na sessão; e predição de trajetória, que projeta a posição futura do
+alvo para calcular o ângulo de mira com antecedência de poucos décimos de segundo. Por fim, a
+heurística impõe dois limites absolutos ao disparo, nunca delegados à rede: um tempo mínimo de mira
+de 0,3 s e um limiar mínimo de certeza de identificação do alvo
+(\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o disparo é recusado independentemente
+de qualquer outra avaliação.
+
+A rede neural, por sua vez, não decide essas regras de segurança nem a cascata de camadas -- ela
+decide apenas a escolha fina \textit{dentro} do espaço já validado pela heurística. É uma rede
+\textit{feedforward} totalmente conectada, implementada do zero (sem biblioteca de aprendizado de
+máquina), com arquitetura de 6 entradas, uma camada oculta de 8 neurônios e 2 saídas, com ativação
+tanh em todas as camadas. As seis entradas -- todas normalizadas no intervalo $[0,1]$ ou
+equivalente -- são a distância normalizada ao alvo, dois indicadores binários de quadrante (mesmo
+quadrante e quadrante adjacente), o ângulo de mira normalizado, a velocidade normalizada do alvo e o
+próprio fator da camada heurística vigente, usado como sinal de contexto. As duas saídas são um
+ajuste de pontuação, somado à pontuação heurística da candidata, e um valor de confiança de
+disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 74 parâmetros, no
+total, para essa arquitetura -- não são ajustados por retropropagação, mas evoluídos por um
+algoritmo genético: cada genoma é um vetor plano desses 74 números, a população evolui por seleção
+por torneio, \textit{crossover} uniforme, mutação gaussiana e elitismo, e o genoma final é
+embutido na aplicação como um vetor de pesos fixo, sem qualquer etapa de treinamento em tempo de
+execução.
+
+A combinação entre os dois mecanismos é, portanto, sequencial e hierárquica, nunca uma mistura
+indiferenciada: a heurística primeiro filtra quais torres são elegíveis e calcula as
+\textit{features} de entrada (quadrante, ângulo, fator de camada); a rede neural, em seguida,
+pondera essa pontuação dentro do subconjunto já validado, decidindo qual candidata específica
+vence o empate fino que a heurística, por si só, não resolveria com a mesma sensibilidade; e, por
+fim, a heurística volta a atuar como filtro de segurança sobre a decisão de disparo, vetando
+qualquer autorização da rede que viole o tempo mínimo de mira, a certeza mínima ou uma zona morta
+ativa. Essa hierarquia tem uma consequência deliberada para o pior caso: uma generalização
+imperfeita da rede nunca produz uma decisão arbitrária, porque toda saída da rede continua restrita
+ao espaço de candidatas e ao conjunto de disparos já pré-aprovados pela heurística -- no limite, o
+sistema regride ao comportamento puramente heurístico, nunca a um erro fora de controle.
+
+Esse acoplamento se reflete diretamente no treinamento do controlador. O algoritmo genético não
+avalia a rede neural isolada: avalia o comportamento do \texttt{ControladorHibrido} completo --
+heurística e rede juntas -- em episódios simulados de 45 s, com as torres reais do projeto, alvos
+nascendo na borda de um mundo circular e avançando em direção à base. O fitness de cada genoma soma
+recompensas por abate (maiores quanto mais longe da base o alvo é interceptado) e penalidades por
+alvo que escapa ou cruza um ponto de perda sem decisão, de modo que o genoma é pressionado a
+aprender a operar bem \textit{dentro} das restrições que a heurística já impõe, e não a contorná-las
+-- não há genoma "vencedor" que dispare fora da zona morta ou abaixo da certeza mínima, porque essas
+decisões nunca chegam a ser avaliadas como tal pelo ambiente de treino. Essa mesma dependência, no
+entanto, também é o ponto mais sensível do processo: como o fitness depende inteiramente do
+comportamento simulado, qualquer premissa equivocada no ambiente de treino se propaga,
+silenciosamente, para o genoma evoluído. Foi exatamente esse o caso identificado e corrigido neste
+trabalho -- a certeza de identificação do alvo era sorteada uma única vez, no nascimento, e nunca
+era atualizada, de modo que cerca de 70\% dos alvos simulados nasciam permanentemente abaixo do
+limiar mínimo de disparo e jamais podiam ser abatidos, independentemente da qualidade do genoma, o
+que mascarava qualquer evolução real sob a aparência de estagnação. A correção -- fazer a certeza
+crescer com o tempo de observação do alvo, como ocorreria com uma câmera real acumulando quadros --
+e o alinhamento posterior dos parâmetros de alcance de mira e de limiar de certeza usados no treino
+com os mesmos valores configuráveis em produção (\texttt{ConfiguracoesAplicativo.AlcanceMiraMetros},
+\texttt{LimiarConfiancaDisparoPercentual}) ilustram, em conjunto, por que a fidelidade do ambiente
+simulado ao comportamento do sistema real é, para um controlador neuroevolutivo, tão determinante
+para o resultado do treinamento quanto a própria arquitetura da rede ou os hiperparâmetros da busca
+genética.
+
+\revbom{Explicar a hierarquia heurística $\rightarrow$ rede $\rightarrow$ heurística (filtra,
+pondera, veta) ficou claro e tecnicamente preciso -- é o núcleo mais original do artigo.}
+
+\revfaltou{Falta um diagrama simples desse fluxo (heurística filtra candidatas $\rightarrow$ rede
+decide dentro do filtro $\rightarrow$ heurística veta disparo inseguro) -- hoje só em texto, e é
+uma ideia que se beneficia bastante de uma figura, inclusive pra reforçar visualmente que a mesma
+classe \texttt{ControladorHibrido} é usada em treino e produção.}
 
 \subsection{Diagrama de pacotes}
 
@@ -376,7 +525,33 @@ Services, enquanto esses mesmos pacotes dependem de Data. Esses ciclos não impe
 da aplicação, pois todos os pacotes pertencem ao mesmo \textit{assembly}, mas aumentam o
 acoplamento e dificultam testes isolados e futuras separações em projetos distintos.
 
+\revbom{Diagrama regenerado a partir do código atual -- já inclui o pacote
+\texttt{NeuralEvolution} e as dependências novas (\texttt{Services} e \texttt{ViewModels} o
+importam).}
+
+\revfaltou{A versão anterior da figura destacava em vermelho os três ciclos de dependência
+encontrados (\texttt{NavigationService}, \texttt{DataSeeder}). A regeração simplificada acima não
+reproduz esse destaque -- se os ciclos ainda existirem no código atual, vale redesenhar com a
+mesma marcação, em vez de simplesmente perder essa informação.}
+
 \subsection{Modelo de dados}
+
+\revmudar{Achado grave: a persistência não é mais CSV -- já migrou pra \textbf{SQLite com chaves
+estrangeiras reais} (\texttt{SqliteSchema.cs} e os \texttt{Sqlite*Repository.cs}). O texto e a
+figura DER\_Atual.png descrevem um estágio anterior do projeto. Tabelas reais hoje: 11, não 6
+-- \texttt{Usuarios}, \texttt{ObjetosDetectados}, \texttt{OcorrenciaEstados} (nova),
+\texttt{acoes\_realizadas}, \texttt{modo\_atual\_torre}, \texttt{PreferenciasUsuario},
+\texttt{Cameras} (nova), \texttt{classificacoes\_alvo} (nova), \texttt{historico\_treinamento\_
+geracoes} (nova), \texttt{marcos\_fitness\_treinamento} (nova),
+\texttt{instantaneos\_comportamento\_melhor\_gene} (nova). \texttt{ChamadoAjuda}, a 6ª entidade do
+artigo atual, não existe mais no código. \texttt{PreferenciasUsuario.UsuarioId} e
+\texttt{modo\_atual\_torre.ID\_USER} já são FK reais por inteiro (com
+\texttt{PRAGMA foreign\_keys = ON}), não mais vínculo por login/texto como o artigo afirma. Já
+existe documentação mais atualizada em
+\texttt{Docs/Documentos\_Entregaveis/Banco\_de\_Dados/conteudo\_modelo\_banco\_dados.tex} e uma
+figura \texttt{DER\_SQLite.png} prontas pra reaproveitar -- mas mesmo esse documento ainda não
+inclui as 4 tabelas de treinamento neuroevolutivo listadas acima. Atualizar o artigo a partir
+desses dois documentos, cobrindo as 11 tabelas reais.}
 
 A persistência do RadarTorres foi igualmente documentada por meio de um levantamento do modelo de
 dados diretamente a partir do código-fonte já implementado. O protótipo não utiliza, no estágio
@@ -388,9 +563,23 @@ Service do formato de armazenamento.
 
 \begin{figure}[htbp]
   \centering
+  \includegraphics[width=\textwidth]{figuras/DER_SQLite_Completo.png}
+  \caption{Modelo de dados atual (SQLite, 11 tabelas, chaves estrangeiras reais) -- diagrama
+  entidade-relacionamento levantado a partir do código-fonte do projeto (dos autores).}
+\end{figure}
+
+\revfaltou{Esta figura (nova, SQLite) e a figura abaixo (DER\_Atual.png, modelo antigo em CSV)
+ainda coexistem no artigo. O texto corrido acima e abaixo da figura antiga ainda descreve o
+modelo em CSV sem chave estrangeira real -- precisa ser reescrito para as 11 tabelas e as FKs
+reais já existentes (ver comentário anterior). A figura DER\_Atual.png pode virar nota histórica
+("modelo original, já superado pela migração para SQLite") em vez de ser apresentada como estado
+atual.}
+
+\begin{figure}[htbp]
+  \centering
   \includegraphics[width=\textwidth]{figuras/DER_Atual.png}
-  \caption{Modelo de dados atual (persistência em CSV) -- diagrama entidade-relacionamento
-  levantado a partir do código-fonte do projeto (dos autores).}
+  \caption{Modelo de dados original em CSV, já substituído pela migração para SQLite (ver figura
+  anterior) -- mantido aqui como registro histórico do projeto (dos autores).}
 \end{figure}
 
 \texttt{Usuario} se relaciona 1:1 com \texttt{PreferenciasUsuario} e 1:N com
@@ -409,6 +598,10 @@ isoladas do formato de armazenamento por meio das interfaces de repositório.
   \caption{Modelo relacional proposto para a migração futura de persistência, de CSV/JSON para SQL
   (dos autores).}
 \end{figure}
+
+\revmudar{Falta uma seção de Conclusão/Considerações finais entre "Desenvolvimento" e as
+referências: hoje o artigo termina abruptamente no modelo de dados, sem sintetizar resultados,
+consolidar limitações (hoje espalhadas em vários parágrafos) nem unificar os trabalhos futuros.}
 
 % ============================================================
 % REFERÊNCIAS
