@@ -139,6 +139,7 @@ public partial class App : Application
         services.AddSingleton<IControladorTreinadoProvider, ControladorTreinadoProvider>();
         services.AddSingleton<ITowerSelectionService, TowerSelectionService>();
         services.AddSingleton<IFireControlService, FireControlService>();
+        services.AddSingleton<IRedeEmbutidaSincronizadorService, RedeEmbutidaSincronizadorService>();
         services.AddSingleton<ISimulationService, SimulationService>();
 
         // --- Módulo "Câmeras" (visualização em tempo real de até 4 webcams simultâneas).

@@ -15,4 +15,12 @@ public interface IControladorTreinadoProvider
     /// nova, nunca treinada) — nesse caso quem consome deve cair para a heurística pura.
     /// </summary>
     RedeNeural? Rede { get; }
+
+    /// <summary>
+    /// O mesmo genoma de <see cref="Rede"/>, como vetor plano de 74 números — necessário para
+    /// sincronizar a rede embutida no Arduino (ver <see cref="IRedeEmbutidaSincronizadorService"/>),
+    /// já que <see cref="RedeNeural"/> não expõe os pesos nesse formato. <c>null</c> nas mesmas
+    /// condições de <see cref="Rede"/>.
+    /// </summary>
+    double[]? Genoma { get; }
 }

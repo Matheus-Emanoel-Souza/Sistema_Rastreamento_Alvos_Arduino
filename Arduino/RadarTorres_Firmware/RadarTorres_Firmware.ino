@@ -65,6 +65,22 @@
  *     FIRE;TOWER=<id>;TARGET=<id>  — aciona LED_DISPARO (ver regras na
  *       seção "LED DE DISPARO"), só tem efeito em COLOR;STATE=VERMELHO.
  *
+ *   PC -> Arduino (rede neural embutida — ver "REDE NEURAL EMBUTIDA" abaixo):
+ *     GENOMA;RESET
+ *       Zera o buffer de carregamento de um genoma novo.
+ *     GENOMA;INDICE=<0-73>;VALOR=<float>
+ *       Envia UM peso/viés do genoma (mesma ordem de RedeNeural.cs, lado PC).
+ *     GENOMA;COMMIT
+ *       Ativa o genoma só se os 74 índices já tiverem chegado; senão recusa
+ *       com ERROR e mantém o genoma anterior em uso.
+ *     REDE;ENTRADAS=<d>;<mesmo_quad>;<quad_adj>;<angulo>;<vel>;<fator_camada>
+ *       Pede o cálculo da saída da rede embutida para estas 6 entradas.
+ *
+ *   Arduino -> PC (rede neural embutida):
+ *     STATUS;REDE_AJUSTE=<float>;REDE_CONFIANCA=<float>
+ *       Resposta a REDE;ENTRADAS — SÓ ISTO, nunca aciona nada sozinha (ver
+ *       invariante de segurança no início da seção "REDE NEURAL EMBUTIDA").
+ *
  *  Bibliotecas necessárias (instalar via Library Manager da IDE/arduino-cli):
  *    - AccelStepper (Mike McCauley) — controla os 9 eixos de forma NÃO
  *      BLOQUEANTE, com aceleração/desaceleração suave (Requisito "evitar
@@ -156,6 +172,141 @@ float camPassosPorPixelTilt[4] = {2.0, 2.0, 2.0, 2.0};
 // longe do centro, por exemplo). AccelStepper já suaviza com aceleração,
 // isso aqui é uma segunda trava independente.
 const long CAM_MAX_PASSOS_POR_CORRECAO = 120;
+
+// ============================================================================
+// REDE NEURAL EMBUTIDA (somente diagnóstico — NUNCA aciona nada sozinha)
+// ----------------------------------------------------------------------------
+// Espelha RedeNeural.cs (lado PC, src/RadarTorres.App/NeuralEvolution/): rede
+// feedforward 6 entradas -> 8 ocultos -> 2 saídas, ativação tanh em todas as
+// camadas, 74 genes (pesos+bias) na MESMA ordem usada lá. Existe só para
+// permitir ao app PEDIR ao Arduino que calcule, de forma independente, a
+// saída da rede já treinada — útil para validar que um genoma sincronizado
+// chegou certo ao hardware (ver Docs/Documentos_Entregaveis/Artigo/
+// Como_a_IA_funciona_no_RadarTorres.MD, Parte 3).
+//
+// *** INVARIANTE DE SEGURANÇA: calcularSaidaRedeEmbutida() SÓ FAZ CONTA E
+//     DEVOLVE NÚMEROS. Nenhuma função desta seção pode chamar digitalWrite,
+//     qualquer stepper.move/moveTo, solicitarDisparo() ou qualquer outra
+//     função de atuação. A seleção de torre e a autorização de disparo
+//     continuam decididas inteiramente pelo app (lado PC), como antes. ***
+// ============================================================================
+const uint8_t REDE_QTD_ENTRADAS = 6;
+const uint8_t REDE_QTD_OCULTOS = 8;
+const uint8_t REDE_QTD_SAIDAS = 2;
+const uint8_t REDE_QTD_GENES = 74; // 6*8+8 + 8*2+2 -- ver RedeNeural.TamanhoGenoma (lado PC)
+
+// Trava de sanidade contra corrupção de linha/valor absurdo — não é limite de
+// treino (os pesos evoluídos não têm teto imposto no algoritmo genético).
+const float REDE_GENE_VALOR_MAXIMO_ABS = 1000.0;
+
+float redeGenomaEmUso[REDE_QTD_GENES];
+float redeGenomaRecebendo[REDE_QTD_GENES];
+bool redeIndiceRecebido[REDE_QTD_GENES];
+
+void inicializarRedeEmbutida() {
+  for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+    redeGenomaEmUso[i] = 0.0;
+    redeGenomaRecebendo[i] = 0.0;
+    redeIndiceRecebido[i] = false;
+  }
+}
+
+// Fiel a RedeNeural.Ativar (lado PC) — mesma ordem de genes: pesos da camada
+// 1 (entrada e-maior, saída s-menor, índices 0..47), bias da camada 1
+// (índices 48..55), pesos da camada 2 (índices 56..71), bias da camada 2
+// (índices 72..73). QUALQUER mudança de arquitetura em RedeNeural.cs tem que
+// ser replicada aqui, ou a comparação PC x Arduino deixa de fazer sentido
+// (mas continua inofensiva — ver invariante de segurança acima).
+void calcularSaidaRedeEmbutida(const float entradas[REDE_QTD_ENTRADAS], float saida[REDE_QTD_SAIDAS]) {
+  float ocultos[REDE_QTD_OCULTOS];
+
+  for (uint8_t s = 0; s < REDE_QTD_OCULTOS; s++) {
+    float soma = redeGenomaEmUso[48 + s];
+    for (uint8_t e = 0; e < REDE_QTD_ENTRADAS; e++) {
+      soma += entradas[e] * redeGenomaEmUso[e * REDE_QTD_OCULTOS + s];
+    }
+    ocultos[s] = tanh(soma);
+  }
+
+  for (uint8_t s = 0; s < REDE_QTD_SAIDAS; s++) {
+    float soma = redeGenomaEmUso[72 + s];
+    for (uint8_t e = 0; e < REDE_QTD_OCULTOS; e++) {
+      soma += ocultos[e] * redeGenomaEmUso[56 + e * REDE_QTD_SAIDAS + s];
+    }
+    saida[s] = tanh(soma);
+  }
+}
+
+void tratarComandoGenoma(const String &linha) {
+  if (linha == "GENOMA;RESET") {
+    for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+      redeGenomaRecebendo[i] = 0.0;
+      redeIndiceRecebido[i] = false;
+    }
+    Serial.println("ACK;CMD=GENOMA;RESET");
+    return;
+  }
+
+  if (linha == "GENOMA;COMMIT") {
+    for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+      if (!redeIndiceRecebido[i]) {
+        Serial.println("ERROR;REASON=GENOMA INCOMPLETO, FALTA INDICE " + String(i) + " - COMMIT RECUSADO");
+        return;
+      }
+    }
+    for (uint8_t i = 0; i < REDE_QTD_GENES; i++) {
+      redeGenomaEmUso[i] = redeGenomaRecebendo[i];
+    }
+    Serial.println("ACK;CMD=GENOMA;COMMIT;STATUS=OK");
+    return;
+  }
+
+  String sIndice = extrairCampo(linha, "INDICE");
+  String sValor = extrairCampo(linha, "VALOR");
+  if (sIndice.length() == 0 || sValor.length() == 0) {
+    Serial.println("ERROR;REASON=CAMPOS AUSENTES EM GENOMA: " + linha);
+    return;
+  }
+
+  int indice = sIndice.toInt();
+  if (indice < 0 || indice >= REDE_QTD_GENES) {
+    Serial.println("ERROR;REASON=INDICE FORA DA FAIXA 0-73 EM GENOMA: " + linha);
+    return;
+  }
+
+  float valor = constrain(sValor.toFloat(), -REDE_GENE_VALOR_MAXIMO_ABS, REDE_GENE_VALOR_MAXIMO_ABS);
+  redeGenomaRecebendo[indice] = valor;
+  redeIndiceRecebido[indice] = true;
+  Serial.println("ACK;CMD=GENOMA;INDICE=" + String(indice));
+}
+
+void tratarComandoRedeEntradas(const String &linha) {
+  String sValores = linha.substring(String("REDE;ENTRADAS=").length());
+  float entradas[REDE_QTD_ENTRADAS];
+  uint8_t lidos = 0;
+  int inicio = 0;
+  while (lidos < REDE_QTD_ENTRADAS) {
+    int fim = sValores.indexOf(';', inicio);
+    String campo = (fim < 0) ? sValores.substring(inicio) : sValores.substring(inicio, fim);
+    entradas[lidos] = campo.toFloat();
+    lidos++;
+    if (fim < 0) break;
+    inicio = fim + 1;
+  }
+
+  if (lidos != REDE_QTD_ENTRADAS) {
+    Serial.println("ERROR;REASON=REDE;ENTRADAS PRECISA DE EXATAMENTE 6 VALORES: " + linha);
+    return;
+  }
+
+  float saida[REDE_QTD_SAIDAS];
+  calcularSaidaRedeEmbutida(entradas, saida);
+
+  Serial.print("STATUS;REDE_AJUSTE=");
+  Serial.print(saida[0], 6);
+  Serial.print(";REDE_CONFIANCA=");
+  Serial.println(saida[1], 6);
+}
 
 // --- Tolerância de centralização e estabilidade (Requisito 3) --------------
 const int16_t TOLERANCIA_PX_X = 8;     // deadband horizontal
@@ -646,6 +797,12 @@ void tratarComando(const String &linha) {
   else if (linha.startsWith("AIM;TOWER=")) {
     tratarComandoMiraTorre(linha);
   }
+  else if (linha.startsWith("GENOMA;")) {
+    tratarComandoGenoma(linha);
+  }
+  else if (linha.startsWith("REDE;ENTRADAS=")) {
+    tratarComandoRedeEntradas(linha);
+  }
   else {
     Serial.println("ERROR;REASON=COMANDO NAO RECONHECIDO: " + linha);
   }
@@ -741,6 +898,7 @@ void setup() {
   pinMode(PIN_LED_DISPARO, OUTPUT);
   digitalWrite(PIN_LED_DISPARO, LOW);
   inicializarLedsTorre();
+  inicializarRedeEmbutida();
 
   pinMode(PIN_DRIVERS_ENABLE, OUTPUT);
   digitalWrite(PIN_DRIVERS_ENABLE, LOW); // LOW = drivers A4988/DRV8825 habilitados
