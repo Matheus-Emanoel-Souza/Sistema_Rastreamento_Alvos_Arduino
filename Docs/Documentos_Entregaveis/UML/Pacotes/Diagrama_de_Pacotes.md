@@ -13,6 +13,7 @@
 | `RadarTorres.App.Helpers` | `src/RadarTorres.App/Helpers/` | Funções puras de apoio (matemática, comando MVVM) | `CoordinateConverter`, `DistanceCalculator`, `QuadrantHelper`, `RelayCommand` |
 | `RadarTorres.App.Services` | `src/RadarTorres.App/Services/` | Toda a regra de negócio (protocolo serial, rastreamento, seleção de torre, acionamento, autenticação, permissões, exportação, i18n, tema) | `SerialCommunicationService`, `TargetTrackingService`, `TowerSelectionService`, `FireControlService`, `AuthService`, `PermissionService`, `ObjetoDetectadoExportService`, entre outros |
 | `RadarTorres.App.Repositories` | `src/RadarTorres.App/Repositories/` | Persistência SQLite, uma interface + implementação por entidade auditável/cadastral | `IUsuarioRepository`/`SqliteUsuarioRepository`, `IObjetoDetectadoRepository`/`SqliteObjetoDetectadoRepository`, etc. |
+| `RadarTorres.App.NeuralEvolution` | `src/RadarTorres.App/NeuralEvolution/` | Controlador híbrido (heurística + rede neural) e o algoritmo genético que o treina | `ControladorHibrido`, `RedeNeural`, `AlgoritmoGenetico`, `AmbienteTreinamento`, `ParametrosTreinamento` |
 | `RadarTorres.App.Data` | `src/RadarTorres.App/Data/` | Motor de acesso a dados: SQLite (persistência principal) e caminhos de dados do usuário; motor de CSV mantido apenas para a exportação manual | `SqliteConnectionFactory`, `SqlLiteral`, `PendingWriteQueue`, `CsvTableStore<T>` (usado só pela exportação CSV), `CsvColumn<T>`, `CsvConvert`, `AppDataPaths`, `DataSeeder` |
 | `RadarTorres.App.ViewModels` | `src/RadarTorres.App/ViewModels/` | Orquestração MVVM — ponte entre Views e Services, sem regra de negócio própria | `ViewModelBase`, `MainViewModel`, `ArduinoSettingsViewModel`, `ObjetosDetectadosViewModel`, `LoginViewModel`, `ShellViewModel` |
 | `RadarTorres.App.Views` | `src/RadarTorres.App/Views/` (+ `Views/Shell/`, `Views/Shared/`) | XAML + code-behind mínimo (diálogos de arquivo, encaminhamento de eventos de UI) | `MonitoramentoView`, `PainelPrincipalView`, `ObjetosDetectadosView`, `ArduinoSettingsView`, `MainWindow`, `ShellView`, `SidebarView`, `TopBarView`, `ProfileWindow`, `RadarControl`, `DashboardCanvas`, `DashboardCard` |
@@ -49,6 +50,7 @@ flowchart TB
         MODELS["Models"]
         HELP["Helpers"]
         CFG["Configuration"]
+        NEVO["NeuralEvolution\n(ControladorHibrido, RedeNeural,\nAlgoritmoGenetico)"]
         ROOT["App.xaml.cs\n(composition root / DI)"]
     end
 
@@ -69,6 +71,11 @@ flowchart TB
     DATA --> MODELS
     HELP --> MODELS
     SVC --> HELP
+    SVC --> NEVO
+    VM --> NEVO
+    NEVO --> MODELS
+    NEVO --> HELP
+    NEVO --> CFG
     ROOT --> VIEWS
     ROOT --> VM
     ROOT --> SVC
