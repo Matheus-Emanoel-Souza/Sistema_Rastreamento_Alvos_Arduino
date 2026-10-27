@@ -15,4 +15,7 @@ public interface IHistoricoTreinamentoRepository
 
     /// <summary>Devolve os registros mais recentes, em ordem cronológica (mais antigo primeiro).</summary>
     IReadOnlyList<HistoricoGeracaoTreinamento> ObterUltimos(int quantidade = 300);
+
+    /// <summary>Remove todos os registros — usado no reset manual do treinamento (tela Configurações).</summary>
+    void LimparTudo();
 }

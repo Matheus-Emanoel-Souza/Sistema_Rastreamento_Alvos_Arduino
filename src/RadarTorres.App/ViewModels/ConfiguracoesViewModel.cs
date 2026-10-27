@@ -7,6 +7,7 @@ using RadarTorres.App.Configuration;
 using RadarTorres.App.Data;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
+using RadarTorres.App.Repositories;
 using RadarTorres.App.Services;
 
 namespace RadarTorres.App.ViewModels;
@@ -34,6 +35,8 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
     private readonly IThemeService _themeService;
     private readonly ITermosDeUsoService _termosDeUsoService;
     private readonly ILoggingService _logger;
+    private readonly IHistoricoTreinamentoRepository _historicoTreinamentoRepository;
+    private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
 
     private ConfiguracoesAplicativo _edicao;
 
@@ -42,13 +45,17 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         ILocalizationService localizationService,
         IThemeService themeService,
         ITermosDeUsoService termosDeUsoService,
-        ILoggingService logger)
+        ILoggingService logger,
+        IHistoricoTreinamentoRepository historicoTreinamentoRepository,
+        IMarcoFitnessTreinamentoRepository marcoFitnessRepository)
     {
         _repositorio = repositorio;
         _localizationService = localizationService;
         _themeService = themeService;
         _termosDeUsoService = termosDeUsoService;
         _logger = logger;
+        _historicoTreinamentoRepository = historicoTreinamentoRepository;
+        _marcoFitnessRepository = marcoFitnessRepository;
 
         _edicao = repositorio.Atual.Clonar();
 
@@ -56,6 +63,7 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         RestaurarPadroesCommand = new RelayCommand(_ => RestaurarPadroes());
         CancelarCommand = new RelayCommand(_ => Cancelar());
         AbrirPastaDiagnosticoCommand = new RelayCommand(_ => AbrirPastaDiagnostico());
+        ResetarTreinamentoIACommand = new RelayCommand(_ => ResetarTreinamentoIA());
         AbrirTermosDeUsoCommand = new RelayCommand(_ => AbrirTermosDeUsoSolicitado?.Invoke(this, EventArgs.Empty));
         BaixarTermosDeUsoCommand = new RelayCommand(_ => BaixarTermosDeUsoSolicitado?.Invoke(this, _termosDeUsoService.NomeArquivoSugerido));
         UsarTamanhoAtualCommand = new RelayCommand(_ => UsarTamanhoAtualDaJanela());
@@ -369,6 +377,7 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
     public RelayCommand RestaurarPadroesCommand { get; }
     public RelayCommand CancelarCommand { get; }
     public RelayCommand AbrirPastaDiagnosticoCommand { get; }
+    public RelayCommand ResetarTreinamentoIACommand { get; }
     public RelayCommand UsarTamanhoAtualCommand { get; }
 
     // ---------------------------------------------------------------- Termos de Uso
@@ -462,6 +471,37 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         catch (Exception ex)
         {
             MensagemStatus = $"Não foi possível abrir a pasta: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Apaga o histórico de treinamento gravado em disco: os até 300 registros recentes por
+    /// geração (<see cref="IHistoricoTreinamentoRepository"/>) e os marcos de melhor fitness /
+    /// fitness médio a cada 500 gerações (<see cref="IMarcoFitnessTreinamentoRepository"/>).
+    /// Não afeta uma sessão de treinamento em andamento na tela "Treinamento do Controlador"
+    /// (essa usa o botão "Resetar" próprio, que também zera o estado em memória).
+    /// </summary>
+    private void ResetarTreinamentoIA()
+    {
+        bool confirmado = System.Windows.MessageBox.Show(
+            "Isso vai apagar permanentemente o histórico de treinamento da IA: os registros por geração e os marcos de melhor fitness / fitness médio. Essa ação não pode ser desfeita. Continuar?",
+            "Resetar treinamento da IA",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+        if (!confirmado) return;
+
+        try
+        {
+            _historicoTreinamentoRepository.LimparTudo();
+            _marcoFitnessRepository.LimparTudo();
+
+            MensagemStatus = "Histórico de treinamento da IA apagado.";
+            _logger.Success("Histórico de treinamento da IA apagado (registros por geração e marcos de fitness).");
+        }
+        catch (Exception ex)
+        {
+            MensagemStatus = $"Não foi possível apagar o histórico de treinamento: {ex.Message}";
+            _logger.Error($"Falha ao resetar o treinamento da IA: {ex.Message}");
         }
     }
 
