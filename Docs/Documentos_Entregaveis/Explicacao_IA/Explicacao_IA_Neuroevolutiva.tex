@@ -1,0 +1,321 @@
+% ============================================================
+% A Inteligência Artificial no Sistema de Rastreamento de Alvos
+% Documento explicativo (não faz parte do artigo do TCC) — para
+% esclarecer o que o controlador neuroevolutivo faz, de onde
+% veio e como evoluir essa mecânica.
+% Compile com pdfLaTeX.
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{array}
+
+\definecolor{caixaFundo}{HTML}{F2F2F2}
+\definecolor{caixaBorda}{HTML}{999999}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\newenvironment{caixa}[1]{%
+  \par\vspace{0.4em}\noindent
+  \begin{tcolorboxfallback}
+  \textbf{#1}\\[0.3em]
+}{%
+  \end{tcolorboxfallback}\vspace{0.4em}
+}
+
+% tcolorbox pode não estar instalado em toda distribuição mínima do MiKTeX;
+% fallback simples com uma régua colorida em vez de depender do pacote.
+\newenvironment{tcolorboxfallback}{%
+  \begingroup
+  \color{black}
+  \noindent\rule{\linewidth}{0.6pt}
+}{%
+  \noindent\rule{\linewidth}{0.6pt}
+  \endgroup
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8em}
+
+% Nomes de classe/arquivo longos em \texttt não têm pontos de quebra naturais —
+% tolerância mais alta evita que extrapolem a margem direita (overfull hbox).
+\tolerance=9999
+\emergencystretch=3em
+\hbadness=10000
+
+\title{\textbf{A Inteligência Artificial no Sistema de Rastreamento de Alvos}\\[0.3em]
+\large Impacto, origem e caminhos de melhoria do controlador neuroevolutivo}
+\author{Documento explicativo do projeto}
+\date{\today}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\tableofcontents
+\newpage
+
+\section{Resumo em uma página}
+
+O sistema tem, hoje, \textbf{dois cérebros possíveis} para decidir qual torre persegue cada
+alvo: uma heurística pura (regras fixas de prioridade por quadrante) e uma heurística
+\emph{combinada com uma rede neural pequena}, treinada por um algoritmo genético dentro do
+próprio aplicativo. A rede neural \textbf{nunca substitui} a heurística — ela só ajusta, dentro
+do que a heurística já considerou uma escolha razoável, qual candidata específica vence e em
+que instante exato a torre deve disparar. Se nenhuma rede treinada estiver embutida no
+aplicativo, o sistema cai de volta para a heurística pura (menor distância), sem travar nem
+mudar de comportamento de forma imprevisível.
+
+Essa rede é treinada numa tela dedicada (``Treinamento do Controlador''), dentro de um mundo
+simulado em 2D — nunca com o hardware real. O resultado do treinamento (um conjunto de números,
+chamado \emph{genoma}) pode ser exportado, embutido no instalador do aplicativo e,
+opcionalmente, sincronizado por porta serial para uma cópia somente leitura rodando dentro do
+próprio firmware do Arduino (hoje usada só para diagnóstico/comparação, não para decidir nada
+sozinha no microcontrolador).
+
+\section{De onde essa IA veio}
+
+\subsection{O algoritmo original (sem IA nenhuma)}
+
+O projeto nasceu com um algoritmo de seleção de torre inteiramente baseado em regras escritas à
+mão (\texttt{Services/TowerSelectionService.cs}), descrito em detalhe no documento
+\textit{Algoritmo de Seleção de Torre — Fundamentação Matemática}:
+
+\begin{enumerate}[leftmargin=1.4em]
+  \item Filtra torres disponíveis e livres;
+  \item Prioriza a torre do \textbf{próprio quadrante} do alvo;
+  \item Se ela estiver ocupada, usa uma torre de quadrante \textbf{adjacente} (cooperação);
+  \item Se nenhuma das duas existir, usa qualquer torre livre restante (\textbf{cobertura});
+  \item Em último caso, reaproveita a torre mais próxima mesmo já comprometida
+    (\textbf{sobrecarga}), para nunca deixar um alvo sem nenhuma torre associada;
+  \item Dentro da camada escolhida, a candidata vencedora era simplesmente a de \textbf{menor
+    distância Euclidiana} até o alvo.
+\end{enumerate}
+
+Esse algoritmo é determinístico, auditável e continua existindo \textbf{integralmente} — é a
+estrutura de camadas (casa → adjacente → cobertura → sobrecarga) que organiza a decisão até
+hoje. A IA entrou depois, para resolver um problema específico: dentro de uma camada com mais de
+uma candidata, ``menor distância'' é uma regra razoável, mas não é obrigatoriamente a melhor —
+por exemplo, pode ignorar que um alvo está muito rápido, ou que o ângulo de abordagem dele vai
+dificultar a mira de uma torre em particular.
+
+\subsection{Por que neuroevolução, e não outro tipo de IA}
+
+A escolha foi por algoritmo genético evoluindo uma rede neural pequena (\emph{neuroevolução}),
+em vez de, por exemplo, aprendizado por reforço clássico ou uma rede treinada por
+retropropagação supervisionada, por três razões registradas no próprio código e nos artigos de
+embasamento do TCC:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Não precisa de dados rotulados.} Não existe um conjunto de ``decisões corretas''
+    gravado previamente — o sistema não sabe, a priori, qual é a torre ideal para cada situação.
+    O algoritmo genético só precisa de uma função de qualidade (\emph{fitness}: alvos abatidos,
+    escapados e tiros errados), não de exemplos prontos.
+  \item \textbf{Auditável.} Um algoritmo genético evoluindo pesos de uma rede pequena (6 entradas,
+    8 neurônios ocultos, 2 saídas) é simples de implementar do zero e de explicar numa banca de
+    TCC, sem depender de bibliotecas de IA de caixa-preta.
+  \item \textbf{Hibridização natural com a heurística existente.} A rede neural só entra
+    \emph{dentro} da estrutura de camadas já escrita à mão — ela nunca decide sozinha algo que a
+    heurística já não tivesse considerado possível. Isso elimina o risco clássico de uma IA
+    pura: escolhas absurdas (torre ocupada, ignorar cooperação entre quadrantes) continuam
+    impossíveis por construção, não por a rede ``ter aprendido'' a evitá-las.
+\end{itemize}
+
+\subsection{Linha do tempo (pelo histórico de commits do repositório)}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Implementação do \texttt{TowerSelectionService} puramente heurístico, com as camadas
+    casa/adjacente/cobertura/sobrecarga.
+  \item Introdução do pacote \texttt{NeuralEvolution}: \texttt{RedeNeural},
+    \texttt{AlgoritmoGenetico}, \texttt{ControladorHibrido} e o ambiente simulado
+    \texttt{AmbienteTreinamento}, junto com a tela ``Treinamento do Controlador''.
+  \item Treinamento passa a usar o alcance de mira e a certeza de disparo configurados pelo
+    usuário em vez de valores fixos no código — a simulação fica mais fiel às configurações
+    reais do sistema.
+  \item Seis regras heurísticas adicionais (anti-oscilação, urgência, corredor de tiro,
+    balanceamento de carga, predição de trajetória, ajuda de torre adjacente) são incorporadas
+    tanto no sistema real quanto na simulação de treinamento, para o genoma treinar contra o
+    comportamento mais próximo possível do produtivo.
+  \item \texttt{ControladorTreinadoProvider} embute o melhor genoma exportado como recurso do
+    instalador; \texttt{RedeEmbutidaSincronizadorService} permite enviar esse mesmo genoma, peso
+    por peso, por porta serial para uma cópia somente leitura dentro do firmware do Arduino
+    (diagnóstico/comparação).
+  \item Persistência de histórico de gerações, marcos de fitness a cada bloco de gerações e
+    instantâneos de comportamento do melhor genoma (\texttt{IHistoricoTreinamentoRepository},
+    \texttt{IMarcoFitnessTreinamentoRepository}, \texttt{IInstantaneoComportamentoRepository}) —
+    para acompanhar se a evolução é real ao longo de muitas sessões de treinamento, não só
+    dentro de uma execução.
+  \item Mais recentemente: catálogo de casos táticos nomeados (enxame/saturação, disputa pela
+    mesma torre, alvo rápido, certeza baixa persistente, alvo perto da base, zona morta) somados
+    à avaliação de toda geração, e um editor de \textbf{cenário personalizado} na própria tela,
+    onde o usuário desenha à mão a posição e a velocidade de cada alvo e observa como o melhor
+    genoma atual reage — sem nenhum sorteio.
+\end{itemize}
+
+\section{O que a IA realmente decide (e o que ela nunca decide)}
+
+\begin{center}
+\begin{tabular}{|p{6.3cm}|p{6.3cm}|}
+\hline
+\textbf{A rede neural influencia} & \textbf{A rede neural nunca decide} \\
+\hline
+Qual torre, \emph{dentro da camada já escolhida pela heurística}, persegue um alvo &
+Se uma torre pode ser escolhida fora das camadas casa/adjacente/cobertura/sobrecarga \\
+\hline
+Em que instante exato, dentro da janela já autorizada, a torre dispara &
+Se o disparo é autorizado — zona morta e certeza mínima são sempre checadas antes, fora do
+alcance da rede \\
+\hline
+O ajuste fino de pontuação entre candidatas empatadas na heurística &
+O acionamento automático do canhão — \texttt{FireControlService} continua exigindo confirmação
+humana (manual) para o disparo físico de fato ocorrer \\
+\hline
+\end{tabular}
+\end{center}
+
+Em outras palavras: \textbf{a IA refina uma decisão, ela não a inventa do zero}. Essa é uma
+escolha de projeto deliberada, não uma limitação técnica — está documentada explicitamente no
+código (\texttt{ControladorHibrido}, \texttt{TowerSelectionService}) como garantia de que o
+sistema nunca produz uma decisão fisicamente absurda só porque a rede ``aprendeu algo
+estranho''.
+
+\subsection{As seis entradas e duas saídas da rede}
+
+A rede neural (arquitetura 6 → 8 → 2, totalmente conectada) recebe sempre as mesmas seis
+informações sobre o par alvo/torre candidata:
+
+\begin{enumerate}[leftmargin=1.4em]
+  \item Distância normalizada até o alvo;
+  \item Se a torre é do mesmo quadrante do alvo;
+  \item Se a torre é de quadrante adjacente;
+  \item Ângulo de mira normalizado;
+  \item Velocidade do alvo normalizada;
+  \item Um fator numérico da camada heurística atual (1,0 = casa, 0,5 = adjacente, 0,0 =
+    cobertura).
+\end{enumerate}
+
+E produz duas saídas: um ajuste de pontuação (somado à pontuação heurística de distância) e uma
+confiança de disparo (se positiva, autoriza considerar o disparo — sempre depois dos critérios
+inegociáveis de zona morta e certeza mínima).
+
+\section{Como ela é treinada}
+
+O treinamento acontece inteiramente dentro de um mundo simulado 2D
+(\texttt{NeuralEvolution/AmbienteTreinamento.cs}), nunca contra o hardware físico:
+
+\begin{enumerate}[leftmargin=1.4em]
+  \item Uma população de 60 ``genomas'' (conjuntos aleatórios de pesos da rede) é criada.
+  \item Cada genoma é testado em vários episódios simulados — alvos nascem na borda de um mundo
+    circular e avançam em direção à base; o genoma controla quais torres perseguem quais alvos e
+    quando disparam.
+  \item Cada episódio gera uma nota (\emph{fitness}): pontos por abate, menos pontos por fuga e
+    por disparo errado.
+  \item O algoritmo genético seleciona os melhores genomas (seleção por torneio), cruza pares
+    deles e aplica mutação aleatória, produzindo a próxima geração — e repete, geração após
+    geração, o mais rápido possível em segundo plano.
+  \item A cada geração, além de episódios aleatórios, o genoma é obrigatoriamente testado contra
+    \textbf{todos} os casos táticos catalogados (enxame, disputa de torre, alvo rápido, certeza
+    baixa, alvo perto da base, zona morta) — para a evolução não ignorar um caso difícil só
+    porque o sorteio raramente produz aquela situação.
+  \item O usuário pode, a qualquer momento, inspecionar visualmente como o melhor genoma atual se
+    comporta: rodando um episódio aleatório, escolhendo um caso catalogado específico, ou
+    desenhando um \textbf{cenário totalmente personalizado} (posição X/Y em metros e velocidade
+    de cada alvo, sem sorteio nenhum).
+\end{enumerate}
+
+\section{Limitações atuais (honestas)}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{O treinamento nunca vê dados reais.} Todo o aprendizado acontece num mundo
+    simulado com física simplificada (alvos em linha reta, erro de disparo probabilístico por
+    fórmula fixa). Não existe hoje um laço de realimentação que compare decisões da rede contra
+    o que de fato aconteceu com o hardware físico.
+  \item \textbf{Sem validação cruzada formal.} O fitness de cada geração usa seeds (sementes de
+    sorteio) diferentes a cada geração, o que reduz o risco de a rede ``memorizar'' um cenário
+    específico, mas não existe hoje um conjunto de episódios reservado exclusivamente para medir
+    se a rede generaliza bem ou só se ajustou aos cenários de treino.
+  \item \textbf{Arquitetura fixa.} A rede sempre tem exatamente 8 neurônios na camada oculta —
+    esse número nunca foi comparado experimentalmente contra alternativas (4, 16, duas camadas
+    ocultas etc.).
+  \item \textbf{Genoma embutido é estático até a próxima build.} O Arduino recebe uma cópia
+    somente leitura do genoma, só para diagnóstico — não há aprendizado nem ajuste nenhum
+    acontecendo no hardware em campo.
+\end{itemize}
+
+\section{Como melhorar essa mecânica}
+
+\subsection{Ganhos de curto prazo (baixo risco, poucas linhas de código)}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Conjunto de validação separado do conjunto de treino.} Reservar algumas seeds (e
+    os cenários personalizados mais representativos criados na tela) para medir o fitness do
+    melhor genoma \emph{sem} elas influenciarem a seleção/mutação — um sinal direto de
+    overfitting, hoje inexistente.
+  \item \textbf{Comparar genomas de gerações diferentes lado a lado.} A tela já grava
+    instantâneos de comportamento a cada bloco de gerações
+    (\texttt{InstantaneoComportamentoMelhorGene}) — falta uma visualização que compare dois
+    desses instantâneos diretamente (taxa de acerto, cobertura, regras aprendidas) para decidir
+    se vale a pena substituir o genoma embutido em produção.
+  \item \textbf{Mais cenários táticos catalogados.} O catálogo atual cobre seis casos; vale
+    mapear outros, como alvo que desacelera/acelera no meio do trajeto, ou disparo simultâneo de
+    três torres no mesmo alvo rápido.
+\end{itemize}
+
+\subsection{Ganhos de médio prazo}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Fitness multiobjetivo.} Hoje o fitness é um único número (abates menos fugas e menos erros,
+    com pesos fixos). Técnicas como NSGA-II permitiriam otimizar abates e economia de tiros
+    (menos erros) como objetivos separados, em vez de depender de um peso arbitrário escolhido à
+    mão.
+  \item \textbf{Busca de arquitetura.} Testar sistematicamente variações de neurônios/camadas
+    ocultas (por exemplo, treinar 8, 12 e 16 neurônios em paralelo e comparar o fitness médio de
+    validação) em vez de manter 8 fixo por convenção histórica.
+  \item \textbf{Currículo de dificuldade.} Começar o treinamento só com cenários fáceis
+    (um alvo lento) e introduzir gradualmente os cenários catalogados mais difíceis — pode
+    acelerar a convergência comparado a já começar misturando todos os casos desde a geração 1.
+\end{itemize}
+
+\subsection{Ganhos de longo prazo (mudam a arquitetura do sistema)}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Laço de realimentação com o hardware real.} Registrar, durante operação física,
+    qual torre foi escolhida, se o disparo acertou ou errou, e usar esses episódios reais (ainda
+    que poucos) como um conjunto de validação adicional — hoje o treinamento é 100\% cego ao
+    comportamento físico real.
+  \item \textbf{Ensemble de genomas.} Em vez de embutir um único ``melhor genoma'', treinar e
+    embutir vários, e deixar o sistema real votar entre eles — reduz o risco de um único genoma
+    ter um ponto fraco não detectado pelos cenários de treino.
+  \item \textbf{Aprendizado contínuo supervisionado pelo operador.} Permitir que o operador,
+    durante o uso real, marque uma decisão da rede como ``errada'' — e usar esse sinal (mesmo que
+    esparso) para re-treinar periodicamente, em vez de o genoma só mudar manualmente a cada nova
+    sessão de treinamento na tela.
+\end{itemize}
+
+\section{Glossário rápido}
+
+\begin{description}[leftmargin=1.4em,style=nextline]
+  \item[Genoma] Um vetor de números (pesos da rede neural) — um ``indivíduo'' candidato dentro do
+    algoritmo genético.
+  \item[Fitness] A nota de qualidade de um genoma, calculada rodando episódios simulados
+    completos.
+  \item[Geração] Uma rodada completa de avaliação + seleção + cruzamento + mutação de toda a
+    população de genomas.
+  \item[Heurística] Regra fixa escrita à mão (ex.: ``prefira a torre do mesmo quadrante''), sem
+    nenhum aprendizado.
+  \item[Controlador híbrido] A combinação de heurística + ajuste da rede neural, usada tanto na
+    simulação de treino quanto no sistema real.
+  \item[Cenário tático catalogado] Um caso de teste nomeado e reprodutível (enxame, disputa de
+    torre etc.), usado para forçar a rede a enfrentar situações específicas a cada geração.
+  \item[Cenário personalizado] Um episódio desenhado à mão pelo usuário na tela de treinamento —
+    posição e velocidade de cada alvo definidas manualmente, sem sorteio.
+\end{description}
+
+\end{document}
