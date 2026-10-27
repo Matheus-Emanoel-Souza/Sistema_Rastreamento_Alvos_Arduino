@@ -53,6 +53,22 @@ public sealed class AlvoTreinamento
     /// </summary>
     public double Certeza => System.Math.Clamp(CertezaBase + TaxaCrescimentoCertezaPorSegundo * TempoDeVidaSegundos, 0.0, 1.0);
 
+    /// <summary>
+    /// Certeza usada para AUTORIZAR disparo: <see cref="Certeza"/> penalizada quando o alvo está
+    /// mais perto da torre do que <paramref name="distanciaMinimaBoaCertezaMetros"/> — câmera real
+    /// não consegue confirmar bem um alvo muito próximo da lente, então tempo de observação sozinho
+    /// não deveria compensar isso (ver <see cref="ParametrosTreinamento.DistanciaMinimaBoaCertezaMetros"/>).
+    /// A penalização é proporcional (não um corte abrupto): a 1m de uma mínima de 2m, por exemplo,
+    /// a certeza já cai pela metade.
+    /// </summary>
+    public double CertezaEfetiva(double distanciaAteTorreMetros, double distanciaMinimaBoaCertezaMetros)
+    {
+        if (distanciaMinimaBoaCertezaMetros <= 0) return Certeza;
+
+        double fatorDistancia = System.Math.Clamp(distanciaAteTorreMetros / distanciaMinimaBoaCertezaMetros, 0.0, 1.0);
+        return Certeza * fatorDistancia;
+    }
+
     /// <summary>Já aplicada a penalidade de "perda de ponto da geração" por ter chegado perto demais da base sem ser abatido nem ter escapado de fato — evita descontar a cada passo enquanto o alvo continua dentro do raio.</summary>
     public bool PenalidadeProximidadeAplicada { get; set; }
 }
