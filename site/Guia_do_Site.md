@@ -1,5 +1,7 @@
 # Site RadarTorres
 
+> Ver também: [Índice](../Índice.md) (raiz do vault).
+
 Site oficial do projeto (documentação técnica, apresentação do TCC e portfólio),
 publicado via **GitHub Pages**. Stack: React 19 + TypeScript + Tailwind CSS v4 + Vite.
 
@@ -48,3 +50,4 @@ src/
   repositório (via URL do GitHub) — nada é duplicado dentro de `site/`.
 - Pasta chamada `site/`, não `docs/`, de propósito: uma pasta `docs/` colidiria
   case-insensitive com `Docs/` (já existente na raiz do repo) no Windows.
+Claude, pode excluir esse documento do projeto.

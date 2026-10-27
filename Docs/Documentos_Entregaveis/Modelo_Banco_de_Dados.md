@@ -22,10 +22,17 @@ automaticamente na próxima inicialização — não há perda silenciosa de dad
 O único uso remanescente de CSV no projeto é o botão manual "Exportar CSV" da tela de Objetos
 Detectados (exportação sob demanda para o usuário, não persistência da aplicação).
 
-**Integridade referencial** agora é garantida pelo próprio SQLite: `ID_OBJETO` (em
-`acoes_realizadas`) e `ID_USER` (em `modo_atual_torre`) são chaves estrangeiras reais para
-`objetos_detectados.Id` e `usuarios.Id`, com `PRAGMA foreign_keys = ON` — ver
-`Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql`.
+**Integridade referencial** NÃO é garantida pelo app real. Nenhum `Sqlite*Repository.cs` em
+`src/RadarTorres.App/Repositories/` executa `PRAGMA foreign_keys = ON`, e a maioria das colunas
+que funcionam como chave lógica — `ID_OBJETO` (`acoes_realizadas`) e `ID_USER`
+(`modo_atual_torre`) — são declaradas como `INTEGER NULL` simples, sem cláusula `REFERENCES`
+alguma (ver `SqliteAcaoRealizadaRepository.cs` e `SqliteModoAtualTorreRepository.cs`). As únicas
+exceções são `OcorrenciaEstados.ObjetoDetectadoId` e `classificacoes_alvo.ObjetoDetectadoId`, que
+declaram `REFERENCES objetos_detectados (Id)` inline — mas, sem `PRAGMA foreign_keys = ON`, o
+SQLite não aplica essa restrição mesmo assim; é só documentação embutida no DDL, não
+enforcement. Chaves estrangeiras reais e com `PRAGMA foreign_keys = ON` existem apenas no
+schema **acadêmico/idealizado** `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql`, que não
+é o schema usado pelo app em produção.
 
 ### 1.1 Especificações técnicas do SGBD
 
@@ -34,7 +41,9 @@ Detectados (exportação sob demanda para o usuário, não persistência da apli
 * **Versão do engine SQLite**: não pinada separadamente pelo projeto — vem embutida no pacote `Microsoft.Data.Sqlite` 9.0.0 via `SQLitePCLRaw`; não há `packages.lock.json` no repositório fixando o número exato da build nativa.
 * **Codificação**: UTF-8 (padrão do SQLite para colunas `TEXT`; não há `PRAGMA encoding` customizado em `schema.sql`).
 * **Collation**: `BINARY` (padrão do SQLite; nenhuma coluna declara `COLLATE NOCASE` ou outra em `schema.sql`).
-* **Integridade referencial**: `PRAGMA foreign_keys = ON` (`schema.sql:5`).
+* **Integridade referencial**: não aplicada pelo app real (nenhum `Sqlite*Repository.cs` executa
+  `PRAGMA foreign_keys = ON`); `PRAGMA foreign_keys = ON` (`schema.sql:5`) existe só no schema
+  acadêmico/idealizado desta pasta, não no banco de produção.
 
 ### 1.2 Índices (completo, de `schema.sql`)
 
@@ -86,6 +95,31 @@ Além desses, `Login` (`usuarios`) e `UsuarioId` (`preferencias_usuario`, PK) j�
 * **`preferencias_usuario`** — uma linha por usuário (tema, idioma, sidebar recolhida);
   personalização mais granular (ordem de cartões, colunas por tabela) reservada para etapa
   futura.
+* **`classificacoes_alvo`** — classificação de perigo/velocidade de um alvo detectado, só
+  inserção (`SqliteClassificacaoPerigoRepository.cs`). Colunas: `Id` (PK), `ObjetoDetectadoId`
+  (`INTEGER NULL REFERENCES objetos_detectados (Id)` — declarado no DDL mas não aplicado, já que
+  o app não ativa `PRAGMA foreign_keys`), `VelocidadeMetrosPorSegundo`, `Grau` (enum
+  `GrauPerigoAlvo` persistido como texto) e `DataHora`. Índice normal em `ObjetoDetectadoId`
+  (`idx_classificacoes_alvo_objeto`).
+* **`historico_treinamento_geracoes`** — série histórica do treinamento neuroevolutivo do
+  controlador, uma linha por geração (`SqliteHistoricoTreinamentoRepository.cs`). Colunas: `ID`
+  (PK), `GERACAO`, `MELHOR_FITNESS`, `FITNESS_MEDIO`, `ALVOS_ABATIDOS`, `ALVOS_ESCAPADOS`,
+  `DH_REGISTRO`. É um **buffer circular**: a cada inserção, o repositório descarta o excedente a
+  partir do `ID` mais antigo, mantendo só os 300 registros mais recentes (`LimiteMaximoRegistros`
+  = 300) — não é expurgo por data. Índice normal em `GERACAO`
+  (`idx_historico_treinamento_geracao`).
+* **`marcos_fitness_treinamento`** — marco de fitness a cada N gerações do treinamento (um marco
+  a cada 500 gerações, sem descarte — volume nunca cresce o suficiente para justificar limite,
+  ao contrário de `historico_treinamento_geracoes`). Colunas: `Id` (PK), `GeracaoMarco` (UK),
+  `FitnessMedioDoBloco`, `MelhorFitnessDoBloco`, `DataHora`
+  (`SqliteMarcoFitnessTreinamentoRepository.cs`). Índice único em `GeracaoMarco`
+  (`idx_marcos_fitness_geracao`).
+* **`instantaneos_comportamento_melhor_gene`** — fotografia do comportamento do melhor genoma a
+  cada marco de geração, para acompanhar a evolução do controlador além do fitness agregado
+  (`SqliteInstantaneoComportamentoRepository.cs`). Colunas: `Id` (PK), `GeracaoMarco` (UK),
+  `Fitness`, `AlvosAbatidos`, `AlvosEscapados`, `TirosErrados`, `TaxaDeAcerto` (nullable),
+  `TaxaDeCobertura` (nullable), `GenomaJson` (vetor de pesos/vieses evoluído, serializado) e
+  `DataHora`. Índice único em `GeracaoMarco` (`idx_instantaneos_comportamento_geracao`).
 
 ### 2.2 DER — modelo atual (SQLite)
 
@@ -96,6 +130,7 @@ erDiagram
     OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
     OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
     CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
+    OBJETOS_DETECTADOS ||--o{ CLASSIFICACOES_ALVO : "classificou (velocidade/perigo)"
 
     USUARIOS {
         int Id PK
@@ -170,6 +205,45 @@ erDiagram
         string TelaInicial "nullable"
         int RegistrosPorPagina
     }
+
+    CLASSIFICACOES_ALVO {
+        int Id PK
+        int ObjetoDetectadoId FK "nullable"
+        double VelocidadeMetrosPorSegundo
+        string Grau "classificacao de perigo do alvo"
+        datetime DataHora
+    }
+
+    HISTORICO_TREINAMENTO_GERACOES {
+        int ID PK
+        int GERACAO
+        double MELHOR_FITNESS
+        double FITNESS_MEDIO
+        int ALVOS_ABATIDOS
+        int ALVOS_ESCAPADOS
+        datetime DH_REGISTRO
+    }
+
+    MARCOS_FITNESS_TREINAMENTO {
+        int Id PK
+        int GeracaoMarco UK "marco a cada N geracoes"
+        double FitnessMedioDoBloco
+        double MelhorFitnessDoBloco
+        datetime DataHora
+    }
+
+    INSTANTANEOS_COMPORTAMENTO_MELHOR_GENE {
+        int Id PK
+        int GeracaoMarco UK
+        double Fitness
+        int AlvosAbatidos
+        int AlvosEscapados
+        int TirosErrados
+        double TaxaDeAcerto "nullable"
+        double TaxaDeCobertura "nullable"
+        string GenomaJson "vetor de pesos/vieses evoluido"
+        datetime DataHora
+    }
 ```
 
 **Nota:** `OBJETOS_DETECTADOS` não tem relacionamento explícito com `USUARIOS` no código — o
@@ -209,7 +283,7 @@ estrutura já mostrada no DER de §2.2.
 
 O arquivo `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql` (nesta mesma pasta) reflete
 esse schema e é usado para visualização em ferramentas de modelagem (ex.: SQL Developer via
-driver JDBC SQLite — ver `README.md` desta pasta); o arquivo de dados real da aplicação é
+driver JDBC SQLite — ver este documento); o arquivo de dados real da aplicação é
 `radartorres.db`.
 
 ## Ver também

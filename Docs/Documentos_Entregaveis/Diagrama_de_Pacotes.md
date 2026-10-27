@@ -12,6 +12,8 @@
 | `RadarTorres.App.Configuration` | `src/RadarTorres.App/Configuration/` | Modelo tipado de `appsettings.json` e preferências de ferramenta externa | `AppSettings`, `AppConfig`, `ArduinoCliSettings` |
 | `RadarTorres.App.Helpers` | `src/RadarTorres.App/Helpers/` | Funções puras de apoio (matemática, comando MVVM) | `CoordinateConverter`, `DistanceCalculator`, `QuadrantHelper`, `RelayCommand` |
 | `RadarTorres.App.Services` | `src/RadarTorres.App/Services/` | Toda a regra de negócio (protocolo serial, rastreamento, seleção de torre, acionamento, autenticação, permissões, exportação, i18n, tema) | `SerialCommunicationService`, `TargetTrackingService`, `TowerSelectionService`, `FireControlService`, `AuthService`, `PermissionService`, `ObjetoDetectadoExportService`, entre outros |
+| `RadarTorres.App.Services` (visão computacional / câmeras) | `src/RadarTorres.App/Services/` | Captura de câmeras, detecção de objetos (YOLO/ONNX) e rastreamento visual do alvo, associação câmera↔quadrante e perfil de alvo | `CameraCaptureService`, `CameraCaptureServiceFactory`, `CameraDeviceEnumerator`, `CameraQuadranteService`, `OnnxYoloDetectionService`, `IObjectDetectionService`, `RastreamentoVisualService`, `AlvoVisualService`, `PerfilAlvoService`/`PerfilAlvoRepository` |
+| `RadarTorres.App.Services` (rede neural embutida) | `src/RadarTorres.App/Services/` | Sincronização do genoma da rede neural (treinada em `NeuralEvolution`) com a rede embutida no firmware do Arduino | `ControladorTreinadoProvider`, `RedeEmbutidaSincronizadorService` |
 | `RadarTorres.App.Repositories` | `src/RadarTorres.App/Repositories/` | Persistência SQLite, uma interface + implementação por entidade auditável/cadastral | `IUsuarioRepository`/`SqliteUsuarioRepository`, `IObjetoDetectadoRepository`/`SqliteObjetoDetectadoRepository`, etc. |
 | `RadarTorres.App.NeuralEvolution` | `src/RadarTorres.App/NeuralEvolution/` | Controlador híbrido (heurística + rede neural) e o algoritmo genético que o treina | `ControladorHibrido`, `RedeNeural`, `AlgoritmoGenetico`, `AmbienteTreinamento`, `ParametrosTreinamento` |
 | `RadarTorres.App.Data` | `src/RadarTorres.App/Data/` | Motor de acesso a dados: SQLite (persistência principal) e caminhos de dados do usuário; motor de CSV mantido apenas para a exportação manual | `SqliteConnectionFactory`, `SqlLiteral`, `PendingWriteQueue`, `CsvTableStore<T>` (usado só pela exportação CSV), `CsvColumn<T>`, `CsvConvert`, `AppDataPaths`, `DataSeeder` |
@@ -21,7 +23,7 @@
 | `RadarTorres.App.Localization` | `src/RadarTorres.App/Localization/` | Extensão de marcação XAML para textos localizados | `LocExtension` |
 | `RadarTorres.App` (raiz) | `src/RadarTorres.App/App.xaml(.cs)` | Composition root: registra serviços/DI, trata exceções globais | `App` |
 | `RadarTorres.Launcher` | `src/RadarTorres.Launcher/` | Executável leve que inicia o app principal (usado pelo instalador) | `Program` |
-| `Arduino` (firmware) | `Arduino/` | Sketch de teste do protocolo serial, sem sensores reais | `ArduinoSimulation.ino` |
+| `Arduino` (firmware) | `Arduino/` | Firmware real do hardware físico (Arduino MEGA 2560): 13 motores de passo (varredura central + 8 pan/tilt de câmeras + 4 pan de torres), 2 sensores ultrassônicos HC-SR04 e 5 LEDs; `ArduinoSimulation.ino` é um sketch auxiliar de teste do protocolo serial, sem sensores/motores reais | `RadarTorres_Firmware/RadarTorres_Firmware.ino`, `ArduinoSimulation.ino` |
 | `Docs` / `docs` | `Docs/`, `docs/` | Documentação de arquitetura, protocolo, dados, e (esta pasta) diagramas/requisitos de engenharia | arquivos `.md` |
 | `installer` | `installer/` | Script do instalador Windows | `RadarTorres.iss` (Inno Setup) |
 | `build` | `build/` | Automação de publicação | `publish.ps1` |
@@ -36,7 +38,7 @@ tipos de WPF.
 ```mermaid
 flowchart TB
     subgraph EXT["Externo"]
-        ARDUINO["Arduino (firmware)\nArduinoSimulation.ino"]
+        ARDUINO["Arduino (firmware)\nRadarTorres_Firmware.ino\n(sim.: ArduinoSimulation.ino)"]
     end
 
     subgraph APP["RadarTorres.App"]
@@ -94,8 +96,8 @@ flowchart TB
 * **Repositories dependem só de Data e Models** — a abstração por interface (`I*Repository`) foi
   o que permitiu trocar a implementação CSV original pelas atuais `Sqlite*Repository` sem alterar
   `Services`/`ViewModels`/`Views`, só o pacote `Data`/`Repositories`.
-* Não há projeto de testes automatizados no repositório no momento (`tests/RadarTorres.Tests` foi
-  removido).
+* Há projeto de testes automatizados no repositório: `tests/RadarTorres.Tests/` (xUnit), com 18
+  arquivos de teste cobrindo `Services`, `NeuralEvolution` e `Repositories`.
 * **Arduino** comunica-se com `Services` (mais especificamente `SerialCommunicationService`)
   exclusivamente por porta serial/texto — não há dependência de compilação entre os dois lados.
 

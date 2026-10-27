@@ -5,7 +5,7 @@
 > completo. Cobre: a ideia, como foi construído, o estado atual e o que falta. Para detalhes
 > técnicos linha a linha, os links para `Docs/*.md` no final apontam para as fontes completas.
 >
-> Última atualização: 2026-08-30.
+> Última atualização: 2026-10-26.
 
 ---
 
@@ -111,6 +111,27 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
     Requisitos Não Funcionais (RNF01–RNF30) e matriz de rastreabilidade requisito → arquivo/
     classe/função. Pontos não confirmáveis por código foram sinalizados como inferência no
     próprio documento (ver `Docs/Documentos_Entregaveis/Diagramas_e_requisitos/README.md`).
+11. **Visão computacional e controlador neuroevolutivo** (múltiplas sessões, entre a versão
+    anterior deste documento e agora): módulo "Câmeras" com detecção YOLO via ONNX Runtime
+    local (`OnnxYoloDetectionService`), telas "Perfis de Alvo" e "Desempenho", projeto de
+    testes automatizados recriado e expandido (`tests/RadarTorres.Tests`, 18 arquivos/145
+    testes), e o controlador neuroevolutivo (`NeuralEvolution/`) — rede neural treinada por
+    algoritmo genético e combinada a regras heurísticas, com telas "Treinamento do
+    Controlador" e "Estatísticas de Treinamento". Nova identidade visual aplicada ao app
+    (ver `Docs/Projeto/IDENTIDADE_VISUAL.md`). Ver seção 3.1 para detalhes de cada
+    funcionalidade.
+12. **5 regras heurísticas do controlador, desligáveis em "Configurações"** (2026-10-23):
+    anti-oscilação, priorização por urgência, corredor de tiro, balanceamento de carga e
+    predição de trajetória — cada uma com toggle em `ConfiguracoesAplicativo`/
+    `ConfiguracoesView`. Nesta mesma janela de trabalho, o item de menu genérico
+    "Configurações" (`MenuItem.Configuracoes`) foi implementado, cobrindo preferências da
+    máquina além dos toggles das heurísticas.
+13. **Diagrama interativo da rede neural na tela de Treinamento do Controlador** (2026-10-23):
+    visualização em tempo real dos pesos/ativações durante o treinamento, com tooltip por
+    neurônio; correção de um bug de redesenho no cone de visão das torres na mesma tela
+    (mutação de `PointCollection` no lugar não disparava `PropertyChanged`).
+14. **Firmware do Arduino embute a rede neural treinada** (commit `dc6325b`): somente para
+    diagnóstico/leitura, não substitui a lógica de seleção de torre do app.
 
 ---
 
@@ -126,9 +147,12 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
 - Aba de Configurações do Arduino: detectar `arduino-cli`, compilar sketch, monitor serial.
 - Instalador Windows completo (`Setup.exe`), self-contained, com upgrade preservando
   configurações do usuário.
-- `dotnet build`: 0 erros/avisos. O projeto `tests/RadarTorres.Tests` (xUnit, cobria a aba do
-  Arduino CLI) foi removido do repositório — atualmente **não há projeto de testes
-  automatizados**.
+- `dotnet build`: 0 erros/avisos. Projeto de testes automatizados `tests/RadarTorres.Tests`
+  (xUnit) existe e cresceu bastante além da aba do Arduino CLI: 18 arquivos de teste cobrindo
+  algoritmo genético, rede neural, seleção de torre, persistência SQLite, visão computacional,
+  perfis de alvo, termos de uso e outros (`AlgoritmoGeneticoTests.cs`,
+  `TowerSelectionServiceTests.cs`, `PersistenciaSqliteTests.cs`, `RedeNeuralTests.cs`, etc. —
+  145 testes aprovados na última sessão registrada em `LOG_SOLICITACOES.md`).
 - **Todas as branches de trabalho consolidadas na `main`** — é o branch canônico agora.
 - Zonas mortas: criação por clique/arraste no radar, bloqueio de torre/disparo, restrito a
   Administrador (ver item 7 da linha do tempo).
@@ -140,6 +164,47 @@ qualquer classe com coleção/evento vinculado à UI é responsável por despach
 - Usuários: CRUD completo (criar/editar/inativar/resetar senha), restrito a Administrador —
   `UsuariosView`/`UsuariosViewModel` implementados e roteados.
 
+### 3.1 Funcionalidades centrais adicionadas após a versão anterior deste documento
+
+Estas passaram a ser parte central do app e não constavam ainda neste resumo:
+
+- **Visão computacional (módulo "Câmeras")**: `OnnxYoloDetectionService`
+  (`Services/OnnxYoloDetectionService.cs`) implementa `IObjectDetectionService` rodando o
+  modelo `tiny-yolov3-11.onnx` (ONNX Model Zoo) localmente via `Microsoft.ML.OnnxRuntime` —
+  sem processo/serviço externo. Entrada 416x416 RGB; o modelo devolve caixas candidatas já
+  filtradas por NMS interno; a classe COCO prevista é ignorada pelo resto do pipeline (o
+  modelo serve só para propor regiões candidatas). Tela `CamerasView`/`CameraPanelView`
+  mostra as webcams conectadas em tempo real (`MenuItem.Cameras`).
+- **Controlador neuroevolutivo (`NeuralEvolution/`)**: conjunto de classes
+  (`RedeNeural`, `AlgoritmoGenetico`, `ControladorHibrido`, `AmbienteTreinamento`,
+  `AlvoTreinamento`, `TorreTreinamento`, `ExtratorDeRegras`, `EpisodioResultado`,
+  `EstadoEpisodio`, `ParametrosTreinamento`) que treina por algoritmo genético uma rede
+  neural pequena (arquitetura `[6,8,2]`: 6 entradas, 8 neurônios ocultos, 2 saídas) combinada
+  a regras heurísticas (`ControladorHibrido`) para decidir o comportamento das torres. O
+  genoma treinado é persistido em
+  `src/RadarTorres.App/Resources/ControladorTreinado/genoma-controlador.json` e também
+  embutido no firmware do Arduino (ver commit `dc6325b`, somente leitura/diagnóstico).
+  Telas dedicadas: **"Treinamento do Controlador"** (`TreinamentoControladorView`,
+  `MenuItem.TreinamentoControlador`) — roda o algoritmo genético, mostra episódios/alvos
+  simulados em um Canvas e, desde 2026-10-23, um diagrama interativo da rede neural com
+  tooltip por neurônio; e **"Estatísticas de Treinamento"** (`EstatisticasTreinamentoView`,
+  `MenuItem.EstatisticasTreinamento`, exclusiva do Administrador) — evolução do fitness
+  médio a cada 500 gerações, lido de `historico_treinamento_geracoes` (SQLite).
+- **Perfis de Alvo**: tela `PerfilAlvoView`/`MenuItem.PerfilAlvo` — cadastro de cor/formato/
+  tamanho que a detecção por visão computacional deve travar como alvo válido.
+- **Desempenho**: tela `DesempenhoView`/`MenuItem.Desempenho` — métricas operacionais em
+  tempo de execução.
+- **Termos de Uso**: `TermosDeUsoWindow` — tela/janela de aceite, com testes dedicados
+  (`TermosDeUsoTests.cs`).
+- **As 5 regras heurísticas do controlador, cada uma desligável em "Configurações"**
+  (sessão de 2026-10-23): anti-oscilação, priorização por urgência, corredor de tiro
+  (considera a linha de tiro até o alvo, não só a posição dele), balanceamento de carga entre
+  torres e predição de trajetória (mira na posição prevista 0,3 s à frente, usando a
+  velocidade real do alvo calculada por diferença finita entre leituras). Documentado em
+  `Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`, seção 7.
+- **Identidade visual nova**: tokens de cor/tipografia/ícones documentados em
+  `Docs/Projeto/IDENTIDADE_VISUAL.md`.
+
 ### Módulo removido
 
 O módulo `ChamadoAjuda` (model, ViewModel, repositório, tela de formulário e entrada de menu na
@@ -148,10 +213,11 @@ TopBar) foi **removido inteiramente** do projeto — não existe mais nenhuma re
 
 ### Telas ainda "em construção" (placeholder, navegação já funciona)
 
-- Configurações — ainda não há um item de menu genérico "Configurações" planejado; o único
-  módulo de configuração implementado hoje é a aba "Configurações do Arduino"
-  (`MenuItem.ConfiguracoesArduino`, já concluída — ver linha "Aba de Configurações do Arduino"
-  acima).
+Nenhuma identificada no momento — o item de menu genérico "Configurações"
+(`MenuItem.Configuracoes`, distinto de `MenuItem.ConfiguracoesArduino`) já está implementado e
+roteado (`ConfiguracoesView`/`ConfiguracoesViewModel`), cobrindo preferências da máquina
+(janela, idioma, tema, comportamento) e, mais recentemente, os toggles das 5 regras
+heurísticas do controlador (ver seção 3.1).
 
 ### Bugs conhecidos (documentados em `Docs/Tecnica/DOCUMENTACAO_TECNICA.md`, seção "Bugs conhecidos")
 
@@ -171,8 +237,9 @@ Conforme plano em `Docs/Projeto/ETAPA1_FUNDACAO.md`, seção 6:
   Chamados de Ajuda foi removido do projeto em vez de ganhar tela de listagem.
 - **Etapa 2**: indicadores gráficos avançados, personalização completa de layout, filtros
   avançados, notificações.
-- **Etapa 3 ("Qualidade")**: recriar um projeto de testes automatizados (o anterior,
-  `tests/RadarTorres.Tests`, foi removido), revisão de segurança, ajustes de desempenho.
+- ~~Etapa 3 ("Qualidade"): recriar um projeto de testes automatizados~~ — **concluído**:
+  `tests/RadarTorres.Tests` existe e tem 18 arquivos/145 testes (ver seção 3); seguem
+  pendentes a revisão de segurança e ajustes de desempenho dessa etapa.
 - ~~Migração de persistência: CSV → banco relacional~~ — **concluído**: persistência é SQLite
   (ver seção 2.1, item "Persistência").
 - **Upload/gravação de firmware** pelo Arduino CLI (hoje só compila) — próximo passo natural
@@ -180,8 +247,7 @@ Conforme plano em `Docs/Projeto/ETAPA1_FUNDACAO.md`, seção 6:
   usuário.
 - Corrigir os dois bugs conhecidos listados acima.
 - Validação manual (interativa, em desktop real) do arraste/redimensionamento dos cards do
-  painel principal — só foi validada por build, não por clique manual (não há mais testes
-  automatizados no projeto).
+  painel principal — só foi validada por build/testes automatizados, não por clique manual.
 
 ---
 
@@ -222,6 +288,7 @@ Relevante para qualquer IA/assistente que for continuar o trabalho:
 | [`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](../Tecnica/ALGORITMO_SELECAO_TORRE.md) | Matemática do radar e da seleção de torres |
 | [`Docs/Projeto/INSTALADOR.md`](INSTALADOR.md) | Processo de criação do instalador |
 | [`Docs/Projeto/ETAPA1_FUNDACAO.md`](ETAPA1_FUNDACAO.md) | Fundação multiusuário: arquitetura, tabelas, validação, roadmap |
+| [`Docs/Projeto/IDENTIDADE_VISUAL.md`](IDENTIDADE_VISUAL.md) | Tokens de cor, tipografia e ícones da identidade visual do app |
 | [`Docs/Tecnica/MODELO_DADOS.md`](../Tecnica/MODELO_DADOS.md) | Schema das tabelas CSV, relacionamentos, plano de migração SQL |
 | [`Docs/Documentos_Entregaveis/Diagramas_e_requisitos/`](../Documentos_Entregaveis/Diagramas_e_requisitos/README.md) | RF01–RF32, RNF01–RNF30, diagrama de classes, de pacotes, DER atual/proposto, matriz de rastreabilidade |
 | [`Docs/Projeto/LOG_SOLICITACOES.md`](LOG_SOLICITACOES.md) | Histórico cronológico dos pedidos feitos à IA (pode não refletir ainda as sessões mais recentes, ex.: migração SQLite, remoção do `ChamadoAjuda`, remoção dos testes) |
