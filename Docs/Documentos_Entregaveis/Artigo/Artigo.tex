@@ -304,9 +304,6 @@ comportamento observado em campo, com hardware físico, antes de se confiar no c
 cenário de operação real -- validação que permanece como trabalho futuro, nos mesmos termos já
 apontados para o restante do protótipo.
 
-\revbom{Esse episódio (bug da certeza estática mascarando estagnação evolutiva) é a contribuição
-mais original do artigo -- é um achado empírico, replicável, documentado por commit. Bem descrito
-aqui.}
 
 A Tabela~\ref{tab:fitness-antes-depois} quantifica o achado, a partir do histórico de treinamento
 persistido localmente (\texttt{historico\_treinamento\_geracoes} e
@@ -458,9 +455,6 @@ bloqueado e o motivo é registrado no console de eventos.
   auditoria (dos autores).}
 \end{figure}
 
-\revbom{Os 7 passos do fluxo operacional estão bem numerados e em ordem lógica -- fácil de seguir
-mesmo sem conhecimento técnico prévio. Fluxograma acima gerado a partir do mesmo texto, reforça
-visualmente o caminho completo do sinal, do sensor até o acionamento.}
 
 \subsubsection{Controlador neuroevolutivo: heurística e rede neural combinadas}
 \label{sec:controlador-hibrido-inicio}
@@ -544,8 +538,6 @@ simulado ao comportamento do sistema real é, para um controlador neuroevolutivo
 para o resultado do treinamento quanto a própria arquitetura da rede ou os hiperparâmetros da busca
 genética.
 
-\revbom{Explicar a hierarquia heurística $\rightarrow$ rede $\rightarrow$ heurística (filtra,
-pondera, veta) ficou claro e tecnicamente preciso -- é o núcleo mais original do artigo.}
 
 \begin{figure}[htbp]
   \centering
@@ -607,9 +599,6 @@ apenas neste parágrafo, em vez de perdidos. Eles não impedem o funcionamento d
 todos os pacotes pertencem ao mesmo \textit{assembly}, mas aumentam o acoplamento e dificultam
 testes isolados e futuras separações em projetos distintos.
 
-\revbom{Diagrama regenerado a partir do código atual -- já inclui o pacote
-\texttt{NeuralEvolution} e as dependências novas (\texttt{Services} e \texttt{ViewModels} o
-importam).}
 
 \subsection{Modelo de dados}
 \label{sec:modelo-dados}
