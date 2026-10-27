@@ -33,7 +33,7 @@ namespace RadarTorres.App.Services;
 /// A região do objeto dentro de cada foto de referência vem da marcação do usuário quando existe e,
 /// sem ela, é escolhida pela COR cadastrada no perfil — nunca pela confiança do detector
 /// (<see cref="EncontrarAreaDoObjeto"/>). Pegar a caixa de maior
-/// score fazia o perfil guardar a assinatura da pessoa que segurava o objeto — o tiny-YOLOv3
+/// score fazia o perfil guardar a assinatura da pessoa que segurava o objeto — o YOLO26n
 /// pontua "person" muito acima de um objeto comum, e a classe COCO é ignorada por este pipeline.
 /// </item>
 /// <item>
@@ -44,7 +44,7 @@ namespace RadarTorres.App.Services;
 /// </item>
 /// <item>
 /// Quando o detector não propõe nenhuma caixa com a cor do perfil, as regiões candidatas são
-/// propostas por segmentação de cor (<see cref="PropostasPorCor"/>). O tiny-YOLOv3 só dispara
+/// propostas por segmentação de cor (<see cref="PropostasPorCor"/>). O YOLO26n só dispara
 /// nas 80 classes COCO — sem esse caminho, qualquer alvo fora dessa lista era indetectável por
 /// construção, por mais que os limiares fossem afrouxados.
 /// </item>
@@ -274,11 +274,13 @@ public sealed class AlvoVisualService : IAlvoVisualService
     /// </summary>
     /// <remarks>
     /// A ordem é invertida em relação ao que parece natural (detector primeiro, cor como
-    /// resgate) por custo medido nesta máquina: uma rodada que resolve pela cor leva ~27 ms,
-    /// contra ~480 ms quando o tiny-YOLOv3 roda (preparo da entrada + inferência). Como o alvo é
-    /// cadastrado COM uma cor, o caminho barato resolve o caso normal e o detector fica para o
-    /// caso em que a cor não encontra nada — que é exatamente quando a caixa de um objeto
-    /// reconhecido vale o tempo gasto.
+    /// resgate) por custo medido nesta máquina com o modelo anterior (tiny-YOLOv3): uma rodada
+    /// que resolve pela cor leva ~27 ms, contra ~480 ms quando o detector roda (preparo da
+    /// entrada + inferência). Números não remedidos após a troca para YOLO26n (entrada maior,
+    /// 640×640 contra 416×416, mas sem custo de NMS) — mas a ordem continua válida pelo mesmo
+    /// motivo: o alvo é cadastrado COM uma cor, o caminho barato resolve o caso normal e o
+    /// detector fica para o caso em que a cor não encontra nada — que é exatamente quando a
+    /// caixa de um objeto reconhecido vale o tempo gasto.
     /// </remarks>
     private IReadOnlyList<Candidato> ObterCandidatos(
         Bitmap frame,
@@ -495,7 +497,7 @@ public sealed class AlvoVisualService : IAlvoVisualService
     /// marcou sobre a foto e nada mais é calculado. O resto deste método é o caminho automático,
     /// usado só por perfis sem marcação: a escolha aí é pela COR cadastrada no perfil, não pela
     /// confiança do detector. Pegar a caixa
-    /// de maior score parece o óbvio e está errado aqui: o tiny-YOLOv3 pontua "person" bem acima
+    /// de maior score parece o óbvio e está errado aqui: o YOLO26n pontua "person" bem acima
     /// de um objeto comum, e como este pipeline ignora a classe COCO, a foto de um objeto
     /// segurado na mão virava a assinatura do rosto/roupa de quem segurava — todo o
     /// reconhecimento passava a perseguir o alvo errado. Sem nenhuma região com a cor do perfil,
