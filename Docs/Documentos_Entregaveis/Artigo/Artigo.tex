@@ -17,6 +17,8 @@
 \usepackage{xcolor}
 \usepackage[alf]{abntex2cite}
 \usepackage[colorinlistoftodos,textsize=footnotesize]{todonotes}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 \renewcommand{\refname}{Referências}
 
 % ---------- Comentários de revisão coloridos (inline) ----------
@@ -173,10 +175,6 @@ ultrassônico de baixa latência, enquanto um Raspberry Pi processa as imagens d
 YOLOv4-tiny, com comunicação serial entre os dois. Essa divisão de papéis é análoga à do
 RadarTorres, em que o Arduino realiza a aquisição e a aplicação desktop concentra o processamento.
 
-\revfaltou{Conferir na fonte original (Majoni et al., 2025) se a divisão "Arduino Mega trata
-ultrassom + Raspberry Pi roda YOLOv4-tiny + comunicação serial" está descrita assim no paper, antes
-de manter a analogia como está.}
-
 A literatura também mostra que sensores ultrassônicos acessíveis podem complementar outras fontes
 de sensoriamento em sistemas de rastreamento, com a precisão melhorada por predição baseada em
 filtro de Kalman e fusão com a distância medida pelos ultrassônicos \cite{curbscan}. O mesmo trabalho observa
@@ -210,10 +208,22 @@ população, paralelização da avaliação de fitness, enriquecimento do sinal 
 descartar, a priori, uma rede maior caso evidências futuras mostrem que a capacidade atual seja o
 fator limitante.
 
-\revfaltou{Faltam referências sobre: restrição de ações válidas (action masking) em RL, "shielding"
-em RL seguro (camada de segurança vetando ações de uma política aprendida) e neuroevolução aplicada
-a atribuição de armas/TEWA especificamente -- fundamentariam a arquitetura híbrida
-heurística+rede melhor do que só a referência genérica de neuroevolução hoje citada.}
+A arquitetura híbrida do controlador -- heurística que restringe o espaço de ações antes da rede
+decidir, e volta a intervir depois, vetando o disparo -- tem paralelo direto com duas técnicas da
+literatura de aprendizado por reforço. A primeira é o mascaramento de ações inválidas
+(\textit{action masking}): \citeonline{huang2020actionmasking} mostram, para algoritmos de
+gradiente de política, que mascarar o espaço de ações antes da amostragem corresponde a uma
+atualização de gradiente válida e se torna mais importante quanto maior a fração de ações
+inválidas -- o que justifica tecnicamente a etapa em que a camada heurística do RadarTorres
+restringe as torres candidatas (nunca ocupada, nunca fora de alcance) antes de a rede neural
+escolher entre elas. A segunda é o \textit{shielding}: \citeonline{alshiekh2017shielding} propõem
+um componente reativo (\textit{shield}) que intercepta a ação escolhida pela política aprendida e a
+substitui quando ela violaria uma propriedade de segurança expressa em lógica temporal -- papel
+equivalente ao do veto heurístico final do RadarTorres sobre o disparo, que nunca é delegado à
+rede. A atribuição de recursos defensivos a ameaças, por sua vez, é tratada na literatura de TEWA
+tanto no caso ameaça por ameaça quanto no caso multiameaça \cite{tewa2009,tewa_multiameaca2009};
+o RadarTorres adota deliberadamente a abordagem mais simples (proximidade, alvo a alvo), com a
+multiameaça permanecendo como trabalho futuro já apontado anteriormente.
 
 O impacto do treinamento virtual sobre a execução física do controlador é atenuado por uma decisão
 de projeto central: o mesmo controlador híbrido -- heurística e rede neural combinadas -- que
@@ -298,9 +308,42 @@ apontados para o restante do protótipo.
 mais original do artigo -- é um achado empírico, replicável, documentado por commit. Bem descrito
 aqui.}
 
-\revfaltou{Falta o número que comprova o achado: gráfico ou tabela de fitness por geração
-antes/depois da correção (commit a02d46a), nº de gerações, tamanho de população e fitness final do
-genoma embutido. Hoje o impacto é só descrito em texto, sem evidência quantitativa.}
+A Tabela~\ref{tab:fitness-antes-depois} quantifica o achado, a partir do histórico de treinamento
+persistido localmente (\texttt{historico\_treinamento\_geracoes} e
+\texttt{marcos\_fitness\_treinamento}, tabelas descritas na Seção~\ref{sec:modelo-dados}). Antes da
+correção (commit \texttt{a02d46a}), o fitness médio da população permaneceu estagnado em torno de 9
+ao longo de 51 blocos de 500 gerações (25.500 gerações treinadas, entre 13h40 e 14h57 do mesmo dia),
+mesmo com o melhor indivíduo de cada bloco oscilando entre 98 e 145 -- sinal de que indivíduos
+pontualmente sortudos conseguiam boa pontuação, sem que a população como um todo convergisse,
+exatamente o efeito esperado de 70\% dos alvos nascerem abaixo do limiar de disparo. Depois da
+correção, a taxa de cobertura (fração de alvos que chegam a ser disparáveis) sobe para 100\% em
+todas as cinco amostras de comportamento do melhor indivíduo registradas na mesma tarde, e o
+fitness médio da população em uma amostra recente de 300 gerações (27/10, gerações 1141--1440) sobe
+para 134,17, muito mais próximo do fitness do melhor indivíduo (137,35) do que o patamar de 9
+observado antes da correção. O genoma embutido no executável (\texttt{genoma-controlador.json})
+corresponde à geração 5377, com \texttt{MelhorFitness} = 136,98.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Fitness da população antes e depois da correção do bug de certeza estática (commit
+  \texttt{a02d46a}), a partir do histórico de treinamento persistido localmente.}
+  \label{tab:fitness-antes-depois}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{4.6cm}p{3.6cm}p{3.6cm}}
+    \hline
+    \textbf{Métrica} & \textbf{Antes (bug)} & \textbf{Depois (corrigido)} \\
+    \hline
+    Fitness médio da população & $\approx$ 9,11 (min. 8,37, máx. 9,43; 51 blocos de 500 gerações) &
+    134,17 (min. 121,31, máx. 150,60; amostra de 300 gerações) \\
+    Melhor fitness por bloco/geração & 97,75 a 144,95 (média 119,62) & 137,35 em média
+    (122,81 a 155,47) \\
+    Taxa de cobertura dos alvos & não medida diretamente -- $\approx$ 70\% dos alvos
+    permanentemente abaixo do limiar & 100\% (5/5 amostras pós-correção) \\
+    Genoma embutido no executável & -- & geração 5377, fitness 136,98 \\
+    \hline
+  \end{tabular}
+\end{table}
 
 \subsection{Projeto e implementação}
 
@@ -360,6 +403,12 @@ acionamento demonstrativo; a torre central tem suporte próprio para os sensores
 topo do mastro. Todas essas peças, assim como o restante do projeto, existem até o momento apenas
 em projeto digital (modelagem 3D e simulação elétrica), sem montagem física realizada.
 
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{maquete_torres_isometrica.png}
+  \caption{Maquete conceitual do arranjo das cinco torres (vista isométrica), com detalhes da torre de disparo e da torre central (dos autores).}
+\end{figure}
+
 \subsubsection{Módulo de visão}
 
 % CONFIRMAR: número de câmeras (quatro) e resolução (720p) -- não há registro desses valores no
@@ -414,6 +463,7 @@ mesmo sem conhecimento técnico prévio. Fluxograma acima gerado a partir do mes
 visualmente o caminho completo do sinal, do sensor até o acionamento.}
 
 \subsubsection{Controlador neuroevolutivo: heurística e rede neural combinadas}
+\label{sec:controlador-hibrido-inicio}
 
 O passo (4) do fluxo operacional -- escolher, entre as torres armadas disponíveis, a mais adequada
 para cada alvo, e decidir o instante do acionamento -- é resolvido no RadarTorres pela combinação
@@ -497,10 +547,28 @@ genética.
 \revbom{Explicar a hierarquia heurística $\rightarrow$ rede $\rightarrow$ heurística (filtra,
 pondera, veta) ficou claro e tecnicamente preciso -- é o núcleo mais original do artigo.}
 
-\revfaltou{Falta um diagrama simples desse fluxo (heurística filtra candidatas $\rightarrow$ rede
-decide dentro do filtro $\rightarrow$ heurística veta disparo inseguro) -- hoje só em texto, e é
-uma ideia que se beneficia bastante de uma figura, inclusive pra reforçar visualmente que a mesma
-classe \texttt{ControladorHibrido} é usada em treino e produção.}
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+      node distance=1.1cm and 1.3cm,
+      box/.style={draw, rounded corners, align=center, minimum height=1.1cm, text width=2.9cm,
+        font=\small},
+      arr/.style={-{Stealth[length=2.5mm]}, thick}
+    ]
+    \node[box] (filtra) {Heurística\\filtra torres candidatas\\(nunca ocupada, nunca fora de alcance)};
+    \node[box, right=of filtra] (decide) {Rede neural\\decide a torre e o instante\\dentro do que a
+      heurística já validou};
+    \node[box, right=of decide] (veta) {Heurística\\veta o disparo\\se inseguro};
+    \draw[arr] (filtra) -- (decide);
+    \draw[arr] (decide) -- (veta);
+    \node[below=0.35cm of decide, font=\footnotesize\itshape] {\texttt{ControladorHibrido} -- a
+      mesma classe decide no treino simulado e na operação real};
+  \end{tikzpicture}%
+  }
+  \caption{Fluxo de decisão do controlador híbrido: a heurística determinística filtra e, ao final,
+  veta; a rede neural decide apenas dentro do espaço já validado (dos autores).}
+\end{figure}
 
 \subsection{Diagrama de pacotes}
 
@@ -527,49 +595,71 @@ $\rightarrow$ Models. O pacote Models ocupa a posição mais estável do sistema
 dependem dele e ele não depende de nenhum outro --, o que é desejável para as entidades de
 domínio, e a separação entre as interfaces de Repositories e a implementação em CSV do pacote Data
 é o que viabiliza a futura migração para um banco relacional sem alterar ViewModels ou Services. A
-construção do diagrama a partir do código revelou, também, três dependências que formam ciclos
-entre pacotes -- destacadas em vermelho na figura --: o \texttt{NavigationService} importa
-\textit{namespaces} de Views para instanciar telas (Services $\rightarrow$ Views), e o
-\texttt{DataSeeder}, responsável pela carga inicial de dados, depende de Repositories e de
-Services, enquanto esses mesmos pacotes dependem de Data. Esses ciclos não impedem o funcionamento
-da aplicação, pois todos os pacotes pertencem ao mesmo \textit{assembly}, mas aumentam o
-acoplamento e dificultam testes isolados e futuras separações em projetos distintos.
+construção do diagrama a partir do código revelou, também, dependências que formam ciclos entre
+pacotes: o \texttt{NavigationService} importa \textit{namespaces} de Views para instanciar telas
+(Services $\rightarrow$ Views, fechando o ciclo com Views $\rightarrow$ ViewModels $\rightarrow$
+Services), e o \texttt{DataSeeder}, responsável pela carga inicial de dados, importa Models,
+Repositories e Services (Data $\rightarrow$ Repositories/Services, fechando o ciclo com
+Repositories/Services $\rightarrow$ Data). Confirmados em \texttt{NavigationService.cs} e
+\texttt{DataSeeder.cs} no código atual, esses dois ciclos continuam presentes, mas a figura acima,
+regenerada ao nível de pacote e não de classe, não os destaca visualmente -- ficam registrados
+apenas neste parágrafo, em vez de perdidos. Eles não impedem o funcionamento da aplicação, pois
+todos os pacotes pertencem ao mesmo \textit{assembly}, mas aumentam o acoplamento e dificultam
+testes isolados e futuras separações em projetos distintos.
 
 \revbom{Diagrama regenerado a partir do código atual -- já inclui o pacote
 \texttt{NeuralEvolution} e as dependências novas (\texttt{Services} e \texttt{ViewModels} o
 importam).}
 
-\revfaltou{A versão anterior da figura destacava em vermelho os três ciclos de dependência
-encontrados (\texttt{NavigationService}, \texttt{DataSeeder}). A regeração simplificada acima não
-reproduz esse destaque -- se os ciclos ainda existirem no código atual, vale redesenhar com a
-mesma marcação, em vez de simplesmente perder essa informação.}
-
 \subsection{Modelo de dados}
-
-\revmudar{Achado grave: a persistência não é mais CSV -- já migrou pra \textbf{SQLite com chaves
-estrangeiras reais} (\texttt{SqliteSchema.cs} e os \texttt{Sqlite*Repository.cs}). O texto e a
-figura DER\_Atual.png descrevem um estágio anterior do projeto. Tabelas reais hoje: 11, não 6
--- \texttt{Usuarios}, \texttt{ObjetosDetectados}, \texttt{OcorrenciaEstados} (nova),
-\texttt{acoes\_realizadas}, \texttt{modo\_atual\_torre}, \texttt{PreferenciasUsuario},
-\texttt{Cameras} (nova), \texttt{classificacoes\_alvo} (nova), \texttt{historico\_treinamento\_
-geracoes} (nova), \texttt{marcos\_fitness\_treinamento} (nova),
-\texttt{instantaneos\_comportamento\_melhor\_gene} (nova). \texttt{ChamadoAjuda}, a 6ª entidade do
-artigo atual, não existe mais no código. \texttt{PreferenciasUsuario.UsuarioId} e
-\texttt{modo\_atual\_torre.ID\_USER} já são FK reais por inteiro (com
-\texttt{PRAGMA foreign\_keys = ON}), não mais vínculo por login/texto como o artigo afirma. Já
-existe documentação mais atualizada em
-\texttt{Docs/Documentos\_Entregaveis/Banco\_de\_Dados/conteudo\_modelo\_banco\_dados.tex} e uma
-figura \texttt{DER\_SQLite.png} prontas pra reaproveitar -- mas mesmo esse documento ainda não
-inclui as 4 tabelas de treinamento neuroevolutivo listadas acima. Atualizar o artigo a partir
-desses dois documentos, cobrindo as 11 tabelas reais.}
+\label{sec:modelo-dados}
 
 A persistência do RadarTorres foi igualmente documentada por meio de um levantamento do modelo de
-dados diretamente a partir do código-fonte já implementado. O protótipo não utiliza, no estágio
-atual, um sistema gerenciador de banco de dados relacional: seis entidades -- usuários, objetos
-detectados, ações realizadas, trocas de modo de operação, preferências de usuário e chamados de
-suporte -- são persistidas localmente em arquivos CSV, um por tabela, cada uma acessada
-exclusivamente por uma interface de repositório dedicada, o que isola as camadas de ViewModel e
-Service do formato de armazenamento.
+dados diretamente a partir do código-fonte já implementado. O protótipo não depende de um
+servidor de banco de dados: utiliza \textbf{SQLite} (\texttt{Microsoft.Data.Sqlite}, arquivo único \texttt{radartorres.db} na
+pasta de dados do usuário), com \texttt{PRAGMA foreign\_keys = ON} garantindo chaves estrangeiras
+reais --
+estágio mais avançado do que o modelo em CSV descrito em versões anteriores deste documento (ver
+nota histórica adiante). O schema atual tem onze tabelas, listadas na Tabela~\ref{tab:tabelas-sqlite}:
+sete cadastrais/de auditoria, já cobertas pelo levantamento em
+\texttt{conteudo\_modelo\_banco\_dados.tex} (pasta \texttt{Banco\_de\_Dados} dos documentos
+entregáveis), e quatro
+exclusivas do treinamento neuroevolutivo, que persistem a evolução do controlador híbrido
+(Seção~\ref{sec:controlador-hibrido-inicio}) entre execuções.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Tabelas do schema SQLite atual (\texttt{schema.sql} e os \texttt{Sqlite*Repository.cs}).}
+  \label{tab:tabelas-sqlite}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{4.6cm}p{7.6cm}}
+    \hline
+    \textbf{Tabela} & \textbf{Finalidade} \\
+    \hline
+    \texttt{usuarios} & Contas de acesso, perfil (Administrador/Operador/Visualizador) e
+    autenticação \\
+    \texttt{objetos\_detectados} & Histórico de ocorrências de detecção (radar e câmera, por
+    quadrante) \\
+    \texttt{ocorrencia\_estados} & Auditoria das transições de estado de cada ocorrência
+    (só inserção) \\
+    \texttt{cameras} & Câmera responsável por cada quadrante (Q1--Q4) \\
+    \texttt{acoes\_realizadas} & Auditoria de acionamentos efetivamente executados (só inserção) \\
+    \texttt{modo\_atual\_torre} & Auditoria de troca de modo de operação (só inserção) \\
+    \texttt{preferencias\_usuario} & Preferências de interface por usuário (tema, idioma,
+    sidebar) \\
+    \texttt{classificacoes\_alvo} & Classificação de perigo do alvo por velocidade estimada,
+    vinculada a \texttt{objetos\_detectados} por FK \\
+    \texttt{historico\_treinamento\_\allowbreak geracoes} & Fitness (melhor e médio) e contagem de
+    alvos abatidos/escapados a cada geração do algoritmo genético \\
+    \texttt{marcos\_fitness\_\allowbreak treinamento} & Agregado de fitness por bloco de gerações, para
+    acompanhar a convergência do treino sem gravar geração a geração \\
+    \texttt{instantaneos\_\allowbreak comportamento\_\allowbreak melhor\_gene} & Snapshot do comportamento do melhor
+    indivíduo em marcos do treino: fitness, taxa de acerto, taxa de cobertura e o próprio genoma
+    (JSON) \\
+    \hline
+  \end{tabular}
+\end{table}
 
 \begin{figure}[htbp]
   \centering
@@ -578,40 +668,77 @@ Service do formato de armazenamento.
   entidade-relacionamento levantado a partir do código-fonte do projeto (dos autores).}
 \end{figure}
 
-\revfaltou{Esta figura (nova, SQLite) e a figura abaixo (DER\_Atual.png, modelo antigo em CSV)
-ainda coexistem no artigo. O texto corrido acima e abaixo da figura antiga ainda descreve o
-modelo em CSV sem chave estrangeira real -- precisa ser reescrito para as 11 tabelas e as FKs
-reais já existentes (ver comentário anterior). A figura DER\_Atual.png pode virar nota histórica
-("modelo original, já superado pela migração para SQLite") em vez de ser apresentada como estado
-atual.}
+\texttt{usuarios} se relaciona 1:1 com \texttt{preferencias\_usuario} (chave
+\texttt{UsuarioId} $\rightarrow$ \texttt{usuarios.Id}) e 1:N com \texttt{modo\_atual\_torre}
+(\texttt{ID\_USER} $\rightarrow$ \texttt{usuarios.Id}) -- em ambos os casos por chave estrangeira
+real de inteiro, não mais por login em texto. \texttt{objetos\_detectados} se relaciona 1:N com
+\texttt{acoes\_realizadas} (quando há alvo associado ao acionamento), com
+\texttt{ocorrencia\_estados} (histórico de transição de estado) e com
+\texttt{classificacoes\_alvo} (\texttt{ObjetoDetectadoId} $\rightarrow$
+\texttt{objetos\_detectados.Id}); \texttt{cameras} se relaciona 1:N com
+\texttt{objetos\_\allowbreak detectados} pelo quadrante monitorado. As quatro tabelas de treinamento não se relacionam por FK com as demais
+nem entre si: são séries temporais independentes, cada uma identificada pelo número da geração
+(\texttt{GERACAO}/\texttt{GeracaoMarco}) e pelo instante de registro, cobrindo da granularidade
+mais fina (\texttt{historico\_treinamento\_geracoes}, uma linha por geração) à mais agregada
+(\texttt{instantaneos\_comportamento\_melhor\_gene}, uma linha por marco, com o genoma completo em
+JSON).
+
+Como registro histórico do projeto, a Figura~\ref{fig:der-atual-historico} mostra o modelo original
+em arquivos CSV, com seis entidades (sem \texttt{ChamadoAjuda}, removida do código) e sem chave
+estrangeira real -- os vínculos entre \texttt{Usuario} e \texttt{AcaoRealizada}/\texttt{ModoAtualTorre}
+eram feitos por login em texto. A Figura~\ref{fig:der-proposto-historico} mostra a proposta de
+migração elaborada a partir desse modelo original; a migração efetivamente realizada seguiu essa
+proposta para as sete entidades que já existiam, mas foi além dela ao acrescentar as quatro tabelas
+de treinamento neuroevolutivo, inexistentes na época em que a proposta foi desenhada.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{DER_Atual.png}
-  \caption{Modelo de dados original em CSV, já substituído pela migração para SQLite (ver figura
-  anterior) -- mantido aqui como registro histórico do projeto (dos autores).}
+  \caption{Modelo de dados original em CSV, já substituído pela migração para SQLite -- mantido
+  aqui como registro histórico do projeto (dos autores).}
+  \label{fig:der-atual-historico}
 \end{figure}
-
-\texttt{Usuario} se relaciona 1:1 com \texttt{PreferenciasUsuario} e 1:N com
-\texttt{AcaoRealizada} e \texttt{ModoAtualTorre} -- nesses dois últimos casos por \textbf{login}
-(texto), sem chave estrangeira real -- e com \texttt{ChamadoAjuda}, por identificador numérico.
-\texttt{ObjetoDetectado} não possui nenhum vínculo persistido com as demais entidades, sendo
-registrado de forma independente. Como proposta de evolução, foi elaborado um modelo relacional
-equivalente, no qual as referências textuais por login seriam substituídas por chaves estrangeiras
-íntegras por identificador numérico, com integridade garantida pelo próprio SGBD, permitindo migrar
-a persistência de CSV/JSON para SQL sem exigir alterações nas camadas de ViewModel ou Service, já
-isoladas do formato de armazenamento por meio das interfaces de repositório.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{DER_Proposto.png}
-  \caption{Modelo relacional proposto para a migração futura de persistência, de CSV/JSON para SQL
-  (dos autores).}
+  \caption{Proposta original de migração de CSV/JSON para SQL -- já implementada e, nas quatro
+  tabelas de treinamento, ampliada em relação ao que aqui se propunha (dos autores).}
+  \label{fig:der-proposto-historico}
 \end{figure}
 
-\revmudar{Falta uma seção de Conclusão/Considerações finais entre "Desenvolvimento" e as
-referências: hoje o artigo termina abruptamente no modelo de dados, sem sintetizar resultados,
-consolidar limitações (hoje espalhadas em vários parágrafos) nem unificar os trabalhos futuros.}
+\section{Conclusão}
+
+Este trabalho descreveu o RadarTorres como um protótipo de rastreamento e seleção automática de
+alvos construído sobre sensoriamento ultrassônico, visão computacional e um controlador híbrido
+-- heurística determinística que filtra e veta, rede neural pequena que decide dentro do espaço já
+validado, treinada por algoritmo genético. A contribuição mais original deste trabalho é empírica:
+a identificação e correção, documentada por commit, de uma falha em que a certeza de identificação
+do alvo era sorteada uma única vez e nunca atualizada, mantendo cerca de 70\% dos alvos
+simulados permanentemente abaixo do limiar de disparo e mascarando a estagnação evolutiva sob a
+aparência de um treino funcional. A Tabela~\ref{tab:fitness-antes-depois} (Seção anterior) quantifica
+o efeito dessa correção: o fitness médio da população, estagnado em torno de 9 ao longo de 25.500
+gerações antes da correção, passou a acompanhar de perto o fitness do melhor indivíduo depois dela,
+e a cobertura de alvos disparáveis foi de uma fração minoritária para 100\% nas amostras
+pós-correção.
+
+As limitações do protótipo, discutidas ao longo do texto, concentram-se em três pontos: (i) o
+hardware físico ainda não foi montado -- toda validação é feita em simulação, com modelos
+(certeza de identificação, probabilidade de erro de disparo) assumidos e não calibrados com dados
+de campo; (ii) a comunicação entre a visão computacional e o Arduino para guiar o apontamento de
+pan/tilt foi projetada mas não implementada, permanecendo como integração pendente; e (iii) a
+propriedade de projeto que limita o controlador híbrido, no pior caso, ao comportamento puramente
+heurístico (nunca a uma decisão arbitrária da rede) ainda não foi submetida a validação em hardware
+físico real.
+
+Os trabalhos futuros identificados neste artigo são, portanto: montagem e validação do hardware
+físico das cinco torres; implementação do comando de apontamento no protocolo serial e da fusão
+entre a posição estimada pela visão e a distância ultrassônica; calibração dos modelos de certeza e
+de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão da seleção de
+torre para a abordagem multiameaça da literatura de TEWA, hoje deixada de lado em favor da
+abordagem por proximidade; e, caso a capacidade da rede se mostre o fator limitante do controlador
+em vez dos hiperparâmetros da busca evolutiva, avaliação de uma arquitetura maior à luz dos
+resultados de \citeonline{such2017deepneuroevolution}.
 
 % ============================================================
 % REFERÊNCIAS
