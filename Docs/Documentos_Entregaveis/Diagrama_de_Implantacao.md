@@ -23,7 +23,7 @@
 
 ## 2. Diagrama de Implantação
 
-![Diagrama de Implantação](UML/Implantacao_RadarTorres.png)
+![Diagrama de Implantação](../../assets/Implantacao_RadarTorres.png)
 
 Diagrama fonte: [`Implantacao_RadarTorres.puml`](UML/Implantacao_RadarTorres.puml).
 

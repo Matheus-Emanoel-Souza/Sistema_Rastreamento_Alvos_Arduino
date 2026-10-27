@@ -5,7 +5,7 @@ em auditoria — uma visão de alto nível, complementar ao [[Diagrama_de_Implan
 [[ALGORITMO_SELECAO_TORRE]] (matemática da seleção).
 
 Fonte: [`fluxo_operacional.mmd`](Fluxo_Operacional/fluxo_operacional.mmd) (Mermaid), renderizado em
-[`Fluxo_Operacional.png`](Fluxo_Operacional/Fluxo_Operacional.png).
+[`Fluxo_Operacional.png`](../../assets/Fluxo_Operacional.png).
 
 ```mermaid
 flowchart TD
