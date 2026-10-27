@@ -661,11 +661,36 @@ exclusivas do treinamento neuroevolutivo, que persistem a evolução do controla
   \end{tabular}
 \end{table}
 
+O modelo de dados atual (SQLite, 11 tabelas, chaves estrangeiras reais) é apresentado a seguir em
+três grupos, por legibilidade: o núcleo de usuários e preferências (Figura~\ref{fig:der-usuarios}),
+o núcleo de detecção, câmeras e auditoria (Figura~\ref{fig:der-cameras}) e as tabelas de
+treinamento neuroevolutivo, independentes entre si (Figura~\ref{fig:der-treinamento}) -- diagramas
+entidade-relacionamento levantados a partir do código-fonte do projeto.
+
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{DER_SQLite_Completo.png}
-  \caption{Modelo de dados atual (SQLite, 11 tabelas, chaves estrangeiras reais) -- diagrama
-  entidade-relacionamento levantado a partir do código-fonte do projeto (dos autores).}
+  \includegraphics[width=0.85\textwidth]{DER_Usuarios_Modo_Preferencias.png}
+  \caption{Núcleo de usuários: \texttt{usuarios}, \texttt{modo\_atual\_torre} e
+  \texttt{preferencias\_usuario} (dos autores).}
+  \label{fig:der-usuarios}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{DER_Cameras_Objetos_Detectados.png}
+  \caption{Núcleo de detecção e auditoria: \texttt{cameras}, \texttt{objetos\_detectados},
+  \texttt{acoes\_realizadas}, \texttt{ocorrencia\_estados} e \texttt{classificacoes\_alvo} (dos
+  autores).}
+  \label{fig:der-cameras}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{DER_Tabelas_Treinamento.png}
+  \caption{Tabelas de treinamento neuroevolutivo -- séries temporais independentes entre si:
+  \texttt{historico\_treinamento\_geracoes}, \texttt{marcos\_fitness\_treinamento} e
+  \texttt{instantaneos\_comportamento\_melhor\_gene} (dos autores).}
+  \label{fig:der-treinamento}
 \end{figure}
 
 \texttt{usuarios} se relaciona 1:1 com \texttt{preferencias\_usuario} (chave
