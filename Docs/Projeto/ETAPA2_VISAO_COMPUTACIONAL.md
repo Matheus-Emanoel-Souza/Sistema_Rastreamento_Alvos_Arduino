@@ -5,6 +5,46 @@
 > antes de implementar. Ver seção 7 para as perguntas que precisam de decisão do usuário
 > antes de qualquer linha de código.
 
+## Status atual (atualizado em 2026-10-26)
+
+Parte deste plano **já foi implementada**, mas com uma arquitetura diferente da proposta
+abaixo nas seções 2 e 4. O restante do documento é mantido como registro do planejamento
+original — não foi atualizado linha a linha, só esta nota foi acrescentada no topo.
+
+**O que de fato existe hoje no código:**
+
+- Detecção de objetos via YOLO/ONNX está implementada em
+  `src/RadarTorres.App/Services/OnnxYoloDetectionService.cs`, que roda o modelo
+  `tiny-yolov3-11.onnx` localmente via `Microsoft.ML.OnnxRuntime` — confirmando a decisão de
+  "C# in-process" da seção 1.
+- A interface `IObjectDetectionService` (`src/RadarTorres.App/Services/IObjectDetectionService.cs`)
+  existe como proposto na seção 4, recebendo um `Bitmap` e devolvendo uma lista de
+  `VisionDetection` (`src/RadarTorres.App/Models/VisionDetection.cs`) — mas o DTO real tem
+  campos diferentes do proposto (`BoxXPx`, `BoxYPx`, `BoxWidthPx`, `BoxHeightPx`, `Score`; sem
+  `CameraId`/`Timestamp`).
+- A classificação "isto é o alvo?" **não** segue o fluxo pixel→ângulo→fusão descrito nas
+  seções 2 e 4. Em vez disso, existe `IAlvoVisualService`/`AlvoVisualService`
+  (`src/RadarTorres.App/Services/IAlvoVisualService.cs`, `AlvoVisualService.cs`), que compara
+  cada `VisionDetection` com um `PerfilAlvo` (`src/RadarTorres.App/Models/PerfilAlvo.cs`,
+  com `CorAlvo`/`FormatoAlvo`) para decidir cor/forma do alvo — um propósito diferente do
+  "pixel → ângulo pan/tilt" descrito aqui.
+
+**O que do plano original NÃO existe:**
+
+- `ICameraCalibrationService` — não existe nenhum arquivo com esse nome ou com esse
+  propósito (calibração câmera → ângulo) no código atual.
+- `IVisionFusionService` — não existe. Não há fusão entre detecção visual e leitura dos
+  sensores ultrassônicos HC-SR04; o pipeline real de visão (detecção + `IAlvoVisualService`)
+  não produz `SensorReading` nem chama `ITargetTrackingService.ProcessReading`.
+- `IAimingService` — não existe. Não há comando `AIM;TOWER=;PAN=;TILT=` nem equivalente;
+  nada no protocolo serial atual envia pan/tilt calculado a partir de uma detecção visual.
+
+Em resumo: a parte de **detecção** (câmera → bounding boxes → classificação por perfil de
+alvo) foi implementada e segue um propósito de reconhecimento/classificação do alvo, não o
+pipeline completo de mira por visão computacional (pixel → ângulo → fusão com ultrassônico →
+`AIM` para o Arduino) planejado neste documento. Esse pipeline de mira continua não
+implementado.
+
 ## 0. Contexto e o que já existe
 
 O módulo "Câmeras" (`CamerasViewModel`/`CameraSlotViewModel`/`ICameraCaptureService`,

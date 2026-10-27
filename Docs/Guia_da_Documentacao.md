@@ -3,9 +3,9 @@
 Guia rápido de onde procurar cada tipo de documento do projeto.
 
 > MOC principal do vault: [[Índice]] (raiz do repositório). Índices por subpasta:
-> [[Docs/Projeto/README|Projeto]], [[Docs/Tecnica/README|Técnica]],
-> [[Docs/Embasamento_Teorico/README|Embasamento Teórico]],
-> [[Docs/Documentos_Entregaveis/README|Documentos Entregáveis]].
+> [[Indice_Projeto|Projeto]], [[Indice_Tecnica|Técnica]],
+> [[Indice_Embasamento_Teorico|Embasamento Teórico]],
+> [[Indice_Documentos_Entregaveis|Documentos Entregáveis]].
 
 | Pasta | Conteúdo |
 |---|---|

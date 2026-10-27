@@ -140,7 +140,7 @@ flowchart TD
    totalmente sem cobertura — e registra aviso de sobrecarga.
 8. Dentro da camada escolhida, pontua cada candidata (distância Euclidiana — ou a combinação
    heurística+rede neural treinada, se houver um controlador embutido, ver
-   [[CONTROLADOR_NEUROEVOLUTIVO]] se existir) e aplica as cinco regras adicionais da seção 7
+   [[CONTROLADOR_NEUROEVOLUTIVO]]) e aplica as cinco regras adicionais da seção 7
    (cada uma independentemente desligável em Configurações) para chegar à vencedora final.
 9. Atualiza `Target.SelectedTower`, `Target.DistanceToSelectedTower` e `Tower.AimAngleDegrees`
    (via `CalcularAnguloDeMira` — `BearingCalculator.AngleTo` com predição de trajetória

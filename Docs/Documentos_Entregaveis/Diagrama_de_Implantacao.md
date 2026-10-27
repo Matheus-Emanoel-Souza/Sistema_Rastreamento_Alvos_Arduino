@@ -2,7 +2,9 @@
 
 > Base desta análise: `installer/RadarTorres.iss` (instalador), `src/RadarTorres.App/App.xaml.cs`
 > (composition root), `src/RadarTorres.App/RadarTorres.App.csproj` (versões de dependências),
-> `Arduino/ArduinoSimulation.ino` e `Docs/Tecnica/COMUNICACAO_ARDUINO.md` (protocolo serial).
+> `Arduino/RadarTorres_Firmware/RadarTorres_Firmware.ino` (firmware real) e
+> `Docs/Tecnica/COMUNICACAO_ARDUINO.md` (protocolo serial). `Arduino/ArduinoSimulation.ino` é
+> apenas um sketch auxiliar de teste do protocolo serial, sem sensores/motores reais.
 > Nenhum nó, artefato ou protocolo foi inventado.
 
 ## 1. Nós e elementos
@@ -14,16 +16,16 @@
 | ↳ dentro do processo | Serviços (regra de negócio) | `ISerialCommunicationService`, `ITargetTrackingService`, `ITowerSelectionService`, `IFireControlService`, `IZonaMortaService`, `IAuthService`, `IPermissionService` |
 | ↳ dentro do processo | Persistência local | Leitura/escrita do banco SQLite via `Microsoft.Data.Sqlite` (`SqliteConnectionFactory`/`Sqlite*Repository`) |
 | ↳ dentro do processo | .NET 9 Desktop Runtime | Embutido pelo instalador — sem dependência externa a instalar |
-| Arduino (microcontrolador) | Firmware | Lê sensores, envia leituras de alvo, recebe comandos, aciona torres demonstrativas |
+| Arduino MEGA 2560 (microcontrolador) | Firmware (`RadarTorres_Firmware.ino`) | Controla 13 motores de passo (varredura central + 8 pan/tilt de câmeras + 4 pan de torres), lê 2 sensores ultrassônicos HC-SR04, aciona 5 LEDs, envia leituras de alvo e recebe comandos do PC |
 | Armazenamento local (disco do usuário) | `radartorres.db` (SQLite) | Usuários, auditoria, objetos detectados, preferências e demais dados cadastrais; CSV permanece apenas como exportação manual da tela de Objetos Detectados |
-| Sensores de detecção | — | Ângulo + distância, alimentam o Arduino |
-| Torres demonstrativas / indicador | — | Laser de baixa potência ou LED, nunca armamento real |
+| Sensores ultrassônicos (2x HC-SR04) | — | Montados a 180° no eixo da varredura central; juntos cobrem 360°, alimentam o Arduino |
+| Torres de decisão (4x, eixo PAN) / indicador | — | Laser de baixa potência ou LED, nunca armamento real; posicionamento via motores de passo próprios |
 
 ## 2. Diagrama de Implantação
 
-![Diagrama de Implantação](Implantacao_RadarTorres.png)
+![Diagrama de Implantação](UML/Implantacao_RadarTorres.png)
 
-Diagrama fonte: [`Implantacao_RadarTorres.puml`](Implantacao_RadarTorres.puml).
+Diagrama fonte: [`Implantacao_RadarTorres.puml`](UML/Implantacao_RadarTorres.puml).
 
 ## 3. Protocolo de comunicação (USB/Serial)
 
@@ -55,13 +57,14 @@ persistidos pelo sistema. Os dois acoplamentos mais relevantes do processo saem 
 fora: Serviços comunica-se com o Arduino pela porta serial, e a camada de Persistência lê/grava o
 banco SQLite local em disco.
 
-Do lado do Arduino, o Firmware concentra as quatro responsabilidades físicas do dispositivo:
-ler os sensores de ângulo/distância, enviar leituras de alvo ao computador, receber comandos e
-acionar as torres demonstrativas.
+Do lado do Arduino (MEGA 2560), o Firmware concentra as responsabilidades físicas do dispositivo:
+controlar os 13 motores de passo (varredura central, pan/tilt das câmeras e pan das torres de
+decisão), ler os 2 sensores ultrassônicos HC-SR04, acionar os 5 LEDs, enviar leituras de alvo ao
+computador e receber comandos deste.
 
 A escolha por um único processo desktop self-contained, sem servidor, é coerente com o argumento
 de segurança/leveza já discutido para o SGBD (ver
-[`Modelo_Banco_de_Dados.md`](../../Banco_de_Dados/Modelo_Banco_de_Dados.md)): menor superfície de
+[`Modelo_Banco_de_Dados.md`](Modelo_Banco_de_Dados.md)): menor superfície de
 ataque (nenhuma porta de rede exposta), zero administração de infraestrutura e instalação
 totalmente local, adequadas ao perfil de nó único do protótipo.
 
@@ -73,7 +76,7 @@ totalmente local, adequadas ao perfil de nó único do protótipo.
   `src/RadarTorres.App/RadarTorres.App.csproj:50`.
 * A segregação em quatro blocos internos (Apresentação/Serviços/Persistência/Runtime) é
   **didática**, não uma leitura de componentes fisicamente distribuídos — ver Seção 6 de
-  [`UML_RadarTorres.md`](../UML_RadarTorres.md).
+  [`UML_RadarTorres.md`](UML_RadarTorres.md).
 
 ## Ver também
 

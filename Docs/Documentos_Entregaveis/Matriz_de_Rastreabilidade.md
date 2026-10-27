@@ -33,8 +33,7 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RF12 | Implementado | `ViewModels/ObjetosDetectadosViewModel.cs` | `ObjetosDetectadosViewModel` | Lista o histórico (`Itens`) |
 | RF12 | Implementado | `Views/ObjetosDetectadosView.xaml.cs` | `ObjetosDetectadosView` | Tela de tabela |
 | RF13 | Implementado | `Services/ObjetoDetectadoExportService.cs` | `ObjetoDetectadoExportService.ExportCsv/Xml/Pdf` | Exportação nos 3 formatos |
-| RF14 | Implementado | `Services/ObjetoDetectadoExportService.cs` | `ObjetoDetectadoExportService.ImportCsv/Xml` | Leitura de arquivo CSV/XML |
-| RF14 | Implementado | `ViewModels/ObjetosDetectadosViewModel.cs` | `ObjetosDetectadosViewModel.PodeImportar` | Restrição de perfil na importação |
+| RF14 | Não implementado | — | — | Requisito pede importação de objetos detectados (CSV/XML); `IObjetoDetectadoExportService` (`Services/ObjetoDetectadoExportService.cs`) só expõe `ExportCsv/Xml/Pdf` ("Sem importação de propósito", comentário explícito na interface) e não existe `PodeImportar` em `ObjetosDetectadosViewModel.cs` |
 | RF15 | Implementado | `Repositories/IAcaoRealizadaRepository.cs` | `IAcaoRealizadaRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `FireControlService` |
 | RF15 | Implementado | `Views/AcoesRealizadasView.xaml.cs`, `ViewModels/AcoesRealizadasViewModel.cs` | `AcoesRealizadasView`/`ViewModel` | Tela de consulta do histórico de ações, roteada em `NavigationService` |
 | RF16 | Implementado | `Repositories/IModoAtualTorreRepository.cs` | `IModoAtualTorreRepository` | Contrato de consulta (sem Update/Delete); gravação ocorre em `MainViewModel` |
@@ -70,7 +69,7 @@ levantamento não é especulativo. Cobre os requisitos funcionais e não funcion
 | RNF11 | `Services/LocalizationService.cs` | `LocalizationService` | Descreve só a troca em runtime, sem duplicar RF18 |
 | RNF12 | `Services/ThemeService.cs`, `Themes/Light.xaml`, `Themes/Dark.xaml` | `ThemeService` | Descreve só a consistência visual, sem duplicar RF18 |
 | RNF14 | `Services/ArduinoCompilerService.cs` | `CompileAsync` (`CancellationToken`) | Não bloqueio/cancelamento, sem duplicar RF24 |
-| RNF18 | — | — | Não há projeto de testes automatizados no repositório no momento (`tests/RadarTorres.Tests` foi removido); status Pendente |
+| RNF18 | `tests/RadarTorres.Tests/*.cs` | `AlgoritmoGeneticoTests`, `TowerSelectionServiceTests`, `PersistenciaSqliteTests`, `RedeNeuralTests`, entre outros (18 arquivos de teste) | Implementado — projeto de testes automatizados existe no repositório e cobre algoritmo genético, rede neural, seleção de torre, persistência SQLite e demais serviços |
 
 ## Decisões Arquiteturais → implementação (ver `Decisoes_Arquiteturais.md`)
 

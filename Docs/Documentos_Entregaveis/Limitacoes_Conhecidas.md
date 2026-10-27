@@ -38,9 +38,9 @@ em ambiente de automação sem desktop interativo real, não confirmada em uso n
 
 ## Divergências entre especificação revisada e implementação atual
 
-**D1 — RF06/RF08: comando de acionamento manual ainda não restrito por modo de operação**
+**D1 — RF07: comando de acionamento manual ainda não restrito por modo de operação**
 
-A especificação revisada (RF06, RF08) define acionamento **exclusivamente automático** no modo
+A especificação revisada (RF07) define acionamento **exclusivamente automático** no modo
 Vermelho, e três estados de operação (Verde/Amarelo/Vermelho). O enum `SystemMode`
 (`Models/SystemState.cs`) já reflete corretamente esses três estados — `LigadoApenas` (Verde),
 `AcompanharAlvos` (Amarelo) e `Disparar` (Vermelho) —, então esse ponto específico já está

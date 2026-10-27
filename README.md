@@ -22,6 +22,7 @@ torre demonstrativa mais próxima/adequada e pode acionar um indicador demonstra
 ## 📋 Índice
 
 - [Objetivo do sistema](#-objetivo-do-sistema)
+- [Capturas de tela](#-capturas-de-tela)
 - [Pré-requisitos](#️-pré-requisitos)
 - [Instalação](#-instalação)
 - [Como usar](#-como-usar)
@@ -52,6 +53,76 @@ Fornecer uma plataforma de software completa para:
    simulação puramente em software), sempre respeitando uma distância mínima de segurança.
 5. Funcionar de ponta a ponta mesmo sem nenhum Arduino conectado, através de um modo de
    simulação embutido — essencial para desenvolvimento contínuo e para as demonstrações do TCC.
+
+---
+
+## 📸 Capturas de tela
+
+### Login
+
+![Tela de login](assets/screenshots/login.png)
+
+Tela inicial do aplicativo. Pede usuário e senha (`admin` / `admin123` no primeiro acesso) antes
+de liberar qualquer painel — ver [Login e multiusuário](#-como-usar).
+
+### Painel principal
+
+![Painel principal](assets/screenshots/painel-principal.png)
+
+Dashboard inicial após o login, com cards configuráveis (arraste/redimensione/feche) mostrando
+objetos detectados hoje, ações realizadas, modo atual do sistema (aqui, "Amarelo — acompanhar
+alvos"), status da conexão serial e os horários da última troca de modo/atualização. É a partir
+daqui que o usuário navega para as demais telas pela barra lateral.
+
+### Monitoramento de câmeras
+
+![Tela de câmeras](assets/screenshots/cameras.png)
+
+Configuração dos 4 painéis de câmera usados pela visão computacional: cada painel escolhe o
+dispositivo de captura e o quadrante (Q1–Q4) que ele deve monitorar — a detecção de um painel só
+é considerada enquanto ele tiver um quadrante atribuído.
+
+### Perfis de alvo
+
+![Tela de perfis de alvo](assets/screenshots/perfis-de-alvo.png)
+
+Cadastro dos alvos que a visão computacional deve reconhecer: nome, cor, formato e fotos de
+referência (fluxo de 4 etapas). Apenas um perfil fica ativo por vez — é ele que orienta a
+classificação de cor/formato/tamanho feita pelo `IAlvoVisualService`.
+
+### Objetos detectados
+
+![Tela de objetos detectados](assets/screenshots/objetos-detectados.png)
+
+Histórico de ocorrências de detecção (Requisito 4), com posição (X/Y), quadrante, câmera de
+origem, confiança da detecção e estado. Permite confirmar ou descartar o abate de um alvo
+selecionado, além de exportar a lista em CSV, XML ou PDF.
+
+### Treinamento do controlador
+
+![Tela de treinamento do controlador](assets/screenshots/treinamento-controlador.png)
+
+Tela exclusiva do Administrador para acompanhar e controlar o treinamento do controlador
+neuroevolutivo (heurística + rede neural): simulação 2D do episódio em tempo real à esquerda,
+visualização interativa da rede neural (6 entradas → 8 ocultos → 2 saídas) ao centro, parâmetros
+do algoritmo genético (tamanho da população, taxa de mutação, alvos simultâneos) e histórico das
+últimas 300 gerações à direita — ver [[CONTROLADOR_NEUROEVOLUTIVO]] para os detalhes técnicos.
+
+### Estatísticas de treinamento
+
+![Tela de estatísticas de treinamento](assets/screenshots/estatisticas-treinamento.png)
+
+Também exclusiva do Administrador: visão de longo prazo do treinamento, com marcos registrados a
+cada 500 gerações (sem o ruído geração a geração da tela anterior) — fitness médio geral, melhor
+fitness já visto e os dois gráficos de evolução do fitness ao longo do treinamento.
+
+### Usuários
+
+![Tela de usuários](assets/screenshots/usuarios.png)
+
+Gerenciamento de contas (exclusivo do Administrador): criação de novo usuário, edição de dados e
+redefinição de senha sem precisar da senha atual — cada conta tem papel (Administrador/Operador)
+que determina quais telas e ações ficam disponíveis.
 
 ---
 
@@ -440,8 +511,8 @@ melhor desempenho de redesenho em tempo real — todos requisitos centrais deste
 | Documento | Conteúdo |
 |---|---|
 | [Requisitos funcionais e não funcionais](Docs/Documentos_Entregaveis/Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | Levantamento completo de requisitos do sistema |
-| [Casos de uso](Docs/Documentos_Entregaveis/UML/Casos_de_Uso/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
-| [Diagrama de Implantação](Docs/Documentos_Entregaveis/UML/Implantacao/Diagrama_de_Implantacao_RadarTorres.pdf) | Distribuição física dos componentes (app desktop + Arduino) |
+| [Casos de uso](Docs/Documentos_Entregaveis/UML/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
+| [Diagrama de Implantação](Docs/Documentos_Entregaveis/UML/Diagrama_de_Implantacao_RadarTorres.pdf) | Distribuição física dos componentes (app desktop + Arduino) |
 | [Diagrama de Classes](Docs/Documentos_Entregaveis/Diagrama_de_Classes/Diagrama_de_Classes_RadarTorres.pdf) | Modelos de domínio e interfaces de serviço |
 | [Modelo Banco de Dados](Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf) | Modelo de dados do sistema |
 | [Artigo do TCC](Docs/Documentos_Entregaveis/Artigo/Artigo.pdf) | Artigo acadêmico do Trabalho de Conclusão de Curso |
