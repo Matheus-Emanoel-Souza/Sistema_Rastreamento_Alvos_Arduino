@@ -23,6 +23,9 @@ public sealed record ParametrosTreinamento
     /// <summary>Certeza mínima (0 a 1) para autorizar disparo — equivalente a <see cref="Configuration.ConfiguracoesAplicativo.LimiarConfiancaDisparoPercentual"/>, mas em fração.</summary>
     public double LimiarConfiancaDisparoFracao { get; init; } = 0.70;
 
+    /// <summary>Distância (m) da torre abaixo da qual a câmera não consegue mais confirmar o alvo com boa certeza (alvo perto demais da lente) — ver <see cref="AlvoTreinamento.CertezaEfetiva"/>.</summary>
+    public double DistanciaMinimaBoaCertezaMetros { get; init; } = 2.0;
+
     /// <summary>Quadrantes tratados como zona morta neste episódio — vazio por padrão (nenhuma restrição). Espelha <see cref="Services.IZonaMortaService"/> do sistema real, só que fixo por episódio em vez de configurável em tela.</summary>
     public IReadOnlySet<Quadrant> ZonasMortasQuadrantes { get; init; } = new HashSet<Quadrant>();
 

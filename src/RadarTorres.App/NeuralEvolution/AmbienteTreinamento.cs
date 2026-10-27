@@ -255,13 +255,18 @@ public sealed class AmbienteTreinamento
     {
         foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo && a.TorreSelecionadaId is not null))
         {
-            // Únicos critérios inegociáveis, independente da distância até o alvo: fora de zona
-            // morta e certeza suficiente (mesma regra de Services.FireControlService.Authorize).
+            // Zona morta é critério inegociável, independente da distância até o alvo (mesma
+            // regra de Services.FireControlService.Authorize).
             if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante)) continue;
-            if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao) continue;
 
             TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
             if (torre is null) continue;
+
+            // Certeza EFETIVA (não a bruta): alvo perto demais da torre não conta o tempo de
+            // observação como confirmação de verdade, igual à limitação real da câmera.
+            double distanciaTorre = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
+            double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros);
+            if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao) continue;
 
             if (!controlador.DecidirDisparo(alvo, torre)) continue;
 
