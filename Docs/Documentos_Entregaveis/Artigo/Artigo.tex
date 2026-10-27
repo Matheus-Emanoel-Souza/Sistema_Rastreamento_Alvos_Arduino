@@ -697,29 +697,12 @@ mais fina (\texttt{historico\_treinamento\_geracoes}, uma linha por geração) �
 (\texttt{instantaneos\_comportamento\_melhor\_gene}, uma linha por marco, com o genoma completo em
 JSON).
 
-Como registro histórico do projeto, a Figura~\ref{fig:der-atual-historico} mostra o modelo original
-em arquivos CSV, com seis entidades (sem \texttt{ChamadoAjuda}, removida do código) e sem chave
-estrangeira real -- os vínculos entre \texttt{Usuario} e \texttt{AcaoRealizada}/\texttt{ModoAtualTorre}
-eram feitos por login em texto. A Figura~\ref{fig:der-proposto-historico} mostra a proposta de
-migração elaborada a partir desse modelo original; a migração efetivamente realizada seguiu essa
-proposta para as sete entidades que já existiam, mas foi além dela ao acrescentar as quatro tabelas
-de treinamento neuroevolutivo, inexistentes na época em que a proposta foi desenhada.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{DER_Atual.png}
-  \caption{Modelo de dados original em CSV, já substituído pela migração para SQLite -- mantido
-  aqui como registro histórico do projeto (dos autores).}
-  \label{fig:der-atual-historico}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{DER_Proposto.png}
-  \caption{Proposta original de migração de CSV/JSON para SQL -- já implementada e, nas quatro
-  tabelas de treinamento, ampliada em relação ao que aqui se propunha (dos autores).}
-  \label{fig:der-proposto-historico}
-\end{figure}
+Como registro histórico do projeto, o modelo original em arquivos CSV tinha seis entidades (sem
+\texttt{ChamadoAjuda}, removida do código) e nenhuma chave estrangeira real -- os vínculos entre
+\texttt{Usuario} e \texttt{AcaoRealizada}/\texttt{ModoAtualTorre} eram feitos por login em texto. A
+migração efetivamente realizada seguiu a proposta elaborada a partir desse modelo original para as
+sete entidades que já existiam, mas foi além dela ao acrescentar as quatro tabelas de treinamento
+neuroevolutivo, inexistentes na época em que a proposta foi desenhada.
 
 \section{Conclusão}
 
