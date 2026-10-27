@@ -277,6 +277,19 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ===================== TREINAMENTO DA IA ======================= -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="Treinamento da IA" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="Apaga o histórico de treinamento gravado em disco: os até 300 registros recentes por geração e os marcos de melhor fitness / fitness médio a cada 500 gerações. Não afeta o genoma embutido nem uma sessão em andamento na tela &quot;Treinamento do Controlador&quot;. Ação permanente."/>
+
+                        <Button Content="Resetar treinamento da IA" Command="{Binding ResetarTreinamentoIACommand}"
+                                Background="{DynamicResource Danger.Fill}" Foreground="{DynamicResource OnAccent}"
+                                HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- ======================= TERMOS DE USO ========================= -->
                 <!-- Mesmo documento aceito durante a instalação (o instalador o exibe como
                      página de licença). Aqui ele fica disponível para releitura e para baixar

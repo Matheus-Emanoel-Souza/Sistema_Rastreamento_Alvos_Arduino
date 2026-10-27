@@ -76,6 +76,16 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         return resultado;
     }
 
+    public void LimparTudo()
+    {
+        using SqliteConnection connection = SqliteConnectionFactory.OpenConnection();
+        EnsureTable(connection);
+
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM historico_treinamento_geracoes";
+        command.ExecuteNonQuery();
+    }
+
     private static void EnsureTable(SqliteConnection connection)
     {
         using SqliteCommand command = connection.CreateCommand();

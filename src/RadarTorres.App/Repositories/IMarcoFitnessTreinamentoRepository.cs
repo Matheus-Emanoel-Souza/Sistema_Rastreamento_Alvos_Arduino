@@ -14,4 +14,7 @@ public interface IMarcoFitnessTreinamentoRepository
 
     /// <summary>Todos os marcos já registrados, em ordem cronológica (geração crescente).</summary>
     IReadOnlyList<MarcoFitnessTreinamento> ObterTodos();
+
+    /// <summary>Remove todos os marcos — usado no reset manual do treinamento (tela Configurações).</summary>
+    void LimparTudo();
 }

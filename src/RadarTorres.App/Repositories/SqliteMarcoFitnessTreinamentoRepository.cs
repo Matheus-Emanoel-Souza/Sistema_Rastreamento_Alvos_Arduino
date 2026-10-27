@@ -57,6 +57,16 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
         return resultado;
     }
 
+    public void LimparTudo()
+    {
+        using SqliteConnection connection = SqliteConnectionFactory.OpenConnection();
+        EnsureTable(connection);
+
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM marcos_fitness_treinamento";
+        command.ExecuteNonQuery();
+    }
+
     private static void EnsureTable(SqliteConnection connection)
     {
         using SqliteCommand command = connection.CreateCommand();
