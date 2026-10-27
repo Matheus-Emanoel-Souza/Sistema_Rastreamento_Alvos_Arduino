@@ -66,6 +66,7 @@ internal sealed class ZonaMortaServiceFalsa : IZonaMortaService
 internal sealed class ControladorTreinadoProviderFalso : IControladorTreinadoProvider
 {
     public RedeNeural? Rede { get; init; }
+    public double[]? Genoma { get; init; }
 }
 
 /// <summary>Em memória, para os testes poderem ligar/desligar as heurísticas de seleção de torre sem tocar o arquivo real do usuário.</summary>
