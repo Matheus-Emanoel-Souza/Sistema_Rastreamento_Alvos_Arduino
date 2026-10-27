@@ -60,14 +60,14 @@ Fornecer uma plataforma de software completa para:
 
 ### Login
 
-![Tela de login](assets/screenshots/login.png)
+![Tela de login](assets/login.png)
 
 Tela inicial do aplicativo. Pede usuário e senha (`admin` / `admin123` no primeiro acesso) antes
 de liberar qualquer painel — ver [Login e multiusuário](#-como-usar).
 
 ### Painel principal
 
-![Painel principal](assets/screenshots/painel-principal.png)
+![Painel principal](assets/painel-principal.png)
 
 Dashboard inicial após o login, com cards configuráveis (arraste/redimensione/feche) mostrando
 objetos detectados hoje, ações realizadas, modo atual do sistema (aqui, "Amarelo — acompanhar
@@ -76,7 +76,7 @@ daqui que o usuário navega para as demais telas pela barra lateral.
 
 ### Monitoramento de câmeras
 
-![Tela de câmeras](assets/screenshots/cameras.png)
+![Tela de câmeras](assets/cameras.png)
 
 Configuração dos 4 painéis de câmera usados pela visão computacional: cada painel escolhe o
 dispositivo de captura e o quadrante (Q1–Q4) que ele deve monitorar — a detecção de um painel só
@@ -84,7 +84,7 @@ dispositivo de captura e o quadrante (Q1–Q4) que ele deve monitorar — a dete
 
 ### Perfis de alvo
 
-![Tela de perfis de alvo](assets/screenshots/perfis-de-alvo.png)
+![Tela de perfis de alvo](assets/perfis-de-alvo.png)
 
 Cadastro dos alvos que a visão computacional deve reconhecer: nome, cor, formato e fotos de
 referência (fluxo de 4 etapas). Apenas um perfil fica ativo por vez — é ele que orienta a
@@ -92,7 +92,7 @@ classificação de cor/formato/tamanho feita pelo `IAlvoVisualService`.
 
 ### Objetos detectados
 
-![Tela de objetos detectados](assets/screenshots/objetos-detectados.png)
+![Tela de objetos detectados](assets/objetos-detectados.png)
 
 Histórico de ocorrências de detecção (Requisito 4), com posição (X/Y), quadrante, câmera de
 origem, confiança da detecção e estado. Permite confirmar ou descartar o abate de um alvo
@@ -100,7 +100,7 @@ selecionado, além de exportar a lista em CSV, XML ou PDF.
 
 ### Treinamento do controlador
 
-![Tela de treinamento do controlador](assets/screenshots/treinamento-controlador.png)
+![Tela de treinamento do controlador](assets/treinamento-controlador.png)
 
 Tela exclusiva do Administrador para acompanhar e controlar o treinamento do controlador
 neuroevolutivo (heurística + rede neural): simulação 2D do episódio em tempo real à esquerda,
@@ -110,7 +110,7 @@ do algoritmo genético (tamanho da população, taxa de mutação, alvos simult�
 
 ### Estatísticas de treinamento
 
-![Tela de estatísticas de treinamento](assets/screenshots/estatisticas-treinamento.png)
+![Tela de estatísticas de treinamento](assets/estatisticas-treinamento.png)
 
 Também exclusiva do Administrador: visão de longo prazo do treinamento, com marcos registrados a
 cada 500 gerações (sem o ruído geração a geração da tela anterior) — fitness médio geral, melhor
@@ -118,7 +118,7 @@ fitness já visto e os dois gráficos de evolução do fitness ao longo do trein
 
 ### Usuários
 
-![Tela de usuários](assets/screenshots/usuarios.png)
+![Tela de usuários](assets/usuarios.png)
 
 Gerenciamento de contas (exclusivo do Administrador): criação de novo usuário, edição de dados e
 redefinição de senha sem precisar da senha atual — cada conta tem papel (Administrador/Operador)

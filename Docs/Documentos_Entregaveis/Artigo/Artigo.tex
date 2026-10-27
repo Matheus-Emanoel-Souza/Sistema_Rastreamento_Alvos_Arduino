@@ -12,6 +12,7 @@
 
 \usepackage[a4paper,margin=2.5cm]{geometry}
 \usepackage{graphicx}
+\graphicspath{{../../../assets/}}
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage[alf]{abntex2cite}
@@ -45,15 +46,15 @@
 \thispagestyle{ucl}
 
 \begin{center}
-    \includegraphics[width=3.6cm]{figuras/logo_ucl.png}\\[1em]
+    \includegraphics[width=3.6cm]{logo_ucl.png}\\[1em]
 
     Trabalho de Conclusão de Curso de Engenharia da Computação\\[0.8em]
 
-    \textbf{\MakeUppercase{Protótipo para detecção, localização e seleção automática de ação por sensoriamento}:}\\
-    \MakeUppercase{Modelo de dados}\\[0.8em]
+    \textbf{\MakeUppercase{RadarTorres}:}\\
+    \MakeUppercase{protótipo para detecção, localização e seleção automática de torre com controlador heurístico-neuroevolutivo}\\[0.8em]
 
-    \textbf{\itshape Prototype for automatic action detection, localization and selection through sensing:}\\
-    \itshape Data model\\[1.2em]
+    \textbf{\itshape RadarTorres:}\\
+    \itshape a prototype for target detection, localization and automatic tower selection with a heuristic-neuroevolutionary controller\\[1.2em]
 \end{center}
 
 \begin{center}
@@ -68,52 +69,59 @@
 
 \noindent A construção de protótipos de sensoriamento com hardware acessível é um recurso
 didático relevante em Engenharia da Computação, por permitir explorar de forma prática conceitos
-de aquisição de dados. Integrar sensoriamento de baixo custo, processamento em tempo real e
-seleção automática de resposta em um único protótipo exige lidar com comunicação entre hardware e
-software e tratamento de leituras ruidosas. Este trabalho tem como objetivo demonstrar a
-viabilidade de um sistema de detecção, localização e seleção automática de ação construído
-inteiramente com componentes acessíveis, em vez de hardware industrial. O sistema combina dois
-sensores ultrassónicos (módulo de baixo custo que mede a distância pelo eco do ultrassom) com
-quatro câmeras de 720p, processa quadros de vídeo (\textit{frames}) e classifica o alvo por sua
-cor, formato e tamanho. O protótipo resultante,
-denominado RadarTorres, converte leituras de ângulo e distância em posição cartesiana, exibindo-as
-em tempo real em um radar circular, seleciona automaticamente, entre torres candidatas posicionadas
-ao redor da base, a mais adequada para responder a cada alvo, e registra em auditoria toda ação
-executada. O processamento e a tomada de decisão são concentrados em uma aplicação desktop, com
-arquitetura pensada para permitir evolução futura sem exigir hardware adicional. Os requisitos do sistema foram levantados por engenharia reversa diretamente
-do código-fonte já implementado. Discutem-se, por fim, as limitações
-inerentes à abordagem de baixo custo adotada.
+de aquisição de dados, rastreamento e tomada de decisão automática. Este trabalho apresenta o
+RadarTorres, um protótipo que detecta um alvo em movimento, estima sua posição e decide, entre um
+conjunto de torres candidatas posicionadas ao redor de uma base central, qual delas deve responder
+a esse alvo -- problema central que o trabalho busca resolver: como identificar, localizar e
+atribuir automaticamente a torre mais adequada a cada alvo, de forma auditável e sem depender de
+sensores ou atuadores de uso industrial. O sistema combina dois sensores ultrassônicos (que medem
+a distância pelo eco do ultrassom) com quatro câmeras de 720p, processa quadros de vídeo
+(\textit{frames}) e classifica o alvo por sua cor, formato e tamanho. O protótipo converte as
+leituras de ângulo e distância em posição cartesiana, exibindo-as em tempo real em um radar
+circular, seleciona automaticamente a torre mais adequada para cada alvo e registra em auditoria
+toda ação executada. Essa seleção combina uma heurística determinística, escrita como regras
+explícitas de engenharia, com uma rede neural que aprende, por meio de um algoritmo genético
+próprio, a refinar essa escolha e o instante do acionamento. O treinamento dessa rede ocorre
+inteiramente antes da operação do sistema, em um ambiente simulado que executa gerações de
+episódios de teste até evoluir os parâmetros da rede; concluído o treinamento, esses parâmetros
+são incorporados de forma fixa à aplicação, de modo que, durante a execução real, o sistema apenas
+aplica o que foi aprendido previamente, sem ajustar seus parâmetros em tempo real. O processamento
+e a tomada de decisão são concentrados em uma aplicação desktop, com arquitetura pensada para
+permitir evolução futura sem exigir hardware adicional. Discutem-se, por fim, as limitações
+inerentes à abordagem de hardware acessível e de baixo custo adotada, e o fato de a validação do
+protótipo, até o momento, ter sido realizada inteiramente por simulação de software, já que a
+estrutura física ainda não foi montada nem testada.
 
-\noindent\textbf{Palavras-chave}: Sensoriamento de baixo custo; Detecção e rastreamento de alvos; Seleção automática de ação; Arduino; Protótipo.
+\noindent\textbf{Palavras-chave}: Detecção e rastreamento de alvos; Seleção automática de torre; Controlador heurístico-neuroevolutivo; Arduino; Protótipo.
 
 \begin{center}
     \textbf{ABSTRACT}
 \end{center}
 
-\noindent This work describes the RadarTorres prototype, a system for automatic action
-detection, localization and selection through sensing, developed as a Final Course Project in
-Computer Engineering. The prototype integrates sensors to identify objects in a monitored
-environment, register their position and allow manual or automatic activation of response
-devices. The system combines two ultrasonic sensors (a low-cost module that measures distance by
+\noindent This work presents RadarTorres, a prototype developed as a Final Course Project in
+Computer Engineering that detects a moving target, estimates its position, and decides, among a
+set of candidate towers placed around a central base, which one should respond to that target --
+the central problem this work addresses: how to automatically identify, localize, and assign the
+most suitable tower to each target, in an auditable way and without relying on industrial-grade
+sensors or actuators. The system combines two ultrasonic sensors (which measure distance by
 ultrasound echo) with four 720p cameras, processes video frames, and classifies the target by
-color, shape, and size. This work details the application's data model: persistence is currently implemented
-through CSV files organized per operating-system user, covering six tables -- users, detected
-objects, executed actions, mode changes, user preferences and help tickets --, each accessed
-through a dedicated repository interface. This choice, documented in the project's technical
-records, keeps the system simple at this stage while explicitly signaling the intent to migrate
-to a relational database in the future. The current table structure, its relationships (by
-login, without real foreign keys) and the proposed model for the SQL migration are described,
-in which textual references would be replaced by proper foreign keys, without requiring changes
-to the application's ViewModel or Service layers, since they depend only on the repository
-interfaces. Results indicate that the interface-based architecture enables this migration
-incrementally and with low risk.
+color, shape, and size. The prototype converts angle and distance readings into Cartesian
+position, displaying them in real time on a circular radar, automatically selects the most
+suitable tower for each target, and logs every executed action for auditing. This selection
+combines a deterministic heuristic, written as explicit engineering rules, with a neural network
+that learns, through a custom genetic algorithm, to refine that choice and the activation timing.
+Training of this network happens entirely before the system is put into operation, in a simulated
+environment that runs generations of test episodes until the network's parameters evolve; once
+training is complete, these parameters are embedded as fixed values into the application, so
+that, during actual execution, the system only applies what was previously learned, without
+adjusting its parameters in real time. Processing and decision-making are concentrated in a
+desktop application, with an architecture designed to allow future evolution without requiring
+additional hardware. Finally, the limitations inherent to the accessible, low-cost hardware
+approach adopted are discussed, as is the fact that validation of the prototype has so far been
+carried out entirely through software simulation, since the physical structure has not yet been
+assembled or tested.
 
-\noindent\textbf{Keywords}: Sensing; Data model; Persistence; SQL migration; Prototype.
-
-\revmudar{Título, resumo, abstract e palavras-chave só falam de "Modelo de dados", mas o corpo do
-artigo hoje cobre requisitos, projeto elétrico, visão computacional, diagrama de pacotes e
-controlador neuroevolutivo. Reescrever título/resumo/abstract/keywords para o escopo real, ou
-dividir em artigos por entregável.}
+\noindent\textbf{Keywords}: Target detection and tracking; Automatic tower selection; Heuristic-neuroevolutionary controller; Arduino; Prototype.
 
 \clearpage
 
@@ -124,15 +132,26 @@ dividir em artigos por entregável.}
 
 Sistemas automáticos de detecção e resposta a alvos exigem, além de identificar um estímulo,
 rastrear com precisão sua posição e aplicar regras de decisão que evitem respostas indevidas --
-tarefas comumente resolvidas com sensores de radar ou LIDAR, de custo elevado. Como alternativa a
-esse tipo de equipamento, este trabalho adota técnicas de visão computacional, aliadas a hardware
-acessível, como parte central da arquitetura do protótipo. Protótipos didáticos construídos dessa
-forma desempenham papel importante nesse processo, por permitirem que esses conceitos sejam
-explorados de forma prática e replicável em laboratório, reproduzindo os princípios de
-sensoriamento, rastreamento e decisão presentes em sistemas mais sofisticados.
+tarefas comumente resolvidas com sensores de radar, de custo elevado. Como alternativa a esse tipo
+de equipamento, este trabalho adota técnicas de visão computacional, aliadas a hardware acessível,
+como parte central da arquitetura do protótipo. Protótipos didáticos construídos dessa forma
+desempenham papel importante nesse processo, por permitirem que esses conceitos sejam explorados
+de forma prática e replicável em laboratório, reproduzindo os princípios de sensoriamento,
+rastreamento e decisão presentes em sistemas mais sofisticados.
 
-\revbom{Introdução contextualiza bem o problema (custo de radar/LIDAR vs. visão computacional +
-hardware acessível) antes de entrar em detalhe técnico -- boa porta de entrada pro leitor leigo.}
+O protótipo resultante, denominado RadarTorres, combina sensores ultrassônicos e câmeras para
+detectar um alvo, estimar sua posição em um radar circular e decidir, entre um conjunto de torres
+candidatas dispostas ao redor de uma base central, qual delas deve responder a esse alvo. Essa
+decisão não é tomada apenas por regras fixas: uma rede neural, evoluída por um algoritmo genético
+próprio, aprende a refinar a escolha da torre e o instante do acionamento, sempre dentro dos
+limites que uma camada de regras explícitas (a heurística) já considera seguros. Esse aprendizado
+acontece em duas etapas bem separadas: antes da operação do sistema, em um ambiente de treinamento
+simulado, onde a rede evolui ao longo de muitas gerações de episódios de teste; e, depois de
+treinada, apenas na forma de inferência durante a execução real, sem qualquer ajuste adicional de
+seus parâmetros em tempo de operação. O problema central que este trabalho busca resolver é,
+portanto, como automatizar essa cadeia -- detectar, localizar e selecionar a torre mais adequada a
+cada alvo -- de forma auditável e replicável em laboratório, sem depender de sensores ou atuadores
+de uso industrial.
 
 % ============================================================
 % 2 DESENVOLVIMENTO
@@ -141,14 +160,13 @@ hardware acessível) antes de entrar em detalhe técnico -- boa porta de entrada
 
 \subsection{Revisão da literatura e fundamentação teórica}
 
-Sistemas de detecção e rastreamento de alvos costumam recorrer a sensores como radar e LIDAR, de
-custo elevado. Como alternativa, sensores de baixo custo podem ser combinados de modo que as
-limitações de um sejam compensadas pelas qualidades do outro. Sensores ultrassônicos, como o
-HC-SR04, medem distância com baixo custo e boa confiabilidade em curto alcance, mas não distinguem
-o tipo do obstáculo; câmeras, por sua vez, fornecem informação semântica, porém dependem das
-condições de iluminação e exigem maior poder de processamento \cite{majoni2025}. A fusão de
-sensores (\textit{sensor fusion}) combina as duas modalidades para aproveitar essa
-complementaridade.
+Sistemas de detecção e rastreamento de alvos costumam recorrer a sensores como radar, de custo
+elevado. Como alternativa, sensores acessíveis podem ser combinados de modo que as limitações de
+um sejam compensadas pelas qualidades do outro. Sensores ultrassônicos, como o HC-SR04, medem
+distância com boa confiabilidade em curto alcance, mas não distinguem o tipo do obstáculo;
+câmeras, por sua vez, fornecem informação semântica, porém dependem das condições de iluminação e
+exigem maior poder de processamento \cite{majoni2025}. A fusão de sensores (\textit{sensor
+fusion}) combina as duas modalidades para aproveitar essa complementaridade.
 
 \citeonline{majoni2025} descrevem uma arquitetura em que um Arduino Mega trata o sensoriamento
 ultrassônico de baixa latência, enquanto um Raspberry Pi processa as imagens da câmera com uma rede
@@ -159,23 +177,19 @@ RadarTorres, em que o Arduino realiza a aquisição e a aplicação desktop conc
 ultrassom + Raspberry Pi roda YOLOv4-tiny + comunicação serial" está descrita assim no paper, antes
 de manter a analogia como está.}
 
-A literatura também mostra que sensores ultrassônicos de baixo custo podem complementar câmeras e
-LiDAR em sistemas de rastreamento, com a precisão melhorada por predição baseada em filtro de
-Kalman e fusão com a distância medida pelos ultrassônicos \cite{curbscan}. O mesmo trabalho observa
+A literatura também mostra que sensores ultrassônicos acessíveis podem complementar outras fontes
+de sensoriamento em sistemas de rastreamento, com a precisão melhorada por predição baseada em
+filtro de Kalman e fusão com a distância medida pelos ultrassônicos \cite{curbscan}. O mesmo trabalho observa
 que as leituras ultrassônicas se tornam ruidosas em distâncias maiores, o que motiva o uso de
 filtragem.
 
 Definidos o alvo e sua posição, resta decidir qual recurso deve responder. Na literatura de defesa,
 esse problema é tratado como avaliação de ameaças e atribuição de armas (\textit{Threat Evaluation
 and Weapon Assignment}, TEWA), no qual as informações dos sensores alimentam as etapas de detecção,
-rastreamento e identificação, seguidas da avaliação da ameaça e da atribuição dos recursos
-\cite{naseem_tewa, roux_tewa}. As abordagens são classificadas em ameaça por ameaça, em que as
-armas são atribuídas sequencialmente, e multiameaça, em que o conjunto de ameaças é considerado
-simultaneamente \cite{roux_tewa}.
-
-\revmudar{\texttt{naseem\_tewa} e \texttt{roux\_tewa} em referencias.bib estão com dados
-"PREENCHER" (placeholder) -- o PDF compilado mostra literalmente "PREENCHER PREENCHER" na lista de
-referências. Preencher com dados reais ou remover a citação até ter a fonte.}
+rastreamento e identificação, seguidas da avaliação da ameaça e da atribuição dos recursos. As
+abordagens desse tipo de problema costumam ser classificadas em ameaça por ameaça, em que os
+recursos são atribuídos sequencialmente, e multiameaça, em que o conjunto de ameaças é considerado
+simultaneamente.
 
 O RadarTorres adota uma abordagem simples, por proximidade, aplicada alvo a alvo, com propósito
 exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento real); a
@@ -187,16 +201,14 @@ tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por
 próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), auditável e
 sem dependência de biblioteca de aprendizado de máquina. \citeonline{such2017deepneuroevolution}
 mostram que algoritmos genéticos são uma alternativa competitiva ao treino por gradiente em tarefas
-de aprendizado por reforço, inclusive em redes bem maiores que a aqui empregada, o que sustenta a
-escolha de ampliar o desempenho do controlador pelo ajuste dos hiperparâmetros da busca evolutiva
-(tamanho de população, paralelização da avaliação de fitness, enriquecimento do sinal de
-recompensa) em vez de aumentar o número de camadas ou neurônios sem evidência de que a capacidade
-atual da rede seja o fator limitante.
-
-\revmudar{Such et al. (2017) testam redes de até 4 milhões de parâmetros (Atari/locomoção) --
-escala bem diferente dos 74 parâmetros da rede do RadarTorres. A referência sustenta "GA é
-competitivo com gradiente", não sustenta "logo não vale ampliar a rede aqui". Ajustar a frase pra
-não atribuir essa conclusão específica ao paper.}
+de aprendizado por reforço, em redes de porte bem maior do que a aqui empregada (até quatro milhões
+de parâmetros, contra os 74 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
+do algoritmo genético como método de treinamento, mas não implica, por si só, que aumentar o número
+de camadas ou neurônios seja desnecessário; por isso, a estratégia adotada para ampliar o
+desempenho do controlador prioriza o ajuste dos hiperparâmetros da busca evolutiva (tamanho de
+população, paralelização da avaliação de fitness, enriquecimento do sinal de recompensa), sem
+descartar, a priori, uma rede maior caso evidências futuras mostrem que a capacidade atual seja o
+fator limitante.
 
 \revfaltou{Faltam referências sobre: restrição de ações válidas (action masking) em RL, "shielding"
 em RL seguro (camada de segurança vetando ações de uma política aprendida) e neuroevolução aplicada
@@ -204,29 +216,27 @@ a atribuição de armas/TEWA especificamente -- fundamentariam a arquitetura hí
 heurística+rede melhor do que só a referência genérica de neuroevolução hoje citada.}
 
 O impacto do treinamento virtual sobre a execução física do controlador é atenuado por uma decisão
-de projeto central: a mesma classe que decide no episódio simulado (\texttt{ControladorHibrido}) é
-a que decide em produção, consultada por \texttt{TowerSelectionService} a partir das leituras do
-Arduino real -- não há conversão para um formato intermediário (ONNX, TensorFlow Lite) nem
-reimplementação em outra linguagem ou plataforma, fontes comuns de divergência entre o
-comportamento treinado e o executado em sistemas de aprendizado por reforço aplicados a robótica. O
-genoma evoluído é um vetor plano de pesos e vieses, embutido diretamente na aplicação
-(\texttt{EmbutirGenomaTreinado.ps1}, \texttt{IControladorTreinadoProvider}); o que muda do ambiente
-de treino para a operação real é apenas a origem dos dados de entrada (leitura simulada ou leitura
-do Arduino), nunca a função de decisão em si. Os parâmetros que definem o episódio simulado --
-alcance de engajamento e certeza mínima para autorizar disparo -- também deixaram de ser constantes
-fixas no código e passaram a ser lidos das mesmas configurações usadas pelo sistema real
-(\texttt{ConfiguracoesAplicativo.AlcanceMiraMetros}, \texttt{LimiarConfiancaDisparoPercentual}), de
-modo que recalibrar o alcance da câmera ou o limiar de certeza no painel de Configurações recalibra
-também o mundo de treino, reduzindo a divergência entre o que foi aprendido e o que será executado.
-Por fim, a rede neural nunca decide isoladamente: ela apenas pondera a escolha dentro do que a
-camada heurística determinística já considera válida (nunca uma torre ocupada, nunca fora de
-alcance, nunca dentro de uma zona morta), o que limita o pior caso de uma generalização imperfeita
-do treino virtual para a física -- no limite, o sistema regride ao comportamento puramente
-heurístico, nunca a uma decisão arbitrária.
-
-\revmudar{Essa garantia de pior caso é afirmada como fato, mas nunca foi validada em hardware real
-(o próprio artigo admite isso mais adiante). Trocar para condicional: "a arquitetura foi concebida
-para limitar..." em vez de afirmar o efeito como já comprovado.}
+de projeto central: o mesmo controlador híbrido -- heurística e rede neural combinadas -- que
+decide no episódio simulado é o que decide em produção, consultado pelo algoritmo responsável por
+selecionar a torre a partir das leituras do Arduino real -- não há conversão para um formato
+intermediário (ONNX, TensorFlow Lite) nem reimplementação em outra linguagem ou plataforma, fontes
+comuns de divergência entre o comportamento treinado e o executado em sistemas de aprendizado por
+reforço aplicados a robótica. O genoma evoluído é um vetor plano de pesos e vieses, embutido
+diretamente na aplicação por uma etapa automática de build, que grava o melhor genoma treinado no
+executável, de onde é carregado por um componente dedicado em tempo de execução; o que muda do
+ambiente de treino para a operação real é apenas a origem dos dados de entrada (leitura simulada
+ou leitura do Arduino), nunca a função de decisão em si. Os parâmetros que definem o episódio
+simulado -- alcance de engajamento e certeza mínima para autorizar disparo -- também deixaram de
+ser constantes fixas no código e passaram a ser lidos das mesmas configurações de alcance de mira
+e de limiar de certeza usadas pelo sistema real, de modo que recalibrar o alcance da câmera ou o
+limiar de certeza no painel de Configurações recalibra também o mundo de treino, reduzindo a
+divergência entre o que foi aprendido e o que será executado. Por fim, a rede neural nunca decide
+isoladamente: ela apenas pondera a escolha dentro do que a camada heurística determinística já
+considera válida (nunca uma torre ocupada, nunca fora de alcance), de modo que a arquitetura foi
+concebida para limitar o pior caso de uma generalização imperfeita do treino virtual para a física
+-- no limite, o controlador regrediria ao comportamento puramente heurístico, nunca a uma decisão
+arbitrária; trata-se, porém, de uma propriedade de projeto ainda não submetida a validação em
+hardware físico real.
 
 % PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
 % computacional clássica (a ser informada pelo autor).
@@ -235,11 +245,13 @@ para limitar..." em vez de afirmar o efeito como já comprovado.}
 
 O percurso metodológico deste trabalho não seguiu o fluxo tradicional de especificação prévia
 seguida de implementação: o protótipo RadarTorres já existia, em desenvolvimento incremental,
-antes do levantamento formal de requisitos. Optou-se, portanto, por uma abordagem de engenharia
-reversa documental, na qual os requisitos funcionais e não funcionais foram extraídos diretamente
-do código-fonte já implementado (\texttt{src/RadarTorres.App/}), do firmware de simulação
-(\texttt{Arduino/ArduinoSimulation.ino}) e da documentação técnica já produzida ao longo do
-projeto, em vez de definidos a priori em um documento de especificação anterior à codificação.
+antes do levantamento formal de requisitos. Optou-se, portanto, por catalogar os requisitos
+funcionais e não funcionais diretamente a partir do que já estava implementado no código-fonte da
+aplicação desktop e da documentação técnica já produzida ao longo do projeto, em vez de defini-los
+a priori em um documento de especificação anterior à codificação. O treinamento do controlador por
+neuroevolução, descrito na Seção 2.1, segue essa mesma lógica incremental: a arquitetura híbrida
+heurística+rede neural foi definida e ajustada em paralelo ao restante do sistema, não a partir de
+um plano de treinamento fechado desde o início.
 
 Esse levantamento resultou em 25 requisitos funcionais (RF01--RF25) e 20 requisitos não
 funcionais (RNF01--RNF20), classificados segundo dois critérios objetivos: a \textbf{prioridade},
@@ -255,18 +267,16 @@ entre o comportamento observado no código e a nomenclatura ou fluxo originalmen
 foram registradas explicitamente, em vez de omitidas ou corrigidas silenciosamente na
 documentação.
 
-A validação funcional do protótipo, por sua vez, não foi realizada sobre o hardware físico, ainda
-não montado: o sistema conta com um modo de simulação embutido na própria aplicação, que gera
-leituras sintéticas de ângulo e distância no mesmo formato produzido pelo Arduino, permitindo
-exercitar de ponta a ponta o rastreamento de alvos, a seleção automática de torre e as regras de
-zona morta sem depender de uma porta serial conectada. Esse modo de simulação foi o meio primário
-usado para observar o comportamento do sistema durante este trabalho, o que impõe um limite claro
-ao escopo dos resultados relatados: eles atestam a corretude da lógica de decisão implementada em
-software, mas não substituem uma validação de campo com sensores e torres físicas, deixada como
-trabalho futuro.
+\textbf{A parte física do RadarTorres (torres, motores, sensores montados em campo) ainda não foi
+implementada nem validada.} Toda a validação funcional relatada neste trabalho foi realizada por
+simulação de software: a lógica de rastreamento de alvos e de seleção automática de torre foi
+exercitada de ponta a ponta sem depender de uma porta serial conectada a hardware real, o que
+impõe um limite claro ao escopo dos resultados relatados -- eles atestam a corretude da lógica de
+decisão implementada em software, mas não substituem uma validação de campo com sensores e torres
+físicas, deixada como trabalho futuro.
 
 A mesma ressalva se aplica, com reforço adicional, ao controlador treinado por neuroevolução: o
-mundo simulado em que os genomas são avaliados (\texttt{AmbienteTreinamento}) é uma aproximação
+mundo simulado em que os genomas são avaliados é uma aproximação
 idealizada do ambiente físico -- os alvos nascem na borda de um círculo e avançam de forma quase
 radial, sem o ruído típico de leituras ultrassônicas reais; a certeza de identificação do alvo pela
 câmera é modelada como uma função sintética que cresce com o tempo de observação, e a probabilidade
@@ -316,11 +326,12 @@ de pares chave-valor separados por ponto e vírgula. Uma leitura de alvo chega n
 \texttt{TARGET;ID=1;ANGLE=45;DIST=2.80}, em que \texttt{ANGLE} é dado em graus no intervalo
 $[0, 360)$ e \texttt{DIST} em metros. O ângulo segue a convenção de bússola -- $0^\circ$ apontando
 para o Norte, sentido horário --, escolhida por ser a leitura mais intuitiva para quem opera um
-radar, e a conversão para coordenadas cartesianas de mundo, isolada em
-\texttt{CoordinateConverter.PolarToCartesian}, é dada por $x = d \cdot \sin\theta$ e
+radar, e a conversão para coordenadas cartesianas de mundo, feita por uma rotina dedicada de
+conversão de coordenadas polares para cartesianas, é dada por $x = d \cdot \sin\theta$ e
 $y = d \cdot \cos\theta$, com $\theta$ em radianos. A partir do par $(x, y)$, o quadrante do alvo é
-determinado pelos sinais das duas coordenadas (\texttt{QuadrantHelper}) e a distância até cada torre
-candidata pela distância euclidiana clássica (\texttt{DistanceCalculator.Euclidean}). Leituras com
+determinado pelos sinais das duas coordenadas (por um algoritmo auxiliar de identificação de
+quadrante) e a distância até cada torre candidata pela distância euclidiana clássica (calculada
+por uma rotina dedicada de cálculo de distância). Leituras com
 campos ausentes, não numéricos, com ângulo fora do intervalo válido ou com distância negativa são
 convertidas em mensagens de erro registradas no console de eventos, nunca em exceções -- falhas de
 sensor ou de cabo produzem degradação graciosa, e não interrupção da aplicação.
@@ -342,13 +353,12 @@ diretamente ao eixo do motor: ele assenta em um disco que gira sobre um rolament
 acionado pelo motor por um cubo duplo-D. A passagem dos fios fica próxima ao eixo central, com folga
 de cabo em vez de anel coletor (\textit{slip ring}), já que o giro é limitado a 180°. A torre
 central é cerca de 5 cm mais alta que as torres armadas (cerca de 137,5 mm de altura). As peças
-estruturais são impressas em 3D.
-
-\revfaltou{Falta descrever o formato físico das torres e seus suportes: estrutura em formato de
-torre impressa em 3D, com suportes para motores e câmeras (que funcionam como os "canhões" de
-acionamento demonstrativo) nas torres armadas, e suporte próprio para os sensores ultrassônicos na
-torre central; ambas com suporte para rolamento axial na base, permitindo a rotação da estrutura.
-Texto já redigido em \texttt{Melhoria\_de\_artigo.MD}, falta inserir aqui.}
+estruturais são impressas em 3D, em formato de torre, com suporte para rolamento axial na base --
+o que permite a rotação da estrutura --, comum às cinco torres. As torres armadas têm, além disso,
+suportes próprios para os motores e para as câmeras, que cumprem o papel dos "canhões" de
+acionamento demonstrativo; a torre central tem suporte próprio para os sensores ultrassônicos no
+topo do mastro. Todas essas peças, assim como o restante do projeto, existem até o momento apenas
+em projeto digital (modelagem 3D e simulação elétrica), sem montagem física realizada.
 
 \subsubsection{Módulo de visão}
 
@@ -357,7 +367,8 @@ Texto já redigido em \texttt{Melhoria\_de\_artigo.MD}, falta inserir aqui.}
 O módulo de visão utiliza quatro câmeras de 720p conectadas por USB ao computador, associadas aos
 quadrantes do radar, e processa os quadros de vídeo (\textit{frames}) para classificar o alvo por
 sua cor, formato e tamanho. Cada quadro capturado é entregue já decodificado à detecção, que executa
-localmente um modelo tiny-YOLOv3 em formato ONNX para propor as regiões candidatas da imagem. Cada
+localmente um modelo YOLO26, na variante nano, em formato ONNX, para propor as regiões candidatas
+da imagem. Cada
 candidata é então comparada ao perfil do alvo previamente cadastrado -- definido por cor, formato e
 tamanho, e opcionalmente por fotos de referência recortadas no objeto de interesse. Havendo foto de
 referência, a comparação combina um histograma de matiz e saturação com uma grade espacial de cor
@@ -382,8 +393,8 @@ formato e tamanho; (4) a aplicação seleciona, entre as torres armadas disponí
 para o alvo, priorizando as do mesmo quadrante e, entre elas, a de menor distância euclidiana (por
 proximidade, alvo a alvo); (5) o comando é enviado ao Arduino, que aciona a torre selecionada;
 (6) o acionamento demonstrativo (laser de baixa potência ou LED) só ocorre respeitando a distância
-mínima de segurança e as regras de zona morta, que podem bloquear um quadrante inteiro ou uma faixa
-de distância a partir da base; (7) toda ação executada é registrada em auditoria.
+mínima de segurança e as demais regras de segurança configuráveis do sistema; (7) toda ação
+executada é registrada em auditoria.
 
 A seleção de torre e o acionamento dependem do modo de operação escolhido pelo operador, em um
 modelo de três níveis: no primeiro, os alvos são apenas detectados e exibidos; no segundo,
@@ -393,7 +404,7 @@ bloqueado e o motivo é registrado no console de eventos.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.55\textwidth]{figuras/Fluxo_Operacional.png}
+  \includegraphics[width=0.55\textwidth]{Fluxo_Operacional.png}
   \caption{Fluxograma do fluxo operacional do RadarTorres, da leitura dos sensores ao registro em
   auditoria (dos autores).}
 \end{figure}
@@ -409,9 +420,8 @@ para cada alvo, e decidir o instante do acionamento -- é resolvido no RadarTorr
 de dois mecanismos de natureza distinta: uma \textbf{heurística} determinística, escrita como regras
 explícitas de engenharia, e uma \textbf{rede neural} \textit{feedforward}, cujo comportamento é
 aprendido por um algoritmo evolutivo próprio, sem biblioteca de aprendizado de máquina. Ambos
-coexistem na mesma classe, \texttt{ControladorHibrido}, e é essa combinação -- não cada mecanismo
-isoladamente -- que determina tanto o comportamento em produção quanto o que é efetivamente
-treinado.
+coexistem no mesmo controlador híbrido, e é essa combinação -- não cada mecanismo isoladamente --
+que determina tanto o comportamento em produção quanto o que é efetivamente treinado.
 
 A heurística é um conjunto de regras fixas, escritas e revisáveis por engenharia, cujo resultado
 para uma mesma entrada é sempre o mesmo. No RadarTorres ela resolve, em cascata, três camadas de
@@ -506,7 +516,7 @@ implementada, e não apenas a pretendida.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{figuras/Diagrama_de_Pacotes.png}
+  \includegraphics[width=\textwidth]{Diagrama_de_Pacotes.png}
   \caption{Diagrama de pacotes do RadarTorres. Setas em vermelho indicam dependências que formam
   ciclos (dos autores).}
 \end{figure}
@@ -563,7 +573,7 @@ Service do formato de armazenamento.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{figuras/DER_SQLite_Completo.png}
+  \includegraphics[width=\textwidth]{DER_SQLite_Completo.png}
   \caption{Modelo de dados atual (SQLite, 11 tabelas, chaves estrangeiras reais) -- diagrama
   entidade-relacionamento levantado a partir do código-fonte do projeto (dos autores).}
 \end{figure}
@@ -577,7 +587,7 @@ atual.}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{figuras/DER_Atual.png}
+  \includegraphics[width=\textwidth]{DER_Atual.png}
   \caption{Modelo de dados original em CSV, já substituído pela migração para SQLite (ver figura
   anterior) -- mantido aqui como registro histórico do projeto (dos autores).}
 \end{figure}
@@ -594,7 +604,7 @@ isoladas do formato de armazenamento por meio das interfaces de repositório.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{figuras/DER_Proposto.png}
+  \includegraphics[width=\textwidth]{DER_Proposto.png}
   \caption{Modelo relacional proposto para a migração futura de persistência, de CSV/JSON para SQL
   (dos autores).}
 \end{figure}
