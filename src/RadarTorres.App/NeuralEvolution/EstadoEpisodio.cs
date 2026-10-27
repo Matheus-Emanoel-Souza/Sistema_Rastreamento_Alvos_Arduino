@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RadarTorres.App.Models;
 
 namespace RadarTorres.App.NeuralEvolution;
 
@@ -30,6 +31,15 @@ public sealed class EstadoEpisodio
 
     /// <summary>Gerador de números aleatórios próprio do episódio — permite reproduzir o mesmo episódio com uma seed fixa.</summary>
     public Random Rng { get; }
+
+    /// <summary>Script de nascimentos deste episódio (ver <see cref="CatalogoCenarios"/>), ou <c>null</c> para o sorteio padrão.</summary>
+    public IReadOnlyList<SpawnScriptado>? SpawnsScriptados { get; set; }
+
+    /// <summary>Próximo nascimento ainda não disparado em <see cref="SpawnsScriptados"/>.</summary>
+    public int ProximoIndiceSpawnScriptado { get; set; }
+
+    /// <summary>Quadrante tratado como zona morta só neste episódio, além dos configurados em <see cref="ParametrosTreinamento.ZonasMortasQuadrantes"/> — ver <see cref="CatalogoCenarios.QuadranteZonaMortaParaForcar"/>.</summary>
+    public Quadrant? ZonaMortaForcadaQuadrante { get; set; }
 
     private int _proximoIdAlvo;
 

@@ -53,6 +53,12 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="Padding" Value="6,4"/>
         </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource Bg.Window}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
 
         <Style x:Key="PontoCanvasStyle" TargetType="ContentPresenter">
             <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
@@ -93,6 +99,14 @@
                             <Button Content="Parar" Command="{Binding PararCommand}"/>
                         </StackPanel>
                         <Button Content="Rodar 1 episódio" Command="{Binding RodarEpisodioUnicoCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Caso tático a simular" Style="{StaticResource ParametroLabel}"/>
+                        <ComboBox ItemsSource="{Binding CenariosDisponiveis}" DisplayMemberPath="Nome"
+                                  SelectedItem="{Binding CenarioOpcaoSelecionada}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding CenarioOpcaoSelecionada.Descricao}" Style="{StaticResource ParametroLabel}"
+                                   Margin="0,0,0,4" FontStyle="Italic" TextWrapping="Wrap"/>
+                        <Button Content="Simular caso selecionado" Command="{Binding SimularCenarioCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+
                         <Button Content="Exportar melhor genoma" Command="{Binding ExportarMelhorGenomaCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
                         <Button Content="Resetar treinamento" Command="{Binding ResetarCommand}" HorizontalAlignment="Stretch"
                                 Background="#7F1D1D" ToolTip="Para o treinamento (se estiver rodando) e volta tudo ao estado inicial — geração, fitness, genoma e visualizações. Não apaga o histórico já salvo no banco."/>
@@ -158,6 +172,55 @@
                             <Polyline x:Name="LinhaFitnessMedio" Stroke="{DynamicResource Text.Secondary}" StrokeThickness="1"/>
                         </Canvas>
                     </Grid>
+                </Border>
+
+                <!-- Cenário personalizado: usuário define posição (X,Y em metros) e velocidade de
+                     cada alvo à mão, sem nenhum sorteio — ver SpawnPersonalizadoEditavel /
+                     TreinamentoControladorViewModel.SimularCenarioPersonalizado. -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="CENÁRIO PERSONALIZADO" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource ParametroLabel}" Margin="0,0,0,8" TextWrapping="Wrap">
+                            <Run Text="Posição (X,Y em metros a partir da base) e velocidade de cada alvo — sem sorteio. O alvo se move em linha reta na direção da base."/>
+                        </TextBlock>
+
+                        <DataGrid ItemsSource="{Binding SpawnsPersonalizados}" AutoGenerateColumns="False" CanUserAddRows="False"
+                                  CanUserDeleteRows="False" CanUserReorderColumns="False" GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column" MaxHeight="180" VerticalScrollBarVisibility="Auto"
+                                  Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
+                                  BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                                  RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
+                                  HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="Padding" Value="4,4"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="X (m)" Binding="{Binding X, Mode=TwoWay}" Width="1*"/>
+                                <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, Mode=TwoWay}" Width="1*"/>
+                                <DataGridTextColumn Header="Vel. (m/s)" Binding="{Binding VelocidadeMetrosPorSegundo, Mode=TwoWay}" Width="1*"/>
+                                <DataGridTextColumn Header="Nasce em (s)" Binding="{Binding InstanteSegundos, Mode=TwoWay}" Width="1*"/>
+                                <DataGridTemplateColumn Width="36">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="✕" Padding="4,0" Margin="0" ToolTip="Remover este alvo"
+                                                    Command="{Binding DataContext.RemoverSpawnPersonalizadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Content="+ Adicionar alvo" Command="{Binding AdicionarSpawnPersonalizadoCommand}"/>
+                            <Button Content="Simular cenário personalizado" Command="{Binding SimularCenarioPersonalizadoCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
                 </Border>
 
                 <!-- "Regras" aproximadas que a rede neural aprendeu (ver ExtratorDeRegras) -->

@@ -59,8 +59,43 @@ public sealed class AmbienteTreinamento
             .ToList();
     }
 
-    /// <summary>Cria um episódio novo (torres na posição base, sem alvos) — opcionalmente reproduzível via <paramref name="seed"/>.</summary>
-    public EstadoEpisodio NovoEpisodio(int? seed = null)
+    /// <summary>
+    /// Cria um episódio novo (torres na posição base, sem alvos) — opcionalmente reproduzível via
+    /// <paramref name="seed"/>. <paramref name="cenario"/> troca o nascimento aleatório padrão por
+    /// um script determinístico de um caso tático específico (ver <see cref="CatalogoCenarios"/>);
+    /// <see cref="TipoCenarioTreinamento.Aleatorio"/> (padrão) mantém o comportamento histórico.
+    /// </summary>
+    public EstadoEpisodio NovoEpisodio(int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio)
+    {
+        EstadoEpisodio estado = CriarEstadoComTorres(seed);
+
+        IReadOnlyList<SpawnScriptado>? spawns = CatalogoCenarios.ObterSpawns(cenario);
+        estado.SpawnsScriptados = spawns;
+        estado.ZonaMortaForcadaQuadrante = CatalogoCenarios.QuadranteZonaMortaParaForcar(cenario);
+        estado.ProximoSpawnSegundos = spawns is null
+            ? ProximoIntervaloSpawn(estado.Rng)
+            : spawns.Count > 0 ? spawns[0].InstanteSegundos : double.MaxValue;
+
+        return estado;
+    }
+
+    /// <summary>
+    /// Cria um episódio com nascimentos 100% definidos por <paramref name="spawns"/> — usado pela
+    /// tela quando o usuário desenha o próprio cenário (posição e velocidade de cada alvo, sem
+    /// nenhum sorteio), em vez de escolher um caso já catalogado em <see cref="CatalogoCenarios"/>.
+    /// </summary>
+    public EstadoEpisodio NovoEpisodioComSpawnsPersonalizados(IReadOnlyList<SpawnScriptado> spawns, int? seed = null)
+    {
+        EstadoEpisodio estado = CriarEstadoComTorres(seed);
+
+        estado.SpawnsScriptados = spawns;
+        estado.ZonaMortaForcadaQuadrante = null;
+        estado.ProximoSpawnSegundos = spawns.Count > 0 ? spawns[0].InstanteSegundos : double.MaxValue;
+
+        return estado;
+    }
+
+    private EstadoEpisodio CriarEstadoComTorres(int? seed)
     {
         var rng = seed.HasValue ? new Random(seed.Value) : new Random();
         var estado = new EstadoEpisodio(rng);
@@ -76,14 +111,13 @@ public sealed class AmbienteTreinamento
             });
         }
 
-        estado.ProximoSpawnSegundos = ProximoIntervaloSpawn(rng);
         return estado;
     }
 
     /// <summary>Roda um episódio completo (sem passos intermediários visíveis) e devolve o resultado — é a função de fitness do algoritmo genético.</summary>
-    public EpisodioResultado ExecutarEpisodioRapido(double[] genoma, int? seed = null)
+    public EpisodioResultado ExecutarEpisodioRapido(double[] genoma, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio)
     {
-        EstadoEpisodio estado = NovoEpisodio(seed);
+        EstadoEpisodio estado = NovoEpisodio(seed, cenario);
         var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, genoma);
         var controlador = new ControladorHibrido(rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
 
@@ -109,14 +143,35 @@ public sealed class AmbienteTreinamento
     /// por torneio (e até o elitismo) vira quase um sorteio — exatamente o sintoma de "fitness
     /// não evolui de verdade" apesar do algoritmo genético em si estar correto.
     /// </summary>
-    public double AvaliarFitness(double[] genoma, IReadOnlyList<int> seeds)
+    /// <param name="cenariosFixos">
+    /// Casos táticos mapeados (ver <see cref="CatalogoCenarios"/>) somados aos episódios
+    /// aleatórios de <paramref name="seeds"/> — cada um conta como mais um episódio na média, de
+    /// modo que a IA não pode ignorar um caso difícil só porque o sorteio raramente o produz.
+    /// Seed fixa (0) nestes: o script de nascimento já é determinístico, então a única fonte de
+    /// aleatoriedade restante (erro de disparo, ver <see cref="CalculadoraErroDisparo"/>) nem
+    /// precisa variar de geração para geração para o caso continuar isolando a mesma dificuldade.
+    /// </param>
+    public double AvaliarFitness(double[] genoma, IReadOnlyList<int> seeds, IReadOnlyList<TipoCenarioTreinamento>? cenariosFixos = null)
     {
         double soma = 0;
+        int total = 0;
+
         foreach (int seed in seeds)
         {
             soma += ExecutarEpisodioRapido(genoma, seed).FitnessTotal;
+            total++;
         }
-        return soma / seeds.Count;
+
+        if (cenariosFixos is not null)
+        {
+            foreach (TipoCenarioTreinamento cenario in cenariosFixos)
+            {
+                soma += ExecutarEpisodioRapido(genoma, seed: 0, cenario).FitnessTotal;
+                total++;
+            }
+        }
+
+        return soma / Math.Max(1, total);
     }
 
     /// <summary>Avança o episódio em <paramref name="dt"/> segundos: nascimento, movimento, seleção de torre e decisão de disparo.</summary>
@@ -146,6 +201,12 @@ public sealed class AmbienteTreinamento
 
     private void TalvezNascerAlvo(EstadoEpisodio estado)
     {
+        if (estado.SpawnsScriptados is { } spawns)
+        {
+            TalvezNascerAlvoScriptado(estado, spawns);
+            return;
+        }
+
         if (estado.TempoDecorridoSegundos < estado.ProximoSpawnSegundos) return;
         estado.ProximoSpawnSegundos = estado.TempoDecorridoSegundos + ProximoIntervaloSpawn(estado.Rng);
 
@@ -179,6 +240,46 @@ public sealed class AmbienteTreinamento
             CertezaBase = 0.20 + estado.Rng.NextDouble() * 0.30,
             TaxaCrescimentoCertezaPorSegundo = 0.08 + estado.Rng.NextDouble() * 0.17
         });
+    }
+
+    /// <summary>
+    /// Versão scriptada de <see cref="TalvezNascerAlvo"/>: em vez de sortear, consome
+    /// <paramref name="spawns"/> em ordem conforme o relógio do episódio alcança cada instante —
+    /// movimento sempre em linha reta (sem desvio angular) para o cenário ser 100% reproduzível.
+    /// </summary>
+    private void TalvezNascerAlvoScriptado(EstadoEpisodio estado, IReadOnlyList<SpawnScriptado> spawns)
+    {
+        while (estado.ProximoIndiceSpawnScriptado < spawns.Count &&
+               estado.TempoDecorridoSegundos >= spawns[estado.ProximoIndiceSpawnScriptado].InstanteSegundos)
+        {
+            SpawnScriptado spec = spawns[estado.ProximoIndiceSpawnScriptado];
+            estado.ProximoIndiceSpawnScriptado++;
+
+            if (estado.Alvos.Count(a => a.Ativo) >= _parametros.MaxAlvosSimultaneos) continue;
+
+            double anguloNascimentoRad = spec.AnguloNascimentoGraus * Math.PI / 180.0;
+            double raio = _parametros.RaioMundoMetros * spec.FracaoRaioNascimento;
+            double x = raio * Math.Cos(anguloNascimentoRad);
+            double y = raio * Math.Sin(anguloNascimentoRad);
+            double anguloMovimento = anguloNascimentoRad + Math.PI;
+
+            estado.Alvos.Add(new AlvoTreinamento
+            {
+                Id = estado.ProximoIdAlvo(),
+                X = x,
+                Y = y,
+                VelocidadeX = spec.VelocidadeMetrosPorSegundo * Math.Cos(anguloMovimento),
+                VelocidadeY = spec.VelocidadeMetrosPorSegundo * Math.Sin(anguloMovimento),
+                VelocidadeMetrosPorSegundo = spec.VelocidadeMetrosPorSegundo,
+                Quadrante = QuadrantHelper.Determine(x, y),
+                CertezaBase = spec.CertezaBase,
+                TaxaCrescimentoCertezaPorSegundo = spec.TaxaCrescimentoCertezaPorSegundo
+            });
+        }
+
+        estado.ProximoSpawnSegundos = estado.ProximoIndiceSpawnScriptado < spawns.Count
+            ? spawns[estado.ProximoIndiceSpawnScriptado].InstanteSegundos
+            : double.MaxValue;
     }
 
     private static void MoverAlvos(EstadoEpisodio estado, double dt)
@@ -257,7 +358,9 @@ public sealed class AmbienteTreinamento
         {
             // Únicos critérios inegociáveis, independente da distância até o alvo: fora de zona
             // morta e certeza suficiente (mesma regra de Services.FireControlService.Authorize).
-            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante)) continue;
+            // estado.ZonaMortaForcadaQuadrante soma mais um quadrante só para este episódio (ver
+            // CatalogoCenarios.AlvoEmZonaMorta), sem alterar a configuração global do ambiente.
+            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante) continue;
             if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao) continue;
 
             TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
