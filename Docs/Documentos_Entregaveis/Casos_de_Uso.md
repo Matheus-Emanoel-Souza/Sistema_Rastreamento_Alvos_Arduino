@@ -35,10 +35,10 @@ para decisão futura (não corrigida nesta tarefa, que é documental).
 
 ## 3. Diagrama de Casos de Uso
 
-Fonte: [`Diagrama_Casos_de_Uso.puml`](Diagrama_Casos_de_Uso.puml) (PlantUML), renderizado em
-[`Diagrama_Casos_de_Uso.png`](Diagrama_Casos_de_Uso.png).
+Fonte: [`Diagrama_Casos_de_Uso.puml`](UML/Diagrama_Casos_de_Uso.puml) (PlantUML), renderizado em
+[`Diagrama_Casos_de_Uso.png`](UML/Diagrama_Casos_de_Uso.png).
 
-![Diagrama de Casos de Uso do RadarTorres](Diagrama_Casos_de_Uso.png)
+![Diagrama de Casos de Uso do RadarTorres](UML/Diagrama_Casos_de_Uso.png)
 
 O diagrama representa o sistema como uma única fronteira "Sistema RadarTorres", subdividida em
 6 agrupamentos visuais para manter a legibilidade (26 casos de uso ativos; UC23 e UC24, do extinto

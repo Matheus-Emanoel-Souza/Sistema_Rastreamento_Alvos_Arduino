@@ -57,7 +57,7 @@ rastreamento, seleção de torre, controle de acionamento, autenticação, permi
 da camada gráfica; e os `Models` são entidades de domínio simples. O mecanismo de binding MVVM
 do RadarTorres (`ViewModelBase`, `RelayCommand`) foi implementado manualmente, sem um framework
 externo como Prism ou CommunityToolkit.Mvvm — decisão documentada como restrição arquitetural em
-`Docs/Documentos_Entregaveis/UML/Decisoes_Arquiteturais.md`, tomada para manter o mecanismo de
+`Docs/Documentos_Entregaveis/Decisoes_Arquiteturais.md`, tomada para manter o mecanismo de
 binding inteiramente explicável na defesa do trabalho. Qualquer menção à arquitetura do
 RadarTorres neste documento e nos diagramas associados refere-se exclusivamente a essa
 organização MVVM, nunca a MVC.
@@ -105,17 +105,17 @@ alcançados apenas por `<<include>>`/`<<extend>>` a partir de quem efetivamente 
 o Usuário observando o radar, ou o Arduino enviando uma leitura — reforçando visualmente que não
 existe, no sistema, um caso de uso de "acionar manualmente".
 
-Diagrama fonte: [`Diagrama_Casos_de_Uso.puml`](Casos_de_Uso/Diagrama_Casos_de_Uso.puml).
+Diagrama fonte: [`Diagrama_Casos_de_Uso.puml`](UML/Diagrama_Casos_de_Uso.puml).
 A especificação textual completa de cada um dos 28 casos de uso (objetivo, atores, fluxos,
 requisito relacionado e status de implementação) está em
-`Docs/Documentos_Entregaveis/UML/Casos_de_Uso/Casos_de_Uso.md`.
+`Docs/Documentos_Entregaveis/Casos_de_Uso.md`.
 
 ## 4. Modos de operação
 
 Um ponto de atenção específico do RadarTorres, relevante para a leitura de qualquer diagrama que
 envolva o comportamento de rastreamento e acionamento, é o conjunto de modos de operação do
 sistema. A especificação de requisitos revisada (`Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`,
-RF08) define exatamente três estados:
+RF07) define exatamente três estados:
 
 * **Verde** — sistema ligado, porém sem operação funcional de rastreamento ou acionamento.
 * **Amarelo** — o sistema realiza detecção e rastreamento de alvos, e as torres acompanham
@@ -133,7 +133,7 @@ O ponto ainda em aberto é outro: o código ainda expõe um comando de acionamen
 (`MainViewModel.ManualFireCommand`), habilitado sempre que há um alvo selecionado e o perfil pode
 executar ações, sem checagem do `SystemMode` atual. Essa divergência entre a especificação
 revisada e a implementação atual está documentada em detalhe em
-`Docs/Documentos_Entregaveis/UML/Limitacoes_Conhecidas.md` (divergência D1) e não foi corrigida no
+`Docs/Documentos_Entregaveis/Limitacoes_Conhecidas.md` (divergência D1) e não foi corrigida no
 código como parte desta tarefa, que é exclusivamente documental.
 
 ## 5. Diagrama de Classes
@@ -149,13 +149,13 @@ comportamento disponível). Entre classes, a UML define diferentes tipos de rela
 **dependência** (uma classe utiliza outra, tipicamente como parâmetro ou tipo de retorno de uma
 operação, sem mantê-la como atributo permanente).
 
-**Situação do artefato.** O diagrama de classes do RadarTorres — que existiu em
-`Docs/Documentos_Entregaveis/Diagrama_de_Classes/` (`Classes_RadarTorres.puml` e arquivos
-associados) — foi removido do repositório e ainda não foi regenerado. Esta seção permanece como
-referência conceitual do que o diagrama deveria representar, mas não há, no momento, um `.puml`
-nem uma imagem renderizada para linkar; a regeneração fica pendente para uma tarefa futura.
+**Situação do artefato.** O diagrama de classes do RadarTorres existe em
+`Docs/Documentos_Entregaveis/Diagrama_de_Classes/Diagrama_de_Classes_RadarTorres.drawio` e está
+atualizado. Esta seção permanece como referência conceitual do que o diagrama representa, mas
+ainda não há um `.md` descritivo associado a esse artefato — a produção desse `.md` fica pendente
+para uma tarefa futura.
 
-Quando regenerado, o diagrama deve continuar deliberadamente conceitual: não representar todas as
+O diagrama deve continuar deliberadamente conceitual: não representar todas as
 classes do projeto (haveria dezenas, incluindo Views, Converters e Helpers, sem ganho de
 compreensão para o leitor), mas concentrar-se nas entidades de domínio e nos serviços centrais
 necessários para entender o funcionamento do sistema. Do lado das entidades de domínio estão
@@ -187,7 +187,7 @@ para explicar onde o processamento efetivamente ocorre nem como a informação a
 entre o computador e o dispositivo físico.
 
 O diagrama de implantação do RadarTorres, em
-[`Implantacao_RadarTorres.puml`](Implantacao/Implantacao_RadarTorres.puml), representa dois nós físicos: o
+[`Implantacao_RadarTorres.puml`](UML/Implantacao_RadarTorres.puml), representa dois nós físicos: o
 **computador do usuário** (Windows 10/11, 64-bit) e o **Arduino** (microcontrolador), conectados
 exclusivamente por **USB/serial**.
 
