@@ -85,8 +85,30 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     public RelayCommand IniciarCommand { get; }
     public RelayCommand PararCommand { get; }
     public RelayCommand RodarEpisodioUnicoCommand { get; }
+    public RelayCommand SimularCenarioCommand { get; }
     public RelayCommand ExportarMelhorGenomaCommand { get; }
     public RelayCommand ResetarCommand { get; }
+    public RelayCommand AdicionarSpawnPersonalizadoCommand { get; }
+    public RelayCommand RemoverSpawnPersonalizadoCommand { get; }
+    public RelayCommand SimularCenarioPersonalizadoCommand { get; }
+
+    /// <summary>Linhas do cenário desenhado à mão pelo usuário (ver <see cref="SimularCenarioPersonalizado"/>) — cada uma é um alvo com posição e velocidade fixadas, sem sorteio nenhum.</summary>
+    public ObservableCollection<SpawnPersonalizadoEditavel> SpawnsPersonalizados { get; } = new();
+
+    /// <summary>Item do seletor de cenário na tela — nome/descrição vêm de <see cref="CatalogoCenarios"/>, lido só na construção (o catálogo é estático).</summary>
+    public sealed record CenarioOpcao(TipoCenarioTreinamento Tipo, string Nome, string Descricao);
+
+    /// <summary>Todos os casos táticos mapeados (ver <see cref="CatalogoCenarios"/>), na ordem de exibição do ComboBox da tela.</summary>
+    public IReadOnlyList<CenarioOpcao> CenariosDisponiveis { get; } = CatalogoCenarios.Todos
+        .Select(t => new CenarioOpcao(t, CatalogoCenarios.NomeExibicao(t), CatalogoCenarios.Descricao(t)))
+        .ToList();
+
+    private CenarioOpcao _cenarioOpcaoSelecionada;
+    public CenarioOpcao CenarioOpcaoSelecionada
+    {
+        get => _cenarioOpcaoSelecionada;
+        set => SetProperty(ref _cenarioOpcaoSelecionada, value);
+    }
 
     public TreinamentoControladorViewModel(
         ILoggingService logger,
@@ -103,12 +125,17 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
         ConstruirDiagramaRedeNeural();
+        _cenarioOpcaoSelecionada = CenariosDisponiveis[0];
 
         IniciarCommand = new RelayCommand(Iniciar, () => !EmExecucao);
         PararCommand = new RelayCommand(Parar, () => EmExecucao);
         RodarEpisodioUnicoCommand = new RelayCommand(RodarEpisodioUnico, () => !EmExecucao);
+        SimularCenarioCommand = new RelayCommand(SimularCenarioSelecionado, () => !EmExecucao);
         ExportarMelhorGenomaCommand = new RelayCommand(ExportarMelhorGenoma, () => _melhorGenomaAtual.Length > 0);
         ResetarCommand = new RelayCommand(Resetar);
+        AdicionarSpawnPersonalizadoCommand = new RelayCommand(() => SpawnsPersonalizados.Add(new SpawnPersonalizadoEditavel()));
+        RemoverSpawnPersonalizadoCommand = new RelayCommand(RemoverSpawnPersonalizado);
+        SimularCenarioPersonalizadoCommand = new RelayCommand(SimularCenarioPersonalizado, () => !EmExecucao);
 
         _timerPreview = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _timerPreview.Tick += (_, _) => AvancarPreview();
@@ -319,6 +346,84 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _timerPreview.Start();
     }
 
+    /// <summary>
+    /// Igual a <see cref="RodarEpisodioUnico"/>, mas força o caso tático escolhido em
+    /// <see cref="CenarioOpcaoSelecionada"/> (ver <see cref="CatalogoCenarios"/>) em vez do
+    /// sorteio padrão — para inspecionar isoladamente como o melhor genoma atual se comporta
+    /// numa situação específica (enxame, disputa de torre, zona morta etc.).
+    /// </summary>
+    private void SimularCenarioSelecionado()
+    {
+        if (EmExecucao) return;
+
+        if (_melhorGenomaAtual.Length == 0)
+        {
+            _melhorGenomaAtual = GerarGenomaAleatorio();
+            AtualizarRegras(_melhorGenomaAtual);
+            AtualizarDiagramaRedeNeural(_melhorGenomaAtual);
+        }
+
+        _previewContinuo = false;
+        _episodioPreview = _ambiente.NovoEpisodio(cenario: CenarioOpcaoSelecionada.Tipo);
+        AlvosVisuais.Clear();
+        MirasVisuais.Clear();
+        _timerPreview.Start();
+    }
+
+    private void RemoverSpawnPersonalizado(object? parametro)
+    {
+        if (parametro is SpawnPersonalizadoEditavel linha) SpawnsPersonalizados.Remove(linha);
+    }
+
+    /// <summary>
+    /// Roda, de forma visível, exatamente o cenário desenhado à mão em
+    /// <see cref="SpawnsPersonalizados"/> — nenhuma posição ou velocidade é sorteada; cada linha
+    /// vira um nascimento (ver <see cref="NeuralEvolution.AmbienteTreinamento.NovoEpisodioComSpawnsPersonalizados"/>),
+    /// na direção da base (mesma convenção dos cenários catalogados em <see cref="CatalogoCenarios"/>).
+    /// </summary>
+    private void SimularCenarioPersonalizado()
+    {
+        if (EmExecucao) return;
+
+        if (SpawnsPersonalizados.Count == 0)
+        {
+            MostrarStatus("Adicione pelo menos um alvo ao cenário personalizado antes de simular.", sucesso: false);
+            return;
+        }
+
+        List<SpawnScriptado> spawns = SpawnsPersonalizados
+            .OrderBy(linha => linha.InstanteSegundos)
+            .Select(linha =>
+            {
+                double raioNascimento = Math.Sqrt(linha.X * linha.X + linha.Y * linha.Y);
+                double anguloGraus = Math.Atan2(linha.Y, linha.X) * 180.0 / Math.PI;
+                double fracaoRaio = raioNascimento / _ambiente.Parametros.RaioMundoMetros;
+
+                return new SpawnScriptado(
+                    InstanteSegundos: Math.Max(0, linha.InstanteSegundos),
+                    AnguloNascimentoGraus: anguloGraus,
+                    VelocidadeMetrosPorSegundo: Math.Max(0, linha.VelocidadeMetrosPorSegundo),
+                    CertezaBase: 0.5,
+                    TaxaCrescimentoCertezaPorSegundo: 0.15,
+                    FracaoRaioNascimento: fracaoRaio);
+            })
+            .ToList();
+
+        if (_melhorGenomaAtual.Length == 0)
+        {
+            _melhorGenomaAtual = GerarGenomaAleatorio();
+            AtualizarRegras(_melhorGenomaAtual);
+            AtualizarDiagramaRedeNeural(_melhorGenomaAtual);
+        }
+
+        _previewContinuo = false;
+        _episodioPreview = _ambiente.NovoEpisodioComSpawnsPersonalizados(spawns);
+        AlvosVisuais.Clear();
+        MirasVisuais.Clear();
+        MostrarStatus($"Simulando cenário personalizado ({spawns.Count} alvo(s)).", sucesso: true);
+        _timerPreview.Start();
+    }
+
     private double[] GerarGenomaAleatorio()
     {
         int tamanho = RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao);
@@ -375,8 +480,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             int[] seedsDaGeracao = Enumerable.Range(0, Math.Max(1, _ambiente.Parametros.EpisodiosPorAvaliacao))
                 .Select(i => algoritmo.GeracaoAtual * 1000 + i)
                 .ToArray();
+            // Além dos cenários aleatórios acima, toda geração também avalia TODOS os casos
+            // táticos mapeados (ver CatalogoCenarios) — a IA não pode ignorar um caso difícil só
+            // porque o sorteio raramente o produz.
             ResultadoGeracao resultado = algoritmo.EvoluirGeracao(
-                genoma => _ambiente.AvaliarFitness(genoma, seedsDaGeracao));
+                genoma => _ambiente.AvaliarFitness(genoma, seedsDaGeracao, CatalogoCenarios.TodosComScript));
 
             _melhorGenomaAtual = resultado.MelhorGenoma;
 
