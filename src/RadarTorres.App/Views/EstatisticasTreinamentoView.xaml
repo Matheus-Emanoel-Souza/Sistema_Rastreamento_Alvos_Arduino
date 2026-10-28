@@ -48,7 +48,7 @@
         </Style>
 
         <!-- Estilo único das duas tabelas comparativas de hiperparâmetros (mesmas colunas, mesma
-             leitura) — ver ExperimentoDataGridColunas logo abaixo. -->
+             leitura), aplicado a cada sub-tabela de série. -->
         <Style x:Key="TabelaExperimento" TargetType="DataGrid">
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="IsReadOnly" Value="True"/>
@@ -99,6 +99,39 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Uma série comparativa: cabeçalho (o que está travado), a tabela e a frase-conclusão.
+             Compartilhado pelas três tabelas de experimento, para que as colunas e a leitura
+             sejam idênticas nas três (ver SerieExperimental / LinhaExperimentoComparativo). -->
+        <DataTemplate x:Key="SerieTemplate">
+            <StackPanel Margin="0,0,0,14">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" FontSize="12"
+                               Foreground="{DynamicResource Text.Primary}"/>
+                    <TextBlock Text="{Binding Rotulo}" FontSize="10" Margin="8,1,0,0"
+                               Foreground="{DynamicResource Text.Muted}"/>
+                    <TextBlock Text="{Binding Cobertura}" FontSize="10" Margin="8,1,0,0"
+                               Foreground="{DynamicResource Text.Muted}"/>
+                </StackPanel>
+                <DataGrid ItemsSource="{Binding Linhas}" Style="{StaticResource TabelaExperimento}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="População" Binding="{Binding TamanhoPopulacao}" Width="Auto" MinWidth="80"/>
+                        <DataGridTextColumn Header="Neurônios" Binding="{Binding NeuroniosOcultos}" Width="Auto" MinWidth="80"/>
+                        <DataGridTextColumn Header="Mutação" Binding="{Binding TaxaMutacaoTexto}" Width="Auto" MinWidth="80"/>
+                        <DataGridTextColumn Header="Gerações" Binding="{Binding GeracoesTexto}" Width="Auto" MinWidth="75"/>
+                        <DataGridTextColumn Header="Fitness final" Binding="{Binding FitnessFinalTexto}" Width="Auto" MinWidth="95"/>
+                        <DataGridTextColumn Header="Ger. do pico" Binding="{Binding GeracaoDoPicoTexto}" Width="Auto" MinWidth="90"/>
+                        <DataGridTextColumn Header="Curva (g25 › g50 › g100 › g200)" Binding="{Binding CurvaTexto}" Width="Auto" MinWidth="190"/>
+                        <DataGridTextColumn Header="Tempo" Binding="{Binding TempoTexto}" Width="Auto" MinWidth="75"/>
+                        <DataGridTextColumn Header="Fitness/s" Binding="{Binding FitnessPorSegundoTexto}" Width="Auto" MinWidth="85"/>
+                        <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHoraTexto}" Width="Auto" MinWidth="120"/>
+                        <DataGridTextColumn Header="" Binding="{Binding Destaque}" Width="*" MinWidth="170"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Text="{Binding Conclusao}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Text.Secondary}"/>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -125,11 +158,13 @@
                 <!--
                     ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS (pedida no parecer do artigo).
                     Duas tabelas no MESMO painel, cada configuração em uma linha: a primeira varia
-                    só a quantidade de neurônios da camada oculta (população fixa no baseline), a
-                    segunda varia só o tamanho da população (camada oculta fixa no baseline).
-                    Separar as séries é o que permite atribuir a diferença de fitness ao
-                    hiperparâmetro variado; mantê-las no mesmo painel é o que permite comparar as
-                    duas de relance. Todas as linhas vêm de execuções REAIS registradas em
+                    só a quantidade de neurônios da camada oculta, a segunda varia só o tamanho da
+                    população. Cada uma é subdividida por valor travado — a série de referência
+                    (baseline) e as séries adicionais que já existem no banco por terem sido
+                    treinadas antes, para nenhum treinamento ser desperdiçado. Separar as séries é
+                    o que permite atribuir a diferença de fitness ao hiperparâmetro variado;
+                    mantê-las no mesmo painel é o que permite comparar todas de relance.
+                    Todas as linhas vêm de execuções REAIS registradas em
                     IExperimentoHiperparametrosRepository — configurações ainda não treinadas
                     aparecem em itálico com "não executado", nunca com valor estimado.
                     Ver EstatisticasTreinamentoViewModel e ExecutorExperimentosHiperparametros.
@@ -145,9 +180,9 @@
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <Button Content="Executar configurações pendentes" Command="{Binding ExecutarExperimentosCommand}"
-                                    ToolTip="Treina apenas as configurações do plano que ainda não têm execução registrada."/>
+                                    ToolTip="Treina apenas as configurações exibidas que ainda não têm execução registrada (uma configuração presente nas duas tabelas é treinada uma vez só)."/>
                             <Button Content="Refazer tudo" Command="{Binding RefazerExperimentosCommand}" Margin="8,0,0,0"
-                                    ToolTip="Apaga as execuções registradas das configurações do plano e treina todas de novo."/>
+                                    ToolTip="Apaga as execuções registradas das configurações exibidas e treina todas de novo."/>
                             <Button Content="Parar" Command="{Binding PararExperimentosCommand}" Margin="8,0,0,0"
                                     ToolTip="Interrompe após a configuração em andamento — as já concluídas continuam registradas."/>
                         </StackPanel>
@@ -157,53 +192,27 @@
                         <TextBlock Text="{Binding StatusExperimentos}" FontSize="11" Margin="0,0,0,12" TextWrapping="Wrap"
                                    FontFamily="{DynamicResource Font.Mono}" Foreground="{DynamicResource Text.Secondary}"/>
 
-                        <!-- Experimento 1 — varia a camada oculta. -->
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2">
-                            <Run Text="EXPERIMENTO 1 — NEURÔNIOS NA CAMADA OCULTA (4 / 8 / 16)"/>
-                        </TextBlock>
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,6" TextWrapping="Wrap">
-                            <Run Text="População fixa em"/>
-                            <Run Text="{Binding PopulacaoBaseline, Mode=OneWay}" FontWeight="SemiBold"/>
-                            <Run Text="indivíduos em todas as linhas."/>
-                        </TextBlock>
-                        <DataGrid ItemsSource="{Binding ComparativoCamadaOculta}" Style="{StaticResource TabelaExperimento}" MaxHeight="200">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Neurônios ocultos" Binding="{Binding NeuroniosOcultos}" Width="Auto" MinWidth="120"/>
-                                <DataGridTextColumn Header="População" Binding="{Binding TamanhoPopulacao}" Width="Auto" MinWidth="90"/>
-                                <DataGridTextColumn Header="Gerações" Binding="{Binding GeracoesTexto}" Width="Auto" MinWidth="80"/>
-                                <DataGridTextColumn Header="Fitness final" Binding="{Binding FitnessFinalTexto}" Width="Auto" MinWidth="100"/>
-                                <DataGridTextColumn Header="Tempo total" Binding="{Binding TempoTexto}" Width="Auto" MinWidth="100"/>
-                                <DataGridTextColumn Header="Fitness/segundo" Binding="{Binding FitnessPorSegundoTexto}" Width="Auto" MinWidth="110"/>
-                                <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHoraTexto}" Width="Auto" MinWidth="140"/>
-                                <DataGridTextColumn Header="" Binding="{Binding Destaque}" Width="*" MinWidth="150"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                        <TextBlock Text="{Binding ConclusaoCamadaOculta}" FontSize="11" Margin="0,6,0,16" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource Text.Secondary}"/>
+                        <!-- As três tabelas usam o MESMO template de série (SerieTemplate): mesmas
+                             colunas, mesma leitura. O título de cada sub-tabela já diz quais
+                             hiperparâmetros estão travados, então não é preciso reordenar as
+                             colunas por tabela. -->
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2"
+                                   Text="EXPERIMENTO 1 — NEURÔNIOS NA CAMADA OCULTA (4 / 8 / 16)"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="Cada tabela abaixo trava a população e a taxa de mutação e varia só a camada oculta."/>
+                        <ItemsControl ItemsSource="{Binding SeriesCamadaOculta}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
 
-                        <!-- Experimento 2 — varia a população. -->
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2">
-                            <Run Text="EXPERIMENTO 2 — TAMANHO DA POPULAÇÃO (30 / 60 / 120)"/>
-                        </TextBlock>
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,6" TextWrapping="Wrap">
-                            <Run Text="Camada oculta fixa em"/>
-                            <Run Text="{Binding NeuroniosBaseline, Mode=OneWay}" FontWeight="SemiBold"/>
-                            <Run Text="neurônios em todas as linhas (a arquitetura usada em produção)."/>
-                        </TextBlock>
-                        <DataGrid ItemsSource="{Binding ComparativoPopulacao}" Style="{StaticResource TabelaExperimento}" MaxHeight="200">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="População" Binding="{Binding TamanhoPopulacao}" Width="Auto" MinWidth="120"/>
-                                <DataGridTextColumn Header="Neurônios ocultos" Binding="{Binding NeuroniosOcultos}" Width="Auto" MinWidth="120"/>
-                                <DataGridTextColumn Header="Gerações" Binding="{Binding GeracoesTexto}" Width="Auto" MinWidth="80"/>
-                                <DataGridTextColumn Header="Fitness final" Binding="{Binding FitnessFinalTexto}" Width="Auto" MinWidth="100"/>
-                                <DataGridTextColumn Header="Tempo total" Binding="{Binding TempoTexto}" Width="Auto" MinWidth="100"/>
-                                <DataGridTextColumn Header="Fitness/segundo" Binding="{Binding FitnessPorSegundoTexto}" Width="Auto" MinWidth="110"/>
-                                <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHoraTexto}" Width="Auto" MinWidth="140"/>
-                                <DataGridTextColumn Header="" Binding="{Binding Destaque}" Width="*" MinWidth="150"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                        <TextBlock Text="{Binding ConclusaoPopulacao}" FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource Text.Secondary}"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
+                                   Text="EXPERIMENTO 2 — TAMANHO DA POPULAÇÃO (30 / 60 / 120)"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="Cada tabela abaixo trava a camada oculta e a taxa de mutação e varia só a população."/>
+                        <ItemsControl ItemsSource="{Binding SeriesPopulacao}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
+
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
+                                   Text="EXPERIMENTO 3 — TAXA DE MUTAÇÃO (0,04 / 0,08 / 0,16)"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="Cada tabela abaixo trava a população e a camada oculta e varia só a probabilidade de mutação por gene. A coluna &quot;Ger. do pico&quot; é a resposta para &quot;evoluem mais rápido?&quot;: é a primeira geração em que o fitness final foi atingido."/>
+                        <ItemsControl ItemsSource="{Binding SeriesTaxaMutacao}" ItemTemplate="{StaticResource SerieTemplate}"/>
                     </StackPanel>
                 </Border>
 
