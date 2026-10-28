@@ -38,6 +38,21 @@ public sealed record ParametrosTreinamento
     /// <summary>Fator que converte o desvio padrão (segundos) do tempo comprometido entre as torres, ao fim do episódio, em penalidade de fitness — incentiva distribuir alvos entre torres em vez de sobrecarregar sempre a mesma (gestão de recursos), ver <see cref="TorreTreinamento.TempoComprometidoSegundos"/>.</summary>
     public double PenalidadeDesequilibrioTorresPorSegundo { get; init; } = 0.5;
 
+    /// <summary>
+    /// Quando <c>true</c>, o episódio IGNORA <see cref="DuracaoEpisodioSegundos"/> como fim normal
+    /// — só termina por invasão de torre (<see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>)
+    /// ou ao atingir <see cref="DuracaoMaximaSegurancaSegundos"/> (salvaguarda contra um genoma tão
+    /// bom que nunca seria invadido). <see cref="DuracaoEpisodioSegundos"/> continua sendo usado
+    /// como referência da escalada de dificuldade (ver <see cref="AmbienteTreinamento.ProximoIntervaloSpawn"/>) —
+    /// só o corte por tempo decorrido é desligado. Existe para testar a hipótese de que o teto de
+    /// fitness observado vem do episódio ser curto demais (poucos alvos nascem), não da qualidade
+    /// do controlador.
+    /// </summary>
+    public bool SemLimiteDeDuracao { get; init; } = false;
+
+    /// <summary>Salvaguarda contra loop efetivamente infinito quando <see cref="SemLimiteDeDuracao"/> está ativo — nenhum episódio passa disto, mesmo que nenhum alvo jamais invada uma torre.</summary>
+    public double DuracaoMaximaSegurancaSegundos { get; init; } = 1800.0;
+
     /// <summary>Piso absoluto do limiar de certeza — mesma regra do sistema real (ver <see cref="Configuration.ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual"/>).</summary>
     public const double LimiarConfiancaMinimaFracao = 0.40;
 

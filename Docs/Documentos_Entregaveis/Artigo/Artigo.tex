@@ -954,6 +954,28 @@ bateria com cenários aleatórios, em vez dos fixos, é o próximo passo natural
 saturação observada é exclusiva dos cenários táticos obrigatórios ou uma característica mais geral
 do ambiente endurecido.
 
+\paragraph{Teste direto: o teto é da rede ou da duração fixa do episódio?}
+Uma forma mais direta de responder a essa pergunta, sem depender dos cenários táticos fixos, é
+remover a própria causa suspeita: a duração fixa do episódio. Foi adicionado um modo de avaliação
+(\texttt{ParametrosTreinamento.SemLimiteDeDuracao}) em que o episódio IGNORA os 45~s normais e só
+termina quando um alvo de fato rompe uma torre (ou aos 1800~s de uma salvaguarda, nunca atingida nos
+testes) -- a escalada de dificuldade continua usando os 45~s como referência de ritmo, só o corte
+abrupto por tempo é desligado. O genoma de produção já treinado (pico de fitness 193,57 em
+treinamento, dentro do limite normal de 45~s) foi avaliado assim em 40 episódios independentes, sem
+nenhuma mudança na rede. O resultado desfaz a pergunta original em duas partes, não uma resposta
+única: o fitness MÁXIMO observado sobe para 443,23 -- quase o triplo do teto de produção e acima da
+meta de 300 que motivou este experimento --, confirmando que a duração fixa de fato interrompia
+episódios que ainda tinham pontuação disponível; mas o fitness MÉDIO (82,35) e a duração média até a
+invasão de uma torre (29,2~s, variando de 5,4~s a 87,4~s) mostram que boa parte dos episódios termina
+por falha real do controlador bem ANTES dos 45~s originais, não por causa do corte. Em outras
+palavras, o teto observado em produção não é puramente "o episódio é curto demais" -- é a combinação
+de um corte de tempo que, de fato, tira pontuação de episódios bem-sucedidos, com uma robustez do
+controlador ainda insuficiente para evitar falhas precoces numa fração considerável dos cenários.
+Isso aponta para dois trabalhos futuros distintos, não um só: alongar o horizonte de treinamento
+(para a rede aprender a explorar episódios longos e bem-sucedidos) e reduzir a variância entre
+seeds (para a rede falhar com menos frequência nos cenários desfavoráveis), sendo este segundo,
+pelos dados aqui, o fator que mais pesa na média atual.
+
 \subsection{Diagrama de pacotes}
 
 A organização interna da aplicação desktop foi documentada por meio de um diagrama de pacotes,
