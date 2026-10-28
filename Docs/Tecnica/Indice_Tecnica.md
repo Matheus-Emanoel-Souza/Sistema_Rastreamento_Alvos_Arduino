@@ -13,6 +13,9 @@ dados, algoritmo de seleção de torre.
 - [[DETECCAO_VISAO_YOLO]] — papel do modelo YOLO na detecção por câmera: o que ele faz e não
   faz, como a confiança chega até a decisão de disparo, e por que o YOLO26n foi escolhido.
 - [[MODELO_DADOS]] — schema das tabelas SQLite, relacionamentos.
+- [[INVENTARIO_FUNCOES]] — mapa de navegacao do codigo: funcoes e classes relevantes de
+  cada fluxo (simulacao, sensores, rede neural, algoritmo genetico, persistencia, UI,
+  autenticacao), achados da auditoria e telas pendentes de reorganizacao.
 - [[DIRETRIZ_UX]] — padrão de interface das telas administrativas: conteúdo principal em
   largura total, ações no canto superior direito e formulários em janela modal.
 
