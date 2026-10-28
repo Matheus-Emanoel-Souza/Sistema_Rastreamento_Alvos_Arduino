@@ -137,7 +137,9 @@ public sealed class AmbienteTreinamento
             Avancar(estado, controlador, dt);
         }
 
-        return new EpisodioResultado(estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos);
+        return new EpisodioResultado(
+            estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
+            estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede);
     }
 
     /// <summary>
@@ -469,7 +471,18 @@ public sealed class AmbienteTreinamento
             double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros);
             if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao) continue;
 
-            if (!controlador.DecidirDisparo(alvo, torre)) continue;
+            // Só conta "oportunidade" DEPOIS do tempo mínimo de mira já ter passado (veto
+            // compartilhado, igual na heurística pura), para isolar exatamente o ponto em que
+            // Hibrido e HeuristicaPura discordam (ver EstadoEpisodio.DisparosRecusadosPelaRede) —
+            // contar antes misturaria o veto compartilhado com a decisão exclusiva da rede.
+            bool passouTempoMinimoDeMira = alvo.TempoDesdeSelecao >= ControladorHibrido.TempoMinimoDeMiraSegundos;
+            if (passouTempoMinimoDeMira) estado.OportunidadesDeDisparo++;
+
+            if (!controlador.DecidirDisparo(alvo, torre))
+            {
+                if (passouTempoMinimoDeMira) estado.DisparosRecusadosPelaRede++;
+                continue;
+            }
 
             Disparar(estado, torre, alvo);
             if (!alvo.Ativo) continue; // abatido pela torre principal — não precisa de ajuda

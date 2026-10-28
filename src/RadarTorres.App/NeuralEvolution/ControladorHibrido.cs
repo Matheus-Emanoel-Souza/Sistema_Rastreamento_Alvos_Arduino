@@ -43,7 +43,8 @@ public sealed class ControladorHibrido
         "Confiança de disparo"
     ];
 
-    private const double TempoMinimoDeMiraSegundos = 0.3;
+    /// <summary>Tempo mínimo de mira — veto heurístico INEGOCIÁVEL, igual em <see cref="ModoDecisao.Hibrido"/> e <see cref="ModoDecisao.HeuristicaPura"/> (só <see cref="ModoDecisao.RedePura"/> não o aplica). Público para quem mede a decisão de disparo isoladamente (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>) poder excluir este veto compartilhado da contagem de "recusa da rede".</summary>
+    public const double TempoMinimoDeMiraSegundos = 0.3;
 
     private readonly RedeNeural _rede;
     private readonly double _raioMundoMetros;

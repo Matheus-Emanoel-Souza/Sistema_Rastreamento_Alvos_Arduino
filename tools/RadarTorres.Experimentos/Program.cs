@@ -311,6 +311,8 @@ public static class Program
         var ab = new List<int>();
         var esc = new List<int>();
         var duracao = new List<double>();
+        var oportunidades = new List<int>();
+        var recusados = new List<int>();
 
         for (int s = 0; s < episodios; s++)
         {
@@ -326,17 +328,22 @@ public static class Program
             ab.Add(estado.AlvosAbatidos);
             esc.Add(estado.AlvosEscapados);
             duracao.Add(estado.TempoDecorridoSegundos);
+            oportunidades.Add(estado.OportunidadesDeDisparo);
+            recusados.Add(estado.DisparosRecusadosPelaRede);
 
-            Console.WriteLine($"  seed {s}: fitness={estado.FitnessAcumulado:0.00} nascidos={estado.AlvosNascidos} abatidos={estado.AlvosAbatidos} escapados={estado.AlvosEscapados} duracao={estado.TempoDecorridoSegundos:0.0}s");
+            Console.WriteLine($"  seed {s}: fitness={estado.FitnessAcumulado:0.00} nascidos={estado.AlvosNascidos} abatidos={estado.AlvosAbatidos} escapados={estado.AlvosEscapados} duracao={estado.TempoDecorridoSegundos:0.0}s oportunidades={estado.OportunidadesDeDisparo} recusados={estado.DisparosRecusadosPelaRede}");
         }
 
         double media = fit.Average();
         double desvioPadrao = Math.Sqrt(fit.Sum(f => Math.Pow(f - media, 2)) / fit.Count);
+        int totalOportunidades = oportunidades.Sum();
+        int totalRecusados = recusados.Sum();
 
-        Console.WriteLine($"--- SOBREVIVENCIA ({episodios} episodios, semlimite={semLimite}, genoma de {caminho}) ---");
+        Console.WriteLine($"--- SOBREVIVENCIA ({episodios} episodios, semlimite={semLimite}, modo={modo}, genoma de {caminho}) ---");
         Console.WriteLine($"fitness   : media={fit.Average():0.00} desvio={desvioPadrao:0.00} min={fit.Min():0.00} max={fit.Max():0.00}");
         Console.WriteLine($"nascidos  : media={nasc.Average():0.00} min={nasc.Min()} max={nasc.Max()}");
         Console.WriteLine($"abatidos  : media={ab.Average():0.00}");
+        Console.WriteLine($"disparo   : oportunidades={totalOportunidades} recusados={totalRecusados} taxaRecusa={(totalOportunidades > 0 ? (double)totalRecusados / totalOportunidades : 0):P1}");
         Console.WriteLine($"escapados : media={esc.Average():0.00}");
         Console.WriteLine($"duracao   : media={duracao.Average():0.0}s min={duracao.Min():0.0}s max={duracao.Max():0.0}s (ate invadir uma torre ou atingir a salvaguarda de {parametros.DuracaoMaximaSegurancaSegundos:0}s)");
     }

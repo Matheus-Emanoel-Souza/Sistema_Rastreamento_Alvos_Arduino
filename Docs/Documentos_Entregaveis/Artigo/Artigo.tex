@@ -1019,10 +1019,27 @@ numa margem pequena mas consistentemente negativa em todas elas. Isso descarta a
 infortúnio de uma única execução do algoritmo genético e aponta para algo estrutural no método de
 treino: dado que a seleção de torre já é dominada pelo termo heurístico, é bastante provável que seja
 de fato a decisão de disparo da rede -- isolada, sem veto heurístico de oportunidade -- quem aprende
-um comportamento levemente pior do que simplesmente disparar sempre que permitido. Medir diretamente
-a taxa de disparos recusados pela rede nos mesmos cenários em que a heurística dispara (confirmando
-ou refutando esse mecanismo específico) é o próximo passo e fica registrado como trabalho futuro em
-andamento.
+um comportamento levemente pior do que simplesmente disparar sempre que permitido.
+
+\paragraph{Confirmação direta: a rede hesita no gatilho.}
+A hipótese anterior foi medida diretamente, em vez de apenas inferida por eliminação. Toda vez que
+os vetos inegociáveis (zona morta, certeza mínima, tempo mínimo de mira) já liberam o disparo --
+exatamente o ponto em que a heurística pura dispararia sempre, sem exceção -- o ambiente agora conta
+essa "oportunidade de disparo" e se a rede, em modo híbrido, a recusou
+(\texttt{EstadoEpisodio.OportunidadesDeDisparo}/\texttt{DisparosRecusadosPelaRede}, somados ao longo
+de 50 episódios por genoma). O resultado confirma a hipótese sem ambiguidade: as CINCO redes
+treinadas neste trabalho (a de produção original e as quatro sementes da seção anterior) recusam
+disparo numa fração nada desprezível das oportunidades legítimas -- 10,0\%, 34,3\%, 10,1\%, 55,9\% e
+51,7\%, respectivamente --, contra 0,0\% da heurística pura (que, por definição, nunca recusa).
+Quanto maior essa taxa de recusa, pior tende a ser o desempenho relativo à heurística pura: as
+sementes 3 e 4 (55,9\% e 51,7\% de recusa) são também as que ficam mais distantes do controle na
+comparação de fitness da seção anterior. O mecanismo suspeitado está, portanto, confirmado: a rede
+não está aprendendo a escolher melhor QUAL torre age (papel já dominado pela heurística na pontuação
+combinada), mas sim um critério de confiança de disparo pior do que simplesmente "disparar sempre
+que autorizado" -- um resultado negativo honesto, mas instrutivo, sobre os limites desta formulação
+específica do controlador híbrido e um ponto de partida concreto para revisar a função de fitness
+(por exemplo, penalizando explicitamente a recusa de uma oportunidade legítima, não só recompensando
+o abate) como trabalho futuro imediato.
 
 \subsection{Diagrama de pacotes}
 

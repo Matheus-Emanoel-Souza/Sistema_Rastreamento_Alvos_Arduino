@@ -6,4 +6,6 @@ public sealed record EpisodioResultado(
     int AlvosAbatidos,
     int AlvosEscapados,
     int TirosErrados = 0,
-    int AlvosNascidos = 0);
+    int AlvosNascidos = 0,
+    int OportunidadesDeDisparo = 0,
+    int DisparosRecusadosPelaRede = 0);
