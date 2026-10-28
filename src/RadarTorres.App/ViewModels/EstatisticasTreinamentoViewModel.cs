@@ -21,10 +21,11 @@ namespace RadarTorres.App.ViewModels;
 /// até 300 no histórico recente); aqui é analisar a tendência de longuíssimo prazo sem ruído
 /// geração a geração.
 ///
-/// Concentra também a ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS pedida no parecer do artigo: duas
-/// tabelas comparativas no mesmo painel — uma variando só a camada oculta (4/8/16 neurônios) e
-/// outra variando só a população (30/60/120 indivíduos) — alimentadas exclusivamente por
-/// execuções reais registradas em <see cref="IExperimentoHiperparametrosRepository"/>.
+/// Concentra também a ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS pedida no parecer do artigo: três
+/// tabelas comparativas no mesmo painel — variando só a camada oculta (4/8/16 neurônios), só a
+/// população (30/60/120 indivíduos) e só a taxa de mutação (0,04/0,08/0,16) — alimentadas
+/// exclusivamente por execuções reais registradas em
+/// <see cref="IExperimentoHiperparametrosRepository"/>.
 /// </summary>
 public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
 {
@@ -45,11 +46,14 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
     /// <summary>Retrato completo do melhor genoma a cada 1.000 gerações (decisões/acertos/erros/genoma) — ver IInstantaneoComportamentoRepository. Nunca sobrescrito; é o histórico comparativo marco a marco.</summary>
     public ObservableCollection<InstantaneoComportamentoMelhorGene> Instantaneos { get; } = new();
 
-    /// <summary>Experimento 1 — varia a camada oculta (4/8/16), população travada no baseline.</summary>
-    public ObservableCollection<LinhaExperimentoComparativo> ComparativoCamadaOculta { get; } = new();
+    /// <summary>Tabela 1 — séries em que varia a quantidade de neurônios da camada oculta (população e mutação travadas).</summary>
+    public ObservableCollection<SerieExperimental> SeriesCamadaOculta { get; } = new();
 
-    /// <summary>Experimento 2 — varia a população (30/60/120), camada oculta travada no baseline.</summary>
-    public ObservableCollection<LinhaExperimentoComparativo> ComparativoPopulacao { get; } = new();
+    /// <summary>Tabela 2 — séries em que varia o tamanho da população (camada oculta e mutação travadas).</summary>
+    public ObservableCollection<SerieExperimental> SeriesPopulacao { get; } = new();
+
+    /// <summary>Tabela 3 — séries em que varia a taxa de mutação (população e camada oculta travadas).</summary>
+    public ObservableCollection<SerieExperimental> SeriesTaxaMutacao { get; } = new();
 
     public RelayCommand AtualizarCommand { get; }
     public RelayCommand ExecutarExperimentosCommand { get; }
@@ -156,29 +160,27 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
     /// <summary>Gerações rodadas em cada configuração — exibido no cabeçalho para deixar claro que a comparação é feita no mesmo ponto de parada.</summary>
     public int GeracoesPorExperimento => ConfiguracaoExperimento.GeracoesPorExperimento;
 
-    public int PopulacaoBaseline => ConfiguracaoExperimento.PopulacaoBaseline;
-
-    public int NeuroniosBaseline => ConfiguracaoExperimento.NeuroniosBaseline;
-
-    /// <summary>Quantas das configurações previstas no plano já têm execução real registrada ("3 de 5").</summary>
+    /// <summary>Quantas das configurações exibidas nas três tabelas já têm execução real registrada.</summary>
     public string CoberturaDoPlano
     {
         get
         {
-            int executadas = ConfiguracaoExperimento.Planejadas.Count(c =>
-                ComparativoCamadaOculta.Concat(ComparativoPopulacao)
-                    .Any(l => l.Executado && l.TamanhoPopulacao == c.TamanhoPopulacao && l.NeuroniosOcultos == c.NeuroniosOcultos));
-            return $"{executadas} de {ConfiguracaoExperimento.Planejadas.Count} configurações do plano já foram treinadas.";
+            int exibidas = ConfiguracoesExibidas().Count;
+            int pendentes = ConfiguracoesPendentes().Count;
+            return $"{exibidas - pendentes} de {exibidas} configurações exibidas já foram treinadas.";
         }
     }
 
+    private IEnumerable<SerieExperimental> TodasAsSeries =>
+        SeriesCamadaOculta.Concat(SeriesPopulacao).Concat(SeriesTaxaMutacao);
+
     /// <summary>
-    /// Monta as duas tabelas a partir das execuções reais gravadas. A qual série cada registro
-    /// pertence é DERIVADO dos próprios valores (população = baseline → série da camada oculta;
-    /// neurônios = baseline → série da população) em vez de gravado: assim qualquer execução já
-    /// existente entra automaticamente na comparação, e a configuração de referência
-    /// (baseline × baseline) aparece nas duas tabelas sem ser treinada duas vezes. Quando há mais
-    /// de uma execução da mesma configuração, vale a mais recente.
+    /// Monta as três tabelas a partir das execuções reais gravadas. A qual série cada registro
+    /// pertence é DERIVADO dos próprios valores (os hiperparâmetros que NÃO variam identificam a
+    /// série), em vez de gravado: assim qualquer execução já existente entra automaticamente na
+    /// comparação em que se encaixa, e uma mesma configuração aparece em várias tabelas sem ser
+    /// treinada mais de uma vez. Havendo mais de uma execução da mesma configuração, vale a mais
+    /// recente.
     /// </summary>
     private void CarregarComparativosDeHiperparametros()
     {
@@ -193,124 +195,173 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
             return;
         }
 
-        Preencher(
-            ComparativoCamadaOculta,
-            ConfiguracaoExperimento.NeuroniosDaSerie.Select(n => new ConfiguracaoExperimento(ConfiguracaoExperimento.PopulacaoBaseline, n)),
-            registros);
+        // Experimento 1 — varia a camada oculta; cada série é identificada por (população, mutação).
+        MontarSeries(
+            SeriesCamadaOculta,
+            registros,
+            combinacoesTravadas: Combinar(ConfiguracaoExperimento.PopulacoesDaSerie, ConfiguracaoExperimento.TaxasMutacaoDaSerie),
+            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.PopulacaoBaseline && Iguais(t.B, ConfiguracaoExperimento.TaxaMutacaoBaseline),
+            valoresVariados: ConfiguracaoExperimento.NeuroniosDaSerie.Select(n => (double)n),
+            criarConfiguracao: (t, variado) => new ConfiguracaoExperimento((int)t.A, (int)variado, t.B),
+            tituloDaSerie: t => $"População {t.A} · mutação {SerieExperimental.FormatarTaxa(t.B)}",
+            unidadeVariada: "neurônios na camada oculta",
+            valorVariado: linha => linha.NeuroniosOcultos.ToString());
 
-        Preencher(
-            ComparativoPopulacao,
-            ConfiguracaoExperimento.PopulacoesDaSerie.Select(p => new ConfiguracaoExperimento(p, ConfiguracaoExperimento.NeuroniosBaseline)),
-            registros);
+        // Experimento 2 — varia a população; cada série é identificada por (neurônios, mutação).
+        MontarSeries(
+            SeriesPopulacao,
+            registros,
+            combinacoesTravadas: Combinar(ConfiguracaoExperimento.NeuroniosDaSerie, ConfiguracaoExperimento.TaxasMutacaoDaSerie),
+            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.NeuroniosBaseline && Iguais(t.B, ConfiguracaoExperimento.TaxaMutacaoBaseline),
+            valoresVariados: ConfiguracaoExperimento.PopulacoesDaSerie.Select(p => (double)p),
+            criarConfiguracao: (t, variado) => new ConfiguracaoExperimento((int)variado, (int)t.A, t.B),
+            tituloDaSerie: t => $"Camada oculta {t.A} · mutação {SerieExperimental.FormatarTaxa(t.B)}",
+            unidadeVariada: "indivíduos na população",
+            valorVariado: linha => linha.TamanhoPopulacao.ToString());
+
+        // Experimento 3 — varia a taxa de mutação; cada série é identificada por (população, neurônios).
+        MontarSeries(
+            SeriesTaxaMutacao,
+            registros,
+            combinacoesTravadas: Combinar(ConfiguracaoExperimento.PopulacoesDaSerie, ConfiguracaoExperimento.NeuroniosDaSerie.Select(n => (double)n).ToList()),
+            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.PopulacaoBaseline && (int)t.B == ConfiguracaoExperimento.NeuroniosBaseline,
+            valoresVariados: ConfiguracaoExperimento.TaxasMutacaoDaSerie,
+            criarConfiguracao: (t, variado) => new ConfiguracaoExperimento((int)t.A, (int)t.B, variado),
+            tituloDaSerie: t => $"População {t.A} · camada oculta {(int)t.B}",
+            unidadeVariada: "de taxa de mutação",
+            valorVariado: linha => SerieExperimental.FormatarTaxa(linha.TaxaMutacao));
 
         OnPropertyChanged(nameof(CoberturaDoPlano));
-        OnPropertyChanged(nameof(ConclusaoCamadaOculta));
-        OnPropertyChanged(nameof(ConclusaoPopulacao));
     }
 
-    private static void Preencher(
-        ObservableCollection<LinhaExperimentoComparativo> destino,
-        IEnumerable<ConfiguracaoExperimento> configuracoes,
-        IReadOnlyList<ExperimentoHiperparametros> registros)
+    /// <summary>Produto cartesiano dos dois hiperparâmetros travados de uma tabela.</summary>
+    private static IReadOnlyList<(double A, double B)> Combinar(IReadOnlyList<int> primeiros, IReadOnlyList<double> segundos) =>
+        primeiros.SelectMany(_ => segundos, (a, b) => ((double)a, b)).ToList();
+
+    private static bool Iguais(double a, double b) => Math.Abs(a - b) < 1e-9;
+
+    /// <summary>Uma série adicional só vale a pena exibir se já der para comparar — com um único ponto não há comparação nenhuma, só uma linha solta.</summary>
+    private const int MinimoExecucoesParaSerieAdicional = 2;
+
+    /// <summary>
+    /// Uma série por combinação de valores travados. A do baseline SEMPRE aparece (é o plano de
+    /// referência pedido no parecer, mesmo sem nenhuma execução ainda); as demais só aparecem
+    /// quando já têm pelo menos <see cref="MinimoExecucoesParaSerieAdicional"/> execuções reais —
+    /// assim nenhum treinamento antigo é desperdiçado, mas a tela também não enche de séries de
+    /// um ponto só. Sem esse piso, cada execução avulsa criaria uma série nova em CADA uma das
+    /// três tabelas (toda execução tem um valor para os três hiperparâmetros), e a lista de
+    /// pendentes cresceria para dezenas de treinamentos que ninguém pediu.
+    /// </summary>
+    private static void MontarSeries(
+        ObservableCollection<SerieExperimental> destino,
+        IReadOnlyList<ExperimentoHiperparametros> registros,
+        IReadOnlyList<(double A, double B)> combinacoesTravadas,
+        Func<(double A, double B), bool> ehBaselineTravado,
+        IEnumerable<double> valoresVariados,
+        Func<(double A, double B), double, ConfiguracaoExperimento> criarConfiguracao,
+        Func<(double A, double B), string> tituloDaSerie,
+        string unidadeVariada,
+        Func<LinhaExperimentoComparativo, string> valorVariado)
     {
-        var linhas = new List<LinhaExperimentoComparativo>();
-
-        foreach (ConfiguracaoExperimento configuracao in configuracoes)
-        {
-            bool ehBaseline = configuracao.TamanhoPopulacao == ConfiguracaoExperimento.PopulacaoBaseline
-                              && configuracao.NeuroniosOcultos == ConfiguracaoExperimento.NeuroniosBaseline;
-
-            ExperimentoHiperparametros? maisRecente = registros
-                .Where(r => r.TamanhoPopulacao == configuracao.TamanhoPopulacao
-                            && r.NeuroniosOcultos == configuracao.NeuroniosOcultos)
-                .OrderByDescending(r => r.DataHora)
-                .FirstOrDefault();
-
-            linhas.Add(maisRecente is null
-                ? LinhaExperimentoComparativo.Pendente(configuracao.TamanhoPopulacao, configuracao.NeuroniosOcultos, ehBaseline)
-                : LinhaExperimentoComparativo.Executada(maisRecente, ehBaseline));
-        }
-
-        // Destaques calculados por TABELA (não globalmente): a pergunta que cada tabela responde
-        // é "qual valor deste hiperparâmetro é o melhor", então comparar com a outra série
-        // misturaria os dois efeitos.
-        List<LinhaExperimentoComparativo> executadas = linhas.Where(l => l.Executado).ToList();
-        if (executadas.Count > 0)
-        {
-            LinhaExperimentoComparativo melhorFitness = executadas.OrderByDescending(l => l.FitnessFinal).First();
-            melhorFitness.MelhorFitness = true;
-
-            LinhaExperimentoComparativo? melhorCusto = executadas
-                .Where(l => l.FitnessPorSegundo is not null)
-                .OrderByDescending(l => l.FitnessPorSegundo)
-                .FirstOrDefault();
-            if (melhorCusto is not null) melhorCusto.MelhorCustoBeneficio = true;
-        }
-
         destino.Clear();
-        foreach (LinhaExperimentoComparativo linha in linhas) destino.Add(linha);
+
+        List<double> variados = valoresVariados.ToList();
+
+        // Baseline primeiro; as adicionais mantêm a ordem natural das listas de valores.
+        foreach ((double A, double B) travado in combinacoesTravadas.OrderBy(t => ehBaselineTravado(t) ? 0 : 1))
+        {
+            var linhas = new List<LinhaExperimentoComparativo>();
+            foreach (double variado in variados)
+            {
+                ConfiguracaoExperimento configuracao = criarConfiguracao(travado, variado);
+                ExperimentoHiperparametros? execucao = ExecucaoMaisRecente(registros, configuracao);
+
+                linhas.Add(execucao is null
+                    ? LinhaExperimentoComparativo.Pendente(configuracao, EhBaseline(configuracao))
+                    : LinhaExperimentoComparativo.Executada(configuracao, execucao, EhBaseline(configuracao)));
+            }
+
+            bool ehPlanoPrincipal = ehBaselineTravado(travado);
+            if (!ehPlanoPrincipal && linhas.Count(l => l.Executado) < MinimoExecucoesParaSerieAdicional) continue;
+
+            destino.Add(new SerieExperimental(tituloDaSerie(travado), ehPlanoPrincipal, linhas, unidadeVariada, valorVariado));
+        }
     }
 
-    public string ConclusaoCamadaOculta => MontarConclusao(ComparativoCamadaOculta, "neurônios na camada oculta", l => l.NeuroniosOcultos);
+    private static bool EhBaseline(ConfiguracaoExperimento configuracao) =>
+        configuracao.TamanhoPopulacao == ConfiguracaoExperimento.PopulacaoBaseline
+        && configuracao.NeuroniosOcultos == ConfiguracaoExperimento.NeuroniosBaseline
+        && Iguais(configuracao.TaxaMutacao, ConfiguracaoExperimento.TaxaMutacaoBaseline);
 
-    public string ConclusaoPopulacao => MontarConclusao(ComparativoPopulacao, "indivíduos na população", l => l.TamanhoPopulacao);
-
-    private static string MontarConclusao(
-        IEnumerable<LinhaExperimentoComparativo> linhas,
-        string unidade,
-        Func<LinhaExperimentoComparativo, int> valorVariado)
-    {
-        List<LinhaExperimentoComparativo> executadas = linhas.Where(l => l.Executado).ToList();
-        if (executadas.Count == 0) return "Nenhuma configuração desta série foi executada ainda.";
-        if (executadas.Count == 1) return $"Só uma configuração desta série foi executada ({valorVariado(executadas[0])} {unidade}) — rode as demais para que a comparação tenha sentido.";
-
-        LinhaExperimentoComparativo melhor = executadas.OrderByDescending(l => l.FitnessFinal).First();
-        LinhaExperimentoComparativo? custo = executadas
-            .Where(l => l.FitnessPorSegundo is not null)
-            .OrderByDescending(l => l.FitnessPorSegundo)
+    /// <summary>
+    /// A execução mais recente de uma configuração. Registros anteriores ao campo de taxa de
+    /// mutação (<c>TaxaMutacao == null</c>) rodaram com o padrão do sistema, então casam com as
+    /// séries de mutação 0,08 — é o que permite reaproveitá-los em vez de descartar treinamentos
+    /// reais já feitos (a tela marca o valor como presumido, ver
+    /// <see cref="LinhaExperimentoComparativo.TaxaMutacaoPresumida"/>).
+    /// </summary>
+    private static ExperimentoHiperparametros? ExecucaoMaisRecente(
+        IReadOnlyList<ExperimentoHiperparametros> registros,
+        ConfiguracaoExperimento configuracao) =>
+        registros
+            .Where(r => r.TamanhoPopulacao == configuracao.TamanhoPopulacao
+                        && r.NeuroniosOcultos == configuracao.NeuroniosOcultos
+                        && r.Geracoes >= ConfiguracaoExperimento.GeracoesPorExperimento
+                        && Iguais(r.TaxaMutacao ?? ConfiguracaoExperimento.TaxaMutacaoBaseline, configuracao.TaxaMutacao))
+            .OrderByDescending(r => r.DataHora)
             .FirstOrDefault();
 
-        string texto = $"Melhor fitness final: {valorVariado(melhor)} {unidade} ({melhor.FitnessFinalTexto}).";
-        if (custo is not null)
-        {
-            texto += custo.MelhorFitness
-                ? " Também é o melhor custo-benefício (maior fitness por segundo de treinamento)."
-                : $" Melhor custo-benefício: {valorVariado(custo)} {unidade} ({custo.FitnessPorSegundoTexto} de fitness por segundo).";
-        }
+    /// <summary>Todas as configurações que aparecem em alguma tabela, sem repetir as compartilhadas.</summary>
+    private IReadOnlyList<ConfiguracaoExperimento> ConfiguracoesExibidas() =>
+        TodasAsSeries
+            .SelectMany(s => s.Linhas)
+            .Select(ConfiguracaoDa)
+            .Distinct()
+            .ToList();
 
-        return texto;
-    }
+    /// <summary>
+    /// As configurações exibidas que ainda não foram treinadas — é exatamente o que o botão
+    /// "Executar configurações pendentes" roda. Uma configuração que aparece em mais de uma
+    /// tabela entra uma vez só.
+    /// </summary>
+    private IReadOnlyList<ConfiguracaoExperimento> ConfiguracoesPendentes() =>
+        TodasAsSeries
+            .SelectMany(s => s.Linhas)
+            .Where(l => !l.Executado)
+            .Select(ConfiguracaoDa)
+            .Distinct()
+            .OrderBy(c => c.TaxaMutacao)
+            .ThenBy(c => c.NeuroniosOcultos)
+            .ThenBy(c => c.TamanhoPopulacao)
+            .ToList();
+
+    private static ConfiguracaoExperimento ConfiguracaoDa(LinhaExperimentoComparativo linha) =>
+        new(linha.TamanhoPopulacao, linha.NeuroniosOcultos, linha.TaxaMutacao);
 
     private void ExecutarExperimentos(bool refazer)
     {
         if (ExperimentosEmExecucao) return;
 
-        IReadOnlyList<ExperimentoHiperparametros> jaRegistradas;
-        try
+        if (refazer && !ConfirmarRefazer()) return;
+
+        // Depois do "Refazer", as linhas foram apagadas e as séries recarregadas — então
+        // ConfiguracoesPendentes() já devolve tudo de novo, sem precisar de uma segunda lista.
+        IReadOnlyList<ConfiguracaoExperimento> aExecutar = ConfiguracoesPendentes();
+
+        if (aExecutar.Count == 0)
         {
-            jaRegistradas = _experimentoRepository.ObterTodos();
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Não foi possível consultar os experimentos já registrados: {ex.Message}");
-            StatusExperimentos = $"Não foi possível consultar os experimentos já registrados: {ex.Message}";
+            StatusExperimentos = "Todas as configurações exibidas já possuem execução registrada — use \"Refazer tudo\" para treiná-las de novo.";
             return;
         }
 
-        if (refazer)
-        {
-            if (!ConfirmarRefazer(jaRegistradas)) return;
-            jaRegistradas = [];
-        }
-
         ExperimentosEmExecucao = true;
-        StatusExperimentos = "Preparando o plano experimental...";
+        StatusExperimentos = $"Preparando {aExecutar.Count} configuração(ões) ({ConfiguracaoExperimento.GeracoesPorExperimento} gerações cada)...";
         _ctsExperimentos = new CancellationTokenSource();
         CancellationToken token = _ctsExperimentos.Token;
 
         _ = _executorExperimentos
             .ExecutarAsync(
-                jaRegistradas,
+                aExecutar,
                 mensagem => RunOnUi(() => StatusExperimentos = mensagem),
                 _ => RunOnUi(CarregarComparativosDeHiperparametros),
                 token)
@@ -322,43 +373,54 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// "Refazer tudo" apaga as execuções anteriores das configurações do plano — é destrutivo e
-    /// cada reexecução leva vários minutos, então exige confirmação explícita.
+    /// "Refazer tudo" apaga as execuções registradas das configurações EXIBIDAS (as das séries
+    /// adicionais incluídas) e devolve true para que todas sejam treinadas de novo. É destrutivo
+    /// e cada reexecução leva vários minutos, então exige confirmação explícita.
     /// </summary>
-    private bool ConfirmarRefazer(IReadOnlyList<ExperimentoHiperparametros> jaRegistradas)
+    private bool ConfirmarRefazer()
     {
-        List<ExperimentoHiperparametros> aRemover = jaRegistradas
-            .Where(r => ConfiguracaoExperimento.Planejadas.Any(c =>
-                c.TamanhoPopulacao == r.TamanhoPopulacao && c.NeuroniosOcultos == r.NeuroniosOcultos))
-            .ToList();
+        IReadOnlyList<ConfiguracaoExperimento> exibidas = ConfiguracoesExibidas();
 
-        if (aRemover.Count > 0)
+        List<ExperimentoHiperparametros> aRemover;
+        try
         {
-            MessageBoxResult resposta = MessageBox.Show(
-                $"Isto apaga {aRemover.Count} execução(ões) já registrada(s) e treina todas as " +
-                $"{ConfiguracaoExperimento.Planejadas.Count} configurações do plano de novo " +
-                $"({ConfiguracaoExperimento.GeracoesPorExperimento} gerações cada). Pode levar vários minutos.\n\nContinuar?",
-                "Refazer a análise experimental",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (resposta != MessageBoxResult.Yes) return false;
-
-            foreach (ExperimentoHiperparametros registro in aRemover)
-            {
-                try
-                {
-                    _experimentoRepository.Remover(registro.Id);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"Não foi possível remover o experimento #{registro.Id}: {ex.Message}");
-                }
-            }
-
-            CarregarComparativosDeHiperparametros();
+            aRemover = _experimentoRepository.ObterTodos()
+                .Where(r => exibidas.Any(c =>
+                    c.TamanhoPopulacao == r.TamanhoPopulacao
+                    && c.NeuroniosOcultos == r.NeuroniosOcultos
+                    && Iguais(r.TaxaMutacao ?? ConfiguracaoExperimento.TaxaMutacaoBaseline, c.TaxaMutacao)))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível consultar os experimentos já registrados: {ex.Message}");
+            StatusExperimentos = $"Não foi possível consultar os experimentos já registrados: {ex.Message}";
+            return false;
         }
 
+        MessageBoxResult resposta = MessageBox.Show(
+            $"Isto apaga {aRemover.Count} execução(ões) já registrada(s) e treina as " +
+            $"{exibidas.Count} configurações exibidas de novo " +
+            $"({ConfiguracaoExperimento.GeracoesPorExperimento} gerações cada). Pode levar vários minutos.\n\nContinuar?",
+            "Refazer a análise experimental",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (resposta != MessageBoxResult.Yes) return false;
+
+        foreach (ExperimentoHiperparametros registro in aRemover)
+        {
+            try
+            {
+                _experimentoRepository.Remover(registro.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Não foi possível remover o experimento #{registro.Id}: {ex.Message}");
+            }
+        }
+
+        CarregarComparativosDeHiperparametros();
         return true;
     }
 

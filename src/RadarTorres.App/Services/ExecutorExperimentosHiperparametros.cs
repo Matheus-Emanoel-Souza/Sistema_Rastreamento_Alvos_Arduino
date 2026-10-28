@@ -12,8 +12,8 @@ namespace RadarTorres.App.Services;
 
 /// <summary>
 /// Executa, de verdade (sem UI e sem dado simulado), a análise experimental de hiperparâmetros
-/// pedida no parecer do artigo: duas séries em que se varia UM hiperparâmetro por vez, todo o
-/// resto mantido idêntico. Cada configuração concluída é gravada na hora em
+/// pedida no parecer do artigo: séries em que se varia UM hiperparâmetro por vez (camada
+/// oculta, tamanho da população ou taxa de mutação), todo o resto mantido idêntico. Cada configuração concluída é gravada na hora em
 /// <see cref="IExperimentoHiperparametrosRepository"/>, de modo que uma interrupção no meio
 /// preserva o que já rodou.
 /// </summary>
@@ -23,26 +23,26 @@ public interface IExecutorExperimentosHiperparametros
     bool EmExecucao { get; }
 
     /// <summary>
-    /// Roda as configurações de <see cref="ConfiguracaoExperimento.Planejadas"/> que ainda não
-    /// estiverem em <paramref name="jaRegistradas"/>, em uma thread de fundo.
+    /// Treina, em uma thread de fundo, exatamente as configurações de
+    /// <paramref name="aExecutar"/> — quem decide o que está pendente é a tela, que conhece as
+    /// séries efetivamente exibidas (ver <c>EstatisticasTreinamentoViewModel</c>).
     /// <paramref name="aoConcluirConfiguracao"/> é chamado a cada configuração gravada e
     /// <paramref name="aoProgredir"/> a cada avanço relevante (ambos fora da thread de UI —
     /// quem chama é responsável por despachar).
     /// </summary>
     Task ExecutarAsync(
-        IReadOnlyCollection<ExperimentoHiperparametros> jaRegistradas,
+        IReadOnlyList<ConfiguracaoExperimento> aExecutar,
         Action<string> aoProgredir,
         Action<ExperimentoHiperparametros> aoConcluirConfiguracao,
         CancellationToken token);
 }
 
 /// <summary>
-/// Uma configuração do plano experimental: população × neurônios ocultos. As duas séries
-/// compartilham a configuração de referência (<see cref="PopulacaoBaseline"/> ×
-/// <see cref="NeuroniosBaseline"/>), que por isso só é treinada uma vez e aparece nas duas
-/// tabelas — 5 execuções no total, não 6.
+/// Uma configuração do plano experimental: população × neurônios ocultos × taxa de mutação.
+/// Uma mesma configuração pode pertencer a mais de uma tabela da tela (a configuração baseline
+/// pertence às três) — ela é treinada UMA vez e reaproveitada em todas, nunca em duplicidade.
 /// </summary>
-public readonly record struct ConfiguracaoExperimento(int TamanhoPopulacao, int NeuroniosOcultos)
+public readonly record struct ConfiguracaoExperimento(int TamanhoPopulacao, int NeuroniosOcultos, double TaxaMutacao)
 {
     /// <summary>População de referência — o padrão da tela de Treinamento do Controlador.</summary>
     public const int PopulacaoBaseline = 60;
@@ -50,23 +50,34 @@ public readonly record struct ConfiguracaoExperimento(int TamanhoPopulacao, int 
     /// <summary>Camada oculta de referência — a de <see cref="ControladorHibrido.ArquiteturaPadrao"/>, isto é, a que o sistema usa em produção.</summary>
     public const int NeuroniosBaseline = 8;
 
+    /// <summary>Taxa de mutação de referência — o padrão de <see cref="ParametrosTreinamento.TaxaMutacao"/>.</summary>
+    public const double TaxaMutacaoBaseline = 0.08;
+
     /// <summary>Gerações rodadas por configuração — fixo e igual para todas, único jeito de isolar o efeito do hiperparâmetro variado (todo mundo para no mesmo ponto).</summary>
     public const int GeracoesPorExperimento = 300;
 
-    /// <summary>Série A — varia só a camada oculta, população travada no baseline.</summary>
+    /// <summary>Gerações em que o melhor fitness é fotografado, para montar a curva de convergência (ver <see cref="ExperimentoHiperparametros.FitnessGeracao25"/>).</summary>
+    public static readonly IReadOnlyList<int> GeracoesDaCurva = [25, 50, 100, 200];
+
+    /// <summary>Série A — varia só a camada oculta.</summary>
     public static readonly IReadOnlyList<int> NeuroniosDaSerie = [4, 8, 16];
 
-    /// <summary>Série B — varia só a população, camada oculta travada no baseline.</summary>
+    /// <summary>Série B — varia só a população.</summary>
     public static readonly IReadOnlyList<int> PopulacoesDaSerie = [30, 60, 120];
 
-    /// <summary>União das duas séries, sem repetir o baseline (que pertence às duas).</summary>
+    /// <summary>Série C — varia só a taxa de mutação: metade, padrão e dobro do valor do sistema.</summary>
+    public static readonly IReadOnlyList<double> TaxasMutacaoDaSerie = [0.04, 0.08, 0.16];
+
+    /// <summary>União das três séries de referência, sem repetir a configuração baseline (que pertence às três).</summary>
     public static IReadOnlyList<ConfiguracaoExperimento> Planejadas { get; } =
-        NeuroniosDaSerie.Select(n => new ConfiguracaoExperimento(PopulacaoBaseline, n))
-            .Concat(PopulacoesDaSerie.Select(p => new ConfiguracaoExperimento(p, NeuroniosBaseline)))
+        NeuroniosDaSerie.Select(n => new ConfiguracaoExperimento(PopulacaoBaseline, n, TaxaMutacaoBaseline))
+            .Concat(PopulacoesDaSerie.Select(p => new ConfiguracaoExperimento(p, NeuroniosBaseline, TaxaMutacaoBaseline)))
+            .Concat(TaxasMutacaoDaSerie.Select(t => new ConfiguracaoExperimento(PopulacaoBaseline, NeuroniosBaseline, t)))
             .Distinct()
             .ToList();
 
-    public override string ToString() => $"população={TamanhoPopulacao}, neurônios ocultos={NeuroniosOcultos}";
+    public override string ToString() =>
+        $"população={TamanhoPopulacao}, neurônios ocultos={NeuroniosOcultos}, mutação={TaxaMutacao:0.###}";
 }
 
 /// <inheritdoc cref="IExecutorExperimentosHiperparametros"/>
@@ -87,7 +98,7 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
     public bool EmExecucao => Volatile.Read(ref _emExecucao) == 1;
 
     public Task ExecutarAsync(
-        IReadOnlyCollection<ExperimentoHiperparametros> jaRegistradas,
+        IReadOnlyList<ConfiguracaoExperimento> aExecutar,
         Action<string> aoProgredir,
         Action<ExperimentoHiperparametros> aoConcluirConfiguracao,
         CancellationToken token)
@@ -102,7 +113,7 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
         {
             try
             {
-                Executar(jaRegistradas, aoProgredir, aoConcluirConfiguracao, token);
+                Executar(aExecutar, aoProgredir, aoConcluirConfiguracao, token);
             }
             catch (Exception ex)
             {
@@ -117,38 +128,31 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
     }
 
     private void Executar(
-        IReadOnlyCollection<ExperimentoHiperparametros> jaRegistradas,
+        IReadOnlyList<ConfiguracaoExperimento> aExecutar,
         Action<string> aoProgredir,
         Action<ExperimentoHiperparametros> aoConcluirConfiguracao,
         CancellationToken token)
     {
-        // Parâmetros de fábrica (não os da tela): as duas séries precisam rodar sob condições
+        // Parâmetros de fábrica (não os da tela): todas as séries precisam rodar sob condições
         // idênticas para a diferença de fitness ser atribuível ao hiperparâmetro variado, e não
         // a um ajuste que o usuário tenha feito em "Treinamento do Controlador" entre uma
         // execução e outra. TamanhoPopulacao é sobrescrito por configuração logo abaixo.
         var parametrosBase = new ParametrosTreinamento();
 
-        List<ConfiguracaoExperimento> pendentes = ConfiguracaoExperimento.Planejadas
-            .Where(c => !jaRegistradas.Any(r =>
-                r.TamanhoPopulacao == c.TamanhoPopulacao &&
-                r.NeuroniosOcultos == c.NeuroniosOcultos &&
-                r.Geracoes >= ConfiguracaoExperimento.GeracoesPorExperimento))
-            .ToList();
-
-        if (pendentes.Count == 0)
+        if (aExecutar.Count == 0)
         {
-            aoProgredir("Todas as configurações do plano experimental já possuem execução registrada — use \"Refazer tudo\" para treiná-las de novo.");
+            aoProgredir("Todas as configurações exibidas já possuem execução registrada — use \"Refazer tudo\" para treiná-las de novo.");
             return;
         }
 
         int indice = 0;
-        foreach (ConfiguracaoExperimento configuracao in pendentes)
+        foreach (ConfiguracaoExperimento configuracao in aExecutar)
         {
             indice++;
             if (token.IsCancellationRequested) break;
 
             ExperimentoHiperparametros? registro = TreinarConfiguracao(
-                configuracao, parametrosBase, indice, pendentes.Count, aoProgredir, token);
+                configuracao, parametrosBase, indice, aExecutar.Count, aoProgredir, token);
 
             // Configuração cancelada antes de completar as gerações previstas: descartada em vez
             // de virar uma linha mais curta (e portanto incomparável) na tabela.
@@ -160,7 +164,8 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
                 aoConcluirConfiguracao(registro);
                 _logger.Success(
                     $"Experimento concluído ({configuracao}): gerações={registro.Geracoes}, " +
-                    $"fitness final={registro.FitnessFinal:0.0}, tempo={registro.TempoSegundos:0.0}s.");
+                    $"fitness final={registro.FitnessFinal:0.0} (pico na geração {registro.GeracaoDoPico}), " +
+                    $"tempo={registro.TempoSegundos:0.0}s.");
             }
             catch (Exception ex)
             {
@@ -170,7 +175,7 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
 
         aoProgredir(token.IsCancellationRequested
             ? "Execução interrompida — as configurações já concluídas continuam registradas."
-            : $"Plano experimental concluído: {pendentes.Count} configuração(ões) treinada(s) e registrada(s).");
+            : $"Plano experimental concluído: {aExecutar.Count} configuração(ões) treinada(s) e registrada(s).");
     }
 
     private static ExperimentoHiperparametros? TreinarConfiguracao(
@@ -188,7 +193,11 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
             ControladorHibrido.QuantidadeSaidas
         ];
 
-        ParametrosTreinamento parametros = parametrosBase with { TamanhoPopulacao = configuracao.TamanhoPopulacao };
+        ParametrosTreinamento parametros = parametrosBase with
+        {
+            TamanhoPopulacao = configuracao.TamanhoPopulacao,
+            TaxaMutacao = configuracao.TaxaMutacao
+        };
         var ambiente = new AmbienteTreinamento(parametros, arquitetura: arquitetura);
 
         // Elitismo proporcional (10% da população, no mínimo 2) — mesma regra do treinamento
@@ -197,11 +206,18 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
         var algoritmo = new AlgoritmoGenetico(
             tamanhoGenoma: RedeNeural.TamanhoGenoma(arquitetura),
             tamanhoPopulacao: configuracao.TamanhoPopulacao,
-            taxaMutacao: parametros.TaxaMutacao,
+            taxaMutacao: configuracao.TaxaMutacao,
             elitismo: Math.Max(2, configuracao.TamanhoPopulacao / 10));
 
         var cronometro = Stopwatch.StartNew();
         ResultadoGeracao? ultimoResultado = null;
+
+        // Velocidade de evolução: o melhor fitness já visto, a primeira geração em que ele
+        // apareceu, e fotos da curva nas gerações de GeracoesDaCurva. É o que permite distinguir
+        // "chegou no mesmo lugar" de "chegou no mesmo lugar MUITO antes".
+        double melhorAteAgora = double.NegativeInfinity;
+        int geracaoDoPico = 0;
+        var curva = new Dictionary<int, double>();
 
         for (int g = 0; g < ConfiguracaoExperimento.GeracoesPorExperimento && !token.IsCancellationRequested; g++)
         {
@@ -214,13 +230,23 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
             ultimoResultado = algoritmo.EvoluirGeracao(
                 genoma => ambiente.AvaliarFitness(genoma, seedsDaGeracao, CatalogoCenarios.TodosComScript));
 
+            if (ultimoResultado.MelhorFitness > melhorAteAgora)
+            {
+                melhorAteAgora = ultimoResultado.MelhorFitness;
+                geracaoDoPico = ultimoResultado.Geracao;
+            }
+
+            if (ConfiguracaoExperimento.GeracoesDaCurva.Contains(ultimoResultado.Geracao))
+            {
+                curva[ultimoResultado.Geracao] = melhorAteAgora;
+            }
+
             if (ultimoResultado.Geracao % 25 == 0 || ultimoResultado.Geracao == ConfiguracaoExperimento.GeracoesPorExperimento)
             {
-                ResultadoGeracao progresso = ultimoResultado;
                 aoProgredir(
                     $"Configuração {indice}/{total} ({configuracao}): " +
-                    $"geração {progresso.Geracao}/{ConfiguracaoExperimento.GeracoesPorExperimento}, " +
-                    $"melhor fitness={progresso.MelhorFitness:0.0} · {cronometro.Elapsed.TotalSeconds:0}s");
+                    $"geração {ultimoResultado.Geracao}/{ConfiguracaoExperimento.GeracoesPorExperimento}, " +
+                    $"melhor fitness={melhorAteAgora:0.0} (pico na geração {geracaoDoPico}) · {cronometro.Elapsed.TotalSeconds:0}s");
             }
         }
 
@@ -233,8 +259,18 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
         {
             TamanhoPopulacao = configuracao.TamanhoPopulacao,
             NeuroniosOcultos = configuracao.NeuroniosOcultos,
+            TaxaMutacao = configuracao.TaxaMutacao,
             Geracoes = ultimoResultado.Geracao,
-            FitnessFinal = ultimoResultado.MelhorFitness,
+
+            // O melhor de TODAS as gerações, não o da última: com elitismo o fitness não deveria
+            // regredir, mas a avaliação é estocástica (seeds mudam a cada geração), então a
+            // última geração pode marcar abaixo do pico já alcançado.
+            FitnessFinal = melhorAteAgora,
+            GeracaoDoPico = geracaoDoPico,
+            FitnessGeracao25 = curva.TryGetValue(25, out double g25) ? g25 : null,
+            FitnessGeracao50 = curva.TryGetValue(50, out double g50) ? g50 : null,
+            FitnessGeracao100 = curva.TryGetValue(100, out double g100) ? g100 : null,
+            FitnessGeracao200 = curva.TryGetValue(200, out double g200) ? g200 : null,
             TempoSegundos = cronometro.Elapsed.TotalSeconds,
             DataHora = DateTime.Now
         };
