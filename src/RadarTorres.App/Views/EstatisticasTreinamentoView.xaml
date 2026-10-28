@@ -46,6 +46,59 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+
+        <!-- Estilo único das duas tabelas comparativas de hiperparâmetros (mesmas colunas, mesma
+             leitura) — ver ExperimentoDataGridColunas logo abaixo. -->
+        <Style x:Key="TabelaExperimento" TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="True"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="RowBackground" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource Bg.Card}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Border.Divider}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource Border.Divider}"/>
+            <Setter Property="ColumnHeaderStyle">
+                <Setter.Value>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                        <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+                        <Setter Property="FontSize" Value="12"/>
+                        <Setter Property="Padding" Value="8,6"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource Border.Divider}"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="RowStyle">
+                <Setter.Value>
+                    <!-- Realce visual (requisito de identificar a melhor configuração de relance):
+                         negrito+destaque na de melhor fitness, cinza nas que ainda não rodaram. -->
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding MelhorFitness}" Value="True">
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Executado}" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                                <Setter Property="FontStyle" Value="Italic"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -60,7 +113,7 @@
                     <TextBlock Text="ESTATÍSTICAS DE TREINAMENTO" FontSize="20" FontWeight="Bold"
                                Foreground="{DynamicResource Text.Primary}"/>
                     <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="Fitness médio a cada 500 gerações de neuroevolução (marcos em 500, 1.000, 1.500...) — visão de longo prazo, sem o ruído geração a geração. Tela exclusiva do perfil Administrador."/>
+                               Text="Análise experimental de hiperparâmetros (camada oculta e tamanho da população) e evolução do fitness médio a cada 500 gerações de neuroevolução — visão de longo prazo, sem o ruído geração a geração. Tela exclusiva do perfil Administrador."/>
                 </StackPanel>
                 <Button Content="Atualizar" Command="{Binding AtualizarCommand}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
             </Grid>
@@ -68,6 +121,91 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
+
+                <!--
+                    ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS (pedida no parecer do artigo).
+                    Duas tabelas no MESMO painel, cada configuração em uma linha: a primeira varia
+                    só a quantidade de neurônios da camada oculta (população fixa no baseline), a
+                    segunda varia só o tamanho da população (camada oculta fixa no baseline).
+                    Separar as séries é o que permite atribuir a diferença de fitness ao
+                    hiperparâmetro variado; mantê-las no mesmo painel é o que permite comparar as
+                    duas de relance. Todas as linhas vêm de execuções REAIS registradas em
+                    IExperimentoHiperparametrosRepository — configurações ainda não treinadas
+                    aparecem em itálico com "não executado", nunca com valor estimado.
+                    Ver EstatisticasTreinamentoViewModel e ExecutorExperimentosHiperparametros.
+                -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,10" TextWrapping="Wrap">
+                            <Run Text="Um hiperparâmetro por vez, todo o resto idêntico:"/>
+                            <Run Text="{Binding GeracoesPorExperimento, Mode=OneWay}" FontWeight="SemiBold"/>
+                            <Run Text="gerações por configuração, mesma função de fitness, mesmos cenários táticos e mesma taxa de mutação. Os dados abaixo são de execuções reais — nenhum valor é estimado."/>
+                        </TextBlock>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Content="Executar configurações pendentes" Command="{Binding ExecutarExperimentosCommand}"
+                                    ToolTip="Treina apenas as configurações do plano que ainda não têm execução registrada."/>
+                            <Button Content="Refazer tudo" Command="{Binding RefazerExperimentosCommand}" Margin="8,0,0,0"
+                                    ToolTip="Apaga as execuções registradas das configurações do plano e treina todas de novo."/>
+                            <Button Content="Parar" Command="{Binding PararExperimentosCommand}" Margin="8,0,0,0"
+                                    ToolTip="Interrompe após a configuração em andamento — as já concluídas continuam registradas."/>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding CoberturaDoPlano}" FontSize="11" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource Text.Muted}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding StatusExperimentos}" FontSize="11" Margin="0,0,0,12" TextWrapping="Wrap"
+                                   FontFamily="{DynamicResource Font.Mono}" Foreground="{DynamicResource Text.Secondary}"/>
+
+                        <!-- Experimento 1 — varia a camada oculta. -->
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2">
+                            <Run Text="EXPERIMENTO 1 — NEURÔNIOS NA CAMADA OCULTA (4 / 8 / 16)"/>
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,6" TextWrapping="Wrap">
+                            <Run Text="População fixa em"/>
+                            <Run Text="{Binding PopulacaoBaseline, Mode=OneWay}" FontWeight="SemiBold"/>
+                            <Run Text="indivíduos em todas as linhas."/>
+                        </TextBlock>
+                        <DataGrid ItemsSource="{Binding ComparativoCamadaOculta}" Style="{StaticResource TabelaExperimento}" MaxHeight="200">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Neurônios ocultos" Binding="{Binding NeuroniosOcultos}" Width="Auto" MinWidth="120"/>
+                                <DataGridTextColumn Header="População" Binding="{Binding TamanhoPopulacao}" Width="Auto" MinWidth="90"/>
+                                <DataGridTextColumn Header="Gerações" Binding="{Binding GeracoesTexto}" Width="Auto" MinWidth="80"/>
+                                <DataGridTextColumn Header="Fitness final" Binding="{Binding FitnessFinalTexto}" Width="Auto" MinWidth="100"/>
+                                <DataGridTextColumn Header="Tempo total" Binding="{Binding TempoTexto}" Width="Auto" MinWidth="100"/>
+                                <DataGridTextColumn Header="Fitness/segundo" Binding="{Binding FitnessPorSegundoTexto}" Width="Auto" MinWidth="110"/>
+                                <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHoraTexto}" Width="Auto" MinWidth="140"/>
+                                <DataGridTextColumn Header="" Binding="{Binding Destaque}" Width="*" MinWidth="150"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="{Binding ConclusaoCamadaOculta}" FontSize="11" Margin="0,6,0,16" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text.Secondary}"/>
+
+                        <!-- Experimento 2 — varia a população. -->
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2">
+                            <Run Text="EXPERIMENTO 2 — TAMANHO DA POPULAÇÃO (30 / 60 / 120)"/>
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,6" TextWrapping="Wrap">
+                            <Run Text="Camada oculta fixa em"/>
+                            <Run Text="{Binding NeuroniosBaseline, Mode=OneWay}" FontWeight="SemiBold"/>
+                            <Run Text="neurônios em todas as linhas (a arquitetura usada em produção)."/>
+                        </TextBlock>
+                        <DataGrid ItemsSource="{Binding ComparativoPopulacao}" Style="{StaticResource TabelaExperimento}" MaxHeight="200">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="População" Binding="{Binding TamanhoPopulacao}" Width="Auto" MinWidth="120"/>
+                                <DataGridTextColumn Header="Neurônios ocultos" Binding="{Binding NeuroniosOcultos}" Width="Auto" MinWidth="120"/>
+                                <DataGridTextColumn Header="Gerações" Binding="{Binding GeracoesTexto}" Width="Auto" MinWidth="80"/>
+                                <DataGridTextColumn Header="Fitness final" Binding="{Binding FitnessFinalTexto}" Width="Auto" MinWidth="100"/>
+                                <DataGridTextColumn Header="Tempo total" Binding="{Binding TempoTexto}" Width="Auto" MinWidth="100"/>
+                                <DataGridTextColumn Header="Fitness/segundo" Binding="{Binding FitnessPorSegundoTexto}" Width="Auto" MinWidth="110"/>
+                                <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHoraTexto}" Width="Auto" MinWidth="140"/>
+                                <DataGridTextColumn Header="" Binding="{Binding Destaque}" Width="*" MinWidth="150"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="{Binding ConclusaoPopulacao}" FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Text.Secondary}"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- Sem dados ainda: nenhum marco completou 500 gerações nesta base. -->
                 <Border Style="{StaticResource SemDadosCard}">
