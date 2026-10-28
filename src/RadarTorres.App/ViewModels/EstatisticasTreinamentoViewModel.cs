@@ -342,11 +342,22 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
     {
         if (ExperimentosEmExecucao) return;
 
-        if (refazer && !ConfirmarRefazer()) return;
+        IReadOnlyList<ConfiguracaoExperimento> aExecutar;
 
-        // Depois do "Refazer", as linhas foram apagadas e as séries recarregadas — então
-        // ConfiguracoesPendentes() já devolve tudo de novo, sem precisar de uma segunda lista.
-        IReadOnlyList<ConfiguracaoExperimento> aExecutar = ConfiguracoesPendentes();
+        if (refazer)
+        {
+            // A lista vem de ConfirmarRefazer porque precisa ser capturada ANTES da limpeza:
+            // apagados os registros, as séries adicionais (que só aparecem por já terem
+            // execuções) somem da tela, e ConfiguracoesPendentes() devolveria apenas as
+            // configurações do plano de referência — refazendo menos do que o aviso prometeu.
+            IReadOnlyList<ConfiguracaoExperimento>? capturadas = ConfirmarRefazer();
+            if (capturadas is null) return;
+            aExecutar = capturadas;
+        }
+        else
+        {
+            aExecutar = ConfiguracoesPendentes();
+        }
 
         if (aExecutar.Count == 0)
         {
@@ -374,10 +385,11 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
 
     /// <summary>
     /// "Refazer tudo" apaga as execuções registradas das configurações EXIBIDAS (as das séries
-    /// adicionais incluídas) e devolve true para que todas sejam treinadas de novo. É destrutivo
-    /// e cada reexecução leva vários minutos, então exige confirmação explícita.
+    /// adicionais incluídas) e devolve a lista delas para que todas sejam treinadas de novo —
+    /// <c>null</c> se o usuário cancelar ou se a consulta falhar. É destrutivo e cada reexecução
+    /// leva vários minutos, então exige confirmação explícita.
     /// </summary>
-    private bool ConfirmarRefazer()
+    private IReadOnlyList<ConfiguracaoExperimento>? ConfirmarRefazer()
     {
         IReadOnlyList<ConfiguracaoExperimento> exibidas = ConfiguracoesExibidas();
 
@@ -395,7 +407,7 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
         {
             _logger.Error($"Não foi possível consultar os experimentos já registrados: {ex.Message}");
             StatusExperimentos = $"Não foi possível consultar os experimentos já registrados: {ex.Message}";
-            return false;
+            return null;
         }
 
         MessageBoxResult resposta = MessageBox.Show(
@@ -406,7 +418,7 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
 
-        if (resposta != MessageBoxResult.Yes) return false;
+        if (resposta != MessageBoxResult.Yes) return null;
 
         foreach (ExperimentoHiperparametros registro in aRemover)
         {
@@ -421,7 +433,7 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
         }
 
         CarregarComparativosDeHiperparametros();
-        return true;
+        return exibidas;
     }
 
     private void PararExperimentos()
