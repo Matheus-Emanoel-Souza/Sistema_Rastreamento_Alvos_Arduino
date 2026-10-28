@@ -204,6 +204,101 @@ alternativo, usado nos testes). **Quem usa:** `ArduinoSettingsViewModel`.
 "Restaurar layout padrão"). **Quem usa:** `PainelPrincipalView.xaml.cs` (nunca a ViewModel —
 ver seção Views).
 
+### Visão computacional — detecção de objetos (`Services/IObjectDetectionService.cs`, `OnnxYoloDetectionService.cs`, pasta `ComputerVision/`)
+**Função:** `IObjectDetectionService.Detect(Bitmap frame)` devolve apenas caixas
+(posição/tamanho/confiança) encontradas num quadro de câmera já decodificado; não decide o que é
+ou não o alvo procurado — isso é responsabilidade de `IAlvoVisualService`. **Por que existe
+separado:** permite trocar o modelo/motor de inferência sem tocar na lógica de negócio (mesmo
+racional de `ICameraCaptureService` para a câmera em si). **Implementação:**
+`OnnxYoloDetectionService` roda o modelo `tiny-yolov3-11.onnx` (ONNX Model Zoo) localmente via
+`Microsoft.ML.OnnxRuntime`, sem nenhum serviço/processo externo — o `.onnx` fica em
+`ComputerVision/Models/YoloModel/tiny-yolov3-11.onnx` (copiado para a pasta de saída pelo
+`.csproj`). Entrada `input_1` [1,3,416,416] float32 RGB 0–1 (quadro chega em BGR24, canais
+trocados no pré-processamento) + `image_shape` [1,2]; saídas já filtradas por NMS pelo próprio
+modelo (a classe COCO escolhida é ignorada pelo restante do pipeline — o modelo só propõe
+regiões candidatas). **Quem usa:** `IAlvoVisualService`/`RastreamentoVisualService` (compara cada
+caixa com o `PerfilAlvo` ativo), consumido pelos cards de detecção de `CamerasView`/
+`MonitoramentoView`.
+
+### `IAlvoVisualService` / `AlvoVisualService`
+**Função:** decide, para um quadro de câmera, se alguma detecção de `IObjectDetectionService`
+bate com o `PerfilAlvo` ativo (cor/formato/tamanho) e, se bater, estima a distância do alvo.
+**Por que existe:** fica entre a detecção pura de caixas e a ViewModel do card "Detecção por
+Câmera" — pura lógica de negócio, sem referência a WPF (mesmo princípio de
+`TowerSelectionService`). **Método principal:** `AvaliarFrame(Bitmap frame)` → `AlvoVisualAvaliacao`
+(`Resultado` é `null` se não há perfil ativo ou nenhuma detecção bate o suficiente). **Quem
+usa:** `CameraSlotViewModel`, `PerfilAlvoViewModel` (modal de cadastro).
+
+### `ICameraQuadranteService` / `CameraQuadranteService`
+**Função:** mantém a associação "qual câmera monitora qual quadrante" (`CameraQuadrante`, Q1–Q4),
+validando a regra "uma câmera, um quadrante". **Métodos principais:** `Associacoes`,
+`ObterQuadrante(dispositivoId)`, `ObterCameraDoQuadrante(quadrante)`, `Atribuir(camera,
+quadrante)` (evento `AssociacoesAlteradas` para as telas abertas se realinharem). **Quem usa:**
+`CamerasViewModel` (atribuição na tela), detecção por visão (rotula a ocorrência com o quadrante
+de quem a enxergou).
+
+### `IOcorrenciaDeteccaoService` / `OcorrenciaDeteccaoService`
+**Função:** converte detecções por câmera em ocorrências no histórico ("Objetos Detectados"),
+aplicando a regra central: enquanto o mesmo objeto continuar sendo acompanhado no mesmo
+quadrante e não for abatido, não se cria ocorrência nova — o que avança é só o "visto por
+último" (um mesmo alvo cadastrado pode gerar até quatro ocorrências, uma por quadrante, sem
+duplicar dentro do mesmo quadrante). **Métodos principais:** `RegistrarDeteccao(ContextoDeteccao)`,
+`RegistrarRodadaSemDeteccao`, `EncerrarCamera`, `MarcarAbatePendente` (chamado por
+`IFireControlService` ao confirmar abate). **Evento:** `ConfiancaAtualizada` (pontuação 0–1 por
+quadrante, usada por `Target.Confidence`/regra de disparo por certeza mínima). **Quem usa:**
+`CameraSlotViewModel`, `MonitoramentoView`/`MainViewModel` (card de detecção), testado em
+`OcorrenciaDeteccaoServiceTests`, `DeteccaoConcorrenteTests`.
+
+### `IPerfilAlvoRepository` / `PerfilAlvoRepository`, `IPerfilAlvoService` / `PerfilAlvoService`
+**Função:** CRUD de `PerfilAlvo` (nome, cor, formato, dimensões, fotografias, mínimo de fotos) —
+persistência via SQLite — e exposição do perfil atualmente ativo (`PerfilAtivo`), que é o que a
+detecção por visão computacional deve travar. **Métodos principais do serviço:** `Add`, `Update`,
+`Remove`, `DefinirAtivo`, `PerfilAtivo`. **Quem usa:** `PerfilAlvoViewModel` (tela "Perfis de
+Alvo"), `IAlvoVisualService` (consulta o perfil ativo), testado em `PerfilAlvoServiceTests`,
+`CadastroAlvoModalTests`, `ValidacaoFotoAlvoTests`.
+
+### `IDesempenhoMonitorService` / `DesempenhoMonitorService`
+**Função:** coleta, em tempo real, a taxa de atualização efetiva do radar e o tempo do ciclo
+detecção → seleção de torre, reportados por `RadarControl`/`MainViewModel` sem que esses
+componentes tenham referência à tela "Desempenho". **Quem usa:** `DesempenhoViewModel`.
+
+### `ITermosDeUsoService` / `TermosDeUsoService`
+**Função:** expõe o documento vigente de Termos de Uso (`DocumentoTermos`, já com blocos
+classificados para exibição) e o nome de arquivo sugerido para exportação. **Quem usa:**
+`TermosDeUsoViewModel`, `ConfiguracoesViewModel` (link para reabrir os termos), testado em
+`TermosDeUsoTests`.
+
+### `ResolvedorFontesPdf`
+**Função:** helper de resolução de fontes usado na geração de PDF (Termos de Uso / exportação de
+"Objetos Detectados") via PdfSharp. **Quem usa:** `ObjetoDetectadoExportService.ExportPdf`,
+exportação de PDF da janela de Termos de Uso.
+
+### `ICameraCaptureServiceFactory`/`CameraCaptureServiceFactory`, `ICameraCaptureService`/`CameraCaptureService`, `ICameraDeviceEnumerator`/`CameraDeviceEnumerator`
+**Função:** abstraem a captura de vídeo de uma webcam Windows (enumerar dispositivos, abrir/
+fechar sessão de captura, entregar quadros decodificados) sem acoplar a lógica de negócio ao
+driver/biblioteca de captura. A fábrica cria uma instância de captura por painel/uso (tela
+"Câmeras" tem 4 painéis independentes; o modal de "Perfis de Alvo" abre sua própria sessão). **Quem
+usa:** `CamerasViewModel`/`CameraSlotViewModel`, `PerfilAlvoViewModel`.
+
+### `IControladorTreinadoProvider` / `ControladorTreinadoProvider`
+**Função:** lê o melhor genoma treinado (ver `NeuralEvolution/` em `ARQUITETURA.md`, seção 5.6),
+persistido em `Resources/ControladorTreinado/genoma-controlador.json`, e reconstrói o
+`RedeNeural`/`ControladorHibrido` correspondente. **Quem usa:** `TreinamentoControladorViewModel`
+(para continuar evoluindo a partir do estado salvo), `EstatisticasTreinamentoViewModel`, testado
+em `ControladorTreinadoProviderTests`.
+
+### `IRedeEmbutidaSincronizadorService` / `RedeEmbutidaSincronizadorService`
+**Função:** sincroniza o genoma treinado para dentro do sketch do Arduino, embutido apenas para
+diagnóstico/leitura — o firmware não usa esse valor para decidir o acionamento real, que
+continua em `TowerSelectionService`/`FireControlService` puros. **Quem usa:**
+`TreinamentoControladorViewModel`/`ConfiguracoesViewModel` (ação de sincronizar).
+
+### `ConfiguracoesAplicativoRepository` (`IConfiguracoesAplicativoRepository`)
+**Função:** carrega/grava `ConfiguracoesAplicativo` (preferências desta máquina: tamanho/posição
+de janela, idioma, tema, comportamentos de disparo) em disco. **Por que existe separado de
+`ArduinoCliSettings`/`AppSettings`:** é a persistência própria da tela "Configurações" genérica
+(distinta de "Configurações do Arduino"). **Quem usa:** `ConfiguracoesViewModel`.
+
 ---
 
 ## ViewModels
@@ -232,6 +327,75 @@ recebe a **mesma instância Singleton** de `ISerialCommunicationService` usada p
 isso:** posição/tamanho de elementos visuais (`DashboardCanvas`) não é estado de domínio —
 a ViewModel não referencia nenhum tipo de `System.Windows.Controls`. Quem efetivamente aplica
 a restauração é o code-behind da View (ver `DashboardCanvas`/`DashboardCard` em Views abaixo).
+
+### `CamerasViewModel` / `CameraSlotViewModel`
+**Função:** ViewModel do módulo "Câmeras" — orquestra até 4 painéis independentes
+(`CameraSlotViewModel`), cada um com sua própria webcam selecionável, visualização em tempo real
+(grade 2x2 na View) e detecção por visão rodando na sua própria câmera, registrando as
+ocorrências no quadrante atribuído a ela. **Por que existe separado por painel:** cada
+`CameraSlotViewModel` não sabe nada sobre os outros; `CamerasViewModel` só consulta a lista de
+câmeras do Windows (`ICameraDeviceEnumerator`) e garante a regra de exclusividade — uma mesma
+câmera física nunca reservada em mais de um painel ao mesmo tempo. **Sem gravação de vídeo e sem
+integração direta com o Arduino/torres** nesta entrega. **Quem usa:** `CamerasView.xaml`.
+
+### `PerfilAlvoViewModel`
+**Função:** ViewModel da tela "Perfis de Alvo" — cadastra, edita e remove os perfis (cor +
+formato + dimensões + fotografias) que a detecção por visão computacional deve travar, e
+escolhe qual está ativo. **Como funciona:** cadastro/edição acontecem num modal com etapas
+(`EtapaCadastroAlvo`: Informacoes → Fotografias → Dimensoes → Revisao), sempre sobre um
+rascunho — nada é gravado até concluir, o que permite desistir no meio sem deixar o perfil num
+estado intermediário; editar nunca cria registro novo (atualiza pelo `Id`, preservando o vínculo
+com o histórico de detecções). A câmera só é ligada enquanto o modal está aberto (mesma
+infraestrutura do módulo "Câmeras", sessão própria). O botão de cadastrar fica desabilitado
+enquanto não houver `PerfilAlvo.MinimoFotos` fotos válidas (a checagem de verdade é no serviço).
+**Quem usa:** `PerfilAlvoView.xaml`, testado em `CadastroAlvoModalTests`, `ValidacaoFotoAlvoTests`.
+
+### `DesempenhoViewModel`
+**Função:** ViewModel da tela "Desempenho" — mostra em tempo real a taxa de atualização do
+radar e o tempo do ciclo detecção → seleção de torre, lidos de `IDesempenhoMonitorService`.
+**Como funciona:** amostra a cada 300 ms via `DispatcherTimer`, só enquanto a tela está visível
+(`StartMonitoring`/`StopMonitoring` chamados pela View no Loaded/Unloaded); `ZerarEstatisticasCommand`
+zera o monitor e atualiza os valores exibidos. **Quem usa:** `DesempenhoView.xaml`.
+
+### `TermosDeUsoViewModel`
+**Função:** ViewModel da janela "Termos de Uso" — entrega os blocos já classificados do
+documento vigente (`ITermosDeUsoService.Obter()`) e coordena a exportação em PDF. **Como
+funciona:** nenhum diálogo de arquivo aqui — só dispara o evento `SalvarPdfSolicitado` com o
+nome sugerido; quem mostra o `SaveFileDialog` e devolve o caminho é a View (mesmo padrão de
+`ObjetosDetectadosViewModel`); `EstaGerandoPdf` desabilita o botão e evita cliques duplicados
+durante a geração. **Quem usa:** `TermosDeUsoWindow.xaml`.
+
+### `TreinamentoControladorViewModel`
+**Função:** ViewModel da tela "Treinamento do Controlador" — comanda o `AlgoritmoGenetico`
+(`NeuralEvolution/`) em segundo plano, o mais rápido possível sem travar a UI, enquanto anima
+num `Canvas` 2D, em tempo real, o melhor genoma encontrado até agora. **Como funciona:** dois
+laços independentes sobre o mesmo `AmbienteTreinamento` — um rápido (fitness, em `Task`
+dedicada/cancelável) e um visual de prévia (`DispatcherTimer`); registra marcos de fitness médio
+a cada 500 gerações (`IMarcoFitnessTreinamentoRepository`) e um "instantâneo" completo do
+comportamento do melhor genoma a cada 1000 gerações (`IInstantaneoComportamentoRepository`);
+expõe as coleções visuais do diagrama da rede (`NeuroniosVisuais`/`ConexoesVisuais`) e a lista
+"Regras aprendidas" (via `ExtratorDeRegras`). **Quem usa:** `TreinamentoControladorView.xaml`,
+testado indiretamente por `AlgoritmoGeneticoTests`, `AmbienteTreinamentoTests`,
+`EvolucaoDoTreinamentoTests`.
+
+### `EstatisticasTreinamentoViewModel`
+**Função:** ViewModel da tela "Estatísticas de Treinamento" — exclusiva do Administrador (ver
+`IPermissionService`): mostra a evolução de longo prazo do fitness médio a cada 500 gerações
+(`IMarcoFitnessTreinamentoRepository`), o histórico recente geração a geração (mesma fonte da
+tela de treinamento) e os instantâneos de comportamento a cada 1000 gerações. **Por que existe
+separada de `TreinamentoControladorViewModel`:** ali o foco é acompanhar o treinamento rodando
+agora; aqui é analisar a tendência de longuíssimo prazo sem o ruído geração a geração. **Quem
+usa:** `EstatisticasTreinamentoView.xaml`.
+
+### `ConfiguracoesViewModel`
+**Função:** ViewModel da tela "Configurações" (genérica — distinta de "Configurações do
+Arduino"): edita as `ConfiguracoesAplicativo` desta máquina (tamanho/posição de janela, idioma,
+tema, comportamento de disparo) e grava em disco para a próxima execução já abrir nas condições
+escolhidas. **Como funciona:** trabalha sobre uma cópia (`ConfiguracoesAplicativo.Clonar()`) e só
+grava no "Salvar" — "Cancelar" tem o que desfazer e mexer em um controle não altera o
+comportamento do app em uso antes de confirmar; expõe também acesso aos Termos de Uso e ao
+histórico/marcos de treinamento do controlador (para sincronizar o genoma embutido no firmware).
+**Quem usa:** `ConfiguracoesView.xaml` (item de menu `IPermissionService.MenuItem.Configuracoes`).
 
 ---
 
@@ -262,6 +426,43 @@ RequestResize`; o conteúdo interno de cada card é definido por quem usa o cont
 para a propriedade `CardContent` via `[ContentProperty]`. **Propriedades:** `CardId` (chave
 estável usada na persistência), `Title`, `CardContent`. **Quem usa:**
 `PainelPrincipalView.xaml` (6 instâncias, uma por indicador do painel).
+
+### `CamerasView.xaml`
+**Função:** grade 2x2 com os 4 painéis de câmera (`CameraSlotViewModel`) do módulo "Câmeras" —
+seleção de webcam por painel, visualização em tempo real e indicação de detecção/quadrante.
+**DataContext:** `CamerasViewModel`.
+
+### `PerfilAlvoView.xaml`
+**Função:** lista os perfis de alvo cadastrados e abre o modal de cadastro/edição em etapas
+(Informações → Fotografias → Dimensões → Revisão), incluindo a prévia da câmera durante a etapa
+de fotografias. **DataContext:** `PerfilAlvoViewModel`.
+
+### `DesempenhoView.xaml`
+**Função:** exibe a taxa de atualização do radar (configurada vs. medida) e o tempo do ciclo
+detecção → seleção de torre, com botão para zerar as estatísticas acumuladas. **DataContext:**
+`DesempenhoViewModel`.
+
+### `TermosDeUsoWindow.xaml`
+**Função:** janela (não aba da shell) que exibe o documento de Termos de Uso vigente, já
+formatado em blocos, com botão para exportar em PDF. **DataContext:** `TermosDeUsoViewModel`.
+
+### `TreinamentoControladorView.xaml`
+**Função:** tela de treinamento do controlador neuroevolutivo — Canvas 2D animando o episódio
+do melhor genoma em tempo real (torres, alvos, miras, campos de visão), diagrama da rede neural
+(nós/conexões), gráfico de evolução do fitness por geração, lista "Regras aprendidas" e
+controles para iniciar/pausar/resetar o treinamento e ajustar `ParametrosTreinamento`.
+**DataContext:** `TreinamentoControladorViewModel`.
+
+### `EstatisticasTreinamentoView.xaml`
+**Função:** tela exclusiva do Administrador com os marcos de fitness médio a cada 500 gerações,
+o histórico recente geração a geração e os instantâneos de comportamento do melhor genoma a
+cada 1000 gerações. **DataContext:** `EstatisticasTreinamentoViewModel`.
+
+### `ConfiguracoesView.xaml`
+**Função:** tela de preferências desta máquina (tamanho/posição de janela com opções
+predefinidas, idioma, tema, comportamentos de disparo), distinta da aba "Configurações do
+Arduino" (`ArduinoSettingsView`, que é específica de ambiente/compilação/monitor serial).
+**DataContext:** `ConfiguracoesViewModel`.
 
 ### `RadarControl`
 **Função:** desenha o radar circular (ver README, seção 9, para o funcionamento visual
@@ -358,13 +559,27 @@ origem), `BoolToFoundBrushConverter` (indicador "CLI encontrado/não encontrado"
   torre, apenas distância e quadrante preferencial.
 * Não há reconexão automática após queda de conexão (o campo `ReconnectAttempts` já existe na
   configuração, mas a lógica de retry ainda não foi implementada — ver abaixo).
-* Testes automatizados: o projeto `tests/RadarTorres.Tests` (xUnit) cobre a aba Configurações
-  do Arduino (localização do CLI, montagem segura de argumentos, interpretação de código de
-  saída, cancelamento, persistência, limite de linhas dos consoles e disputa pela porta
-  serial) — ver `Docs/Projeto/LOG_SOLICITACOES.md`. O restante da aplicação (algoritmo de seleção de
-  torre, parser serial, etc.) ainda não tem testes automatizados, embora a arquitetura
-  (serviços com interface, sem dependência de UI) tenha sido desenhada especificamente para
-  viabilizá-los facilmente.
+* Testes automatizados: o projeto `tests/RadarTorres.Tests` (xUnit, 18 arquivos) cobre bem mais
+  do que a aba Configurações do Arduino. Áreas principais cobertas hoje:
+  * **Seleção de torre:** `TowerSelectionServiceTests` (algoritmo de seleção por camadas).
+  * **Controlador neuroevolutivo (`NeuralEvolution/`):** `RedeNeuralTests`,
+    `AlgoritmoGeneticoTests`, `AmbienteTreinamentoTests`, `AlvoTreinamentoTests`,
+    `ExtratorDeRegrasTests`, `ControladorTreinadoProviderTests`, `EvolucaoDoTreinamentoTests`.
+  * **Persistência SQLite:** `PersistenciaSqliteTests`,
+    `SqliteHistoricoTreinamentoRepositoryTests`.
+  * **Detecção/visão computacional e concorrência:** `DeteccaoConcorrenteTests`,
+    `OcorrenciaDeteccaoServiceTests`, `RastreamentoVisualServiceTests`.
+  * **Perfis de alvo:** `PerfilAlvoServiceTests`, `CadastroAlvoModalTests`,
+    `ValidacaoFotoAlvoTests`.
+  * **Termos de Uso:** `TermosDeUsoTests`.
+  * **Aba Configurações do Arduino:** localização do CLI, montagem segura de argumentos,
+    interpretação de código de saída, cancelamento, persistência, limite de linhas dos
+    consoles e disputa pela porta serial (ver `Docs/Projeto/LOG_SOLICITACOES.md`).
+
+  A arquitetura (serviços com interface, sem dependência de UI) foi desenhada especificamente
+  para viabilizar esse tipo de teste; áreas ainda sem cobertura direta incluem o parser serial
+  (`SerialProtocolParser`) e os ViewModels/Views em si (testados apenas indiretamente, via os
+  serviços que consomem).
 * A aba Configurações do Arduino implementa apenas **compilação** do sketch — gravação/upload
   do firmware para a placa (`arduino-cli upload`) não foi implementada nesta entrega.
 * O acionamento demonstrativo é, por definição do escopo, apenas indicativo (log + comando

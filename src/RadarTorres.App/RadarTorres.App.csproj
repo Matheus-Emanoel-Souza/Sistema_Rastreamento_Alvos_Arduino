@@ -62,10 +62,11 @@
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
 
     <!-- Detecção por visão computacional (card "Detecção por Câmera" em Monitoramento):
-         roda o modelo tiny-yolov3-11.onnx já presente em ComputerVision/Models/YoloModel/
-         dentro do próprio processo (ver OnnxYoloDetectionService) — mesma lógica de "sem
-         processo externo" já adotada para o módulo Câmeras. System.Speech dá o anúncio por
-         voz da distância (SAPI do Windows, builtin, sem modelo/arquivo extra). -->
+         roda o modelo yolo26n.onnx (Ultralytics YOLO26, nano) já presente em
+         ComputerVision/Models/YoloModel/ dentro do próprio processo (ver
+         OnnxYoloDetectionService) — mesma lógica de "sem processo externo" já adotada para o
+         módulo Câmeras. System.Speech dá o anúncio por voz da distância (SAPI do Windows,
+         builtin, sem modelo/arquivo extra). -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     <PackageReference Include="System.Speech" Version="9.0.0" />
   </ItemGroup>

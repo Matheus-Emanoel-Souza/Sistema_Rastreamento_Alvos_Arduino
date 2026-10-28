@@ -70,8 +70,8 @@ erDiagram
     OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
     CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
     USUARIOS ||--o{ MODO_ATUAL_TORRE : "confirma"
-    USUARIOS ||--o{ CHAMADOS_AJUDA : "abre"
     USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
+    OBJETOS_DETECTADOS ||--o{ CLASSIFICACOES_ALVO : "classifica"
 
     USUARIOS {
         int Id PK
@@ -157,19 +157,33 @@ erDiagram
         int RegistrosPorPagina
     }
 
-    CHAMADOS_AJUDA {
-        int Id PK
-        int UsuarioId FK
-        string UsuarioNome
-        string Titulo
-        string Descricao
-        string Categoria
-        string ModuloRelacionado "nullable"
-        string MensagemErro "nullable"
-        datetime DataHoraEnvio
-        string Status "Aberto | EmAnalise | Resolvido | Cancelado"
-        string RespostaAdmin "nullable"
-        datetime DataResolucao "nullable"
+    MARCOS_FITNESS_TREINAMENTO {
+        int ID PK
+        int GERACAO_MARCO UK "a cada 500 geracoes"
+        double MELHOR_FITNESS
+        double FITNESS_MEDIO
+        datetime DH_REGISTRO
+    }
+
+    INSTANTANEOS_COMPORTAMENTO_MELHOR_GENE {
+        int ID PK
+        int GERACAO_MARCO UK "a cada 1000 geracoes"
+        double PONTUACAO
+        int ALVOS_ABATIDOS
+        int ALVOS_ESCAPADOS
+        int TIROS_ERRADOS
+        double TAXA_ACERTO
+        double TAXA_COBERTURA
+        string GENOMA_JSON "genoma inteiro serializado"
+        datetime DH_REGISTRO
+    }
+
+    CLASSIFICACOES_ALVO {
+        int ID PK
+        int ObjetoDetectadoId FK "nullable - pode nao existir ainda no radar"
+        string GrauPerigosidade "Baixo | Medio | Alto | Critico"
+        double VelocidadeEstimada
+        datetime DH_REGISTRO
     }
 ```
 
@@ -288,11 +302,6 @@ quando já houver (pode ser `NULL` nas primeiras leituras do radar, antes do pri
 Uma linha por usuário (Requisito 8) — idioma, tema, sidebar recolhida/expandida. Colunas de
 personalização mais granular (ordem dos cartões, colunas por tabela) ficam reservadas para a
 Etapa 2.
-
-### `chamados_ajuda`
-Chamados de suporte (Requisito 9) — suporta atualização (`Update`) porque um administrador
-pode alterar `Status`/`RespostaAdmin` ao tratar o chamado; usuário e data de envio são
-preenchidos automaticamente pelo sistema, nunca digitados.
 
 ## Ver também
 

@@ -1,27 +1,36 @@
 @startuml Diagrama_Eletrico_RadarTorres
 
 ' RadarTorres — Diagrama Elétrico (conceitual/funcional)
-' Objetivo: mostrar como os componentes de hardware serão conectados ao microcontrolador,
-' complementando o Diagrama de Implantação (Docs/Documentos_Entregaveis/UML/Implantacao/Implantacao_RadarTorres.puml)
+' Objetivo: mostrar como os componentes de hardware se conectam ao microcontrolador,
+' complementando o Diagrama de Implantação (Docs/Documentos_Entregaveis/UML/Implantacao_RadarTorres.puml)
 ' e o protocolo serial (Docs/Tecnica/COMUNICACAO_ARDUINO.md).
 '
-' Hardware assumido (confirmado com o autor em 2026-09-19):
-'   - Placa: Arduino Uno (ATmega328P, lógica 5V)
-'   - Varredura/detecção: 1x servo motor (ex.: SG90) + 1x sensor ultrassônico HC-SR04
-'   - Indicação de torre selecionada: 1 LED por torre, uma torre por quadrante (Q1..Q4)
+' Hardware real (extraído de Arduino/RadarTorres_Firmware/RadarTorres_Firmware.ino em 2026-10-26,
+' substitui a topologia Uno/1 servo/1 sensor confirmada com o autor em 2026-09-19):
+'   - Placa: Arduino MEGA 2560 (ATmega2560, lógica 5V) — 13 motores de passo não cabem no Uno
+'   - Varredura central: 1x motor 28BYJ-48 + driver ULN2003
+'   - Detecção de distância: 2x sensor ultrassônico HC-SR04, opostos 180° no eixo de varredura
+'   - Mira das câmeras: 8x motor NEMA17 + driver A4988/DRV8825 (pan+tilt, CAM1-CAM4)
+'   - Mira das torres: 4x motor NEMA17 + driver A4988/DRV8825 (pan, Q1-Q4)
+'   - Indicação: 4x LED de torre (Q1-Q4) + 1x LED de disparo
 '
 ' Este diagrama é funcional (mostra QUAIS sinais ligam a QUAIS pinos), não um esquemático
-' elétrico completo com footprints/trilhas — para isso, usar uma ferramenta dedicada
-' (ex.: Fritzing/KiCad) na etapa de montagem física.
+' elétrico completo com footprints/trilhas — para a montagem física, usar ferramenta dedicada
+' (Fritzing/KiCad).
 '
-' Legenda de cores dos fios (reduz cruzamento visual e identifica o tipo de sinal):
-'   vermelho = alimentação (5V)   |   preto = GND   |   azul = sinal/dados
+' A CONFIRMAR (não declarado no firmware, ver Diagrama_Eletrico.md Seção 2.5/5): alimentação
+' VMOT externa dos 12 drivers A4988/DRV8825, fiação física VCC/GND dos 2 HC-SR04, jumpers de
+' microstepping.
 
 skinparam shadowing false
 skinparam linetype ortho
 skinparam rectangle {
   BackgroundColor White
   BorderColor Black
+}
+skinparam rectangle<<todo>> {
+  BackgroundColor #FFF3CD
+  BorderColor #CC9900
 }
 skinparam node {
   BackgroundColor White
@@ -32,100 +41,72 @@ skinparam ArrowFontColor #333333
 
 node "PC (RadarTorres.App)" as PC
 
-rectangle "Arduino Uno" as UNO {
-  rectangle "5V" as UNO_5V #FFE0E0
-  rectangle "GND" as UNO_GND #E0E0E0
-  rectangle "D2" as UNO_D2
-  rectangle "D3" as UNO_D3
-  rectangle "D4" as UNO_D4
-  rectangle "D5" as UNO_D5
-  rectangle "D7\n(Trig)" as UNO_D7
-  rectangle "D8\n(Echo)" as UNO_D8
-  rectangle "D9\n(PWM)" as UNO_D9
+rectangle "Arduino MEGA 2560" as MEGA {
+  rectangle "D22-D25" as P_SWEEP
+  rectangle "D26-D29" as P_US
+  rectangle "D30-D34" as P_LED
+  rectangle "D36-D51" as P_CAM
+  rectangle "D2-D9" as P_TORRE
+  rectangle "D52\n(ENABLE)" as P_EN
 }
 
-rectangle "Sensor ultrassônico HC-SR04\nmede distância" as HCSR04 {
-  rectangle "VCC" as HC_VCC #FFE0E0
-  rectangle "GND" as HC_GND #E0E0E0
-  rectangle "Trig" as HC_TRIG
-  rectangle "Echo" as HC_ECHO
-}
-
-rectangle "Servo motor (ex.: SG90)\nvarredura do ângulo" as SERVO {
-  rectangle "VCC\n(vermelho)" as SERVO_VCC #FFE0E0
-  rectangle "GND\n(marrom)" as SERVO_GND #E0E0E0
-  rectangle "Sinal\n(laranja)" as SERVO_SIG
-}
+rectangle "Motor 28BYJ-48 + ULN2003\n(varredura central 0°-180°)" as SWEEP
+rectangle "HC-SR04 #1" as US1 <<todo>>
+rectangle "HC-SR04 #2\n(oposto 180°)" as US2 <<todo>>
 
 rectangle "LED Torre Q1" as LED1
 rectangle "LED Torre Q2" as LED2
 rectangle "LED Torre Q3" as LED3
 rectangle "LED Torre Q4" as LED4
+rectangle "LED Disparo" as LEDFIRE
 
-rectangle "Resistor 220Ω (Q1)" as R1
-rectangle "Resistor 220Ω (Q2)" as R2
-rectangle "Resistor 220Ω (Q3)" as R3
-rectangle "Resistor 220Ω (Q4)" as R4
+rectangle "8x NEMA17 + A4988/DRV8825\n(pan+tilt CAM1-CAM4)" as CAMS <<todo>>
+rectangle "4x NEMA17 + A4988/DRV8825\n(pan Torre Q1-Q4)" as TORRES <<todo>>
 
-rectangle "GND comum\n(catodos dos 4 LEDs)" as GNDRAIL #E0E0E0
+PC -down-> MEGA #black;line.bold : USB\n(5V + serial 9600 baud,\nprotocolo TIPO;CHAVE=VALOR)
 
-PC -down-> UNO #black;line.bold : USB\n(alimentação 5V + serial,\nprotocolo TIPO;CHAVE=VALOR)
+P_SWEEP -down-> SWEEP #0000AA : IN1-IN4
+SWEEP .down. US1 : mesmo eixo
+SWEEP .down. US2 : mesmo eixo,\noposto 180°
+P_US -down-> US1 #0000AA : Trig/Echo
+P_US -down-> US2 #0000AA : Trig/Echo
 
-' --- Sensor ultrassônico (sinal em azul, alimentação em vermelho/preto) ---
-UNO_D7 -down-> HC_TRIG #0000AA : Trig
-HC_ECHO -up-> UNO_D8 #0000AA : Echo
-UNO_5V -down-> HC_VCC #CC0000 : 5V
-UNO_GND -down-> HC_GND #444444 : GND
+P_LED -down-> LED1 #0000AA
+P_LED -down-> LED2 #0000AA
+P_LED -down-> LED3 #0000AA
+P_LED -down-> LED4 #0000AA
+P_LED -down-> LEDFIRE #0000AA
 
-' --- Servo motor ---
-UNO_D9 -down-> SERVO_SIG #0000AA : PWM (ângulo)
-UNO_5V -down-> SERVO_VCC #CC0000 : 5V
-UNO_GND -down-> SERVO_GND #444444 : GND
+P_CAM -down-> CAMS #0000AA : 8x STEP+DIR
+P_TORRE -down-> TORRES #0000AA : 4x STEP+DIR
+P_EN .down. CAMS : habilita (LOW)
+P_EN .down. TORRES : habilita (LOW)
 
-' --- LEDs indicadores de torre (D2–D4 alinhados com R1–R4/LED1–LED4 abaixo) ---
-UNO_D2 -down-> R1 #0000AA
-UNO_D3 -down-> R2 #0000AA
-UNO_D4 -down-> R3 #0000AA
-UNO_D5 -down-> R4 #0000AA
-
-R1 -down-> LED1 #0000AA : anodo
-R2 -down-> LED2 #0000AA : anodo
-R3 -down-> LED3 #0000AA : anodo
-R4 -down-> LED4 #0000AA : anodo
-
-LED1 -down-> GNDRAIL #444444 : catodo
-LED2 -down-> GNDRAIL #444444 : catodo
-LED3 -down-> GNDRAIL #444444 : catodo
-LED4 -down-> GNDRAIL #444444 : catodo
-
-GNDRAIL -up-> UNO_GND #444444 : GND
-
-note right of SERVO
-  Se o servo apresentar tremulação/reset do Arduino
-  ao mover, alimentar o servo por fonte externa 5V
-  separada, com GND comum ao Arduino — o pino 5V
-  do Uno tem corrente limitada (~500mA via USB).
+note right of SWEEP
+  28BYJ-48 tolera 5V direto do driver ULN2003, mas
+  picos de corrente ao mover + os 2 HC-SR04 simultâneos
+  podem exigir fonte externa para não afetar o 5V do
+  MEGA via USB.
 end note
 
-note bottom of GNDRAIL
-  4 LEDs = 1 por torre/quadrante (Q1–Q4), conforme
+note bottom of LED4
+  4 LEDs = 1 por torre/quadrante (Q1-Q4), conforme
   enum Quadrant em src/RadarTorres.App/Models/SystemState.cs.
-  Ajustar a quantidade se o número real de torres
-  físicas for diferente.
+  LED Disparo é evento (FIRE explícito), não estado
+  contínuo — ver Diagrama_Eletrico.md Seção 5.
 end note
 
-note bottom of HCSR04
-  Echo do HC-SR04 opera em 5V, compatível com a
-  lógica 5V do Arduino Uno — não é necessário
-  divisor de tensão (seria preciso apenas se o
-  microcontrolador fosse de lógica 3.3V, ex.: ESP32).
+note bottom of CAMS
+  Blocos em amarelo: alimentação (VMOT dos drivers,
+  VCC dos HC-SR04) não declarada no firmware — a
+  confirmar na montagem física (ver Diagrama_Eletrico.md
+  Seção 2.5).
 end note
 
 legend right
   |= cor |= significado |
-  |<#CC0000>   | alimentação 5V |
-  |<#444444>   | GND |
   |<#0000AA>   | sinal/dados |
+  |<#FFF3CD>   | alimentação a confirmar |
 endlegend
 
 @enduml

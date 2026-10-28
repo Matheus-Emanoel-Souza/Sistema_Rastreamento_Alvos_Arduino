@@ -361,10 +361,19 @@ public sealed class AmbienteTreinamento
             // estado.ZonaMortaForcadaQuadrante soma mais um quadrante só para este episódio (ver
             // CatalogoCenarios.AlvoEmZonaMorta), sem alterar a configuração global do ambiente.
             if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante) continue;
+            // Curto-circuito: Certeza bruta é limite superior de CertezaEfetiva (ver
+            // AlvoTreinamento.CertezaEfetiva), então se já está abaixo do limiar aqui, não há
+            // necessidade de calcular a distância até a torre para confirmar o mesmo resultado.
             if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao) continue;
 
             TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
             if (torre is null) continue;
+
+            // Certeza EFETIVA (não a bruta): alvo perto demais da torre não conta o tempo de
+            // observação como confirmação de verdade, igual à limitação real da câmera.
+            double distanciaTorre = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
+            double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros);
+            if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao) continue;
 
             if (!controlador.DecidirDisparo(alvo, torre)) continue;
 

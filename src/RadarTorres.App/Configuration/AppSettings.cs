@@ -88,7 +88,7 @@ public sealed class VisionSettings
 {
     /// <summary>
     /// Confiança mínima (0–1) de uma caixa do YOLO para ser considerada candidata a alvo.
-    /// Baixo de propósito: o tiny-YOLOv3 é um modelo pequeno e raramente passa de 0,5 em
+    /// Baixo de propósito: mesmo um modelo nano (YOLO26n) raramente passa de 0,5 em
     /// objetos do dia a dia fora de cena ideal, e aqui a caixa é só uma *proposta de região* —
     /// quem decide se é o alvo é a comparação com o perfil em <see cref="Services.AlvoVisualService"/>,
     /// então vale deixar entrar candidato fraco e filtrar depois, em vez de perder o alvo aqui.

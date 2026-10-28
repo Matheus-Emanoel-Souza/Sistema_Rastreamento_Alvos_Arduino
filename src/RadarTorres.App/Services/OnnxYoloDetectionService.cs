@@ -13,27 +13,32 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Services;
 
 /// <summary>
-/// Implementação de <see cref="IObjectDetectionService"/> sobre o modelo
-/// <c>tiny-yolov3-11.onnx</c> (ONNX Model Zoo), rodado localmente via
+/// Implementação de <see cref="IObjectDetectionService"/> sobre o modelo <c>yolo26n.onnx</c>
+/// (Ultralytics YOLO26, variante nano), rodado localmente via
 /// <c>Microsoft.ML.OnnxRuntime</c> — sem nenhum serviço/processo externo, mesmo racional do
 /// módulo "Câmeras" (ver comentário em RadarTorres.App.csproj).
 /// </summary>
 /// <remarks>
 /// Contrato do modelo (confirmado carregando o .onnx real com <see cref="InferenceSession"/>,
-/// não documentação): entrada <c>input_1</c> [1,3,416,416] float32, pixels RGB normalizados
-/// 0–1 (não BGR — o quadro da câmera chega em BGR24, os canais são trocados no pré-
-/// processamento); entrada <c>image_shape</c> [1,2] float32 = (altura, largura) da imagem
-/// original, usada pelo próprio modelo para devolver as caixas já na escala original. Saídas:
-/// <c>yolonms_layer_1</c> = caixas (y1,x1,y2,x2) em pixels da imagem original,
-/// <c>yolonms_layer_1:1</c> = score por classe COCO (80 classes) por caixa candidata,
-/// <c>yolonms_layer_1:2</c> = índices (lote, classe, caixa) já filtrados por NMS — o modelo
-/// decide a supressão de caixas sobrepostas internamente, nenhum NMS é feito aqui.
-/// A classe COCO escolhida pelo NMS é ignorada pelo restante do pipeline (ver
-/// <see cref="VisionDetection"/>) — o modelo serve só para propor regiões candidatas.
+/// não documentação): entrada <c>images</c> [1,3,640,640] float32, pixels RGB normalizados 0–1
+/// (não BGR — o quadro da câmera chega em BGR24, os canais são trocados no pré-processamento).
+/// Saída única <c>output0</c> [1,300,6] float32 = até 300 detecções, cada uma
+/// (x1,y1,x2,y2,score,classeCOCO) em pixels do quadro 640×640 de entrada — SEM NMS a aplicar
+/// aqui: o YOLO26 é "NMS-free" por arquitetura (cabeça one-to-one), então as 300 linhas já vêm
+/// deduplicadas; linhas sem detecção real vêm com score ~0 e são descartadas pelo limiar de
+/// confiança abaixo, exatamente como as caixas de baixa confiança do modelo anterior.
+/// Mesma simplificação do modelo anterior (tiny-yolov3-11.onnx): o redimensionamento para
+/// 640×640 é um "stretch" direto (não letterbox), então a conversão de volta para pixels do
+/// quadro original usa a razão independente de largura/altura — não há entrada <c>image_shape</c>
+/// nesta arquitetura para o modelo fazer esse trabalho internamente, diferente do YOLOv3.
+/// A classe COCO escolhida é ignorada pelo restante do pipeline (ver <see cref="VisionDetection"/>)
+/// — o modelo serve só para propor regiões candidatas.
 /// </remarks>
 public sealed class OnnxYoloDetectionService : IObjectDetectionService, IDisposable
 {
-    private const int InputSize = 416;
+    private const int InputSize = 640;
+    private const int MaxDeteccoes = 300;
+    private const int ValoresPorDeteccao = 6;
 
     private readonly InferenceSession _session;
     private readonly ILoggingService _logger;
@@ -42,7 +47,7 @@ public sealed class OnnxYoloDetectionService : IObjectDetectionService, IDisposa
     {
         _logger = logger;
 
-        string modelPath = Path.Combine(AppContext.BaseDirectory, "ComputerVision", "Models", "YoloModel", "tiny-yolov3-11.onnx");
+        string modelPath = Path.Combine(AppContext.BaseDirectory, "ComputerVision", "Models", "YoloModel", "yolo26n.onnx");
         _session = new InferenceSession(modelPath);
     }
 
@@ -51,36 +56,27 @@ public sealed class OnnxYoloDetectionService : IObjectDetectionService, IDisposa
         try
         {
             DenseTensor<float> inputTensor = ToInputTensor(frame);
-            var imageShapeTensor = new DenseTensor<float>(new float[] { frame.Height, frame.Width }, new[] { 1, 2 });
-
-            var inputs = new List<NamedOnnxValue>
-            {
-                NamedOnnxValue.CreateFromTensor("input_1", inputTensor),
-                NamedOnnxValue.CreateFromTensor("image_shape", imageShapeTensor)
-            };
+            var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
 
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run(inputs);
 
-            Tensor<float> boxes = results.First(r => r.Name == "yolonms_layer_1").AsTensor<float>();
-            Tensor<float> scores = results.First(r => r.Name == "yolonms_layer_1:1").AsTensor<float>();
-            Tensor<int> indices = results.First(r => r.Name == "yolonms_layer_1:2").AsTensor<int>();
+            Tensor<float> saida = results.First(r => r.Name == "output0").AsTensor<float>();
 
             double confiancaMinima = AppConfig.Current.VisionSettings.ConfiancaMinima;
+            float escalaX = frame.Width / (float)InputSize;
+            float escalaY = frame.Height / (float)InputSize;
+
             var deteccoes = new List<VisionDetection>();
 
-            int totalSelecionadas = indices.Dimensions[1];
-            for (int i = 0; i < totalSelecionadas; i++)
+            for (int i = 0; i < MaxDeteccoes; i++)
             {
-                int classId = indices[0, i, 1];
-                int boxIndex = indices[0, i, 2];
-
-                double score = scores[0, classId, boxIndex];
+                float score = saida[0, i, 4];
                 if (score < confiancaMinima) continue;
 
-                float y1 = boxes[0, boxIndex, 0];
-                float x1 = boxes[0, boxIndex, 1];
-                float y2 = boxes[0, boxIndex, 2];
-                float x2 = boxes[0, boxIndex, 3];
+                float x1 = saida[0, i, 0] * escalaX;
+                float y1 = saida[0, i, 1] * escalaY;
+                float x2 = saida[0, i, 2] * escalaX;
+                float y2 = saida[0, i, 3] * escalaY;
 
                 int x = Math.Max(0, (int)Math.Round(x1));
                 int y = Math.Max(0, (int)Math.Round(y1));
@@ -104,7 +100,7 @@ public sealed class OnnxYoloDetectionService : IObjectDetectionService, IDisposa
     }
 
     /// <summary>
-    /// Converte o quadro para o tensor de entrada [1,3,416,416] em RGB normalizado 0–1.
+    /// Converte o quadro para o tensor de entrada [1,3,640,640] em RGB normalizado 0–1.
     /// </summary>
     /// <remarks>
     /// Escreve direto no buffer linear do tensor (<see cref="DenseTensor{T}.Buffer"/>) em vez de
@@ -121,7 +117,7 @@ public sealed class OnnxYoloDetectionService : IObjectDetectionService, IDisposa
         using Bitmap resized = new(InputSize, InputSize, PixelFormat.Format24bppRgb);
         using (Graphics g = Graphics.FromImage(resized))
         {
-            // Bilinear simples (não HighQuality): a imagem já está sendo reduzida para 416px e o
+            // Bilinear simples (não HighQuality): a imagem já está sendo reduzida para 640px e o
             // modelo não distingue a diferença, mas a reamostragem de alta qualidade cobra caro.
             g.InterpolationMode = InterpolationMode.Bilinear;
             g.DrawImage(frame, 0, 0, InputSize, InputSize);

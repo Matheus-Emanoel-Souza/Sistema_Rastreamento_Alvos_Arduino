@@ -287,6 +287,81 @@ flowchart LR
   `ObjetosDetectadosView`, mesmo padrão já usado em `ArduinoSettingsView` para os diálogos de
   arquivo do CLI/sketch.
 
+## 5.6 Controlador neuroevolutivo — heurística + rede neural (`NeuralEvolution/`)
+
+```mermaid
+flowchart LR
+    subgraph TREINO["Tela \"Treinamento do Controlador\" / \"Estatísticas de Treinamento\""]
+        VMT["TreinamentoControladorViewModel"]
+        VME["EstatisticasTreinamentoViewModel"]
+    end
+
+    AG["AlgoritmoGenetico\n(seleção por torneio, crossover, mutação, elitismo)"]
+    AMB["AmbienteTreinamento\n(mundo 2D: torres fixas + alvos nascendo na borda)"]
+    CH["ControladorHibrido\n(heurística em camadas + RedeNeural)"]
+    RN["RedeNeural\n(feedforward, tanh, genoma plano de doubles)"]
+    EXT["ExtratorDeRegras\n(análise de sensibilidade → frases em PT)"]
+    PROV["IControladorTreinadoProvider / genoma-controlador.json"]
+    TOWER["TowerSelectionService (sistema real)"]
+
+    VMT --> AG
+    AG -- "avaliarFitness(genoma)" --> AMB
+    AMB --> CH
+    CH --> RN
+    VMT --> EXT
+    EXT --> RN
+    AG -- "melhor genoma" --> PROV
+    PROV -. "mesma heurística em camadas, sem a RN" .-> TOWER
+    VME --> PROV
+```
+
+* **Por que existe:** além da heurística em camadas já usada pelo sistema real
+  (`TowerSelectionService` — próprio quadrante → adjacente → sobressalente), este módulo treina,
+  por neuroevolução (algoritmo genético evoluindo os pesos de uma rede neural, sem
+  backpropagation), um refinamento da pontuação de torre candidata e da confiança de disparo
+  dentro do que a heurística já considerou viável. É um experimento de pesquisa do TCC — o
+  resultado treinado é só **embutido no firmware do Arduino para diagnóstico/leitura**; o
+  sistema real em runtime continua decidindo por `TowerSelectionService`/`FireControlService`
+  puros (ver `Docs/Projeto/LOG_SOLICITACOES.md` e o commit "feat: embute rede neural no firmware
+  do Arduino para diagnostico (somente leitura)").
+* **`RedeNeural`** — feedforward totalmente conectada, ativação `tanh` em todas as camadas,
+  implementada do zero (sem biblioteca de ML). Os pesos/bias não são aprendidos por
+  backpropagation: vêm de fora, como um genoma plano de `double[]` (`TamanhoGenoma(camadas)`
+  calcula o tamanho exato esperado).
+* **`AlgoritmoGenetico`** — evolui uma população de genomas a partir de uma função de fitness
+  fornecida por quem chama. Implementação própria: seleção por torneio, crossover uniforme,
+  mutação gaussiana e elitismo, para manter o algoritmo auditável/explicável na defesa do TCC.
+  `EvoluirGeracao` avalia a população em paralelo (`AsParallel`) e devolve um `ResultadoGeracao`
+  (melhor fitness, fitness médio, melhor genoma) que alimenta o gráfico de evolução na tela.
+* **`AmbienteTreinamento`** — mundo 2D de um episódio: torres fixas (mesma disposição do sistema
+  real, lida de `AppConfig.Current.Towers`) e alvos que nascem na borda e avançam até a base.
+  Expõe a MESMA lógica de passo (`Avancar`) tanto para `ExecutarEpisodioRapido` (função de
+  fitness, sem UI) quanto para a animação passo a passo da tela — garantindo que a prévia visual
+  seja fiel ao que o algoritmo genético de fato avaliou.
+* **`ControladorHibrido`** — combina a heurística em camadas (espelhando
+  `TowerSelectionService.SelectTowerFor`) com o ajuste da `RedeNeural`: a heurística decide a
+  *camada* viável (próprio quadrante → adjacente → sobressalente) e garante que a decisão nunca
+  seja absurda; dentro da camada escolhida, a rede neural decide qual torre candidata específica
+  vence e também o instante do disparo. 6 entradas (distância normalizada, mesmo quadrante?,
+  quadrante adjacente?, ângulo normalizado, velocidade normalizada, fator da camada heurística) →
+  2 saídas (ajuste de pontuação da torre candidata, confiança de disparo).
+* **`ExtratorDeRegras`** — a rede evoluída não tem regras explícitas (é uma matriz de pesos);
+  esta classe aproxima, por análise de sensibilidade (variação de cada entrada em torno de um
+  ponto de referência típico), frases em português descrevendo as tendências aprendidas —
+  alimenta a lista "Regras aprendidas" na tela de treinamento.
+* **`ParametrosTreinamento`**, **`TorreTreinamento`**, **`AlvoTreinamento`**, **`EstadoEpisodio`**,
+  **`EpisodioResultado`** — modelos/parâmetros do episódio (raio do mundo, velocidade dos alvos,
+  duração, recompensas/penalidades, tamanho de população, taxa de mutação etc.), todos ajustáveis
+  na própria tela de treinamento.
+* **Persistência do resultado treinado:** `IControladorTreinadoProvider`/`ControladorTreinadoProvider`
+  lê o melhor genoma gravado em `Resources/ControladorTreinado/genoma-controlador.json`;
+  `IRedeEmbutidaSincronizadorService`/`RedeEmbutidaSincronizadorService` sincroniza esse genoma
+  para dentro do sketch do Arduino (somente leitura/diagnóstico, nunca decide o acionamento real).
+* **Nenhuma dependência de WPF** nas classes acima (mesmo princípio de `TowerSelectionService`):
+  tudo em `NeuralEvolution/` é puro C#, testável sem UI — ver `AlgoritmoGeneticoTests`,
+  `RedeNeuralTests`, `ExtratorDeRegrasTests`, `AmbienteTreinamentoTests`,
+  `AlvoTreinamentoTests`, `ControladorTreinadoProviderTests`, `EvolucaoDoTreinamentoTests`.
+
 ## 5. Extensibilidade
 
 * **Trocar o protocolo serial:** só `SerialProtocolParser` precisa mudar; todo o resto do

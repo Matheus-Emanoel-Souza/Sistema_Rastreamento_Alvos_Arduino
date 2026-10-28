@@ -1,5 +1,7 @@
 # Roteiro de apresentação — RadarTorres
 
+> Ver também: [Índice](Índice.md) (raiz do vault).
+
 ## O que é
 
 Aplicativo desktop (C#/WPF) que se comunica via porta serial com um Arduino para detectar alvos ao redor de uma base, localizá-los em um radar gráfico, determinar automaticamente o quadrante de cada alvo, selecionar a torre demonstrativa mais adequada e acionar um indicador demonstrativo (laser de baixa potência / LED / simulação — nunca armamento real). Desenvolvido como Trabalho de Conclusão de Curso (TCC) em Engenharia da Computação, em dupla.

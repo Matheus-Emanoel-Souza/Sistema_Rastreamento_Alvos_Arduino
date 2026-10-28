@@ -6,7 +6,7 @@ namespace RadarTorres.App.Services;
 
 /// <summary>
 /// Executa detecção de objetos num quadro de câmera já decodificado, usando o modelo ONNX
-/// local (tiny-YOLOv3 — ver <see cref="OnnxYoloDetectionService"/>). Devolve apenas caixas
+/// local (YOLO26n — ver <see cref="OnnxYoloDetectionService"/>). Devolve apenas caixas
 /// (posição/tamanho/confiança); não decide o que é ou não o alvo procurado — essa decisão é de
 /// <see cref="IAlvoVisualService"/>, que compara cada caixa com o <see cref="PerfilAlvo"/> ativo.
 /// Interface separada (em vez de embutir a inferência direto no serviço de visão) para poder
