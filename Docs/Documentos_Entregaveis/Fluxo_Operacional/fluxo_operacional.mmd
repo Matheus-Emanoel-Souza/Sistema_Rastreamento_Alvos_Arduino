@@ -13,7 +13,7 @@ flowchart TD
     LOG1 --> SEL["App seleciona a torre mais\nadequada: mesmo quadrante primeiro,\ndepois adjacente, depois sobressalente"]
 
     SEL --> CMD["Comando enviado ao Arduino"]
-    CMD --> CHK{"Distancia minima de\nseguranca e zona morta\nliberam o disparo?"}
+    CMD --> CHK{"Distancia minima de\nseguranca libera o\ndisparo?"}
 
     CHK -- "Nao" --> BLOQ["Acionamento bloqueado\ne motivo registrado no\nconsole de eventos"]
     CHK -- "Sim" --> ACAO["Torre aciona o alvo\n(laser/LED demonstrativo)"]

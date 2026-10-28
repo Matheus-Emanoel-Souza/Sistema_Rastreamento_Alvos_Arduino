@@ -86,7 +86,7 @@ avisos confirmado) e rodar `RadarTorres.App.exe`.
 > **Nota (atualização posterior):** o comportamento de auditoria descrito acima (coluna
 > `Resultado=Sucesso/Erro/Cancelada`, gravada mesmo em cancelamento/bloqueio) foi simplificado
 > depois — o schema atual não tem coluna `Resultado`, e tentativas bloqueadas/canceladas não
-> geram mais linha nenhuma (só log); ver `Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_de_Dados.md`.
+> geram mais linha nenhuma (só log); ver `Docs/Documentos_Entregaveis/Modelo_Banco_de_Dados.md`.
 > O módulo de "Formulário de ajuda" (`ChamadoAjuda`) descrito acima foi removido inteiramente do
 > projeto em uma etapa posterior.
 

@@ -1,0 +1,294 @@
+# Modelo de Banco de Dados
+
+## 1. Situação real hoje: SQLite é a única persistência
+
+O projeto usa **SQLite** como único mecanismo de persistência. A migração CSV → SQL descrita
+anteriormente neste documento como plano futuro **já foi implementada**: o contêiner de DI em
+`App.xaml.cs:141-146` registra `Sqlite*Repository` diretamente para as 5 tabelas (`Usuario`,
+`ObjetoDetectado`, `AcaoRealizada`, `ModoAtualTorre`, `PreferenciasUsuario`). Não existem mais
+classes `Csv*Repository`/`Resilient*Repository` de persistência no repositório.
+
+Local do arquivo (por usuário do Windows, sem precisar de administrador):
+
+```
+%AppData%\RadarTorres\Data\
+└── radartorres.db
+```
+
+Se uma gravação falhar (ex.: banco temporariamente indisponível), a operação é enfileirada em
+`pending-writes.sql` (`src/RadarTorres.App/Data/PendingWriteQueue.cs`) e reaplicada
+automaticamente na próxima inicialização — não há perda silenciosa de dados.
+
+O único uso remanescente de CSV no projeto é o botão manual "Exportar CSV" da tela de Objetos
+Detectados (exportação sob demanda para o usuário, não persistência da aplicação).
+
+**Integridade referencial** NÃO é garantida pelo app real. Nenhum `Sqlite*Repository.cs` em
+`src/RadarTorres.App/Repositories/` executa `PRAGMA foreign_keys = ON`, e a maioria das colunas
+que funcionam como chave lógica — `ID_OBJETO` (`acoes_realizadas`) e `ID_USER`
+(`modo_atual_torre`) — são declaradas como `INTEGER NULL` simples, sem cláusula `REFERENCES`
+alguma (ver `SqliteAcaoRealizadaRepository.cs` e `SqliteModoAtualTorreRepository.cs`). As únicas
+exceções são `OcorrenciaEstados.ObjetoDetectadoId` e `classificacoes_alvo.ObjetoDetectadoId`, que
+declaram `REFERENCES objetos_detectados (Id)` inline — mas, sem `PRAGMA foreign_keys = ON`, o
+SQLite não aplica essa restrição mesmo assim; é só documentação embutida no DDL, não
+enforcement. Chaves estrangeiras reais e com `PRAGMA foreign_keys = ON` existem apenas no
+schema **acadêmico/idealizado** `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql`, que não
+é o schema usado pelo app em produção.
+
+### 1.1 Especificações técnicas do SGBD
+
+* **SGBD**: SQLite (embarcado, arquivo único, sem servidor).
+* **Driver/linguagem de acesso**: `Microsoft.Data.Sqlite` versão **9.0.0** (`src/RadarTorres.App/RadarTorres.App.csproj:50`), consumido em C#/.NET 9.
+* **Versão do engine SQLite**: não pinada separadamente pelo projeto — vem embutida no pacote `Microsoft.Data.Sqlite` 9.0.0 via `SQLitePCLRaw`; não há `packages.lock.json` no repositório fixando o número exato da build nativa.
+* **Codificação**: UTF-8 (padrão do SQLite para colunas `TEXT`; não há `PRAGMA encoding` customizado em `schema.sql`).
+* **Collation**: `BINARY` (padrão do SQLite; nenhuma coluna declara `COLLATE NOCASE` ou outra em `schema.sql`).
+* **Integridade referencial**: não aplicada pelo app real (nenhum `Sqlite*Repository.cs` executa
+  `PRAGMA foreign_keys = ON`); `PRAGMA foreign_keys = ON` (`schema.sql:5`) existe só no schema
+  acadêmico/idealizado desta pasta, não no banco de produção.
+
+### 1.2 Índices (completo, de `schema.sql`)
+
+| Índice | Tabela | Coluna(s) | Tipo |
+|---|---|---|---|
+| `idx_acoes_realizadas_torre` | `acoes_realizadas` | `ID_TORRE` | normal |
+| `idx_objetos_detectados_datahora` | `objetos_detectados` | `DataHora` | normal |
+| `idx_acoes_realizadas_datahora` | `acoes_realizadas` | `DH_ACAO` | normal |
+| `idx_modo_atual_torre_usuario` | `modo_atual_torre` | `ID_USER` | normal |
+| `idx_objetos_detectados_perfil` | `objetos_detectados` | `PerfilAlvoId` | normal |
+| `idx_ocorrencia_estados_objeto` | `ocorrencia_estados` | `ObjetoDetectadoId` | normal |
+| `idx_objetos_detectados_rastreamento` | `objetos_detectados` | `RastreamentoId, Quadrante` | único, parcial (`WHERE RastreamentoId IS NOT NULL`) |
+| `idx_cameras_dispositivo` | `cameras` | `DispositivoId` | único |
+| `idx_cameras_quadrante` | `cameras` | `Quadrante` | único |
+
+Além desses, `Login` (`usuarios`) e `UsuarioId` (`preferencias_usuario`, PK) já têm índice implícito por `UNIQUE`/`PRIMARY KEY`.
+
+## 2. Modelo identificado no código (SQLite atual)
+
+### 2.1 Descrição textual das tabelas
+
+* **`usuarios`** — contas de acesso ao aplicativo (login independente do Windows). Perfil:
+  `Administrador` | `Operador` | `Visualizador`. Senha em PBKDF2-HMACSHA256 (100.000 iterações,
+  salt de 128 bits por usuário, `PasswordHasher.cs`) — nunca texto puro. Semeado no primeiro uso
+  com `admin`/`admin123` (`DataSeeder.cs`).
+* **`objetos_detectados`** — histórico de **ocorrências** de detecção. No radar, uma linha por
+  **primeira detecção** de um alvo (não a cada atualização de posição), para não inflar a tabela
+  a cada ciclo (~150 ms). Na câmera, uma linha por **acompanhamento** (`RastreamentoId`) em cada
+  quadrante: enquanto o mesmo objeto segue sendo acompanhado, só `DataHoraUltimaDeteccao` avança.
+  Um mesmo alvo cadastrado pode originar até quatro ocorrências, uma por quadrante, sem duplicar
+  dentro de um deles — garantido pelo índice único parcial `(RastreamentoId, Quadrante)`.
+  `PerfilAlvoId` liga a ocorrência ao alvo cadastrado; `Estado` (`Detectado` | `AbatePendente` |
+  `Abatido`) só muda por evento explícito do sistema, nunca por o objeto sair da imagem. `Z` é
+  sempre `null` hoje (sensores 2D); campo reservado para sensores 3D futuros.
+* **`ocorrencia_estados`** — transições de `objetos_detectados.Estado`, somente inserção
+  (auditoria do ciclo de abate: quem confirmou ou descartou, e quando).
+* **`cameras`** — qual câmera monitora qual quadrante (Q1..Q4). Uma câmera por quadrante e um
+  quadrante por câmera, com índices únicos em `DispositivoId` e `Quadrante`.
+* **`acoes_realizadas`** — auditoria de acionamentos, **somente inserção** (o repositório não
+  expõe Update/Delete de propósito). Gravado em `FireControlService.cs:105`, apenas quando o
+  acionamento é **efetivamente executado com sucesso**; tentativas bloqueadas por segurança ou
+  com erro não geram linha nesta tabela, só uma mensagem de log. Colunas: `ID_ACAO` (PK),
+  `ID_TORRE`, `ID_OBJETO` (FK opcional para `objetos_detectados`), `DH_ACAO`, `OBSERVACAO`.
+* **`modo_atual_torre`** — auditoria de troca de `SystemMode`, também somente inserção; só a
+  **confirmação** de uma troca de modo gera linha (`MainViewModel.cs`, em torno da linha 291) —
+  um cancelamento na confirmação retorna antes de chegar ao repositório, só gerando log. Colunas:
+  `ID_MODO` (PK), `MODOATUAL`, `MODOANTERIOR`, `ID_USER` (FK opcional para `usuarios`),
+  `DHALTERACAO`.
+* **`preferencias_usuario`** — uma linha por usuário (tema, idioma, sidebar recolhida);
+  personalização mais granular (ordem de cartões, colunas por tabela) reservada para etapa
+  futura.
+* **`classificacoes_alvo`** — classificação de perigo/velocidade de um alvo detectado, só
+  inserção (`SqliteClassificacaoPerigoRepository.cs`). Colunas: `Id` (PK), `ObjetoDetectadoId`
+  (`INTEGER NULL REFERENCES objetos_detectados (Id)` — declarado no DDL mas não aplicado, já que
+  o app não ativa `PRAGMA foreign_keys`), `VelocidadeMetrosPorSegundo`, `Grau` (enum
+  `GrauPerigoAlvo` persistido como texto) e `DataHora`. Índice normal em `ObjetoDetectadoId`
+  (`idx_classificacoes_alvo_objeto`).
+* **`historico_treinamento_geracoes`** — série histórica do treinamento neuroevolutivo do
+  controlador, uma linha por geração (`SqliteHistoricoTreinamentoRepository.cs`). Colunas: `ID`
+  (PK), `GERACAO`, `MELHOR_FITNESS`, `FITNESS_MEDIO`, `ALVOS_ABATIDOS`, `ALVOS_ESCAPADOS`,
+  `DH_REGISTRO`. É um **buffer circular**: a cada inserção, o repositório descarta o excedente a
+  partir do `ID` mais antigo, mantendo só os 300 registros mais recentes (`LimiteMaximoRegistros`
+  = 300) — não é expurgo por data. Índice normal em `GERACAO`
+  (`idx_historico_treinamento_geracao`).
+* **`marcos_fitness_treinamento`** — marco de fitness a cada N gerações do treinamento (um marco
+  a cada 500 gerações, sem descarte — volume nunca cresce o suficiente para justificar limite,
+  ao contrário de `historico_treinamento_geracoes`). Colunas: `Id` (PK), `GeracaoMarco` (UK),
+  `FitnessMedioDoBloco`, `MelhorFitnessDoBloco`, `DataHora`
+  (`SqliteMarcoFitnessTreinamentoRepository.cs`). Índice único em `GeracaoMarco`
+  (`idx_marcos_fitness_geracao`).
+* **`instantaneos_comportamento_melhor_gene`** — fotografia do comportamento do melhor genoma a
+  cada marco de geração, para acompanhar a evolução do controlador além do fitness agregado
+  (`SqliteInstantaneoComportamentoRepository.cs`). Colunas: `Id` (PK), `GeracaoMarco` (UK),
+  `Fitness`, `AlvosAbatidos`, `AlvosEscapados`, `TirosErrados`, `TaxaDeAcerto` (nullable),
+  `TaxaDeCobertura` (nullable), `GenomaJson` (vetor de pesos/vieses evoluído, serializado) e
+  `DataHora`. Índice único em `GeracaoMarco` (`idx_instantaneos_comportamento_geracao`).
+
+### 2.2 DER — modelo atual (SQLite)
+
+```mermaid
+erDiagram
+    USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
+    USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
+    OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
+    OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
+    CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
+    OBJETOS_DETECTADOS ||--o{ CLASSIFICACOES_ALVO : "classificou (velocidade/perigo)"
+
+    USUARIOS {
+        int Id PK
+        string Nome
+        string Login UK
+        string SenhaHash
+        string SenhaSalt
+        string Perfil
+        bool Ativo
+        datetime DataCriacao
+        datetime UltimoAcesso "nullable"
+    }
+
+    OBJETOS_DETECTADOS {
+        int Id PK
+        string Tipo
+        double X
+        double Y
+        double Z "nullable"
+        string Quadrante
+        datetime DataHora
+        string Dispositivo
+        double NivelConfianca "nullable"
+        string Observacao "nullable"
+        string ReferenciaImagem "nullable"
+        int PerfilAlvoId "nullable"
+        string CameraDispositivoId "nullable"
+        string CameraNome "nullable"
+        string RastreamentoId "nullable"
+        string Estado "Detectado|AbatePendente|Abatido"
+        datetime DataHoraUltimaDeteccao "nullable"
+    }
+
+    OCORRENCIA_ESTADOS {
+        int Id PK
+        int ObjetoDetectadoId FK
+        string Estado "Detectado|AbatePendente|Abatido"
+        datetime DataHora
+        string Usuario "nullable - login de quem decidiu"
+        string Observacao "nullable"
+    }
+
+    CAMERAS {
+        int Id PK
+        string DispositivoId UK "moniker DirectShow"
+        string Nome
+        string Quadrante UK "Q1..Q4"
+        datetime AtualizadoEm
+    }
+
+    ACOES_REALIZADAS {
+        int ID_ACAO PK
+        int ID_TORRE
+        int ID_OBJETO FK "nullable"
+        datetime DH_ACAO
+        string OBSERVACAO "nullable"
+    }
+
+    MODO_ATUAL_TORRE {
+        int ID_MODO PK
+        string MODOATUAL
+        string MODOANTERIOR
+        int ID_USER FK "nullable"
+        datetime DHALTERACAO
+    }
+
+    PREFERENCIAS_USUARIO {
+        int UsuarioId PK, FK
+        string Idioma
+        string Tema "Claro | Escuro | Sistema"
+        bool SidebarRecolhida
+        string TelaInicial "nullable"
+        int RegistrosPorPagina
+    }
+
+    CLASSIFICACOES_ALVO {
+        int Id PK
+        int ObjetoDetectadoId FK "nullable"
+        double VelocidadeMetrosPorSegundo
+        string Grau "classificacao de perigo do alvo"
+        datetime DataHora
+    }
+
+    HISTORICO_TREINAMENTO_GERACOES {
+        int ID PK
+        int GERACAO
+        double MELHOR_FITNESS
+        double FITNESS_MEDIO
+        int ALVOS_ABATIDOS
+        int ALVOS_ESCAPADOS
+        datetime DH_REGISTRO
+    }
+
+    MARCOS_FITNESS_TREINAMENTO {
+        int Id PK
+        int GeracaoMarco UK "marco a cada N geracoes"
+        double FitnessMedioDoBloco
+        double MelhorFitnessDoBloco
+        datetime DataHora
+    }
+
+    INSTANTANEOS_COMPORTAMENTO_MELHOR_GENE {
+        int Id PK
+        int GeracaoMarco UK
+        double Fitness
+        int AlvosAbatidos
+        int AlvosEscapados
+        int TirosErrados
+        double TaxaDeAcerto "nullable"
+        double TaxaDeCobertura "nullable"
+        string GenomaJson "vetor de pesos/vieses evoluido"
+        datetime DataHora
+    }
+```
+
+**Nota:** `OBJETOS_DETECTADOS` não tem relacionamento explícito com `USUARIOS` no código — o
+campo `Dispositivo` identifica a fonte (ex.: "Arduino", "Simulador"), não um usuário.
+
+## 3. Migração CSV → SQLite (histórico)
+
+Esta seção documenta, em retrospecto, a migração que era descrita nas versões anteriores deste
+documento como "proposta futura" e que **já foi concluída**. O modelo de dados em si não mudou
+de estrutura entre CSV e SQLite (mesmas tabelas/colunas, já mostradas em §2) — a mudança foi só
+no mecanismo de armazenamento.
+
+Passos efetivamente executados (refletidos no código atual):
+
+1. Cada interface de repositório já existente (`IUsuarioRepository`,
+   `IObjetoDetectadoRepository`, `IAcaoRealizadaRepository`, `IModoAtualTorreRepository`,
+   `IPreferenciasUsuarioRepository`) ganhou uma implementação `Sqlite*Repository`
+   (`src/RadarTorres.App/Repositories/Sqlite*Repository.cs`), mantendo a mesma assinatura de
+   método que a versão CSV anterior — cada classe define o schema da sua tabela em um método
+   `EnsureTable`.
+2. O registro no contêiner de DI em `App.xaml.cs:141-146` foi trocado de
+   `Csv*Repository` para `Sqlite*Repository` para as 5 tabelas.
+3. Nenhum ViewModel, Service ou View precisou mudar — todos dependiam só da interface, como
+   previsto no plano original.
+4. Um mecanismo de resiliência foi adicionado além do que estava previsto originalmente: falhas
+   de escrita são enfileiradas em `pending-writes.sql`
+   (`src/RadarTorres.App/Data/PendingWriteQueue.cs`) e reaplicadas automaticamente na próxima
+   inicialização, em vez de simplesmente propagar o erro.
+5. O módulo `ChamadoAjuda` (model, repositório, tela, entrada de menu) foi removido do projeto
+   antes da conclusão desta etapa — por isso não há tabela `chamados_ajuda` no schema atual (ver
+   §2).
+
+Com o SGBD relacional, as referências que antes eram por texto (`Login`) passaram a ser chaves
+estrangeiras reais por `Id` (`ID_OBJETO` → `objetos_detectados.Id`, `ID_USER` → `usuarios.Id`),
+com integridade garantida pelo próprio banco (`PRAGMA foreign_keys = ON`) — exatamente a
+estrutura já mostrada no DER de §2.2.
+
+O arquivo `Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql` (nesta mesma pasta) reflete
+esse schema e é usado para visualização em ferramentas de modelagem (ex.: SQL Developer via
+driver JDBC SQLite — ver este documento); o arquivo de dados real da aplicação é
+`radartorres.db`.
+
+## Ver também
+
+- [[MODELO_DADOS]] — versão técnica interna deste modelo (mesmo schema, enquadramento de
+  desenvolvimento em vez de entregável acadêmico).
+- [[Matriz_de_Rastreabilidade]] — requisito → tabela/coluna.
+- [[UML_RadarTorres]] — diagrama de classes conceitual relacionado às entidades aqui descritas.

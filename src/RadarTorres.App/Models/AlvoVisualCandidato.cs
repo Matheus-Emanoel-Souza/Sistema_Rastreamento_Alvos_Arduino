@@ -3,7 +3,7 @@ namespace RadarTorres.App.Models;
 /// <summary>De onde veio a caixa candidata que está sendo avaliada.</summary>
 public enum OrigemCandidato
 {
-    /// <summary>Proposta pelo modelo ONNX (tiny-YOLOv3) — um objeto de alguma das 80 classes COCO.</summary>
+    /// <summary>Proposta pelo modelo ONNX (YOLO26n) — um objeto de alguma das 80 classes COCO.</summary>
     Detector,
 
     /// <summary>Proposta por segmentação da cor do perfil — mancha contígua da cor procurada.</summary>
