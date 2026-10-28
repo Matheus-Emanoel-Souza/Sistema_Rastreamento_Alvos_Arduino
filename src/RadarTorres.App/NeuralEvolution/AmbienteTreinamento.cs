@@ -202,7 +202,11 @@ public sealed class AmbienteTreinamento
 
         estado.Alvos.RemoveAll(a => !a.Ativo);
 
-        if (estado.TempoDecorridoSegundos >= _parametros.DuracaoEpisodioSegundos)
+        double tetoDeTempo = _parametros.SemLimiteDeDuracao
+            ? _parametros.DuracaoMaximaSegurancaSegundos
+            : _parametros.DuracaoEpisodioSegundos;
+
+        if (estado.TempoDecorridoSegundos >= tetoDeTempo)
         {
             FinalizarEpisodio(estado);
         }
