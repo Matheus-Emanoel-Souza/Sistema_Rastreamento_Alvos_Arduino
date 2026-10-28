@@ -174,52 +174,17 @@
                     </Grid>
                 </Border>
 
-                <!-- Cenário personalizado: usuário define posição (X,Y em metros) e velocidade de
-                     cada alvo à mão, sem nenhum sorteio — ver SpawnPersonalizadoEditavel /
+                <!-- Cenário personalizado: abre uma janela modal centralizada onde o usuário
+                     cadastra os alvos (nome, posição X/Y em metros e velocidade) à mão, sem
+                     nenhum sorteio — ver CenarioPersonalizadoWindow / SpawnPersonalizadoEditavel /
                      TreinamentoControladorViewModel.SimularCenarioPersonalizado. -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="CENÁRIO PERSONALIZADO" Style="{StaticResource CardTitle}"/>
                         <TextBlock Style="{StaticResource ParametroLabel}" Margin="0,0,0,8" TextWrapping="Wrap">
-                            <Run Text="Posição (X,Y em metros a partir da base) e velocidade de cada alvo — sem sorteio. O alvo se move em linha reta na direção da base."/>
+                            <Run Text="Cadastre os alvos (nome, posição e velocidade) numa janela própria e inicie o cenário a partir dela."/>
                         </TextBlock>
-
-                        <DataGrid ItemsSource="{Binding SpawnsPersonalizados}" AutoGenerateColumns="False" CanUserAddRows="False"
-                                  CanUserDeleteRows="False" CanUserReorderColumns="False" GridLinesVisibility="Horizontal"
-                                  HeadersVisibility="Column" MaxHeight="180" VerticalScrollBarVisibility="Auto"
-                                  Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
-                                  BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
-                                  RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
-                                  HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
-                                    <Setter Property="FontSize" Value="11"/>
-                                    <Setter Property="Padding" Value="4,4"/>
-                                </Style>
-                            </DataGrid.ColumnHeaderStyle>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="X (m)" Binding="{Binding X, Mode=TwoWay}" Width="1*"/>
-                                <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, Mode=TwoWay}" Width="1*"/>
-                                <DataGridTextColumn Header="Vel. (m/s)" Binding="{Binding VelocidadeMetrosPorSegundo, Mode=TwoWay}" Width="1*"/>
-                                <DataGridTextColumn Header="Nasce em (s)" Binding="{Binding InstanteSegundos, Mode=TwoWay}" Width="1*"/>
-                                <DataGridTemplateColumn Width="36">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="✕" Padding="4,0" Margin="0" ToolTip="Remover este alvo"
-                                                    Command="{Binding DataContext.RemoverSpawnPersonalizadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                    CommandParameter="{Binding}"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Button Content="+ Adicionar alvo" Command="{Binding AdicionarSpawnPersonalizadoCommand}"/>
-                            <Button Content="Simular cenário personalizado" Command="{Binding SimularCenarioPersonalizadoCommand}"/>
-                        </StackPanel>
+                        <Button Content="Configurar cenário personalizado..." Click="BotaoCenarioPersonalizado_Click" HorizontalAlignment="Stretch"/>
                     </StackPanel>
                 </Border>
 

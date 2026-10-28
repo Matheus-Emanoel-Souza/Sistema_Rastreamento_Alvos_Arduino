@@ -8,6 +8,9 @@ namespace RadarTorres.App.ViewModels;
 /// </summary>
 public sealed class SpawnPersonalizadoEditavel : ViewModelBase
 {
+    private string _nome = string.Empty;
+    public string Nome { get => _nome; set => SetProperty(ref _nome, value); }
+
     private double _x = 8.0;
     public double X { get => _x; set => SetProperty(ref _x, value); }
 

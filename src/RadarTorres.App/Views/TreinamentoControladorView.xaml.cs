@@ -48,6 +48,17 @@ public partial class TreinamentoControladorView : UserControl
 
     private void OnHistoricoAlterado(object? sender, NotifyCollectionChangedEventArgs e) => RedesenharGrafico();
 
+    /// <summary>Abre a janela modal de cadastro do cenário personalizado, centralizada sobre a
+    /// janela atual (Requisito: substituir o card da barra lateral por uma janela modal).</summary>
+    private void BotaoCenarioPersonalizado_Click(object sender, RoutedEventArgs e)
+    {
+        var janela = new CenarioPersonalizadoWindow(_viewModel)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        janela.ShowDialog();
+    }
+
     /// <summary>
     /// Alterna o painel de histórico de gerações entre minimizado (só o título + botão visíveis)
     /// e expandido (tabela visível, do tamanho que estava antes de minimizar). A divisória
