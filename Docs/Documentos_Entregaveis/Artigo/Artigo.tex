@@ -577,10 +577,79 @@ próprio fator da camada heurística vigente, usado como sinal de contexto. As d
 ajuste de pontuação, somado à pontuação heurística da candidata, e um valor de confiança de
 disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 82 parâmetros, no
 total, para essa arquitetura -- não são ajustados por retropropagação, mas evoluídos por um
-algoritmo genético: cada genoma é um vetor plano desses 74 números, a população evolui por seleção
+algoritmo genético: cada genoma é um vetor plano desses 82 números, a população evolui por seleção
 por torneio, \textit{crossover} uniforme, mutação gaussiana e elitismo, e o genoma final é
 embutido na aplicação como um vetor de pesos fixo, sem qualquer etapa de treinamento em tempo de
 execução.
+
+\paragraph{Impacto de acrescentar uma entrada.}
+A sétima entrada (tempo detectado sem abate) não fazia parte do projeto original -- a rede nasceu
+com seis entradas e cinco indicadores de contexto, e essa sétima foi incluída posteriormente para
+dar à rede um sinal que faltava: por quanto tempo um alvo específico já vem sendo observado sem ter
+sido abatido, de modo que a evolução pudesse aprender a priorizar alvos "esquecidos" em vez de
+tratar todos como igualmente urgentes. Mudar a contagem de entradas de uma rede já evoluída, porém,
+não é uma alteração isolada, e vale registrar os quatro impactos concretos que ela trouxe, cada um
+observado diretamente neste trabalho e não apenas previsto em teoria.
+
+O primeiro impacto é no tamanho da rede: de 74 para 82 parâmetros (aumento de \textbf{8 pesos}, um
+por neurônio da camada oculta, ligando a nova entrada a cada um deles -- a camada oculta continuou
+com 8 neurônios e as duas saídas não mudaram). É um acréscimo de 10,8\% no genoma, mas, como a
+Seção~\ref{sec:experimento-hiperparametros} confirma experimentalmente, o tempo de treinamento
+continua dominado pela quantidade de episódios simulados por geração (função do tamanho da
+\emph{população}), não pelo tamanho da rede avaliada em cada episódio -- oito pesos adicionais são
+imperceptíveis nesse custo, e nenhuma das onze execuções da grade mostrou um tempo de treinamento
+mensuravelmente maior apenas por ter mais ocultos do que antes.
+
+O segundo impacto, esse sim severo, é a \textbf{incompatibilidade retroativa total}: qualquer genoma
+evoluído sob a arquitetura antiga (seis entradas, 74 pesos) deixou de ser utilizável, porque
+\texttt{RedeNeural.Ativar} exige que o vetor de entradas tenha exatamente o tamanho declarado pela
+arquitetura -- não há conversão possível entre um genoma de 74 e um de 82 números, nem forma de
+"completar" o genoma antigo com os oito pesos que faltam sem reavaliar do zero o que a evolução
+faria com eles. Isso invalidou, de uma só vez, o controlador de produção já embutido no executável
+(\texttt{Resources/ControladorTreinado/genoma-controlador.json}, treinado sob a arquitetura antiga)
+e todas as 11 execuções da Seção~\ref{sec:experimento-hiperparametros} documentadas anteriormente --
+ambos precisaram ser retreinados do zero sob a nova arquitetura (e, no mesmo retreinamento, sob o
+ambiente também endurecido, ver próximo parágrafo) para voltarem a valer. Esse acoplamento rígido
+entre arquitetura e genoma é uma propriedade conhecida de redes neurais simples sem camadas de
+embedding ou \textit{padding}: cada entrada nova é, na prática, uma mudança de \textit{breaking
+change} no formato do genoma, nunca uma extensão compatível com versões anteriores.
+
+O terceiro impacto é operacional, não só experimental: como o próprio executável em produção
+(\texttt{TowerSelectionService}) chama a mesma função estática \texttt{ControladorHibrido.ConstruirEntradas}
+usada pelo treinamento -- por design, para garantir que a rede treinada receba em campo exatamente a
+mesma entrada que recebeu durante a evolução --, acrescentar uma entrada obriga a atualizar os DOIS
+lados ao mesmo tempo, simulação e sistema real, e a localizar, no sistema real, um valor de verdade
+que corresponda ao conceito simulado. Neste caso a atualização foi simples porque a grandeza já
+existia no sistema real: \texttt{Target.Timestamp} já registrava o instante da primeira detecção de
+cada alvo (usado para outros fins), bastando calcular \texttt{(DateTime.UtcNow - Target.Timestamp)}
+no ponto de decisão. Esse não é o caso geral -- uma entrada hipotética sem contrapartida instrumentada
+no hardware real teria exigido adicionar sensoriamento ou lógica nova ao sistema físico antes de a
+rede treinada em simulação poder ser usada de verdade, e não apenas ajustar uma fórmula de
+normalização.
+
+O quarto impacto foi preventivo: para que a incompatibilidade do segundo impacto não se manifestasse
+como uma exceção não tratada na primeira seleção de torre real (o que teria travado o aplicativo em
+produção com o genoma antigo ainda embutido, entre o momento em que o código mudou e o momento em
+que um novo genoma foi treinado e reembutido), foi adicionada uma verificação explícita de
+compatibilidade em \texttt{ControladorTreinadoProvider}: antes de instanciar a rede a partir do
+genoma embutido, o número de entradas declarado no arquivo é comparado ao
+\texttt{ControladorHibrido.QuantidadeEntradas} atual, e qualquer divergência faz o sistema
+degradar, deliberadamente, para a heurística pura -- o mesmo comportamento seguro de "nunca travar,
+na pior hipótese operar só com a heurística" já descrito para as demais camadas de segurança do
+controlador híbrido. Esse guarda não existia antes da mudança de arquitetura; passou a existir
+\emph{por causa} dela, e é hoje o que torna seguro acrescentar uma oitava, nona ou décima entrada no
+futuro sem risco de travar o aplicativo de alguém que ainda não retreinou.
+
+Uma ressalva metodológica fecha esta discussão: a entrada nova e o endurecimento do ambiente de
+treino (ver próximo parágrafo) foram introduzidos na mesma leva de mudanças e avaliados juntos nas
+onze execuções da Seção~\ref{sec:experimento-hiperparametros}, de modo que este trabalho \textbf{não}
+isola o efeito de ter mais uma entrada do efeito de o ambiente ter ficado mais difícil -- os dados
+aqui não permitem afirmar que a sétima entrada, por si só, melhorou (ou piorou) a qualidade do
+controlador. Uma comparação controlada, com a sétima entrada mas no ambiente ANTIGO (sem invasão de
+torre nem teto por quadrante), ou vice-versa, é o experimento de ablação natural para isolar essa
+pergunta, e fica registrada aqui como trabalho futuro específico, distinto da ablação
+heurística-\textit{vs}-rede já conduzida (Seção~\ref{sec:experimento-hiperparametros}) e distinto
+também da repetição com múltiplas sementes já apontada como limitação geral.
 
 A combinação entre os dois mecanismos é, portanto, sequencial e hierárquica, nunca uma mistura
 indiferenciada: a heurística primeiro filtra quais torres são elegíveis e calcula as
@@ -655,6 +724,106 @@ genética.
   \caption{Fluxo de decisão do controlador híbrido: a heurística determinística filtra e, ao final,
   veta; a rede neural decide apenas dentro do espaço já validado (dos autores).}
 \end{figure}
+
+\subsubsection{Regras heurísticas que regem o sistema}
+\label{sec:regras-heuristicas}
+
+A Seção anterior descreveu a heurística em termos do seu papel (filtra, depois veta) e da cascata
+de três camadas (próprio quadrante, adjacente, sobressalente). Esta seção cataloga, em detalhe e
+numeradas, TODAS as regras heurísticas implementadas em código que efetivamente decidem qual torre
+persegue cada alvo e se um disparo é ou não autorizado -- as mesmas regras que operam tanto na
+simulação de treino (\texttt{ControladorHibrido}/\texttt{AmbienteTreinamento}) quanto no sistema
+real (\texttt{TowerSelectionService}/\texttt{FireControlService}), já que a primeira é escrita para
+espelhar fielmente a segunda (Seção~\ref{sec:controlador-hibrido-inicio}).
+
+\paragraph{Cascata de elegibilidade (três camadas).} Antes de qualquer pontuação, as torres livres
+são agrupadas em camadas, e só a primeira camada não-vazia participa da disputa:
+\begin{enumerate}
+  \item \textbf{Torre do próprio quadrante} (\texttt{fatorCamada = 1,0}): se alguma torre cujo
+  quadrante de cobertura coincide com o do alvo está livre, só elas concorrem.
+  \item \textbf{Torre de quadrante adjacente} (\texttt{fatorCamada = 0,5}): só entra em jogo se a
+  camada 1 estiver vazia -- e, dentro dela, só concorrem torres cujo PRÓPRIO quadrante não tenha
+  neste momento outro alvo ativo concorrente (não ajuda quem precisa de si mesma em casa).
+  \item \textbf{Torre sobressalente/qualquer livre} (\texttt{fatorCamada = 0,0}): cobertura de
+  último recurso, só quando as camadas 1 e 2 estão ambas vazias -- qualquer torre livre do sistema,
+  mesmo diagonalmente oposta ao alvo, é melhor do que deixá-lo sem nenhuma torre perseguindo.
+\end{enumerate}
+Se nenhuma torre está livre em NENHUMA camada ("sobrecarregada"), o alvo fica sem torre selecionada
+até alguma liberar -- nunca há fila de espera ou reserva antecipada. Dentro da camada escolhida, a
+pontuação de cada candidata é a combinação heurística+rede descrita na seção anterior
+(\texttt{ControladorHibrido.Pontuar}), ou simplesmente a menor distância se nenhum controlador
+treinado estiver embutido (heurística pura de fábrica).
+
+\paragraph{Seis regras de refinamento (\texttt{TowerSelectionService}), as cinco primeiras
+desligáveis individualmente na tela de Configurações, a sexta sempre ativa.} Aplicadas depois da
+cascata de camadas, nesta ordem lógica:
+\begin{enumerate}
+  \item \textbf{Anti-oscilação.} Se a torre JÁ comprometida com o alvo continua sendo uma candidata
+  válida e sua pontuação está dentro de uma margem de empate da vencedora (0,3~m sem rede, ou 0,1
+  ponto com rede embutida), a torre atual é mantida -- evita trocar de torre por uma diferença de
+  pontuação irrelevante, causada por ruído de leitura, quando a torre atual ainda serve bem.
+  \item \textbf{Priorização por urgência.} Um alvo é considerado "urgente" quando sua distância cai
+  abaixo de 1,5$\times$ a distância mínima de segurança configurada. Um alvo urgente pode TOMAR a
+  torre de outro alvo que esteja claramente mais longe (distância do outro maior que a do urgente
+  mais 1~m E fora da própria zona de urgência) -- o alvo que perdeu a torre não fica descoberto para
+  sempre, só procura outra candidata na próxima leitura.
+  \item \textbf{Corredor de tiro.} Antes de pontuar, descarta candidatas cuja linha reta até o alvo
+  atravesse uma zona morta ativa (12 pontos amostrados ao longo do segmento, excluindo as pontas) --
+  mas nunca deixa um alvo sem NENHUMA candidata só por isso: se todas as candidatas da camada
+  tiverem corredor bloqueado, a restrição é relaxada e a torre menos ideal ainda é escolhida, melhor
+  arriscar do que abandonar a cobertura.
+  \item \textbf{Balanceamento de carga.} Entre as candidatas praticamente empatadas com a vencedora
+  (mesma margem da regra 1), prefere a torre usada com MENOS frequência nesta sessão -- contador
+  reiniciado a cada execução do aplicativo, de propósito: é um critério de desempate do momento, não
+  uma métrica histórica persistida.
+  \item \textbf{Predição de trajetória.} O ângulo de mira aponta para onde o alvo estará 0,3~s no
+  futuro, projetado a partir da velocidade estimada (zero no primeiro instante de detecção, sem
+  histórico ainda) -- não para a posição atual. Afeta só a mira exibida/calculada, nunca a escolha
+  de QUAL torre.
+  \item \textbf{Ajuda de torre adjacente contra alvo rápido (sempre ativa).} Alvos com velocidade
+  igual ou acima do limiar configurado de "alvo rápido" recebem, além da torre principal, QUALQUER
+  torre de quadrante adjacente a até 2~m de distância do alvo -- mesmo fora do alcance normal de
+  câmera -- como reforço de disparo. Um segundo canhão reduz a chance de o alvo escapar de um tiro
+  único, já que a probabilidade de erro cresce com a velocidade
+  (\texttt{Helpers.CalculadoraErroDisparo}). É a única das seis regras sem interruptor na tela de
+  Configurações; só o limiar de velocidade que a aciona é ajustável.
+\end{enumerate}
+Uma regra adicional, implícita e sempre ativa, nunca listada entre as seis acima porque não é uma
+preferência e sim uma restrição física: nenhuma torre é candidata, em nenhuma camada, se outra torre
+qualquer estiver posicionada geometricamente entre ela e o alvo dentro de um corredor estreito de
+0,3~m -- ela bloquearia o próprio tiro.
+
+\paragraph{Vetos finais, sempre ativos, no momento da autorização de disparo
+(\texttt{FireControlService.Authorize}).} Mesmo com uma torre já selecionada, nenhum comando de
+acionamento sai do sistema sem passar por TODOS estes critérios, verificados nesta ordem e
+reavaliados a cada tentativa (uma torre selecionada agora pode ser vetada mais tarde, se a condição
+mudar entre a seleção e o disparo):
+\begin{enumerate}
+  \item O alvo precisa continuar ativo (não pode ter saído de cena entre a seleção e a tentativa de
+  disparo).
+  \item O sistema precisa estar no modo operacional \texttt{Disparar} -- qualquer outro modo
+  bloqueia incondicionalmente.
+  \item O alvo não pode estar dentro de uma zona morta ativa no instante do disparo -- mesmo que a
+  zona tenha sido criada/ativada DEPOIS de a torre já ter sido selecionada para aquele alvo.
+  \item A certeza de identificação do alvo (percentual de confiança acumulado pela câmera) precisa
+  ser maior ou igual ao limiar mínimo configurado (\texttt{LimiarConfiancaDisparoPercentual}) --
+  nunca abaixo do piso absoluto do sistema.
+  \item A torre específica que está tentando disparar precisa constar na lista de torres
+  efetivamente engajando aquele alvo (\texttt{Target.EngagingTowers}) -- a mesma lista calculada
+  pela regra 6 e pela restrição de corredor de tiro; uma torre pode ter sido selecionada como
+  "principal" e ainda assim não ter linha de tiro livre neste instante.
+\end{enumerate}
+Vencidos os cinco critérios, o disparo em si -- acertar ou errar o alvo -- continua sendo
+probabilístico e cresce com a velocidade do alvo (mesma fórmula usada para calibrar o ambiente de
+treino, \texttt{CalculadoraErroDisparo}), nunca determinístico só por ter sido autorizado.
+
+Duas regras adicionais do controlador híbrido valem apenas durante a simulação de treino, nunca em
+produção, porque em produção o INSTANTE do disparo é sempre decidido manualmente por um operador, e
+não pelo controlador: um tempo mínimo de mira de 0,3~s desde que a torre foi comprometida com o alvo
+(a rede não pode autorizar disparo antes disso, mesmo que queira) e o mesmo limiar mínimo de certeza
+da regra 4 acima, aplicado contra a certeza simulada do alvo em vez da real. Ambas existem só para a
+avaliação de fitness do algoritmo genético corresponder ao que o sistema real, de fato, permite --
+nenhuma delas é uma regra "a mais" que o sistema real desconheça.
 
 \subsubsection{Análise experimental de hiperparâmetros}
 \label{sec:experimento-hiperparametros}
