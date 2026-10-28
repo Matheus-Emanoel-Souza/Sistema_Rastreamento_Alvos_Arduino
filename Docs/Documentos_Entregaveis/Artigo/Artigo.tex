@@ -976,6 +976,54 @@ Isso aponta para dois trabalhos futuros distintos, não um só: alongar o horizo
 seeds (para a rede falhar com menos frequência nos cenários desfavoráveis), sendo este segundo,
 pelos dados aqui, o fator que mais pesa na média atual.
 
+\paragraph{A variância é da rede, do ambiente, ou da avaliação do algoritmo genético?}
+O teste anterior levanta uma suspeita incômoda: se o teto sobe para 443 mas a média continua baixa,
+o sistema está aprendendo algo consistente ou só tirando sorte? Três medições, nesta ordem, isolam a
+resposta. Primeiro, o desvio padrão de fitness do mesmo genoma de produção foi medido dentro do
+regime NORMAL de 45~s (não o modo sem limite), em 50 episódios independentes: desvio de 63,65 contra
+uma média de 66,69 -- ou seja, a variância já é da mesma ordem de grandeza da própria média mesmo sem
+remover o corte de tempo, o que descarta a hipótese de que ela fosse um artefato só do modo sem
+limite. Segundo, o MESMO genoma foi avaliado em modo \texttt{HeuristicaPura} (rede completamente
+ignorada, ajuste zero, dispara sempre que a heurística permite) nas MESMAS 50 seeds: desvio de 67,36
+e média de \textbf{74,34} -- estatisticamente indistinguível da rede treinada, e com média até
+superior. Isso aponta a variância para o ambiente (que alvos nascem, em que quadrante, em que
+instante), não para a política de decisão -- mesmo uma heurística determinística sofre a mesma
+montanha-russa de sorte, porque um único alvo nascendo no lugar errado no início do episódio já basta
+para invadir uma torre em poucos segundos, antes de qualquer controlador conseguir reagir.
+
+A comparação acima, porém, revelou um problema diferente e mais preocupante: a rede treinada estava
+perdendo, em média, para a heurística que ela deveria apenas refinar. A hipótese seguinte foi que
+\texttt{EpisodiosPorAvaliacao} (quantos episódios são sorteados e tirada a média para avaliar CADA
+genoma a cada geração) estivesse baixo demais -- 3, antes deste teste -- para a seleção do algoritmo
+genético distinguir genoma melhor de genoma apenas sortudo, dado que o próprio desvio por episódio já
+é maior que a diferença de qualidade que se quer medir. O valor foi elevado para 12 e um novo genoma
+de produção foi treinado do zero com o restante dos parâmetros idêntico (1000 gerações, população
+60, 8 neurônios ocultos, mutação 0,08, cenários aleatórios). O resultado, infelizmente, não confirma
+essa hipótese: nas mesmas 50 seeds, a rede treinada com 12 episódios por avaliação obteve média
+65,02 (desvio 60,57) contra os mesmos 74,34 (desvio 67,36) da heurística pura -- o GANHO esperado não
+apareceu, e o desvio continua do mesmo tamanho. Elevar o número de episódios por avaliação reduz o
+ruído da MEDIÇÃO de fitness que o algoritmo genético usa para selecionar, mas não resolve se o
+problema estiver em outro lugar -- e os dados aqui sugerem que está: como a seleção de torre já é
+dominada pelo termo heurístico na pontuação combinada (Seção~\ref{sec:controlador-hibrido-inicio}),
+é a decisão de DISPARO (\texttt{confiancaDisparo > 0}, inteiramente da rede em modo híbrido, sem
+veto heurístico de oportunidade) a candidata mais provável a estar aprendendo a hesitar ou recusar
+disparos que a heurística pura, sem essa hesitação, aproveitaria.
+
+Para separar "este genoma específico saiu ruim" de "o método de treino tende a produzir isto", o
+treinamento (1000 gerações, 12 episódios por avaliação, restante idêntico) foi repetido com mais
+três sementes do algoritmo genético (2, 3 e 4), cada uma avaliada nas mesmas 50 seeds de teste contra
+o mesmo controle de heurística pura (74,34 de fitness médio, por não depender de genoma nenhum). O
+resultado é sistemático, não uma execução sortuda ruim: as QUATRO sementes ficaram abaixo da
+heurística pura -- 65,02 (semente 1), 71,56 (semente 2), 65,09 (semente 3) e 64,18 (semente 4) --,
+numa margem pequena mas consistentemente negativa em todas elas. Isso descarta a hipótese de
+infortúnio de uma única execução do algoritmo genético e aponta para algo estrutural no método de
+treino: dado que a seleção de torre já é dominada pelo termo heurístico, é bastante provável que seja
+de fato a decisão de disparo da rede -- isolada, sem veto heurístico de oportunidade -- quem aprende
+um comportamento levemente pior do que simplesmente disparar sempre que permitido. Medir diretamente
+a taxa de disparos recusados pela rede nos mesmos cenários em que a heurística dispara (confirmando
+ou refutando esse mecanismo específico) é o próximo passo e fica registrado como trabalho futuro em
+andamento.
+
 \subsection{Diagrama de pacotes}
 
 A organização interna da aplicação desktop foi documentada por meio de um diagrama de pacotes,
