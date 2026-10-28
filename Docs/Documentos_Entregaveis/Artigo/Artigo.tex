@@ -1060,8 +1060,31 @@ cinco redes treinadas com episódio limitado. Em outras palavras, dar mais tempo
 ensinou a rede a disparar melhor; só deu a ela (e à heurística, igualmente) mais tempo para acumular
 pontos quando a sorte do episódio é favorável. Os dois problemas identificados nesta investigação
 são, portanto, independentes: a duração fixa do episódio limitava o TETO alcançável (resolvido
-removendo o limite), e a hesitação aprendida na decisão de disparo limita a MÉDIA alcançável
-(continua sem solução, e aponta para a função de fitness, não para o ambiente, como já discutido).
+removendo o limite), e a hesitação aprendida na decisão de disparo limita a MÉDIA alcançável -- este
+segundo problema aponta para a função de fitness, não para o ambiente, e foi atacado diretamente a
+seguir.
+
+\paragraph{Corrigindo a função de fitness: penalizar a recusa em si.}
+Como a função de fitness, até este ponto, só recompensava abate e penalizava fuga/invasão -- nunca
+custando nada à rede simplesmente NÃO disparar numa oportunidade legítima --, foi adicionado um
+termo explícito para isso:
+\texttt{ParametrosTreinamento.PenalidadeRecusaDisparo} subtrai 3,0 pontos de fitness toda vez que
+\texttt{EstadoEpisodio.DisparosRecusadosPelaRede} é incrementado (ver parágrafo anterior), em tempo
+real, durante o próprio episódio de treino -- não é uma penalidade pós-hoc, aplicada só na análise.
+Um genoma de produção foi retreinado do zero com esse termo ativo, mesmo ambiente sem limite de
+duração, mesmas 1000 gerações. O resultado confirma que a hesitação era, de fato, um problema da
+função de fitness, corrigível por ela mesma: a taxa de recusa de disparo caiu de 35,8\% para
+\textbf{0,0\%} -- a rede evoluída passou a se comportar, no gatilho, EXATAMENTE como a heurística
+pura (nunca recusa). O fitness médio, avaliado nas mesmas 50 seeds de teste, subiu de 69,28 para
+86,09 -- a 4\% da heurística pura (89,69), contra os quase 30\% de distância antes da correção -- e
+o fitness máximo (434,59) ficou praticamente empatado com o teto da heurística pura (434,72). A
+rede, porém, não passou a SUPERAR a heurística pura: convergiu para replicá-la na decisão de
+disparo, sem demonstrar ganho próprio nessa decisão específica -- o ganho de qualidade observado
+nesta seção vem inteiramente de eliminar um defeito (a hesitação), não de a rede ter aprendido algo
+que a heurística não sabia. Ainda assim, é o resultado mais consistente da neuroevolução deste
+trabalho: confirma que o fitness, quando mede exatamente o comportamento que se quer corrigir, é
+suficiente para corrigi-lo, sem precisar de nenhuma mudança na arquitetura da rede ou no ambiente de
+treino.
 
 \subsection{Diagrama de pacotes}
 

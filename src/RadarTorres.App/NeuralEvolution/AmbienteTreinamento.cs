@@ -480,7 +480,11 @@ public sealed class AmbienteTreinamento
 
             if (!controlador.DecidirDisparo(alvo, torre))
             {
-                if (passouTempoMinimoDeMira) estado.DisparosRecusadosPelaRede++;
+                if (passouTempoMinimoDeMira)
+                {
+                    estado.DisparosRecusadosPelaRede++;
+                    estado.FitnessAcumulado -= _parametros.PenalidadeRecusaDisparo;
+                }
                 continue;
             }
 
