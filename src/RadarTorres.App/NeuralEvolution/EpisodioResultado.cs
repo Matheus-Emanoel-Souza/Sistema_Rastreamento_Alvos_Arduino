@@ -5,4 +5,5 @@ public sealed record EpisodioResultado(
     double FitnessTotal,
     int AlvosAbatidos,
     int AlvosEscapados,
-    int TirosErrados = 0);
+    int TirosErrados = 0,
+    int AlvosNascidos = 0);

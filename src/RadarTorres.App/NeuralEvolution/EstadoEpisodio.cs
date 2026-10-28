@@ -49,4 +49,7 @@ public sealed class EstadoEpisodio
     }
 
     public int ProximoIdAlvo() => ++_proximoIdAlvo;
+
+    /// <summary>Quantos alvos nasceram neste episódio (ids são sequenciais e nunca reutilizados) — métrica de denominador para taxa de abate, não influencia o fitness.</summary>
+    public int AlvosNascidos => _proximoIdAlvo;
 }
