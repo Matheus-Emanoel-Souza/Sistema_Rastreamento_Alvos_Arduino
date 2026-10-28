@@ -39,6 +39,17 @@ public sealed record ParametrosTreinamento
     public double PenalidadeDesequilibrioTorresPorSegundo { get; init; } = 0.5;
 
     /// <summary>
+    /// Penalidade de fitness aplicada toda vez que a rede RECUSA uma oportunidade de disparo
+    /// legítima — os vetos inegociáveis (zona morta, certeza mínima, tempo mínimo de mira) já
+    /// liberaram, e ainda assim <see cref="ControladorHibrido.DecidirDisparo"/> devolve falso (ver
+    /// <see cref="EstadoEpisodio.DisparosRecusadosPelaRede"/>). Adicionada depois de medir que as
+    /// redes treinadas sem este termo recusavam entre 10% e 56% dessas oportunidades e, por isso,
+    /// perdiam em fitness médio para a heurística pura (que nunca recusa) — o fitness antes só
+    /// recompensava abate e penalizava fuga/invasão, sem custo explícito para a HESITAÇÃO em si.
+    /// </summary>
+    public double PenalidadeRecusaDisparo { get; init; } = 3.0;
+
+    /// <summary>
     /// Quando <c>true</c>, o episódio IGNORA <see cref="DuracaoEpisodioSegundos"/> como fim normal
     /// — só termina por invasão de torre (<see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>)
     /// ou ao atingir <see cref="DuracaoMaximaSegurancaSegundos"/> (salvaguarda contra um genoma tão
