@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using RadarTorres.App.Models;
 using RadarTorres.App.Views;
 using RadarTorres.App.Views.Shell;
 
@@ -48,9 +49,45 @@ public sealed class NavigationService : INavigationService
     /// <summary>Define o <see cref="ContentControl"/> que hospeda a view atual (chamado uma vez pela ShellWindow).</summary>
     public void SetHost(ContentControl host) => _host = host;
 
+    /// <summary>
+    /// Autorização de navegação no ÚNICO ponto por onde toda troca de tela passa. A Sidebar já
+    /// esconde os itens que o perfil não pode ver (<see cref="ShellViewModel.RebuildMenu"/>) e o
+    /// <see cref="ShellViewModel"/> repete a checagem antes de chamar este serviço, mas nenhuma
+    /// das duas barreiras cobre os outros chamadores de <see cref="NavigateTo"/> —
+    /// <c>PainelPrincipalViewModel</c> (atalhos do painel), <c>CamerasView</c> e
+    /// <c>ShellView</c> injetam <see cref="INavigationService"/> e navegam diretamente. Com a
+    /// regra aqui dentro, esconder o botão volta a ser só apresentação: a autorização de fato
+    /// acontece neste método, para qualquer origem.
+    ///
+    /// As dependências são resolvidas sob demanda do <see cref="IServiceProvider"/>, e não pelo
+    /// construtor, porque este serviço é criado na composição da raiz junto com os demais; pedir
+    /// <see cref="IAuthService"/> no construtor acoplaria a ordem de registro no contêiner sem
+    /// necessidade.
+    /// </summary>
+    private bool PodeNavegarPara(MenuItem item)
+    {
+        IAuthService auth = _serviceProvider.GetRequiredService<IAuthService>();
+        IPermissionService permissoes = _serviceProvider.GetRequiredService<IPermissionService>();
+
+        Usuario? usuario = auth.CurrentUser;
+        if (usuario is null || !usuario.Ativo) return false;
+
+        return permissoes.PodeVerMenu(usuario.Perfil, item);
+    }
+
     public void NavigateTo(MenuItem item)
     {
         if (_host is null || !_factories.TryGetValue(item, out Func<object>? factory)) return;
+
+        if (!PodeNavegarPara(item))
+        {
+            // Sem exceção: uma navegação negada não é erro de programação, é a regra funcionando.
+            // Fica registrada para auditoria — sem nome de usuário, perfil ou qualquer dado de
+            // sessão no log, apenas a tela recusada.
+            _serviceProvider.GetRequiredService<ILoggingService>()
+                .Warning($"Navegação bloqueada por falta de permissão ou sessão válida: {item}.");
+            return;
+        }
 
         object view = factory();
         _host.Content = view;

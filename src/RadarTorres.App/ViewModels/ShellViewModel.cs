@@ -290,7 +290,27 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
     /// <summary>Chamado pela ShellWindow logo após registrar o ContentControl host (ver SetHost).</summary>
     public void NavigateToDefault() => Navigate(MenuItem.PainelPrincipal);
 
-    private void Navigate(MenuItem item) => _navigationService.NavigateTo(item);
+    /// <summary>
+    /// Ponto único de autorização de navegação (defesa em profundidade — Requisito 7/11):
+    /// mesmo que o item esteja oculto na Sidebar para o perfil atual, nada impede que
+    /// <see cref="NavigateCommand"/> seja acionado diretamente (ex.: binding alternativo,
+    /// automação de teste, erro futuro de UI). Por isso a checagem de sessão + permissão é
+    /// repetida aqui, usando a mesma regra (<see cref="IPermissionService.PodeVerMenu"/>) que
+    /// decide a visibilidade do item — nenhuma tela confia apenas no botão estar escondido.
+    /// Sem sessão válida (<see cref="IAuthService.CurrentUser"/> nulo) a navegação é bloqueada.
+    /// </summary>
+    private bool PodeNavegarPara(MenuItem item)
+    {
+        Usuario? usuario = _authService.CurrentUser;
+        return usuario is not null && usuario.Ativo && _permissionService.PodeVerMenu(usuario.Perfil, item);
+    }
+
+    private void Navigate(MenuItem item)
+    {
+        if (!PodeNavegarPara(item)) return;
+
+        _navigationService.NavigateTo(item);
+    }
 
     /// <summary>Sincroniza seleção da Sidebar e título do cabeçalho com a navegação real —
     /// assina <see cref="INavigationService.Navigated"/> em vez de só reagir ao próprio
