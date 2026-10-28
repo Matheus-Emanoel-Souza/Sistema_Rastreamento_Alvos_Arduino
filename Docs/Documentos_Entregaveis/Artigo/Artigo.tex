@@ -350,6 +350,64 @@ corresponde à geração 5377, com \texttt{MelhorFitness} = 136,98.
   \end{tabular}
 \end{table}
 
+\subsubsection{Ambiente computacional}
+\label{sec:ambiente-computacional}
+
+Os experimentos controlados de hiperparâmetros relatados na Seção~\ref{sec:experimento-hiperparametros}
+e os tempos de treinamento ali citados (entre 14 e 75 segundos, para 300 gerações) foram executados
+em uma única máquina, cuja configuração de hardware e software é descrita na
+Tabela~\ref{tab:ambiente-computacional}. O registro explícito desse ambiente é condição necessária
+para que os tempos medidos sejam interpretáveis: o laço de avaliação do algoritmo genético roda
+inteiramente sobre a CPU, sem qualquer aceleração por GPU -- a placa de vídeo integrada da máquina de
+testes não possui suporte a CUDA nem é utilizada pelo \texttt{AlgoritmoGenetico} ou pelo
+\texttt{AmbienteTreinamento}, de modo que o tempo de treinamento depende do desempenho do processador
+e não da placa gráfica. Reportar hardware, sistema operacional e \textit{runtime} é, portanto,
+pré-condição para que os tempos absolutos apresentados nas Figuras~\ref{fig:experimento-mutacao} e
+\ref{fig:experimento-tempo} sejam reproduzíveis ou comparáveis em outra máquina: um processador mais
+rápido, mais núcleos ou memória disponível alteram os segundos medidos sem alterar a lógica avaliada,
+e a ausência de uso de GPU explica por que o tempo escala com o tamanho da população (mais indivíduos
+avaliados por geração) e quase não escala com o tamanho da rede neural (Seção~\ref{sec:experimento-hiperparametros},
+parágrafo de custo computacional) -- o gargalo é o número de episódios simulados em CPU, não a
+propagação da rede, pequena demais para pesar no tempo total.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Ambiente computacional dos experimentos de hiperparâmetros (Seção~\ref{sec:experimento-hiperparametros}).}
+  \label{tab:ambiente-computacional}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{3.6cm}p{8.2cm}}
+    \hline
+    \textbf{Componente} & \textbf{Especificação} \\
+    \hline
+    Processador & Intel\textsuperscript{\textregistered} Core\textsuperscript{\texttrademark} i5-4200U
+    @ 1,60 GHz, 2 núcleos físicos / 4 threads, clock máximo de 2,30 GHz \\
+    Memória RAM & 16 GB \\
+    Placa de vídeo & Intel HD Graphics Family (integrada), 1024 MB de memória compartilhada, sem GPU
+    dedicada e sem aceleração CUDA \\
+    Sistema operacional & Microsoft Windows 11 Home, versão 10.0.22631 (\textit{build} 22631), 64 bits \\
+    \textit{Runtime} & .NET SDK 9.0.320, \textit{runtime} Microsoft.WindowsDesktop.App 9.0.x,
+    \textit{target framework} \texttt{net9.0-windows} \\
+    Principais dependências & Microsoft.Data.Sqlite 9.0.0, Microsoft.Extensions.* 9.0.0,
+    Microsoft.ML.OnnxRuntime 1.20.1, AForge.Video / AForge.Video.DirectShow 2.2.5,
+    System.Drawing.Common 9.0.0, PDFsharp 6.2.4, System.IO.Ports 9.0.0 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+Essa descrição de ambiente cobre especificamente os onze experimentos de hiperparâmetros da
+Seção~\ref{sec:experimento-hiperparametros}, executados nesta máquina e nesta configuração de
+\textit{software} no mesmo dia. Ela \textbf{não} se estende ao treinamento mais longo que produziu o
+genoma de produção embutido no executável (\texttt{Resources/ControladorTreinado/genoma-controlador.json}):
+o histórico de treinamento persistido localmente (Tabela~\ref{tab:fitness-antes-depois} e
+Seção~\ref{sec:modelo-dados}) registra gerações, fitness e horários, mas não qual máquina executou
+cada sessão de treinamento, de modo que não é possível afirmar que o genoma de produção foi gerado
+neste mesmo ambiente de hardware. Essa lacuna de rastreamento é registrada aqui como limitação
+explícita e como trabalho futuro: o \texttt{AmbienteTreinamento} poderia passar a persistir, junto do
+histórico de gerações, uma identificação da máquina de execução (processador, núcleos e presença ou
+não de GPU), tornando toda sessão de treinamento -- e não apenas os experimentos controlados desta
+seção -- igualmente rastreável e reproduzível.
+
 \subsection{Projeto e implementação}
 
 \subsubsection{Módulo de detecção de alvos}
