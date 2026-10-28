@@ -125,11 +125,11 @@ public sealed class AmbienteTreinamento
     }
 
     /// <summary>Roda um episódio completo (sem passos intermediários visíveis) e devolve o resultado — é a função de fitness do algoritmo genético.</summary>
-    public EpisodioResultado ExecutarEpisodioRapido(double[] genoma, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio)
+    public EpisodioResultado ExecutarEpisodioRapido(double[] genoma, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio, ControladorHibrido.ModoDecisao modo = ControladorHibrido.ModoDecisao.Hibrido)
     {
         EstadoEpisodio estado = NovoEpisodio(seed, cenario);
         var rede = new RedeNeural(_arquitetura, genoma);
-        var controlador = new ControladorHibrido(rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
+        var controlador = new ControladorHibrido(rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo, modo);
 
         const double dt = 0.2;
         while (!estado.Finalizado)
@@ -137,7 +137,7 @@ public sealed class AmbienteTreinamento
             Avancar(estado, controlador, dt);
         }
 
-        return new EpisodioResultado(estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados);
+        return new EpisodioResultado(estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos);
     }
 
     /// <summary>
@@ -161,14 +161,14 @@ public sealed class AmbienteTreinamento
     /// aleatoriedade restante (erro de disparo, ver <see cref="CalculadoraErroDisparo"/>) nem
     /// precisa variar de geração para geração para o caso continuar isolando a mesma dificuldade.
     /// </param>
-    public double AvaliarFitness(double[] genoma, IReadOnlyList<int> seeds, IReadOnlyList<TipoCenarioTreinamento>? cenariosFixos = null)
+    public double AvaliarFitness(double[] genoma, IReadOnlyList<int> seeds, IReadOnlyList<TipoCenarioTreinamento>? cenariosFixos = null, ControladorHibrido.ModoDecisao modo = ControladorHibrido.ModoDecisao.Hibrido)
     {
         double soma = 0;
         int total = 0;
 
         foreach (int seed in seeds)
         {
-            soma += ExecutarEpisodioRapido(genoma, seed).FitnessTotal;
+            soma += ExecutarEpisodioRapido(genoma, seed, TipoCenarioTreinamento.Aleatorio, modo).FitnessTotal;
             total++;
         }
 
@@ -176,7 +176,7 @@ public sealed class AmbienteTreinamento
         {
             foreach (TipoCenarioTreinamento cenario in cenariosFixos)
             {
-                soma += ExecutarEpisodioRapido(genoma, seed: 0, cenario).FitnessTotal;
+                soma += ExecutarEpisodioRapido(genoma, seed: 0, cenario, modo).FitnessTotal;
                 total++;
             }
         }
