@@ -1086,6 +1086,46 @@ trabalho: confirma que o fitness, quando mede exatamente o comportamento que se 
 suficiente para corrigi-lo, sem precisar de nenhuma mudança na arquitetura da rede ou no ambiente de
 treino.
 
+\paragraph{Terceira comparação: a mesma rede, sem a camada heurística, supera as outras duas.}
+A ablação heurística-\textit{vs}-rede já conduzida neste trabalho (Seção~\ref{sec:experimento-hiperparametros},
+modo \texttt{RedePura}) havia sido medida sob a arquitetura e o ambiente antigos, num genoma treinado
+à parte para esse modo -- não a MESMA rede de produção, só sem a heurística. Para completar o quadro
+desta investigação, a rede de produção corrigida (penalidade de recusa, treinada sem limite de
+duração) foi avaliada também em \texttt{RedePura} -- mesmo genoma, mesmas 50 seeds de teste, mas sem
+a heurística filtrar candidatas por quadrante nem impor o tempo mínimo de mira de 0,3~s. O resultado
+é o melhor dos três regimes medidos nesta seção:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Mesma rede de produção (treinada com a penalidade de recusa), avaliada nos três modos de
+  decisão, 50 seeds de teste, sem limite de duração de episódio.}
+  \label{tab:tres-modos-decisao}
+  \small
+  \begin{tabular}{lrrr}
+    \hline
+    \textbf{Modo} & \textbf{Fitness médio} & \textbf{Fitness máximo} & \textbf{Taxa de recusa} \\
+    \hline
+    Híbrido (produção) & 86,09 & 434,59 & 0,0\% \\
+    Heurística pura & 89,69 & 434,72 & 0,0\% \\
+    Rede pura & \textbf{114,12} & \textbf{449,00} & 0,2\% \\
+    \hline
+  \end{tabular}
+\end{table}
+
+A MESMA rede, livre do filtro heurístico de candidatas e do tempo mínimo de mira obrigatório, supera
+tanto o modo híbrido quanto a heurística pura -- 114,12 contra 89,69 e 86,09, respectivamente. A
+explicação mais provável está no próprio tempo mínimo de mira: 0,3~s de espera obrigatória antes de
+qualquer disparo, nesta versão endurecida do ambiente (onde um único alvo não interceptado a tempo
+pode invadir uma torre e encerrar o episódio), é tempo que o modo rede pura não perde -- ela já pode
+disparar no instante em que a certeza mínima é atingida. Esse resultado não implica que a heurística
+deva ser removida de produção: as regras heurísticas (Seção~\ref{sec:regras-heuristicas}) existem
+por segurança e previsibilidade operacional, não só por desempenho de fitness, e o tempo mínimo de
+mira em particular evita disparos por reflexo em identificações ainda instáveis. O achado, em vez
+disso, é um indício concreto de que o CUSTO de segurança desse veto específico é medível e
+relativamente alto neste ambiente -- 24 pontos de fitness médio, cerca de 28\% -- e fica registrado
+como candidato a revisão: talvez o tempo mínimo de mira devesse ser menor, ou condicionado à urgência
+do alvo, em vez de um valor fixo único para qualquer situação.
+
 \subsection{Diagrama de pacotes}
 
 A organização interna da aplicação desktop foi documentada por meio de um diagrama de pacotes,
