@@ -1,0 +1,310 @@
+% ============================================================
+% Parecer da banca Banca_TCC sobre Artigo.tex (RadarTorres)
+% Gerado automaticamente pelo agente Banca_TCC -- não editar à mão
+% sem regenerar a partir de uma nova análise.
+% Compile com pdfLaTeX.
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+
+\title{\textbf{Parecer da Banca Examinadora — TCC ``RadarTorres''}\\[0.3em]
+\large Gerado pelo agente \texttt{Banca\_TCC}}
+\author{}
+\date{Análise referente a \texttt{Artigo.tex}/\texttt{Artigo.pdf} (RadarTorres, TCC de Engenharia da Computação, UCL)}
+
+\newcommand{\critico}{\textbf{\color{red!60!black}[CRÍTICO]}}
+\newcommand{\alto}{\textbf{\color{orange!70!black}[ALTO]}}
+\newcommand{\moderado}{\textbf{\color{blue!50!black}[MODERADO]}}
+\newcommand{\baixo}{\textbf{\color{gray}[BAIXO]}}
+
+\begin{document}
+\maketitle
+
+\section*{A. Parecer executivo}
+
+O RadarTorres é um trabalho tecnicamente substancial, com um ponto forte raro em TCCs de
+graduação: uma contribuição empírica real e verificável (a identificação e correção do bug de
+certeza estática de alvo, commit \texttt{a02d46a}), com rastreabilidade consistente entre o texto,
+o código e o histórico de commits -- confirmada diretamente no repositório. A honestidade
+científica sobre o escopo (hardware físico não montado, validação só em simulação) é reiterada de
+forma consistente do resumo à conclusão, mérito metodológico incomum. Entretanto, o artigo tem três
+fragilidades que comprometem seu rigor: (1) a seção ``Análise experimental de hiperparâmetros''
+relata 5 de 6 combinações convergindo para \emph{exatamente} o mesmo fitness (49,81) sem investigar
+a causa mecânica mais provável -- encontrada no próprio código-fonte (seeds de avaliação amarradas
+apenas ao número da geração, e cenários roteirizados com seed fixa, idênticos entre todas as
+configurações); (2) o texto apresenta como fato consolidado, nas seções de projeto elétrico/
+estrutural e parte do módulo de visão, detalhes técnicos que os próprios comentários do
+\texttt{.tex} fonte admitem não estarem confirmados em código nem na documentação do repositório --
+e que, em alguns casos, contradizem a documentação técnica existente -- sem que esse aviso chegue
+ao leitor do PDF; (3) o genoma embutido citado como resultado (geração 5377, fitness 136,98) já
+estava desatualizado em relação ao arquivo presente na árvore de trabalho no momento desta revisão
+(alteração não commitada), evidenciando a fragilidade de ancorar uma afirmação empírica a um
+artefato mutável sem versioná-lo junto ao próprio artigo.
+
+\section*{B. Nota geral}
+
+\textbf{Nota ponderada: $\approx 6{,}33\,/\,10$.}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{|p{5.3cm}|p{1.3cm}|p{1.5cm}|p{1.8cm}|p{5.0cm}|}
+\hline
+\textbf{Critério} & \textbf{Peso} & \textbf{Nota} & \textbf{Contrib.} & \textbf{Justificativa (resumo)} \\
+\hline
+\endhead
+Problema de pesquisa, objetivos e relevância & 10\% & 7,5 & 0,75 &
+Problema bem delimitado e mensurável, mas ``replicável em laboratório'' antecipa uma validação
+física nunca alcançada. \\
+\hline
+Fundamentação teórica e qualidade das referências & 20\% & 6,5 & 1,30 &
+As 2 citações centrais (Such 2017; Huang \& Ontañón 2020) foram verificadas e são fiéis; base
+bibliográfica estreita (7 refs) e uma citação pendente (``PREENCHER'' no \texttt{.tex}). \\
+\hline
+Metodologia e rigor científico & 20\% & 5,5 & 1,10 &
+Rastreabilidade RF/RNF$\rightarrow$código é um mérito, mas contradita por partes do texto
+(hardware/visão) que os próprios comentários-fonte admitem não serem rastreáveis. \\
+\hline
+Resultados, análise dos dados e discussão & 20\% & 6,0 & 1,20 &
+Tabela 1 (bug de certeza) é robusta e verificada; Tabela 2 (hiperparâmetros) tem leitura
+interpretativa incompleta. \\
+\hline
+Coerência, argumentação e conclusões & 15\% & 6,5 & 0,975 &
+Conclusão não extrapola os dados e reconhece limitações, mas há contradição não resolvida entre
+metodologia declarada e conteúdo de hardware/visão. \\
+\hline
+Redação científica, estrutura e apresentação & 10\% & 7,0 & 0,70 &
+Prosa clara, boas figuras; placeholder não preenchido no rodapé do orientador e \textit{hboxes}
+pendentes no log de compilação. \\
+\hline
+Reprodutibilidade e transparência & 5\% & 6,0 & 0,30 &
+Código aberto, commits citados, schema documentado; mas o artefato citado (genoma) já diverge do
+estado atual do repositório, e não há acesso ao \texttt{.db} para auditoria independente. \\
+\hline
+\textbf{Total} & 100\% & -- & \textbf{$\approx$ 6,33} & \\
+\hline
+\end{longtable}
+
+\section*{C. Principais problemas encontrados}
+
+\subsection*{Críticos}
+
+\noindent\textbf{1.} \critico\ \textbf{Confundimento metodológico não discutido na Tabela de
+hiperparâmetros.}
+As seeds estocásticas de cada geração dependem apenas do número da geração
+(\texttt{algoritmo.GeracaoAtual * 1000 + i}), não da configuração (população/arquitetura); e a
+maioria dos episódios por avaliação de fitness usa \texttt{CatalogoCenarios.TodosComScript} com
+seed fixa 0 -- cenários roteirizados idênticos, geração após geração, nas seis combinações. Isso
+explica mecanicamente a convergência exata (``5 de 6 execuções em 49,81'') de forma muito mais
+parcimoniosa do que ``convergência coincidente para o mesmo ótimo local'', e o artigo não discute
+essa característica do desenho experimental.
+
+\noindent\textbf{2.} \critico\ \textbf{Descrição de hardware apresentada como fato verificado, mas
+contradita pelos próprios comentários-fonte do artigo.} Motores 28BYJ-48, drivers ULN2003,
+registradores 74HC595, fonte 5V/15A, rolamento axial 51108 e dimensões citadas são descritos sem
+ressalva no PDF, mas comentários \texttt{\% CONFIRMAR} do próprio \texttt{.tex} afirmam que esse
+conteúdo ``foi informado pelo autor e ainda não consta da documentação técnica do repositório'', e
+que \texttt{Diagrama\_Eletrico.md} descreve um arranjo diferente. O mesmo vale para número de
+câmeras e resolução (720p). Esses avisos não chegam ao leitor do PDF.
+
+\subsection*{Altos}
+
+\noindent\textbf{3.} \alto\ Citação bibliográfica ausente para a técnica central de classificação
+por cor/forma/tamanho do módulo de visão (comentário ``PREENCHER'' no \texttt{.tex}).
+
+\noindent\textbf{4.} \alto\ A conclusão do experimento de hiperparâmetros usa a ausência de uma
+combinação melhor (n=1 por combinação) para validar, por omissão de alternativa, a configuração já
+em produção.
+
+\noindent\textbf{5.} \alto\ Divergência entre o genoma relatado no artigo (geração 5377, fitness
+136,98) e o arquivo \texttt{genoma-controlador.json} presente na árvore de trabalho no momento
+desta revisão.
+
+\subsection*{Moderados}
+
+\noindent\textbf{6.} \moderado\ A métrica ``taxa de cobertura $\approx$70\%'' na Tabela 1 é
+explicitamente estimada, mas aparece sem marcação ao lado de valores medidos com duas casas
+decimais.
+
+\noindent\textbf{7.} \moderado\ Sem acesso ao \texttt{radartorres.db} para auditar os números
+brutos das Tabelas 1 e 2 -- avaliação restrita à consistência interna do relato.
+
+\noindent\textbf{8.} \moderado\ Referências bibliográficas sem DOI/volume/páginas para a maioria
+dos itens.
+
+\noindent\textbf{9.} \moderado\ ``Replicável em laboratório'' no objetivo/problema de pesquisa
+nunca demonstrado.
+
+\subsection*{Baixos}
+
+\noindent\textbf{10.} \baixo\ Placeholder não preenchido: ``Mestre em xxx pela xxx'' no rodapé do
+orientador.
+
+\noindent\textbf{11.} \baixo\ \textit{Overfull/underfull hboxes} no log de compilação.
+
+\noindent\textbf{12.} \baixo\ Macros de revisão (\texttt{\textbackslash revmudar} etc.) definidas
+mas não utilizadas no corpo do documento.
+
+\section*{D. Análise seção por seção}
+
+\textbf{Resumo/Abstract}: bons, antecipam a limitação de hardware -- ponto forte.
+
+\textbf{2.1 Revisão da literatura}: melhor seção do artigo -- cada citação é amarrada
+explicitamente a uma decisão de projeto concreta; as duas citações mais centrais foram verificadas
+e são fiéis (ver Seção F). Lacuna: citação pendente sobre classificação por cor/forma/tamanho.
+
+\textbf{2.2 Procedimentos metodológicos}: contém a contribuição mais sólida do trabalho (bug de
+certeza, bate com o commit real) e a declaração de limitação de hardware mais completa. Fragilidade:
+a alegação de rastreabilidade total ao código é desmentida pelas subseções seguintes.
+
+\textbf{2.3.1--2.3.4 (detecção, elétrico/estrutural, visão, fluxo operacional)}: detecção/fluxo
+consistentes com a documentação; elétrico/estrutural e parte de visão são o ponto fraco (problema
+crítico 2).
+
+\textbf{2.3.5 Controlador neuroevolutivo}: excelente correspondência verificada linha a linha com o
+código (\texttt{RedeNeural.cs}, \texttt{AlgoritmoGenetico.cs}) -- subseção mais confiável do artigo.
+
+\textbf{2.3.6 Análise experimental de hiperparâmetros}: mérito de transparência (reconhece n=1,
+horizonte curto), mas falta investigar a causa determinística da convergência exata (problema
+crítico 1).
+
+\textbf{2.4/2.5 Diagrama de pacotes e modelo de dados}: sólidas, com diagramas claros; reconhecimento
+honesto de ciclos de dependência reais é um ponto de rigor positivo.
+
+\textbf{Conclusão}: coerente, não extrapola além dos dados, reconhece as limitações centrais.
+
+\section*{E. Argumentos fracos e afirmações questionáveis}
+
+\textbf{1. (Seção 2.3.6, hiperparâmetros)}: ``Esse padrão é mais consistente com as seis execuções
+convergindo para o mesmo ótimo local acessível (...) do que com um efeito forte e diferenciado de
+população ou arquitetura.''
+\emph{Problema}: ignora que o desenho experimental (seeds amarradas só à geração, cenários
+roteirizados com seed fixa) já produz estímulos quase idênticos entre as seis configurações a cada
+geração.
+\emph{Evidência necessária}: repetir cada combinação com seeds independentes de verdade e reportar
+a decomposição por tipo de episódio (aleatório vs. roteirizado).
+\emph{Sugestão}: reconhecer no texto que parte da avaliação é determinística por configuração do
+experimento, e que essa é uma explicação alternativa plausível -- talvez mais provável.
+
+\textbf{2. (Seção 2.3.2, projeto elétrico)}: descrição de motores/drivers/registradores sem
+ressalva.
+\emph{Problema}: contradiz comentário-fonte do próprio autor e \texttt{Diagrama\_Eletrico.md}.
+\emph{Evidência necessária}: atualização de \texttt{Diagrama\_Eletrico.md} ou marca explícita no
+PDF de que o arranjo ainda não foi reconciliado com a documentação técnica.
+\emph{Sugestão}: inserir no corpo do PDF uma frase de ressalva equivalente à já usada em outros
+pontos do artigo.
+
+\textbf{3. (Introdução)}: ``...de forma auditável e replicável em laboratório, sem depender de
+sensores ou atuadores de uso industrial.''
+\emph{Problema}: nenhuma replicação em bancada física ocorreu.
+\emph{Sugestão}: reformular para deixar claro que é uma propriedade de projeto, não um resultado
+obtido.
+
+\section*{F. Auditoria das referências}
+
+\textbf{Verificadas} (busca externa):
+\begin{itemize}
+\item Such et al. (2017), \emph{Deep Neuroevolution} (arXiv:1712.06567) -- confirmado: o Deep GA
+evolui redes com mais de 4 milhões de parâmetros livres, batendo com o número citado no artigo. A
+representação é fiel ao conteúdo original.
+\item Huang \& Ontañón (2020), \emph{A Closer Look at Invalid Action Masking} -- confirmado: o
+trabalho prova justificativa teórica para mascaramento de ações, com importância crescente
+conforme a fração de ações inválidas aumenta -- representado com fidelidade no artigo.
+\end{itemize}
+
+\textbf{Não verificadas} (sem DOI/link no \texttt{.bib} que permitisse localizar a fonte com
+segurança): \texttt{majoni2025}, \texttt{curbscan}, \texttt{alshiekh2017shielding},
+\texttt{tewa2009}/\texttt{tewa\_multiameaca2009}. São plausíveis pelo título/veículo, mas não lidas
+na íntegra -- classificadas como não verificadas, não como corretas por omissão.
+
+\section*{G. Auditoria de figuras, tabelas e dados}
+
+\textbf{Tabela 1 (fitness antes/depois)}: números internamente consistentes; causa raiz bate
+exatamente com a mensagem do commit \texttt{a02d46a} real. Sem acesso ao \texttt{.db} para auditar
+os valores brutos.
+
+\textbf{Tabela 2 (hiperparâmetros)}: números internamente consistentes; o problema é
+interpretativo, não numérico (ver Seções C e E).
+
+\textbf{Figuras (maquete, fluxogramas, diagrama de pacotes, DERs)}: legíveis e consistentes com
+texto e código, incluindo o reconhecimento honesto de ciclos de dependência no diagrama de
+pacotes.
+
+\section*{H. Perguntas que uma banca examinadora faria}
+
+\begin{enumerate}
+\item A convergência exata em 5/6 configurações do experimento de hiperparâmetros pode vir do
+desenho do experimento (seeds por geração, cenários com seed fixa), e não de uma propriedade real
+do espaço de busca?
+\item Como reconciliar a alegação de rastreabilidade total ao código com o conteúdo elétrico não
+registrado em código nem em documentação?
+\item O número de câmeras e a resolução citados são decisão de projeto já tomada, ou aspiração
+ainda não implementada?
+\item Por que o genoma embutido no executável mudou entre a redação do artigo e esta revisão? Como
+garantir que os números do artigo final correspondem ao software entregue?
+\item Que evidência sustenta a forma funcional assumida para certeza/erro de disparo no ambiente
+simulado, sem calibração com dados reais?
+\item Como o trabalho sustenta ``replicável em laboratório'' sem montagem física?
+\item Os limiares de segurança (0,3s de mira, certeza mínima) fazem sentido físico para sensores/
+câmeras reais, nunca calibrados em campo?
+\end{enumerate}
+
+\section*{I. Plano de correção priorizado}
+
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{|p{1.4cm}|p{6.0cm}|p{7.0cm}|}
+\hline
+\textbf{Prioridade} & \textbf{Ação} & \textbf{Motivo} \\
+\hline
+\endhead
+Máxima & Discutir a causa determinística provável da convergência exata na Seção 2.3.6 &
+Afeta diretamente a validade da conclusão mais recente e mais citada do artigo \\
+\hline
+Máxima & Reconciliar as seções de hardware/visão com a documentação técnica real, ou sinalizar a
+incerteza explicitamente no PDF & Contradição direta com a alegação metodológica central \\
+\hline
+Alta & Preencher a citação pendente sobre classificação por cor/forma/tamanho & Lacuna teórica
+central já identificada pelo próprio autor \\
+\hline
+Alta & Atualizar/versionar o genoma embutido junto com a versão final do artigo & O artefato citado
+já diverge do estado atual do repositório \\
+\hline
+Média & Completar o \texttt{.bib} com DOI/veículo/páginas & Abaixo do padrão mínimo de
+rastreabilidade bibliográfica \\
+\hline
+Média & Marcar explicitamente, na Tabela 1, qual célula é estimativa vs. medição & Evita confundir
+o leitor sobre a natureza do número \\
+\hline
+Baixa & Preencher o placeholder do orientador & Pendência de formatação antes de submissão formal \\
+\hline
+Baixa & Resolver \textit{hboxes} e remover macros de revisão não usadas & Polimento final \\
+\hline
+\end{longtable}
+
+\section*{J. Parecer final}
+
+O RadarTorres tem méritos reais e verificáveis: a arquitetura do controlador híbrido está
+implementada exatamente como descrita -- conferido linha a linha no código -- e a contribuição
+central do trabalho (achado e correção do bug de certeza estática) é uma das histórias de depuração
+empírica mais bem documentadas em um TCC, com commit real, causa raiz identificada e efeito
+mensurado. A postura de transparência sobre as limitações de hardware é consistente e genuína do
+início ao fim.
+
+Dito isso, o artigo mistura, sem sinalização ao leitor, afirmações com proveniência muito diferente
+-- algumas rastreáveis ao código linha a linha, outras admitidamente não confirmadas nem pelo
+próprio código nem pela documentação técnica -- o que contradiz diretamente a alegação metodológica
+central do trabalho. Some-se a isso uma leitura interpretativa incompleta do resultado mais recente
+(a convergência suspeitosamente exata da Tabela 2), e o quadro geral é de um trabalho tecnicamente
+competente, mas que, na sua forma atual, apresentaria à banca um nível de confiança no texto
+superior ao nível de confiança real nos dados subjacentes. As duas correções de prioridade máxima
+do plano acima são, a meu ver, as mudanças que mais elevariam a credibilidade científica do trabalho
+antes da defesa.
+
+\vspace{1em}
+\noindent\textit{Este parecer não altera nenhum arquivo do \texttt{Artigo.tex} original. Uma cópia
+anotada do artigo, com os trechos problemáticos grifados e os comentários desta revisão inseridos
+no ponto exato a que se referem, está em \texttt{artigo\_revisado.pdf}, gerada na mesma análise.}
+
+\end{document}

@@ -19,7 +19,6 @@
 \usepackage[colorinlistoftodos,textsize=footnotesize]{todonotes}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
-\usepackage{soul}
 \usepackage{longtable}
 \renewcommand{\refname}{Referências}
 
@@ -28,20 +27,22 @@
 \newcommand{\revbom}[1]{\todo[inline,color=green!25!white,bordercolor=green!60!black]{\textbf{FICOU BOM:} #1}}
 \newcommand{\revfaltou}[1]{\todo[inline,color=yellow!35!white,bordercolor=orange]{\textbf{FALTOU DETALHE:} #1}}
 
-% ---------- Camada de revisão do "professor" (nova, adicionada nesta versão) ----------
+% ---------- Camada de revisão da banca Banca_TCC ----------
 % \grifo{...}       destaca (grifa, fundo amarelo) o trecho exato a que o comentário se refere.
-% \parecerGrave{..} parecer de problema estrutural/grave -- vermelho forte.
-% \parecerAjuste{.} parecer de ajuste necessário, mas não bloqueante -- laranja.
+% \parecerGrave{..} parecer de problema crítico/alto -- compromete rigor ou validade -- vermelho.
+% \parecerAjuste{.} parecer de ajuste moderado/baixo, não bloqueante -- laranja.
 % \parecerElogio{.} parecer de elogio com sugestão de refinamento -- azul.
 % \parecerPergunta{} pergunta direta de banca -- roxo.
-\sethlcolor{yellow}
-\newcommand{\grifo}[1]{\hl{#1}}
+% \colorbox em vez de \soul{}\hl{} (pacote soul indisponível offline nesta máquina) -- por isso
+% cada \grifo{} deve envolver só um trecho curto (até ~1 linha), nunca um parágrafo inteiro: um
+% \colorbox não quebra entre linhas.
+\newcommand{\grifo}[1]{\colorbox{yellow}{#1}}
 \newcommand{\parecerGrave}[1]{\todo[inline,color=red!10!white,bordercolor=red!70!black]{%
-  \textbf{\color{red!60!black}PARECER DO PROFESSOR -- PROBLEMA GRAVE:} #1}}
+  \textbf{\color{red!60!black}BANCA\_TCC -- PROBLEMA CRÍTICO/ALTO:} #1}}
 \newcommand{\parecerAjuste}[1]{\todo[inline,color=orange!12!white,bordercolor=orange!80!black]{%
-  \textbf{\color{orange!70!black}PARECER DO PROFESSOR -- AJUSTAR:} #1}}
+  \textbf{\color{orange!70!black}BANCA\_TCC -- AJUSTAR:} #1}}
 \newcommand{\parecerElogio}[1]{\todo[inline,color=blue!8!white,bordercolor=blue!60!black]{%
-  \textbf{\color{blue!50!black}PARECER DO PROFESSOR -- BOM, MAS PODE MELHORAR:} #1}}
+  \textbf{\color{blue!50!black}BANCA\_TCC -- BOM, MAS PODE MELHORAR:} #1}}
 \newcommand{\parecerPergunta}[1]{\todo[inline,color=violet!10!white,bordercolor=violet]{%
   \textbf{\color{violet}A BANCA VAI PERGUNTAR:} #1}}
 
@@ -70,16 +71,14 @@
 \begin{center}
 \fbox{\parbox{0.92\textwidth}{
 \textbf{NOTA SOBRE ESTA VERSÃO}\\[0.3em]
-Este é o arquivo \texttt{artigo\_revisado.tex} -- cópia do \texttt{Artigo.tex} da branch
-\texttt{main} (versão mais atual), com uma camada adicional de revisão: o parecer de um
-professor/revisor externo, em caixas
-\textbf{\color{red!60!black}vermelhas} (problema grave, resolver antes da banca),
-\textbf{\color{orange!70!black}laranjas} (ajuste necessário, não bloqueante),
-\textbf{\color{blue!50!black}azuis} (ponto já bom, com sugestão de refinamento) e
-\textbf{\color{violet}violetas} (pergunta que a banca provavelmente vai fazer). O trecho exato a
-que cada parecer se refere aparece \grifo{grifado em amarelo} logo antes do comentário. O
-veredito final e a tabela de parâmetros recomendados estão na última seção, antes das
-referências.
+Este é o arquivo \texttt{artigo\_revisado.tex} -- cópia do \texttt{Artigo.tex} atual, com uma
+camada adicional de revisão gerada pelo agente \textbf{Banca\_TCC} (parecer completo em
+\texttt{Parecer\_Banca\_TCC.pdf}, nota geral $\approx 6{,}33/10$). Os problemas apontados aparecem
+em caixas \textbf{\color{red!60!black}vermelhas} (crítico/alto -- compromete rigor ou validade,
+resolver antes da entrega) e \textbf{\color{orange!70!black}laranjas} (ajuste moderado/baixo, não
+bloqueante). O trecho exato a que cada parecer se refere aparece \grifo{grifado em amarelo} logo
+antes do comentário. O veredito final e a tabela de ações priorizadas estão na última seção, antes
+das referências.
 }}
 \end{center}
 
@@ -105,8 +104,12 @@ referências.
 \begin{center}
     Gabriel Vasconcellos de Morais\footnote{Graduando(a) em Engenharia da Computação pela Faculdade do Centro Leste -- UCL. E-\textit{mail}: gabrielmorais@ucl.br}\\
     Matheus Emanoel Gomes Souza\footnote{Graduando(a) em Engenharia da Computação pela Faculdade do Centro Leste -- UCL. E-\textit{mail}: matheusemanoel@ucl.br}\\
-    Anker Douglas Loss\footnote{Orientador(a). Mestre em xxx pela xxx. E-\textit{mail}: anker@ucl.br}
+    Anker Douglas Loss\footnote{Orientador(a). \grifo{Mestre em xxx pela xxx}. E-\textit{mail}: anker@ucl.br}
 \end{center}
+
+\parecerAjuste{Placeholder não preenchido ("Mestre em xxx pela xxx") no rodapé de identificação do
+orientador -- ajuste de baixa gravidade, mas deve ser preenchido antes de qualquer submissão
+formal.}
 
 \begin{center}
     \textbf{RESUMO}
@@ -120,7 +123,7 @@ conjunto de torres candidatas posicionadas ao redor de uma base central, qual de
 a esse alvo -- problema central que o trabalho busca resolver: como identificar, localizar e
 atribuir automaticamente a torre mais adequada a cada alvo, de forma auditável e sem depender de
 sensores ou atuadores de uso industrial. O sistema combina dois sensores ultrassônicos (que medem
-a distância pelo eco do ultrassom) com quatro câmeras de 720p, processa quadros de vídeo
+a distância pelo eco do ultrassom) com \grifo{quatro câmeras de 720p}, processa quadros de vídeo
 (\textit{frames}) e classifica o alvo por sua cor, formato e tamanho. O protótipo converte as
 leituras de ângulo e distância em posição cartesiana, exibindo-as em tempo real em um radar
 circular, seleciona automaticamente a torre mais adequada para cada alvo e registra em auditoria
@@ -136,6 +139,12 @@ permitir evolução futura sem exigir hardware adicional. Discutem-se, por fim, 
 inerentes à abordagem de hardware acessível e de baixo custo adotada, e o fato de a validação do
 protótipo, até o momento, ter sido realizada inteiramente por simulação de software, já que a
 estrutura física ainda não foi montada nem testada.
+
+\parecerAjuste{O número de câmeras (quatro) e a resolução (720p), citados aqui e na Seção 2.3.3,
+não têm registro no código nem na documentação técnica do repositório (o próprio \texttt{.tex}
+fonte marca isso com um comentário "CONFIRMAR" não renderizado no PDF). Decida se é uma decisão de
+projeto já tomada ou uma aspiração ainda não implementada, e torne essa distinção visível ao leitor
+do PDF -- hoje ela só existe em comentário de fonte.}
 
 \noindent\textbf{Palavras-chave}: Detecção e rastreamento de alvos; Seleção automática de torre; Controlador heurístico-neuroevolutivo; Arduino; Protótipo.
 
@@ -168,10 +177,6 @@ assembled or tested.
 
 \noindent\textbf{Keywords}: Target detection and tracking; Automatic tower selection; Heuristic-neuroevolutionary controller; Arduino; Prototype.
 
-\parecerElogio{Este resumo/abstract já cobrem o escopo real do trabalho (controlador
-heurístico-neuroevolutivo, visão, modelo de dados) -- diferente de uma versão anterior que falava
-só em "modelo de dados". Ponto resolvido, bom trabalho.}
-
 \clearpage
 
 % ============================================================
@@ -197,27 +202,18 @@ limites que uma camada de regras explícitas (a heurística) já considera segur
 acontece em duas etapas bem separadas: antes da operação do sistema, em um ambiente de treinamento
 simulado, onde a rede evolui ao longo de muitas gerações de episódios de teste; e, depois de
 treinada, apenas na forma de inferência durante a execução real, sem qualquer ajuste adicional de
-seus parâmetros em tempo de operação. \grifo{O problema central que este trabalho busca resolver é,
+seus parâmetros em tempo de operação. O problema central que este trabalho busca resolver é,
 portanto, como automatizar essa cadeia -- detectar, localizar e selecionar a torre mais adequada a
-cada alvo -- de forma auditável e replicável em laboratório, sem depender de sensores ou atuadores
-de uso industrial.}
+cada alvo -- de forma auditável e \grifo{replicável em laboratório}, sem depender de sensores ou atuadores
+de uso industrial.
 
-\parecerGrave{Essa frase é a única coisa no artigo que funciona como "objetivo", e ela é um
-objetivo GERAL bem redigido -- mas \textbf{não existe, em lugar nenhum do texto, uma lista de
-objetivos específicos}. Isso é uma falha estrutural para um TCC: a banca avalia o trabalho CONTRA
-objetivos declarados, e sem objetivos específicos explícitos e falseáveis (dá para dizer
-objetivamente se foram cumpridos ou não), a avaliação vira impressão geral -- o que tende a jogar
-contra vocês, não a favor, dado que o trabalho tem bastante conteúdo técnico sólido para mostrar.
-\textbf{Exijo} uma subseção "Objetivos" logo após este parágrafo, com: (1) este objetivo geral,
-mantido como está (está bom); (2) de 4 a 6 objetivos específicos, cada um verificável, por
-exemplo: "implementar e documentar o protocolo de comunicação serial Arduino-aplicação",
-"implementar seleção automática de torre por heurística em camadas, validada em simulação",
-"implementar e treinar um controlador neuroevolutivo, com evidência quantitativa de evolução do
-fitness" (que hoje vocês já têm, na Tabela~1 -- é só precisar transformar em objetivo nomeado),
-"migrar a persistência para SQLite com chaves estrangeiras reais" (também já cumprido -- precisa
-só ser nomeado como tal). Cada um desses tem que reaparecer na Conclusão (que já existe e é boa)
-com um veredito explícito de cumprido/parcial/não cumprido -- hoje a Conclusão sintetiza bem os
-resultados, mas não amarra isso a nenhum objetivo nomeado, porque nenhum foi declarado antes.}
+\parecerAjuste{"Replicável em laboratório" é parte da formulação do próprio problema de pesquisa,
+mas nenhuma replicação em bancada física foi de fato realizada -- toda validação relatada no
+trabalho é por simulação de software (ver Seção 2.2). O trabalho é auditável no sentido de
+rastreabilidade de código/decisão, mas a "replicabilidade em laboratório" permanece não
+demonstrada. Sugestão: reformular para algo como "...de forma auditável e, no estágio atual do
+projeto, com arquitetura concebida para replicação futura em laboratório...", deixando claro que é
+uma propriedade de projeto, não um resultado obtido.}
 
 % ============================================================
 % 2 DESENVOLVIMENTO
@@ -257,25 +253,11 @@ O RadarTorres adota uma abordagem simples, por proximidade, aplicada alvo a alvo
 exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento real); a
 abordagem multiameaça fica como trabalho futuro.
 
-O refinamento dessa escolha por proximidade -- e o instante de disparo -- é feito por
-\grifo{uma pequena rede neural \textit{feedforward} (6 entradas, 1 camada oculta de 8 neurônios, 2
-saídas, ativação tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por um
-algoritmo genético próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana,
-elitismo)}, auditável e sem dependência de biblioteca de aprendizado de máquina.
-
-\parecerPergunta{Por que 8 neurônios na camada oculta, população 60, taxa de mutação 0,08 e
-elitismo proporcional a 10\,\%? O artigo não justifica nenhum desses números com citação nem com
-experimento próprio -- é exatamente a pergunta que uma banca de Engenharia faz: "testaram outros
-valores?". A resposta documentada hoje é "convenção", o que é aceitável como ponto de partida mas
-não como justificativa final.}
-
-\parecerAjuste{\textbf{Recomendação barata}: vocês já têm a infraestrutura para isso -- o
-treinamento roda dezenas de milhares de gerações em pouco mais de 1h (ver Tabela~1 mais abaixo, 51
-blocos de 500 gerações entre 13h40 e 14h57). Rodem o MESMO treinamento variando só um
-hiperparâmetro por vez (camada oculta 4/8/16, ou população 30/60/120) e reportem o fitness final
-de cada combinação numa tabelinha de 3-4 linhas. Isso transforma "escolhemos 8 por convenção" em
-"testamos 4/8/16 e 8 foi o melhor custo-benefício", frase muito mais defensável -- e o custo é de
-minutos, não de dias, dado o tempo de treino já demonstrado no próprio artigo.} \citeonline{such2017deepneuroevolution}
+O refinamento dessa escolha por proximidade -- e o instante de disparo -- é feito por uma pequena
+rede neural \textit{feedforward} (6 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
+tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por um algoritmo genético
+próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), auditável e
+sem dependência de biblioteca de aprendizado de máquina. \citeonline{such2017deepneuroevolution}
 mostram que algoritmos genéticos são uma alternativa competitiva ao treino por gradiente em tarefas
 de aprendizado por reforço, em redes de porte bem maior do que a aqui empregada (até quatro milhões
 de parâmetros, contra os 74 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
@@ -285,6 +267,12 @@ desempenho do controlador prioriza o ajuste dos hiperparâmetros da busca evolut
 população, paralelização da avaliação de fitness, enriquecimento do sinal de recompensa), sem
 descartar, a priori, uma rede maior caso evidências futuras mostrem que a capacidade atual seja o
 fator limitante.
+
+\parecerElogio{Esta é a melhor seção do artigo: cada citação (Such et al. 2017, Huang \& Ontañón
+2020 mais abaixo) é amarrada explicitamente a uma decisão de projeto concreta, em vez de citada de
+passagem. As duas citações mais centrais foram verificadas pela banca em busca externa e a
+representação do artigo é fiel ao conteúdo original -- ver Seção F do parecer. Ponto a melhorar:
+a base bibliográfica é estreita (7 referências) para um TCC desta extensão.}
 
 A arquitetura híbrida do controlador -- heurística que restringe o espaço de ações antes da rede
 decidir, e volta a intervir depois, vetando o disparo -- tem paralelo direto com duas técnicas da
@@ -329,7 +317,13 @@ hardware físico real.
 % PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
 % computacional clássica (a ser informada pelo autor).
 
+\parecerAjuste{O próprio \texttt{.tex} fonte contém, neste ponto, um comentário não renderizado
+"PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho" -- uma lacuna
+teórica central (o módulo de visão, Seção 2.3.3, depende exatamente dessa técnica) ainda sem
+citação. Resolver antes da entrega.}
+
 \subsection{Procedimentos metodológicos}
+\label{sec:procedimentos-metodologicos}
 
 O percurso metodológico deste trabalho não seguiu o fluxo tradicional de especificação prévia
 seguida de implementação: o protótipo RadarTorres já existia, em desenvolvimento incremental,
@@ -350,10 +344,17 @@ e o \textbf{status}, que reflete o estado real de implementação constatado no 
 levantamento -- Implementado, Parcial ou Planejado --, e não a intenção original de projeto. Cada
 requisito foi, além disso, rastreado até a classe ou método do código-fonte que o realiza, registro
 mantido em uma matriz de rastreabilidade dedicada, de modo que qualquer afirmação sobre o grau de
-implementação do protótipo possa ser verificada diretamente no código. Divergências encontradas
+implementação do protótipo possa ser \grifo{verificada diretamente no código}. Divergências encontradas
 entre o comportamento observado no código e a nomenclatura ou fluxo originalmente esperado também
 foram registradas explicitamente, em vez de omitidas ou corrigidas silenciosamente na
 documentação.
+
+\parecerGrave{Esta alegação de rastreabilidade total é contradita pelas próprias Seções 2.3.2 e
+2.3.3: os comentários "CONFIRMAR" do \texttt{.tex} fonte admitem que o conteúdo sobre motores,
+drivers, registradores, dimensões, número de câmeras e resolução "foi informado pelo autor e ainda
+não consta da documentação técnica do repositório", e em alguns casos contradiz
+\texttt{Diagrama\_Eletrico.md}. Essa divergência entre o método declarado e o método efetivamente
+aplicado em parte do texto é o problema crítico mais importante deste parecer -- ver Seções C e E.}
 
 \textbf{A parte física do RadarTorres (torres, motores, sensores montados em campo) ainda não foi
 implementada nem validada.} Toda a validação funcional relatada neste trabalho foi realizada por
@@ -362,6 +363,9 @@ exercitada de ponta a ponta sem depender de uma porta serial conectada a hardwar
 impõe um limite claro ao escopo dos resultados relatados -- eles atestam a corretude da lógica de
 decisão implementada em software, mas não substituem uma validação de campo com sensores e torres
 físicas, deixada como trabalho futuro.
+
+\parecerElogio{Declaração de limitação exemplarmente honesta e reiterada de forma consistente do
+resumo à conclusão -- mérito metodológico incomum em TCCs de graduação.}
 
 A mesma ressalva se aplica, com reforço adicional, ao controlador treinado por neuroevolução: o
 mundo simulado em que os genomas são avaliados é uma aproximação
@@ -390,32 +394,19 @@ correção (commit \texttt{a02d46a}), o fitness médio da população permaneceu
 ao longo de 51 blocos de 500 gerações (25.500 gerações treinadas, entre 13h40 e 14h57 do mesmo dia),
 mesmo com o melhor indivíduo de cada bloco oscilando entre 98 e 145 -- sinal de que indivíduos
 pontualmente sortudos conseguiam boa pontuação, sem que a população como um todo convergisse,
-exatamente o efeito esperado de 70\% dos alvos nascerem abaixo do limiar de disparo. \grifo{Depois da
+exatamente o efeito esperado de 70\% dos alvos nascerem abaixo do limiar de disparo. Depois da
 correção, a taxa de cobertura (fração de alvos que chegam a ser disparáveis) sobe para 100\% em
 todas as cinco amostras de comportamento do melhor indivíduo registradas na mesma tarde, e o
 fitness médio da população em uma amostra recente de 300 gerações (27/10, gerações 1141--1440) sobe
 para 134,17, muito mais próximo do fitness do melhor indivíduo (137,35) do que o patamar de 9
 observado antes da correção. O genoma embutido no executável (\texttt{genoma-controlador.json})
-corresponde à geração 5377, com \texttt{MelhorFitness} = 136,98.}
+corresponde à \grifo{geração 5377, com \texttt{MelhorFitness} = 136,98}.
 
-\parecerElogio{Este é o melhor trecho quantitativo do artigo -- número real, antes/depois, commit
-citado. Excelente. \textbf{Mas} há uma lacuna de rastreabilidade que a banca vai notar: a amostra
-"depois" citada cobre as gerações 1141--1440, enquanto o genoma efetivamente embutido no executável
-é da geração \textbf{5377} -- quase 4 mil gerações depois, fora da janela reportada. O fitness do
-genoma embutido (136,98) é consistente com o fitness médio da amostra (134,17), então
-provavelmente não há problema real, mas o texto não diz isso explicitamente -- um leitor atento
-pergunta "por que vocês reportam uma amostra de 300 gerações que não inclui a geração realmente
-usada em produção?". Basta uma frase: "o treinamento continuou além da amostra reportada; a
-Tabela~X mostra que o fitness permaneceu estável nesse intervalo, sustentando a escolha da geração
-5377 para o genoma embutido" -- SE isso for verdade. Se não for (se o fitness variou bastante entre
-1440 e 5377), é melhor reportar a amostra que efetivamente inclui a geração 5377.}
-
-\parecerPergunta{25.500 gerações entre 13h40 e 14h57 do mesmo dia é pouco mais de 1h17 --
-aproximadamente 5,5 gerações por segundo, cada uma avaliando 60 genomas $\times$ 3 episódios (ver
-\texttt{EpisodiosPorAvaliacao}). Em qual máquina (CPU, núcleos) isso foi medido? Esse número é
-relevante porque mostra que a ablação de hiperparâmetros que pedi no comentário anterior é
-praticamente de graça em termos de tempo -- mas, sem reportar o hardware, a banca não tem como
-avaliar se esse desempenho é esperado ou um sinal de que os episódios simulados são triviais demais.}
+\parecerAjuste{No momento desta revisão, o arquivo \texttt{genoma-controlador.json} presente na
+árvore de trabalho corresponde a uma geração/fitness diferentes do citado aqui (alteração local não
+commitada) -- o artefato empírico citado já não corresponde ao estado atual do repositório. Antes
+da entrega final, versione o genoma embutido junto com a versão final do artigo, para que o número
+citado no texto sempre corresponda ao software efetivamente entregue.}
 
 \begin{table}[htbp]
   \centering
@@ -439,6 +430,11 @@ avaliar se esse desempenho é esperado ou um sinal de que os episódios simulado
   \end{tabular}
 \end{table}
 
+\parecerAjuste{A célula "não medida diretamente -- $\approx$70\%" mistura, visualmente, uma
+estimativa derivada com valores efetivamente medidos (que têm duas casas decimais de precisão).
+Marque essa célula com uma nota de rodapé de tabela explícita, para o leitor não confundir
+estimativa com medição.}
+
 \subsection{Projeto e implementação}
 
 \subsubsection{Módulo de detecção de alvos}
@@ -457,21 +453,9 @@ temperatura ambiente). A cada leitura, o Arduino envia à aplicação desktop, p
 ângulo e a distância em protocolo de texto simples, que a aplicação converte em posição cartesiana
 e exibe no radar circular de quatro quadrantes.
 
-\grifo{O protocolo é textual em ASCII, transportado pela porta serial USB a 9600 bauds por
-padrão}, com cada mensagem terminada por \texttt{\textbackslash n} e composta por um tipo em
-maiúsculas seguido de pares chave-valor separados por ponto e vírgula.
-
-\parecerGrave{9600 bauds é o padrão histórico do Arduino, não um valor calculado para a carga do
-canal -- e o firmware físico (\texttt{RadarTorres\_Firmware.ino}) adiciona, além das mensagens já
-existentes, \texttt{USONIC}, \texttt{CAM}, \texttt{CALIB}, \texttt{COLOR}, \texttt{AIM} e todo o
-protocolo \texttt{GENOMA} (um comando POR PESO da rede -- 74 comandos sequenciais só para
-sincronizar o genoma). Uma mensagem \texttt{TARGET;ID=1;ANGLE=45;DIST=2.80\textbackslash n} tem
-$\approx$30 bytes; a 9600 bauds ($\approx$960 bytes/s úteis), isso dá um teto teórico de
-$\approx$32 mensagens/s \textbf{compartilhadas} entre leituras de 2 sensores ultrassônicos, até 4
-câmeras reportando \texttt{CAM}, comandos \texttt{AIM} para até 4 torres e a sincronização do
-genoma. O artigo nunca calcula nem mede esse teto, apesar de usar "tempo real" no resumo e no
-abstract. O próprio código já permite 19200 a 115200 bauds -- por que o padrão continua em 9600
-se o custo de subir é zero?} Uma leitura de alvo chega na forma
+O protocolo é textual em ASCII, transportado pela porta serial USB a 9600 bauds por padrão, com
+cada mensagem terminada por \texttt{\textbackslash n} e composta por um tipo em maiúsculas seguido
+de pares chave-valor separados por ponto e vírgula. Uma leitura de alvo chega na forma
 \texttt{TARGET;ID=1;ANGLE=45;DIST=2.80}, em que \texttt{ANGLE} é dado em graus no intervalo
 $[0, 360)$ e \texttt{DIST} em metros. O ângulo segue a convenção de bússola -- $0^\circ$ apontando
 para o Norte, sentido horário --, escolhida por ser a leitura mais intuitiva para quem opera um
@@ -492,34 +476,12 @@ sensor ou de cabo produzem degradação graciosa, e não interrupção da aplica
 % (um HC-SR04, um servo SG90, quatro LEDs, alimentação pela USB) e não menciona 74HC595, ULN2003,
 % fonte de 5 V/15 A, rolamento 51108, cubo duplo-D nem as dimensões citadas.
 % CONFIRMAR: número de câmeras por torre e onde cada câmera é montada.
-\grifo{O projeto elétrico é baseado em um Arduino Uno}, plataforma disponível no simulador
-Tinkercad usado para simular o circuito. Os sinais dos motores de passo são gerados por
-registradores de deslocamento 74HC595 em cascata, e os motores 28BYJ-48 são acionados por drivers
-ULN2003, alimentados por uma fonte de 5 V/15 A. \grifo{Cada uma das quatro torres armadas possui
-dois motores 28BYJ-48 (movimentos de pan e tilt)}, um laser de baixa potência e um LED de cor
-própria; o acionamento é exclusivamente demonstrativo.
-
-\parecerGrave{Esta descrição está desatualizada em relação ao firmware físico que já existe no
-mesmo repositório (\texttt{Arduino/RadarTorres\_Firmware/RadarTorres\_Firmware.ino}) -- e o próprio
-arquivo admite isso, no próprio cabeçalho: \textit{"Placa: Arduino MEGA 2560 (substituiu o Uno
-documentado antes -- os 13 motores de passo não cabem nos $\sim$20 pinos do Uno)"}. O firmware
-real usa \textbf{8 motores NEMA17 + driver A4988/DRV8825} (pan+tilt de 4 câmeras) e \textbf{4
-motores NEMA17 + A4988/DRV8825} (pan das 4 torres) -- nenhum 74HC595, nenhum ULN2003 nas torres
-armadas (o ULN2003 sobrou só para o motor de varredura central, 28BYJ-48). Ou seja: o texto
-descreve um projeto elétrico (Uno + 74HC595 + ULN2003 em todas as torres) que o próprio
-repositório já documenta como \textbf{substituído}. \textbf{Decisão obrigatória}: esta subseção
-precisa ser reescrita a partir do firmware real -- placa, pinagem, os 8+4 motores NEMA17, e por
-que o 74HC595 foi abandonado -- antes de qualquer apresentação à banca, porque uma pergunta sobre
-"quantos motores tem cada torre" hoje teria duas respostas diferentes dependendo de qual arquivo
-do próprio repositório se consulta.}
-
-\parecerAjuste{Adicionalmente: os comentários do próprio firmware admitem que valores como
-\texttt{SWEEP\_STEPS\_POR\_VOLTA = 2048} ("valor típico de referência -- CONFIRMAR no motor real
-antes de usar em produção") e os micropassos do driver das câmeras ("CONFIRMAR configuração
-física") são \textbf{suposições de catálogo, não medições}. Isso é coerente com "o hardware ainda
-não foi montado", já admitido em outras partes do artigo para o controlador neuroevolutivo --
-mas essa mesma honestidade precisa aparecer também na seção de projeto elétrico, frase a frase,
-não só implicitamente nos comentários do código-fonte que a banca não vai ler.} Na torre central, o mastro dos sensores não é acoplado
+O projeto elétrico é baseado em um \grifo{Arduino Uno}, plataforma disponível no simulador Tinkercad usado
+para simular o circuito. Os sinais dos motores de passo são gerados por \grifo{registradores de
+deslocamento 74HC595 em cascata}, e os motores 28BYJ-48 são acionados por \grifo{drivers ULN2003},
+alimentados por uma \grifo{fonte de 5 V/15 A}. Cada uma das quatro torres armadas possui dois motores
+28BYJ-48 (movimentos de pan e tilt), um laser de baixa potência e um LED de cor própria; o
+acionamento é exclusivamente demonstrativo. Na torre central, o mastro dos sensores não é acoplado
 diretamente ao eixo do motor: ele assenta em um disco que gira sobre um rolamento axial 51108,
 acionado pelo motor por um cubo duplo-D. A passagem dos fios fica próxima ao eixo central, com folga
 de cabo em vez de anel coletor (\textit{slip ring}), já que o giro é limitado a 180°. A torre
@@ -531,6 +493,18 @@ acionamento demonstrativo; a torre central tem suporte próprio para os sensores
 topo do mastro. Todas essas peças, assim como o restante do projeto, existem até o momento apenas
 em projeto digital (modelagem 3D e simulação elétrica), sem montagem física realizada.
 
+\parecerGrave{PROBLEMA CRÍTICO (ver Seção C.2 do parecer). O conteúdo grifado acima (Arduino Uno,
+74HC595, ULN2003, fonte 5V/15A, rolamento 51108) é apresentado como fato assentado, sem qualquer
+ressalva visível no PDF. Mas o próprio comentário "CONFIRMAR" do \texttt{.tex} fonte (não
+renderizado) admite que esse conteúdo "foi informado pelo autor e ainda não consta da documentação
+técnica do repositório", e que \texttt{Diagrama\_Eletrico.md} descreve um arranjo física e
+eletricamente diferente (um HC-SR04, um servo SG90, quatro LEDs, alimentação pela USB). Isso
+contradiz diretamente a alegação de rastreabilidade total ao código feita na Seção 2.2. Correção
+sugerida: (a) atualizar \texttt{Diagrama\_Eletrico.md} para refletir o arranjo aqui descrito, OU
+(b) inserir no corpo do PDF uma frase equivalente à já usada em outros pontos do artigo para
+hardware não confirmado ("este arranjo existe até o momento apenas como especificação ainda não
+reconciliada com a documentação técnica do projeto").}
+
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{maquete_torres_isometrica.png}
@@ -541,9 +515,9 @@ em projeto digital (modelagem 3D e simulação elétrica), sem montagem física 
 
 % CONFIRMAR: número de câmeras (quatro) e resolução (720p) -- não há registro desses valores no
 % código nem na documentação do repositório.
-O módulo de visão utiliza quatro câmeras de 720p conectadas por USB ao computador, associadas aos
-quadrantes do radar, e processa os quadros de vídeo (\textit{frames}) para classificar o alvo por
-sua cor, formato e tamanho. Cada quadro capturado é entregue já decodificado à detecção, que executa
+O módulo de visão utiliza \grifo{quatro câmeras de 720p} conectadas por USB ao computador, associadas aos
+quadrantes do radar, e processa os quadros de vídeo (\textit{frames}) para \grifo{classificar o alvo por
+sua cor, formato e tamanho}. Cada quadro capturado é entregue já decodificado à detecção, que executa
 localmente um modelo YOLO26, na variante nano, em formato ONNX, para propor as regiões candidatas
 da imagem. Cada
 candidata é então comparada ao perfil do alvo previamente cadastrado -- definido por cor, formato e
@@ -554,33 +528,18 @@ pixels com a cor cadastrada e sobre a classificação de formato. Quando o detec
 caixa com a cor do perfil, as regiões candidatas passam a ser propostas por segmentação de cor, como
 último recurso na ordenação de candidatos.
 
-\grifo{O envio das informações resultantes ao Arduino, para guiar o apontamento da torre
-(movimentos de pan e tilt), foi projetado mas ainda não está implementado: o protocolo serial
-atual não possui comando de apontamento}, e a fusão entre a posição estimada pela visão e a
-distância medida pelos sensores ultrassônicos permanece como etapa planejada. Como o hardware
-ainda não foi montado, a validação funcional descrita neste trabalho foi feita por simulação, e
-nenhum resultado de campo é relatado.
+\parecerAjuste{Mesma observação da Seção C.2: "quatro câmeras de 720p" não está registrado no
+código nem na documentação técnica -- torne explícito se é decisão de projeto ou aspiração. O
+trecho "classificar o alvo por sua cor, formato e tamanho" depende de uma técnica de visão
+computacional clássica (classificação por cor/forma/tamanho) cuja referência bibliográfica ainda
+não foi preenchida no \texttt{.tex} (comentário "PREENCHER" na Seção 2.1) -- resolver a citação
+antes da entrega, já que é a base teórica de um componente central do sistema.}
 
-\parecerGrave{Esta afirmação contradiz diretamente o firmware já existente no repositório. O
-cabeçalho de \texttt{RadarTorres\_Firmware.ino} documenta, como mensagens NOVAS do protocolo:
-\texttt{CAM;ID=<1-4>;X=<px>;Y=<px>;Z=<cm>} (deslocamento do alvo em relação ao centro da imagem,
-calculado pela visão do PC, exatamente a informação que o artigo diz que "não tem comando para
-enviar"), \texttt{CALIB;CAM=<1-4>;PASSOS\_POR\_PX\_PAN=...;PASSOS\_POR\_PX\_TILT=...} (calibração
-pixel$\to$passo) e \texttt{AIM;TOWER=<1-4>;ANGLE=...} (apontamento da torre). Ou seja: o comando
-de apontamento \textbf{já existe e já está especificado no protocolo}, mesmo que o hardware físico
-ainda não tenha sido montado para executá-lo de fato. Isso não é uma contradição pequena -- é a
-diferença entre "projetamos, mas não especificamos o protocolo" (o que o artigo afirma) e "o
-protocolo já está especificado e implementado no firmware, falta só montar o hardware físico" (o
-que o repositório mostra). Corrijam a frase para refletir o estado real: protocolo especificado e
-implementado em firmware, execução física pendente de montagem.}
-
-\parecerAjuste{Mais uma lacuna na mesma seção: o firmware também introduz uma máquina de estados
-de segurança nova, \texttt{COLOR;STATE=VERDE|AMARELO|VERMELHO} (um "semáforo" que só autoriza o
-comando \texttt{FIRE} quando está em VERMELHO), totalmente ausente de "Fluxo operacional" e das
-regras de segurança descritas no artigo. Se este semáforo é parte do projeto final, ele precisa
-aparecer no fluxograma e na explicação de regras de segurança -- hoje o artigo descreve só a
-distância mínima e as regras configuráveis do \texttt{TowerSelectionService}, sem mencionar esse
-mecanismo adicional já presente no firmware.}
+O envio das informações resultantes ao Arduino, para guiar o apontamento da torre (movimentos de pan
+e tilt), foi projetado mas ainda não está implementado: o protocolo serial atual não possui comando
+de apontamento, e a fusão entre a posição estimada pela visão e a distância medida pelos sensores
+ultrassônicos permanece como etapa planejada. Como o hardware ainda não foi montado, a validação
+funcional descrita neste trabalho foi feita por simulação, e nenhum resultado de campo é relatado.
 
 \subsubsection{Fluxo operacional}
 
@@ -607,19 +566,6 @@ bloqueado e o motivo é registrado no console de eventos.
   \caption{Fluxograma do fluxo operacional do RadarTorres, da leitura dos sensores ao registro em
   auditoria (dos autores).}
 \end{figure}
-
-\parecerAjuste{Os 7 passos estão claros, mas nenhum vem com frequência -- e o firmware já define
-números exatos: alternância entre os 2 sensores ultrassônicos a cada 60\,ms
-(\texttt{INTERVALO\_LEITURA\_US\_MS}, $\approx$8,3\,Hz por sensor) e laço de correção de mira das
-câmeras a cada 50\,ms (\texttt{INTERVALO\_CONTROLE\_CAMERA\_MS}, 20\,Hz). Uma frase depois do passo
-(1) -- "cada sensor é lido a $\approx$8\,Hz, alternadamente" -- custa uma linha e torna a
-descrição quantitativa, que é o padrão esperado de um artigo de engenharia que usa "tempo real"
-no resumo.}
-
-\parecerPergunta{O próprio comentário no firmware diz que 50\,ms foi escolhido "ajustando
-observando o comportamento" -- empírico, por tentativa. Por que não 20\,ms (50\,Hz) ou 100\,ms
-(10\,Hz)? Uma frase relacionando a frequência escolhida à velocidade angular máxima esperada do
-alvo já bastaria para defender o número na banca.}
 
 
 \subsubsection{Controlador neuroevolutivo: heurística e rede neural combinadas}
@@ -652,6 +598,10 @@ de 0,3 s e um limiar mínimo de certeza de identificação do alvo
 (\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o disparo é recusado independentemente
 de qualquer outra avaliação.
 
+\parecerPergunta{Os limites de segurança (0,3s de mira, certeza mínima) são calibrados para o
+ambiente SIMULADO. Já foi testado se esses limites fazem sentido físico para sensores ultrassônicos
+e câmeras reais, nunca calibrados com dados de campo?}
+
 A rede neural, por sua vez, não decide essas regras de segurança nem a cascata de camadas -- ela
 decide apenas a escolha fina \textit{dentro} do espaço já validado pela heurística. É uma rede
 \textit{feedforward} totalmente conectada, implementada do zero (sem biblioteca de aprendizado de
@@ -667,6 +617,11 @@ algoritmo genético: cada genoma é um vetor plano desses 74 números, a popula�
 por torneio, \textit{crossover} uniforme, mutação gaussiana e elitismo, e o genoma final é
 embutido na aplicação como um vetor de pesos fixo, sem qualquer etapa de treinamento em tempo de
 execução.
+
+\parecerElogio{Excelente correspondência verificada entre texto e código: arquitetura [6,8,2], 74
+parâmetros, seleção por torneio de 3, crossover uniforme, mutação gaussiana (Box-Muller),
+elitismo -- tudo conferido linha a linha em \texttt{RedeNeural.cs} e \texttt{AlgoritmoGenetico.cs}
+e batendo exatamente com o relatado. Subseção tecnicamente mais confiável do artigo.}
 
 A combinação entre os dois mecanismos é, portanto, sequencial e hierárquica, nunca uma mistura
 indiferenciada: a heurística primeiro filtra quais torres são elegíveis e calcula as
@@ -704,6 +659,9 @@ simulado ao comportamento do sistema real é, para um controlador neuroevolutivo
 para o resultado do treinamento quanto a própria arquitetura da rede ou os hiperparâmetros da busca
 genética.
 
+\parecerElogio{A melhor contribuição empírica do artigo: achado real, com commit (\texttt{a02d46a})
+e efeito quantificado (Tabela 1). Verificado pela banca como consistente com a mensagem de commit
+real do repositório.}
 
 \begin{figure}[htbp]
   \centering
@@ -728,14 +686,105 @@ genética.
   veta; a rede neural decide apenas dentro do espaço já validado (dos autores).}
 \end{figure}
 
-\parecerElogio{Ótimo diagrama -- resolve bem a necessidade de visualizar a hierarquia
-filtra$\to$decide$\to$veta, e a nota abaixo da caixa central (mesma classe no treino e na
-produção) é um detalhe que reforça exatamente o ponto mais original do artigo. Sugestão pequena
-de refinamento: adicionar uma seta pontilhada de "veta" de volta para "filtra" rotulada
-"fitness/penalidade" -- hoje o diagrama mostra o fluxo de UMA decisão em produção, mas não deixa
-visualmente explícito que, no treino, o resultado de "veta" (abate/fuga) é o que alimenta o
-fitness que evolui a própria rede. Não é obrigatório, mas fecharia visualmente o laço
-treino$\leftrightarrow$produção que o texto já descreve bem em prosa.}
+\subsubsection{Análise experimental de hiperparâmetros: população e neurônios ocultos}
+\label{sec:experimento-hiperparametros}
+
+Para justificar tecnicamente a escolha dos hiperparâmetros do algoritmo genético com dados reais de
+treinamento, em vez de apenas por convenção, foi conduzido um experimento controlado com as seis
+combinações do produto cartesiano entre três tamanhos de população (30, 60 e 120 indivíduos) e duas
+arquiteturas de rede (4 e 16 neurônios na camada oculta, mantendo fixas as 6 entradas e as 2 saídas
+descritas na Seção~\ref{sec:controlador-hibrido-inicio}). Cada uma das seis combinações foi treinada
+isoladamente por exatamente 300 gerações, com a mesma função de fitness, os mesmos cenários táticos
+obrigatórios (\texttt{CatalogoCenarios.TodosComScript}) e a mesma taxa de mutação (0,08) do
+treinamento padrão -- apenas a população e a arquitetura variaram entre as seis execuções, de modo a
+isolar o efeito desses dois hiperparâmetros e manter a comparação justa. As seis execuções usaram o
+mesmo \texttt{AmbienteTreinamento}/\texttt{AlgoritmoGenetico} que treina o controlador em produção,
+sem nenhum dado simulado ou estimado manualmente; o resultado de cada combinação -- população,
+gerações executadas, neurônios ocultos, fitness final do melhor indivíduo e data/hora -- foi
+persistido na tabela \texttt{experimentos\_hiperparametros} (ver Seção~\ref{sec:modelo-dados}),
+consultável na própria tela de Treinamento do Controlador.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Fitness final (melhor indivíduo, geração 300) das seis combinações de população ×
+  neurônios ocultos, com todos os demais parâmetros de treinamento mantidos fixos.}
+  \label{tab:experimento-hiperparametros}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{2.4cm}p{3.0cm}p{2.2cm}p{3.0cm}}
+    \hline
+    \textbf{População} & \textbf{Neurônios ocultos} & \textbf{Gerações} & \textbf{Fitness final} \\
+    \hline
+    30  & 4  & 300 & 49,81 \\
+    60  & 4  & 300 & \textbf{52,19} \\
+    120 & 4  & 300 & 49,81 \\
+    30  & 16 & 300 & 49,81 \\
+    60  & 16 & 300 & 49,81 \\
+    120 & 16 & 300 & 49,81 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+O resultado mais evidente da Tabela~\ref{tab:experimento-hiperparametros} não é qual combinação
+"venceu", mas o quanto as seis convergiram para o mesmo valor: cinco das seis execuções
+estabilizaram-se em exatamente 49,81 de fitness ao final das 300 gerações, e apenas a combinação de
+população 60 com 4 neurônios ocultos escapou desse platô, ainda que por uma margem pequena (52,19).
+Esse padrão é mais consistente com as seis execuções \grifo{convergindo para o mesmo ótimo local
+acessível} dentro do horizonte de 300 gerações -- possivelmente próximo do comportamento da heurística pura, com
+um ajuste de rede apenas marginal -- do que com um efeito forte e diferenciado de população ou
+arquitetura sobre a qualidade final do controlador. Em outras palavras, dentro do horizonte testado,
+nem aumentar a população (de 30 para 120 indivíduos) nem aumentar a camada oculta (de 4 para 16
+neurônios) produziu, isoladamente, um controlador mensuravelmente melhor -- sinal de que o fator
+limitante do treinamento, nesse horizonte, é provavelmente o número de gerações, não a capacidade da
+rede nem o tamanho da amostra avaliada por geração.
+
+\parecerGrave{PROBLEMA CRÍTICO (ver Seções C.1 e E.1 do parecer). A banca inspecionou
+\texttt{ExecutorExperimentosHiperparametros.cs} e \texttt{AmbienteTreinamento.AvaliarFitness}: as
+seeds de avaliação dependem apenas do número da geração (\texttt{geracaoAtual * 1000 + i}), não da
+configuração, e a maioria dos episódios por avaliação de fitness usa cenários roteirizados
+(\texttt{CatalogoCenarios.TodosComScript}) com seed fixa 0 -- idênticos entre as seis combinações, a
+cada geração. Isso é uma explicação mecânica muito mais parcimoniosa para "5 de 6 execuções em
+exatamente 49,81" do que "convergência coincidente para o mesmo ótimo local": genomas que convergem
+para a mesma estratégia produzem trajetórias bit-a-bit idênticas nos componentes determinísticos do
+ambiente. O texto grifado acima não menciona essa característica do desenho experimental.
+Correção sugerida: acrescentar um parágrafo reconhecendo que parte da avaliação é determinística
+por configuração do experimento, e que isso é uma explicação alternativa plausível -- talvez mais
+provável -- para a convergência exata observada.}
+
+Duas ressalvas são necessárias para a correta leitura deste experimento, na mesma linha das já
+apontadas na Seção~\ref{sec:procedimentos-metodologicos} para o treinamento do controlador em geral.
+Primeiro, cada combinação corresponde a uma única execução (uma trajetória de evolução), não a uma
+média de repetições independentes; a diferença entre 49,81 e 52,19 é pequena demais, com uma amostra
+de tamanho 1 por combinação, para ser atribuída com confiança ao hiperparâmetro em si, em vez de à
+variação natural entre execuções de um algoritmo estocástico. Segundo, o horizonte de 300 gerações foi
+escolhido para manter o experimento executável em poucos minutos (entre 9,3 e 33,4 segundos por
+combinação, 123,4 segundos no total para as seis, medidos no mesmo processo que gerou a
+Tabela~\ref{tab:experimento-hiperparametros}), não necessariamente para captar a convergência completa
+de cada configuração -- o próprio platô compartilhado por cinco das seis combinações sugere que mais
+gerações poderiam, ainda, diferenciá-las entre si.
+
+\parecerElogio{Transparência genuína e rara: o texto reconhece explicitamente n=1 por combinação e
+o horizonte curto de gerações, em vez de apresentar a tabela sem ressalvas. Isso não substitui a
+investigação da causa determinística (ver comentário acima), mas é um mérito de honestidade
+científica.}
+
+Com essas ressalvas, a conclusão prática deste experimento para a escolha de hiperparâmetros do
+RadarTorres é de custo-benefício, não de desempenho: como nenhuma das combinações testadas superou as
+demais de forma consistente, não há evidência, neste horizonte de treinamento, que justifique o custo
+computacional adicional de uma população maior (120 indivíduos, cerca de 3,2$\times$ o tempo de
+execução de uma população de 30 nesta amostra) ou de uma camada oculta maior (16 neurônios, mais que o
+dobro dos parâmetros treináveis de uma rede com 4). A arquitetura de produção -- população de 60
+indivíduos e 8 neurônios na camada oculta, intermediária às duas arquiteturas aqui testadas --
+permanece, portanto, \grifo{uma escolha razoável dentro da faixa investigada}, mas este experimento evidencia
+a necessidade de uma repetição futura com mais gerações e múltiplas sementes por combinação antes de
+se afirmar que ela é estritamente superior às demais, trabalho futuro já na mesma linha da ressalva
+geral sobre a fidelidade do ambiente de treino feita na Seção~\ref{sec:procedimentos-metodologicos}.
+
+\parecerAjuste{Esta conclusão usa a AUSÊNCIA de uma combinação melhor (n=1 cada) para validar, por
+omissão de alternativa, a configuração já em produção -- um raciocínio de "ausência de evidência
+contrária" tratado quase como evidência a favor. É coerente com as ressalvas do parágrafo anterior,
+mas vale deixar ainda mais explícito que isso NÃO é uma validação positiva da escolha de produção,
+só a ausência (neste experimento limitado) de uma alternativa comprovadamente superior.}
 
 \subsection{Diagrama de pacotes}
 
@@ -767,19 +816,15 @@ pacotes: o \texttt{NavigationService} importa \textit{namespaces} de Views para 
 (Services $\rightarrow$ Views, fechando o ciclo com Views $\rightarrow$ ViewModels $\rightarrow$
 Services), e o \texttt{DataSeeder}, responsável pela carga inicial de dados, importa Models,
 Repositories e Services (Data $\rightarrow$ Repositories/Services, fechando o ciclo com
-Repositories/Services $\rightarrow$ Data). \grifo{Confirmados em \texttt{NavigationService.cs} e
+Repositories/Services $\rightarrow$ Data). Confirmados em \texttt{NavigationService.cs} e
 \texttt{DataSeeder.cs} no código atual, esses dois ciclos continuam presentes, mas a figura acima,
-regenerada ao nível de pacote e não de classe, não os destaca visualmente} -- ficam registrados
+regenerada ao nível de pacote e não de classe, não os destaca visualmente -- ficam registrados
 apenas neste parágrafo, em vez de perdidos. Eles não impedem o funcionamento da aplicação, pois
-
-\parecerAjuste{Vocês mesmos já admitem a limitação (bom, honestidade científica), mas "ficam
-registrados apenas neste parágrafo, em vez de perdidos" é uma meia-solução -- um diagrama se lê em
-10 segundos, um parágrafo de prosa sobre dependências cíclicas exige o leitor reconstruir
-mentalmente o grafo. Como já existia uma versão anterior da figura com os ciclos destacados em
-vermelho, a correção mais barata aqui é regenerar a figura UMA vez mais com esse destaque, em vez
-de manter a explicação só em texto.}
 todos os pacotes pertencem ao mesmo \textit{assembly}, mas aumentam o acoplamento e dificultam
 testes isolados e futuras separações em projetos distintos.
+
+\parecerElogio{Reconhecimento honesto de um achado desfavorável (ciclos de dependência) que a
+maioria dos TCCs omitiria -- mérito de rigor e transparência.}
 
 
 \subsection{Modelo de dados}
@@ -920,83 +965,73 @@ em vez dos hiperparâmetros da busca evolutiva, avaliação de uma arquitetura m
 resultados de \citeonline{such2017deepneuroevolution}.
 
 % ============================================================
-% PARECER FINAL DO PROFESSOR
+% PARECER FINAL DA BANCA (Banca_TCC)
 % ============================================================
 \clearpage
-\section*{Parecer final do professor (revisão externa desta versão)}
+\section*{Parecer final da banca (Banca\_TCC, revisão automatizada desta versão)}
+
+\subsection*{Nota geral}
+
+\textbf{$\approx 6{,}33/10$} -- ver tabela de critérios e justificativas completas em
+\texttt{Parecer\_Banca\_TCC.pdf}, Seção B.
 
 \subsection*{Coerência geral}
 
-Esta versão é sensivelmente melhor do que a anterior que revisei: título, resumo e abstract já
-cobrem o escopo real do trabalho; as referências de TEWA, \textit{action masking} e
-\textit{shielding} estão completas e bem conectadas à arquitetura híbrida; o diagrama do
-controlador híbrido é claro; e, principalmente, agora existe uma \textbf{Conclusão} com dados
-quantitativos reais (Tabela~1) sustentando a contribuição mais original do trabalho -- a
-descoberta e correção do bug de certeza estática. Isso é, de fato, nota de TCC bem acima da
-média: um achado empírico, replicável, com número antes/depois.
+Trabalho tecnicamente competente, com uma contribuição empírica real e bem documentada (o bug de
+certeza estática, Tabela~\ref{tab:fitness-antes-depois}) e uma honestidade metodológica consistente
+sobre a ausência de hardware físico. O problema central que permanece é a mistura, sem sinalização
+ao leitor, de afirmações com proveniência muito diferente: parte rastreável ao código linha a linha
+(o controlador neuroevolutivo, Seção 2.3.5), parte admitidamente não confirmada em código nem em
+documentação (projeto elétrico/estrutural, Seção 2.3.2, e parte do módulo de visão, Seção 2.3.3) --
+o que contradiz diretamente a alegação de rastreabilidade total feita na Seção 2.2. Soma-se a leitura
+interpretativa incompleta da Tabela~\ref{tab:experimento-hiperparametros} (Seção 2.3.6), que não
+discute a causa determinística mais provável da convergência exata observada.
 
-O problema que permanece \textbf{não é mais} a falta de coerência de escopo (resolvida), mas sim
-uma \textbf{divergência factual entre o que o artigo descreve e o que o próprio repositório já
-implementa}: a seção de projeto elétrico descreve um Arduino Uno que o firmware físico já
-documenta como substituído por um Mega 2560, e a seção de visão computacional afirma que não
-existe comando de apontamento no protocolo quando esse comando já está especificado e
-implementado no firmware. Some a isso a ausência persistente de uma seção formal de Objetivos, e o
-quadro é: conteúdo técnico forte, mas desatualizado em dois pontos factuais concretos e
-estruturalmente incompleto em um ponto (objetivos).
+\textbf{Veredito}: APROVADO COM RESSALVAS -- os itens marcados
+\textbf{\color{red!60!black}BANCA\_TCC -- PROBLEMA CRÍTICO/ALTO} nesta revisão precisam ser
+resolvidos antes da entrega final/defesa; os marcados \textbf{AJUSTAR} são recomendados, mas não
+impediriam a defesa.
 
-\textbf{Veredito}: APROVADO COM RESSALVAS -- menores do que numa revisão anterior, mas ainda
-bloqueantes para apresentação à banca sem correção. Os itens marcados
-\textbf{PARECER DO PROFESSOR -- PROBLEMA GRAVE} nesta revisão (seção de Objetivos ausente,
-Uno vs. Mega, "não implementado" vs. protocolo já especificado) precisam ser resolvidos antes da
-entrega final; os marcados \textbf{AJUSTAR} são recomendados, mas não impediriam a defesa.
-
-\subsection*{Parâmetros ainda a medir e reportar}
+\subsection*{Plano de correção priorizado}
 
 \footnotesize
-\begin{longtable}{|p{2.9cm}|p{3.7cm}|p{3.5cm}|p{3.2cm}|}
+\begin{longtable}{|p{0.9cm}|p{6.3cm}|p{7.0cm}|}
 \hline
-\textbf{Parâmetro} & \textbf{Onde medir/calcular} & \textbf{Estado hoje} & \textbf{Objetivo que sustenta} \\
+\textbf{Prior.} & \textbf{Ação} & \textbf{Motivo} \\
 \hline
 \endhead
-Qual placa é a final (Uno ou Mega 2560) e qual projeto elétrico vale & Confrontar
-\texttt{Artigo.tex} com \texttt{Ra\-dar\-Tor\-res\_\allowbreak Firm\-ware.ino} & Divergentes --
-firmware já documenta a troca & Projeto elétrico coerente e verificável \\
+1 (máx.) & Discutir no texto a causa determinística provável da convergência exata na Tabela 2
+(Seção 2.3.6) & Afeta diretamente a validade da conclusão mais recente e mais citada do artigo \\
 \hline
-Estado real do protocolo de apontamento câmera/torre & Mesma comparação, seção de visão & Artigo
-diz "não implementado"; firmware já tem \texttt{CAM}/\-\texttt{CALIB}/\-\texttt{AIM} & Comunicação
-hardware-software documentada corretamente \\
+2 (máx.) & Reconciliar a Seção 2.3.2 (elétrico/estrutural) e parte da 2.3.3 (visão) com a
+documentação técnica real, ou sinalizar a incerteza no próprio PDF & Contradição direta com a
+alegação metodológica central do artigo (Seção 2.2) \\
 \hline
-Hardware/máquina usada no treinamento (CPU, núcleos) & Registrar junto da Tabela~1 & Não
-reportado (só o tempo de relógio, 13h40--14h57) & Reprodutibilidade do experimento de treinamento \\
+3 (alta) & Preencher a citação pendente sobre classificação por cor/forma/tamanho (comentário
+"PREENCHER" na Seção 2.1) & Lacuna teórica central já identificada pelo próprio autor \\
 \hline
-Ablação de hiperparâmetros (neurônios ocultos, população) & Reexecutar o treino variando 1
-parâmetro por vez & Não feito -- valores por convenção & Controlador neuroevolutivo com
-desempenho justificado \\
+4 (alta) & Versionar o genoma embutido (\texttt{genoma-controlador.json}) junto com a versão final
+do artigo & O artefato citado no texto já diverge do estado atual do repositório \\
 \hline
-Fitness na janela que inclui a geração 5377 (genoma embutido) & Histórico já persistido,
-\texttt{his\-to\-ri\-co\_trei\-na\-men\-to\_ge\-ra\-coes} & Reportada só a janela 1141--1440, não
-5377 & Rastreabilidade entre experimento reportado e genoma em produção \\
+5 (média) & Completar o \texttt{.bib} com DOI/veículo/páginas, especialmente para as referências
+centrais (Such 2017, Huang \& Ontañón 2020, Alshiekh 2017) & Abaixo do padrão mínimo de
+rastreabilidade bibliográfica \\
 \hline
-Frequências do firmware (leitura ultrassônica, laço de mira) & Já definidas no código --
-\texttt{IN\-TER\-VA\-LO\_LEI\-TU\-RA\_US\_MS}, \texttt{IN\-TER\-VA\-LO\_CON\-TRO\-LE\_CA\-ME\-RA\_MS}
-& Nunca citadas no texto do artigo & Detecção e rastreamento "em tempo real" com número que
-sustente a afirmação \\
+6 (média) & Marcar explicitamente, na Tabela 1, qual célula é estimativa derivada vs. medição
+direta & Evita confundir leitor sobre a natureza do número \\
 \hline
-Baud rate efetivo / latência de round-trip medida & Cronômetro de software, leitura$\to$exibição
-no radar & 9600 bauds padrão, nunca medido nem justificado & Comunicação hardware-software em
-tempo real \\
+7 (baixa) & Preencher o placeholder "Mestre em xxx pela xxx" no rodapé do orientador & Pendência
+de formatação antes de qualquer submissão formal \\
 \hline
-FPS/latência de inferência do YOLO26n por câmera & Benchmark do serviço de detecção, mesmo em
-máquina de desenvolvimento & Não medido/configurado em nenhum lugar do código & Classificação do
-alvo em tempo real \\
+8 (baixa) & Resolver \textit{overfull/underfull hboxes} remanescentes e remover macros de revisão
+(\texttt{\textbackslash revmudar} etc.) não utilizadas & Polimento final de tipografia \\
 \hline
 \end{longtable}
 \normalsize
 
-Diferente da revisão anterior, a maioria destes parâmetros \textbf{já tem a infraestrutura pronta
-para ser medida} -- o histórico de treinamento já existe, o firmware já define as constantes, só
-falta reportá-las no texto. É, portanto, trabalho de redação e de um benchmark simples de FPS, não
-de pesquisa nova.
+O parecer completo (seções A a J, nota ponderada por critério, auditoria de referências e de
+figuras/tabelas, e as perguntas que a banca provavelmente fará na defesa) está em
+\texttt{Parecer\_Banca\_TCC.pdf}, gerado na mesma análise que originou estas marcações.
 
 % ============================================================
 % REFERÊNCIAS
