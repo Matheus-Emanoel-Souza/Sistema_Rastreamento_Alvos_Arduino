@@ -34,3 +34,8 @@ CLAUDE.md
 *.fdb_latexmk
 Docs/Documentos_Entregaveis/**/b[0-9]*.log
 Docs/Documentos_Entregaveis/**/build*.log
+
+# Genomas exportados pelas execucoes do harness de experimentos (tools/RadarTorres.Experimentos):
+# sao artefatos de uma execucao especifica, grandes e regeneraveis. O resumo com as metricas de
+# todas as execucoes (Resultados/resultados.json) E versionado, por ser o dado citado no artigo.
+tools/RadarTorres.Experimentos/Resultados/genoma-*.json
