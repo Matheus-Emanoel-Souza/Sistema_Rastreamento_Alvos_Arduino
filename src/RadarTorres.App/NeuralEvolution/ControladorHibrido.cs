@@ -47,12 +47,41 @@ public sealed class ControladorHibrido
     private readonly RedeNeural _rede;
     private readonly double _raioMundoMetros;
     private readonly double _velocidadeMaximaAlvoMetrosPorSegundo;
+    private readonly ModoDecisao _modo;
 
-    public ControladorHibrido(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo)
+    /// <summary>
+    /// Como a decisão é tomada. <see cref="Hibrido"/> é o modo de PRODUÇÃO e o padrão — os
+    /// demais existem só para o estudo comparativo (ablação) descrito no TCC, e nenhum deles é
+    /// usado pelo aplicativo em execução normal.
+    /// </summary>
+    public enum ModoDecisao
+    {
+        /// <summary>Heurística em camadas filtra as candidatas e soma pontuação; a rede ajusta dentro disso (comportamento de produção).</summary>
+        Hibrido,
+
+        /// <summary>
+        /// Rede pura: a heurística NÃO influencia nada aqui dentro — todas as torres livres são
+        /// candidatas (sem filtro de quadrante próprio/adjacente), a pontuação é só a saída da
+        /// rede (sem o termo <c>(1-distância)+fatorCamada</c>) e o tempo mínimo de mira não é
+        /// imposto. Observação metodológica: os vetos de segurança de
+        /// <see cref="AmbienteTreinamento.DecidirDisparos"/> (zona morta e certeza mínima)
+        /// continuam valendo em qualquer modo — são requisito do sistema físico, não heurística
+        /// de seleção, e removê-los mudaria a tarefa avaliada, não o controlador.
+        /// </summary>
+        RedePura,
+
+        /// <summary>Heurística pura: a rede é ignorada (ajuste 0, disparo sempre que a heurística permite) — baseline inferior do estudo.</summary>
+        HeuristicaPura
+    }
+
+    public ModoDecisao Modo => _modo;
+
+    public ControladorHibrido(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo, ModoDecisao modo = ModoDecisao.Hibrido)
     {
         _rede = rede;
         _raioMundoMetros = raioMundoMetros;
         _velocidadeMaximaAlvoMetrosPorSegundo = velocidadeMaximaAlvoMetrosPorSegundo;
+        _modo = modo;
     }
 
     /// <summary>
@@ -66,6 +95,25 @@ public sealed class ControladorHibrido
     {
         List<TorreTreinamento> livres = torres.Where(t => t.Livre).ToList();
         if (livres.Count == 0) return null;
+
+        if (_modo == ModoDecisao.RedePura)
+        {
+            // Nenhuma camada heurística: todas as livres concorrem e só a rede decide. fatorCamada
+            // entra na entrada da rede como 0 constante para não reintroduzir a informação de
+            // camada por via indireta.
+            TorreTreinamento? melhorRede = null;
+            double melhorSaida = double.NegativeInfinity;
+            foreach (TorreTreinamento torre in livres)
+            {
+                double saida = _rede.Ativar(ConstruirEntradas(alvo, torre, fatorCamada: 0.0))[0];
+                if (saida > melhorSaida)
+                {
+                    melhorSaida = saida;
+                    melhorRede = torre;
+                }
+            }
+            return melhorRede;
+        }
 
         HashSet<Models.Quadrant> quadrantesComOutrosAlvos = outrosAlvosAtivos
             .Where(a => a.Id != alvo.Id)
@@ -96,7 +144,9 @@ public sealed class ControladorHibrido
         foreach (TorreTreinamento torre in candidatas)
         {
             double[] entradas = ConstruirEntradas(alvo, torre, fatorCamada);
-            double pontuacaoFinal = Pontuar(_rede, entradas, fatorCamada);
+            double pontuacaoFinal = _modo == ModoDecisao.HeuristicaPura
+                ? (1.0 - entradas[0]) + fatorCamada
+                : Pontuar(_rede, entradas, fatorCamada);
 
             if (pontuacaoFinal > melhorPontuacao)
             {
@@ -118,7 +168,15 @@ public sealed class ControladorHibrido
     /// </summary>
     public bool DecidirDisparo(AlvoTreinamento alvo, TorreTreinamento torre)
     {
+        if (_modo == ModoDecisao.RedePura)
+        {
+            // Sem o tempo mínimo de mira (regra heurística) e sem fatorCamada: só a rede.
+            return _rede.Ativar(ConstruirEntradas(alvo, torre, fatorCamada: 0.0))[1] > 0;
+        }
+
         if (alvo.TempoDesdeSelecao < TempoMinimoDeMiraSegundos) return false;
+
+        if (_modo == ModoDecisao.HeuristicaPura) return true;
 
         double[] entradas = ConstruirEntradas(alvo, torre, fatorCamada: 1.0);
         double confiancaDisparo = _rede.Ativar(entradas)[1];
