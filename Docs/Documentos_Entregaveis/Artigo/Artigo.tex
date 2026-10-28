@@ -201,13 +201,13 @@ exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem 
 abordagem multiameaça fica como trabalho futuro.
 
 O refinamento dessa escolha por proximidade -- e o instante de disparo -- é feito por uma pequena
-rede neural \textit{feedforward} (6 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
+rede neural \textit{feedforward} (7 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
 tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por um algoritmo genético
 próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), auditável e
 sem dependência de biblioteca de aprendizado de máquina. \citeonline{such2017deepneuroevolution}
 mostram que algoritmos genéticos são uma alternativa competitiva ao treino por gradiente em tarefas
 de aprendizado por reforço, em redes de porte bem maior do que a aqui empregada (até quatro milhões
-de parâmetros, contra os 74 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
+de parâmetros, contra os 82 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
 do algoritmo genético como método de treinamento, mas não implica, por si só, que aumentar o número
 de camadas ou neurônios seja desnecessário; por isso, a estratégia adotada para ampliar o
 desempenho do controlador prioriza o ajuste dos hiperparâmetros da busca evolutiva (tamanho de
@@ -362,8 +362,8 @@ inteiramente sobre a CPU, sem qualquer aceleração por GPU -- a placa de vídeo
 testes não possui suporte a CUDA nem é utilizada pelo \texttt{AlgoritmoGenetico} ou pelo
 \texttt{AmbienteTreinamento}, de modo que o tempo de treinamento depende do desempenho do processador
 e não da placa gráfica. Reportar hardware, sistema operacional e \textit{runtime} é, portanto,
-pré-condição para que os tempos absolutos apresentados nas Figuras~\ref{fig:experimento-mutacao} e
-\ref{fig:experimento-tempo} sejam reproduzíveis ou comparáveis em outra máquina: um processador mais
+pré-condição para que os tempos absolutos citados na Seção~\ref{sec:experimento-hiperparametros}
+(o experimento original, de seis entradas) sejam reproduzíveis ou comparáveis em outra máquina: um processador mais
 rápido, mais núcleos ou memória disponível alteram os segundos medidos sem alterar a lógica avaliada,
 e a ausência de uso de GPU explica por que o tempo escala com o tamanho da população (mais indivíduos
 avaliados por geração) e quase não escala com o tamanho da rede neural (Seção~\ref{sec:experimento-hiperparametros},
@@ -407,6 +407,18 @@ explícita e como trabalho futuro: o \texttt{AmbienteTreinamento} poderia passar
 histórico de gerações, uma identificação da máquina de execução (processador, núcleos e presença ou
 não de GPU), tornando toda sessão de treinamento -- e não apenas os experimentos controlados desta
 seção -- igualmente rastreável e reproduzível.
+
+Como verificação adicional de portabilidade, o executável foi também inicializado em uma segunda
+máquina, de configuração distinta da descrita na Tabela~\ref{tab:ambiente-computacional}: processador
+Intel\textsuperscript{\textregistered} Core\textsuperscript{\texttrademark} i5-8400 @ 2,80 GHz (6
+núcleos físicos / 6 threads), 7,83 GB de memória RAM, placa de vídeo integrada Intel UHD Graphics 630
+(sem GPU dedicada e sem aceleração CUDA), Microsoft Windows 11 Pro (versão 10.0.26300, 64 bits) e
+\textit{runtime} .NET SDK 9.0.316 com Microsoft.WindowsDesktop.App 9.0.18. O teste consistiu na
+inicialização do aplicativo nesse ambiente, sem execução de rotinas adicionais: a janela principal
+abriu normalmente, sem erros. Esse resultado confirma apenas que a aplicação inicializa corretamente
+em outra configuração de hardware e versão do sistema operacional -- não substitui, e não deve ser
+confundido com, os experimentos controlados de hiperparâmetros da Seção~\ref{sec:experimento-hiperparametros},
+que permanecem associados exclusivamente à máquina da Tabela~\ref{tab:ambiente-computacional}.
 
 \subsection{Projeto e implementação}
 
@@ -555,13 +567,15 @@ de qualquer outra avaliação.
 A rede neural, por sua vez, não decide essas regras de segurança nem a cascata de camadas -- ela
 decide apenas a escolha fina \textit{dentro} do espaço já validado pela heurística. É uma rede
 \textit{feedforward} totalmente conectada, implementada do zero (sem biblioteca de aprendizado de
-máquina), com arquitetura de 6 entradas, uma camada oculta de 8 neurônios e 2 saídas, com ativação
-tanh em todas as camadas. As seis entradas -- todas normalizadas no intervalo $[0,1]$ ou
+máquina), com arquitetura de 7 entradas, uma camada oculta de 8 neurônios e 2 saídas, com ativação
+tanh em todas as camadas. As sete entradas -- todas normalizadas no intervalo $[0,1]$ ou
 equivalente -- são a distância normalizada ao alvo, dois indicadores binários de quadrante (mesmo
-quadrante e quadrante adjacente), o ângulo de mira normalizado, a velocidade normalizada do alvo e o
+quadrante e quadrante adjacente), o ângulo de mira normalizado, a velocidade normalizada do alvo, o
+tempo normalizado em que o alvo está sendo detectado sem ter sido abatido (satura em 1,0 a partir de
+3~s de observação contínua -- ver Seção~\ref{sec:experimento-hiperparametros}) e o
 próprio fator da camada heurística vigente, usado como sinal de contexto. As duas saídas são um
 ajuste de pontuação, somado à pontuação heurística da candidata, e um valor de confiança de
-disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 74 parâmetros, no
+disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 82 parâmetros, no
 total, para essa arquitetura -- não são ajustados por retropropagação, mas evoluídos por um
 algoritmo genético: cada genoma é um vetor plano desses 74 números, a população evolui por seleção
 por torneio, \textit{crossover} uniforme, mutação gaussiana e elitismo, e o genoma final é
@@ -588,7 +602,21 @@ recompensas por abate (maiores quanto mais longe da base o alvo é interceptado)
 alvo que escapa ou cruza um ponto de perda sem decisão, de modo que o genoma é pressionado a
 aprender a operar bem \textit{dentro} das restrições que a heurística já impõe, e não a contorná-las
 -- não há genoma "vencedor" que dispare fora da zona morta ou abaixo da certeza mínima, porque essas
-decisões nunca chegam a ser avaliadas como tal pelo ambiente de treino. Essa mesma dependência, no
+decisões nunca chegam a ser avaliadas como tal pelo ambiente de treino.
+
+O ambiente de treino foi posteriormente endurecido em quatro pontos, para aproximar melhor a
+simulação de um cenário de saturação real. Primeiro, o teto de alvos simultâneos deixou de ser
+global e passou a valer por quadrante (\texttt{MaxAlvosPorQuadrante}): cada um dos quatro quadrantes
+pode estar no próprio limite ao mesmo tempo, em vez de um único teto compartilhado por todo o mundo.
+Segundo, o intervalo entre nascimentos de alvo encolhe ao longo do episódio -- uma escalada de
+dificuldade que faz os alvos chegarem cada vez mais rápido conforme o tempo passa, em vez de a uma
+taxa constante do início ao fim. Terceiro, um alvo ainda ativo que chega perto demais de QUALQUER
+torre (não apenas da base) agora rompe a defesa e encerra o episódio imediatamente, descartando toda
+pontuação futura possível -- distinto da fuga pela base, que só penaliza e deixa o episódio
+continuar. Quarto, ao fim de cada episódio o fitness é também penalizado pelo desvio padrão do tempo
+em que cada torre ficou comprometida com algum alvo: sobrecarregar sempre a mesma torre enquanto
+outra permanece ociosa agora custa pontos, mesmo que o total de abates tenha sido bom -- uma medida
+explícita de gestão de recursos, e não só de taxa de abate. Essa mesma dependência, no
 entanto, também é o ponto mais sensível do processo: como o fitness depende inteiramente do
 comportamento simulado, qualquer premissa equivocada no ambiente de treino se propaga,
 silenciosamente, para o genoma evoluído. Foi exatamente esse o caso identificado e corrigido neste
@@ -634,204 +662,128 @@ genética.
 Para justificar tecnicamente a escolha dos hiperparâmetros do algoritmo genético com dados reais de
 treinamento, em vez de apenas por convenção, foram conduzidos experimentos controlados em que se
 varia \emph{um} hiperparâmetro por vez, mantendo todos os demais fixos. Foram testados três
-tamanhos de população (30, 60 e 120 indivíduos), três arquiteturas de rede (4, 8 e 16 neurônios na
-camada oculta, mantendo fixas as 6 entradas e as 2 saídas descritas na
-Seção~\ref{sec:controlador-hibrido-inicio}) e três taxas de mutação (0,04, 0,08 e 0,16, isto é, a
-metade, o valor padrão e o dobro da probabilidade de cada gene receber ruído gaussiano na
-reprodução), totalizando onze execuções independentes.
+tamanhos de população (30, 60 e 120 indivíduos) combinados com três arquiteturas de rede (4, 8 e 16
+neurônios na camada oculta, mantendo fixas as 7 entradas e as 2 saídas descritas na
+Seção~\ref{sec:controlador-hibrido-inicio} -- grade completa $3\times3$, nove execuções) e, isolando
+a taxa de mutação com população e arquitetura fixas na configuração de produção, duas execuções
+adicionais com 0,04 e 0,16 (metade e dobro do valor padrão de 0,08, já coberto pela grade),
+totalizando onze execuções independentes.
 
 Cada configuração foi treinada isoladamente por exatamente 300 gerações, com a mesma função de
 fitness, os mesmos cenários táticos obrigatórios (\texttt{CatalogoCenarios.TodosComScript}) e o
-mesmo ambiente de avaliação do treinamento padrão. Todas as execuções usaram o mesmo
-\texttt{AmbienteTreinamento} e o mesmo \texttt{AlgoritmoGenetico} que treinam o controlador em
-produção, sem nenhum dado simulado ou estimado manualmente. O resultado de cada configuração --
-população, neurônios ocultos, taxa de mutação, gerações executadas, fitness final, geração em que
-esse fitness foi alcançado pela primeira vez, curva de convergência, tempo de treinamento e
-data/hora -- foi persistido na tabela \texttt{experimentos\_hiperparametros} (ver
-Seção~\ref{sec:modelo-dados}) e é consultável na tela de Estatísticas de Treinamento, que apresenta
-cada série comparativa separadamente e destaca a configuração de melhor fitness, a de convergência
-mais rápida e a de melhor custo-benefício. Os gráficos desta seção são gerados diretamente desses
-registros.
+mesmo ambiente de avaliação do treinamento padrão -- já no ambiente endurecido descrito ao final da
+Seção~\ref{sec:controlador-hibrido-inicio} (teto por quadrante, escalada de dificuldade, invasão de
+torre encerrando o episódio e penalidade de desequilíbrio entre torres). Todas as execuções usaram
+o mesmo \texttt{AmbienteTreinamento} e o mesmo \texttt{AlgoritmoGenetico} que treinam o controlador
+em produção, sem nenhum dado simulado ou estimado manualmente, rodadas em lote único e sequencial
+numa única máquina -- não a da Tabela~\ref{tab:ambiente-computacional}, e sim a segunda máquina
+descrita no parágrafo de portabilidade ao final da Seção~\ref{sec:ambiente-computacional}
+(processador Intel Core i5-8400 @ 2,80 GHz, 6 núcleos, Windows 11 Pro, .NET SDK 9.0.316) -- para que
+os tempos cronometrados fossem comparáveis entre si. Por serem de uma máquina diferente, os tempos
+desta seção \textbf{não} devem ser comparados diretamente com os 14 a 75 segundos citados na
+Seção~\ref{sec:ambiente-computacional} para o experimento original (seis entradas): só as
+comparações \emph{dentro} da Tabela~\ref{tab:hiperparametros-7entradas}, entre si, são válidas. O resultado de cada configuração -- população, neurônios ocultos, taxa
+de mutação, fitness final, geração em que esse fitness foi alcançado pela primeira vez, curva de
+convergência nas gerações 25/50/100/200 e tempo de treinamento -- está listado na
+Tabela~\ref{tab:hiperparametros-7entradas} e exportado em
+\texttt{tools/RadarTorres.Experimentos/Resultados/experimentos\_hiperparametros\_7entradas.json}.
 
-\paragraph{Efeito sobre a qualidade final do controlador.}
-A Figura~\ref{fig:experimento-fitness} apresenta o fitness final das nove combinações de população
-e arquitetura, com a taxa de mutação fixa em 0,08. O painel (a) agrupa os resultados por
-arquitetura e o painel (b) pelos mesmos dados organizados por tamanho de população, de modo que
-cada painel isola visualmente o efeito de um dos dois hiperparâmetros.
-
-\begin{figure}[htbp]
+\begin{table}[htbp]
   \centering
-  \begin{tikzpicture}
-    \begin{axis}[
-      name=esq, width=7.3cm, height=5.6cm,
-      xlabel={Neurônios na camada oculta}, ylabel={Fitness final},
-      xtick={4,8,16}, ymin=55, ymax=58, grid=major,
-      legend style={font=\scriptsize, at={(0.5,-0.28)}, anchor=north, legend columns=3},
-      label style={font=\small}, tick label style={font=\footnotesize},
-      title={(a) por arquitetura}, title style={font=\small}]
-      \addplot+[mark=*]      coordinates {(4,56.66) (8,55.59) (16,56.48)}; \addlegendentry{pop.\ 30}
-      \addplot+[mark=square*]coordinates {(4,57.27) (8,56.07) (16,56.11)}; \addlegendentry{pop.\ 60}
-      \addplot+[mark=triangle*]coordinates{(4,57.09) (8,56.48) (16,56.20)}; \addlegendentry{pop.\ 120}
-    \end{axis}
-    \begin{axis}[
-      at={(esq.east)}, xshift=1.4cm, anchor=west,
-      width=7.3cm, height=5.6cm,
-      xlabel={Tamanho da população}, ylabel={Fitness final},
-      xtick={30,60,120}, ymin=55, ymax=58, grid=major,
-      legend style={font=\scriptsize, at={(0.5,-0.28)}, anchor=north, legend columns=3},
-      label style={font=\small}, tick label style={font=\footnotesize},
-      title={(b) por tamanho de população}, title style={font=\small}]
-      \addplot+[mark=*]      coordinates {(30,56.66) (60,57.27) (120,57.09)}; \addlegendentry{4 neur.}
-      \addplot+[mark=square*]coordinates {(30,55.59) (60,56.07) (120,56.48)}; \addlegendentry{8 neur.}
-      \addplot+[mark=triangle*]coordinates{(30,56.48) (60,56.11) (120,56.20)}; \addlegendentry{16 neur.}
-    \end{axis}
-  \end{tikzpicture}
-  \caption{Fitness final (melhor indivíduo ao longo de 300 gerações) das nove combinações de
-  população e neurônios na camada oculta, com taxa de mutação fixa em 0,08. Os dois painéis mostram
-  os mesmos nove pontos, reorganizados para isolar cada hiperparâmetro. Note que o eixo vertical
-  cobre apenas a faixa de 55 a 58, de modo que as diferenças aparentes correspondem a menos de 3\%
-  de variação (dos autores).}
-  \label{fig:experimento-fitness}
-\end{figure}
+  \caption{As onze execuções da grade de hiperparâmetros, já com a arquitetura de 7 entradas e o
+  ambiente endurecido. Fitness final e geração do pico idênticos (a menos de 0,02 ponto) em todas
+  as linhas -- ver discussão abaixo.}
+  \label{tab:hiperparametros-7entradas}
+  \small
+  \begin{tabular}{rrr rr r}
+    \hline
+    \textbf{Pop.} & \textbf{Ocultos} & \textbf{Mutação} & \textbf{Fitness final} & \textbf{Pico (ger.)} & \textbf{Tempo (s)} \\
+    \hline
+    30  & 4  & 0,08 & 68,33 & 222 & 3,4 \\
+    30  & 8  & 0,08 & 68,34 & 222 & 3,3 \\
+    30  & 16 & 0,08 & 68,34 & 222 & 3,6 \\
+    60  & 4  & 0,08 & 68,34 & 222 & 6,3 \\
+    60  & 8  & 0,08 & 68,34 & 222 & 8,2 \\
+    60  & 16 & 0,08 & 68,34 & 222 & 7,9 \\
+    120 & 4  & 0,08 & 68,34 & 222 & 11,3 \\
+    120 & 8  & 0,08 & 68,34 & 222 & 13,4 \\
+    120 & 16 & 0,08 & 68,34 & 222 & 20,5 \\
+    60  & 8  & 0,04 & 68,34 & 222 & 6,9 \\
+    60  & 8  & 0,16 & 68,34 & 222 & 6,3 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-O resultado mais relevante da Figura~\ref{fig:experimento-fitness} é a \emph{estreiteza} da faixa:
-as nove configurações terminaram entre 55,59 e 57,27 de fitness, uma variação total de 1,68 ponto,
-ou cerca de 3\% entre o pior e o melhor caso. Não há tendência monotônica em nenhum dos dois
-painéis -- aumentar a camada oculta de 4 para 16 neurônios não melhora consistentemente o
-resultado (em população 60, por exemplo, o fitness cai de 57,27 para 56,11), e aumentar a população
-de 30 para 120 indivíduos também não (com 4 neurônios, 60 indivíduos superam 120). O melhor
-resultado isolado foi o da configuração com população 60 e 4 neurônios ocultos (57,27), mas a
-margem sobre as demais é pequena demais, diante de uma única execução por configuração, para ser
-atribuída ao hiperparâmetro em vez da variação natural entre trajetórias de um algoritmo
-estocástico. A leitura defensável, portanto, é que \emph{nenhuma} das configurações testadas produz
-um controlador mensuravelmente melhor que as outras dentro do horizonte de 300 gerações.
+\paragraph{Efeito sobre a qualidade final do controlador: o teto desapareceu por completo.}
+A Tabela~\ref{tab:hiperparametros-7entradas} substitui integralmente a Figura de fitness final da
+versão anterior deste experimento (seis entradas, ambiente sem invasão de torre nem penalidade de
+desequilíbrio): naquela versão, as nove combinações de população e arquitetura terminavam numa
+faixa estreita mas ainda perceptível, de 55,59 a 57,27 (variação de 3\%). Com o ambiente endurecido
+e a arquitetura de sete entradas, essa faixa praticamente desaparece -- as onze execuções terminam
+entre 68,33 e 68,34, uma variação de 0,01 ponto, e \textbf{todas atingem esse valor exatamente na
+mesma geração, 222}, independentemente de população (30 a 120), arquitetura (4 a 16 neurônios
+ocultos) ou taxa de mutação (0,04 a 0,16). Isso não é o mesmo resultado do experimento anterior
+levado ao extremo por acaso: é uma mudança estrutural na tarefa. Os cenários táticos obrigatórios
+(\texttt{CatalogoCenarios.TodosComScript}) são um conjunto pequeno e fixo de situações
+determinísticas; sob o ambiente endurecido, há um teto de pontuação alcançável nesse conjunto fixo
+de cenários que qualquer genoma minimamente competente atinge com folga antes mesmo de terminar as
+300 gerações -- a partir daí, não existe mais recompensa disponível para diferenciar um
+hiperparâmetro do outro, e a busca genética simplesmente para de ter o que otimizar. Em outras
+palavras, o endurecimento do ambiente tornou a bateria de cenários fixos \emph{mais fácil de
+saturar}, não mais difícil de aprender -- o oposto do que se esperaria de regras mais punitivas, e
+evidência de que o verdadeiro desafio do ambiente atual está no treinamento com cenários aleatórios
+(Seção~\ref{sec:modelo-dados}), não nesta bateria fixa historicamente usada para comparar
+hiperparâmetros.
 
-\paragraph{Efeito sobre a velocidade de evolução.}
-Se a qualidade final pouco distingue as configurações, o mesmo não vale para a \emph{velocidade}
-com que cada uma chega ao seu resultado. A Figura~\ref{fig:experimento-mutacao} isola o efeito da
-taxa de mutação sobre a convergência, mantendo fixas a população em 60 indivíduos e a camada oculta
-em 8 neurônios: o painel (a) traz a curva do melhor fitness acumulado ao longo das gerações e o
-painel (b), a geração em que cada execução atingiu seu valor final.
+\paragraph{Efeito sobre a velocidade de evolução: ainda existe, mas só antes do teto.}
+Apesar do teto final idêntico, as curvas de convergência (gerações 25, 50, 100 e 200, disponíveis no
+JSON exportado) ainda diferem entre as taxas de mutação antes de alcançá-lo. Com população 60 e 8
+neurônios ocultos, a mutação 0,16 lidera no início (59,13 na geração 25, contra 57,48 das outras
+duas) mas estagna logo depois (62,43 na geração 200); a mutação 0,08 é a que mais se aproxima do
+teto antes do fim (68,31 já na geração 200); e a mutação 0,04 fica no meio (65,68 na geração 200).
+O padrão é o mesmo do experimento anterior -- mutação alta explora rápido e depois trava, mutação
+baixa refina mais lentamente --, só que agora as três acabam convergindo ao mesmo teto por volta da
+geração 222, em vez de pararem em valores finais diferentes. O compromisso clássico entre exploração
+e explotação continua presente na trajetória; deixou de ser visível no resultado final porque o
+resultado final deixou de ter margem para diferenciá-las.
 
-\begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}
-    \begin{axis}[
-      name=curva, width=8.2cm, height=5.6cm,
-      xlabel={Geração}, ylabel={Melhor fitness acumulado},
-      xmin=0, xmax=310, ymin=53, ymax=57, grid=major,
-      legend style={font=\scriptsize, at={(0.03,0.97)}, anchor=north west},
-      label style={font=\small}, tick label style={font=\footnotesize},
-      title={(a) curva de convergência}, title style={font=\small}]
-      \addplot+[mark=*]       coordinates {(25,53.63) (50,53.63) (100,55.28) (200,55.78) (300,56.35)};
-      \addlegendentry{mutação 0,04}
-      \addplot+[mark=square*] coordinates {(25,53.32) (50,53.32) (100,55.25) (200,56.07) (300,56.07)};
-      \addlegendentry{mutação 0,08}
-      \addplot+[mark=triangle*]coordinates{(25,54.34) (50,54.34) (100,55.25) (200,55.59) (300,55.59)};
-      \addlegendentry{mutação 0,16}
-    \end{axis}
-    \begin{axis}[
-      at={(curva.east)}, xshift=1.9cm, anchor=west,
-      width=6.2cm, height=5.6cm,
-      ybar, bar width=14pt,
-      xlabel={Taxa de mutação}, ylabel={Geração do pico},
-      symbolic x coords={0{,}04,0{,}08,0{,}16}, xtick=data,
-      ymin=0, ymax=280, grid=major, nodes near coords,
-      every node near coord/.append style={font=\scriptsize},
-      label style={font=\small}, tick label style={font=\footnotesize},
-      title={(b) gerações até o pico}, title style={font=\small}]
-      \addplot coordinates {(0{,}04,235) (0{,}08,191) (0{,}16,116)};
-    \end{axis}
-  \end{tikzpicture}
-  \caption{Efeito da taxa de mutação sobre a convergência, com população de 60 indivíduos e 8
-  neurônios na camada oculta. Em (a), o melhor fitness acumulado nas gerações 25, 50, 100, 200 e
-  300; em (b), a primeira geração em que cada execução atingiu seu fitness final (dos autores).}
-  \label{fig:experimento-mutacao}
-\end{figure}
-
-A Figura~\ref{fig:experimento-mutacao} revela o resultado mais nítido de todo o conjunto de
-experimentos: um \emph{compromisso} entre velocidade e qualidade, na direção prevista pela teoria de
-algoritmos genéticos. A taxa de mutação mais alta (0,16) foi a que convergiu mais cedo -- atingiu
-seu valor final na geração 116, contra 191 da taxa padrão e 235 da taxa de 0,04, ou seja, em
-praticamente metade das gerações da configuração mais lenta --, mas foi também a que parou no menor
-fitness (55,59). Na direção oposta, a taxa de 0,04 foi a mais lenta e a que alcançou o maior fitness
-(56,35). O painel (a) deixa visível o mecanismo por trás disso: a curva de 0,16 sobe primeiro e
-achata cedo, enquanto a de 0,04 permanece abaixo das demais até cerca da geração 200 e continua
-subindo quando as outras duas já estabilizaram. Trata-se do equilíbrio clássico entre exploração e
-explotação: mais mutação espalha a busca e encontra rapidamente uma região boa, mas atrapalha o
-refinamento fino em torno dela; menos mutação refina melhor, ao custo de precisar de mais gerações.
-
-Respondendo diretamente à pergunta que motivou este experimento -- se alterar a taxa de mutação faz
-a população evoluir mais rápido --, a resposta observada é sim, e o efeito é considerável no número
-de gerações (fator de aproximadamente 2 entre 0,04 e 0,16), mas esse ganho \textbf{não se traduz em
-economia de tempo de execução}: as três configurações levaram, respectivamente, 33,0, 25,8 e 35,4
-segundos, porque todas rodaram as 300 gerações completas independentemente de já terem estabilizado.
-O ganho só se converteria em tempo caso o treinamento adotasse um critério de parada por
-estagnação, que o RadarTorres não implementa -- possibilidade de melhoria registrada aqui como
-trabalho futuro.
-
-\paragraph{Custo computacional.}
-O tempo de treinamento, por sua vez, respondeu de forma clara e previsível a um único fator: o
-tamanho da população. A Figura~\ref{fig:experimento-tempo} mostra os tempos cronometrados das nove
-configurações do primeiro experimento.
-
-\begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}
-    \begin{axis}[
-      width=13cm, height=5.6cm, ybar, bar width=15pt,
-      xlabel={Tamanho da população}, ylabel={Tempo de treinamento (s)},
-      symbolic x coords={30,60,120}, xtick=data,
-      ymin=0, ymax=92, grid=major, nodes near coords,
-      every node near coord/.append style={font=\tiny},
-      legend style={font=\scriptsize, at={(0.5,-0.32)}, anchor=north, legend columns=3},
-      label style={font=\small}, tick label style={font=\footnotesize}]
-      \addplot coordinates {(30,14.2) (60,31.3) (120,64.7)}; \addlegendentry{4 neurônios}
-      \addplot coordinates {(30,15.3) (60,25.8) (120,74.9)}; \addlegendentry{8 neurônios}
-      \addplot coordinates {(30,16.6) (60,27.3) (120,69.6)}; \addlegendentry{16 neurônios}
-    \end{axis}
-  \end{tikzpicture}
-  \caption{Tempo de parede para treinar 300 gerações em cada uma das nove configurações de
-  população e arquitetura, cronometrado pelo próprio executor de experimentos (dos autores).}
-  \label{fig:experimento-tempo}
-\end{figure}
-
-O tempo cresce de forma aproximadamente linear com a população e é praticamente insensível à
-arquitetura: passar de 30 para 120 indivíduos multiplica o tempo por um fator entre 4,2 e 4,9,
-enquanto quadruplicar os neurônios da camada oculta (de 4 para 16) altera o tempo em menos de 17\%
-em qualquer das populações. O comportamento é o esperado de um laço que avalia cada indivíduo da
-população a cada geração: o custo é dominado pela quantidade de episódios simulados, não pelo
-tamanho da rede avaliada em cada episódio -- a rede, com 6 entradas e no máximo 16 neurônios
-ocultos, é pequena demais para que sua propagação pese diante do custo de simular o ambiente.
+\paragraph{Custo computacional: a população continua sendo o único fator relevante.}
+A última coluna da Tabela~\ref{tab:hiperparametros-7entradas} confirma, com o ambiente novo, a mesma
+conclusão do experimento anterior: o tempo de treinamento escala com o tamanho da população (3,3 a
+3,6 s em população 30; 6,3 a 8,2 s em população 60; 11,3 a 20,5 s em população 120 -- um fator de
+aproximadamente $3\times$ a $6\times$ entre os extremos) e varia muito menos, e sem uma direção
+consistente, com o número de neurônios ocultos. A razão é a mesma de antes: o custo é dominado pela
+quantidade de episódios simulados por geração (um por indivíduo da população), não pelo tamanho da
+rede avaliada em cada episódio -- mesmo com 7 entradas em vez de 6, a rede continua pequena demais
+para que sua propagação pese diante do custo de simular o ambiente. A maior variação não-monotônica
+entre arquiteturas nesta rodada (por exemplo, 120/16 levando 20,5 s contra 11,3 s de 120/4) é
+compatível com a nova mecânica de fim antecipado de episódio por invasão de torre: episódios que
+terminam mais cedo custam menos tempo de simulação, e qual genoma de uma população específica sofre
+invasão antecipada em qual geração é, em si, estocástico -- uma fonte de ruído de tempo que o
+ambiente anterior, sem fim antecipado, não tinha.
 
 \paragraph{Conclusão e escolha dos hiperparâmetros.}
-Combinando os três resultados, a conclusão deste experimento para o RadarTorres é de
-custo-benefício, não de desempenho. Como nenhuma configuração produziu um controlador
-mensuravelmente melhor (variação total de 3\% no fitness final), e como o custo computacional é
-governado quase exclusivamente pelo tamanho da população, não há evidência que justifique o gasto
-adicional de uma população de 120 indivíduos -- cerca de 4,5$\times$ o tempo de uma população de 30
--- nem ganho em adotar uma camada oculta maior. A configuração de produção, população de 60
-indivíduos com 8 neurônios ocultos e taxa de mutação 0,08, situa-se no meio das três faixas testadas
-e é sustentada por estes dados como uma escolha equilibrada: fitness dentro da faixa das demais,
-tempo de treinamento intermediário e convergência também intermediária entre a mutação que
-estabiliza cedo demais e a que demora a estabilizar.
+A conclusão para o RadarTorres permanece de custo-benefício, agora ainda mais categórica: com todas
+as onze configurações atingindo o mesmo teto de fitness na mesma geração, não há absolutamente
+nenhuma evidência -- nem mesmo a variação de 3\% observada antes do endurecimento do ambiente -- que
+justifique o gasto adicional de uma população maior ou de uma camada oculta maior. A configuração de
+produção (população 60, 8 neurônios ocultos, mutação 0,08) permanece sustentada não por superar as
+demais, mas por ser a escolha de fábrica mais testada e por não haver custo de oportunidade
+mensurável em mantê-la.
 
-Duas ressalvas delimitam o alcance destas conclusões, na mesma linha das já apontadas na
-Seção~\ref{sec:procedimentos-metodologicos} para o treinamento do controlador em geral. A primeira é
-amostral: cada configuração corresponde a uma única execução, isto é, a uma única trajetória de
-evolução, e não à média de repetições independentes com sementes distintas. Diferenças da ordem de
-um ponto de fitness, como as que separam as nove combinações da
-Figura~\ref{fig:experimento-fitness}, são pequenas demais para serem atribuídas com confiança ao
-hiperparâmetro em si; por isso o texto acima evita eleger uma configuração vencedora em qualidade e
-se apoia apenas nos efeitos de magnitude maior, como o fator de 2 em gerações até o pico e o fator
-de 4,5 em tempo de execução. A segunda ressalva é o horizonte: as 300 gerações foram escolhidas para
-manter cada experimento executável em cerca de um minuto, não necessariamente para captar a
-convergência completa de cada configuração -- o fato de a taxa de mutação 0,04 ainda estar subindo
-na geração 200 sugere que um horizonte maior poderia, sim, diferenciar melhor as configurações entre
-si. Uma repetição futura com múltiplas sementes por configuração e um horizonte mais longo é,
-portanto, trabalho necessário antes de se afirmar superioridade estrita de qualquer combinação,
-na mesma linha da ressalva geral sobre a fidelidade do ambiente de treino feita na
-Seção~\ref{sec:procedimentos-metodologicos}.
+Duas ressalvas, na mesma linha das já apontadas na Seção~\ref{sec:procedimentos-metodologicos},
+delimitam o alcance desta conclusão. A primeira é que a saturação observada é uma propriedade do
+conjunto FIXO de cenários táticos usado nesta bateria (\texttt{CatalogoCenarios.TodosComScript}), e
+não necessariamente do treinamento de produção, que também avalia cenários aleatórios -- o teto
+idêntico documentado aqui não implica que o controlador de produção (Seção~\ref{sec:modelo-dados})
+tenha convergido do mesmo jeito sob nascimentos sorteados e um horizonte de treinamento muito maior.
+A segunda é a mesma de antes: cada configuração corresponde a uma única execução (não a uma média de
+sementes independentes), de modo que a coincidência de picos exatamente na geração 222 em onze
+execuções sem semente fixa compartilhada é, ela própria, um indício de quão determinístico o teto
+se tornou nesta bateria específica -- mas não prova que o mesmo valha fora dela. Repetir esta mesma
+bateria com cenários aleatórios, em vez dos fixos, é o próximo passo natural para saber se a
+saturação observada é exclusiva dos cenários táticos obrigatórios ou uma característica mais geral
+do ambiente endurecido.
 
 \subsection{Diagrama de pacotes}
 
