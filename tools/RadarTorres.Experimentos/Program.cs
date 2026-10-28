@@ -29,8 +29,9 @@ public static class Program
             case "ga": Ga(args); return 0;
             case "ablacao": Ablacao(args); return 0;
             case "hiperparametros": Hiperparametros(); return 0;
+            case "sobrevivencia": Sobrevivencia(args); return 0;
             default:
-                Console.WriteLine("Comandos: teto | ga | ablacao | hiperparametros");
+                Console.WriteLine("Comandos: teto | ga | ablacao | hiperparametros | sobrevivencia");
                 return 1;
         }
     }
@@ -146,13 +147,14 @@ public static class Program
             Arg(args, "limite", 0),
             Arg(args, "dur", 45),
             Arg(args, "spawnmin", 1.5),
-            Arg(args, "spawnmax", 4.0)));
+            Arg(args, "spawnmax", 4.0),
+            ArgS(args, "semlimite", "nao") == "sim"));
     }
 
     private static Execucao RodarGa(
         string rotulo, int populacao, int ocultos, double mutacao, int geracoes, int seed,
         int maxAlvos, ControladorHibrido.ModoDecisao modo, bool cenariosFixos, double limiteSegundos,
-        double duracao = 45, double spawnMin = 1.5, double spawnMax = 4.0)
+        double duracao = 45, double spawnMin = 1.5, double spawnMax = 4.0, bool semLimiteDeDuracao = false)
     {
         int[] arquitetura = [ControladorHibrido.QuantidadeEntradas, ocultos, ControladorHibrido.QuantidadeSaidas];
         var parametros = new ParametrosTreinamento
@@ -162,7 +164,8 @@ public static class Program
             MaxAlvosPorQuadrante = maxAlvos,
             DuracaoEpisodioSegundos = duracao,
             IntervaloSpawnMinSegundos = spawnMin,
-            IntervaloSpawnMaxSegundos = spawnMax
+            IntervaloSpawnMaxSegundos = spawnMax,
+            SemLimiteDeDuracao = semLimiteDeDuracao
         };
         var ambiente = new AmbienteTreinamento(parametros, arquitetura: arquitetura);
         var ag = new AlgoritmoGenetico(
@@ -271,6 +274,80 @@ public static class Program
             fit.Average() / Math.Max(1e-9, nasc.Average()), ab.Average() / Math.Max(1e-9, nasc.Average()));
         Console.WriteLine($"[ablacao-HeuristicaPura] VAL fitness={heur.ValFitnessMedio:0.00} nascidos={heur.ValAlvosNascidos:0.00} abatidos={heur.ValAbatidos:0.00} taxaAbate={heur.ValTaxaAbate:0.000}");
         Gravar(heur);
+    }
+
+    // --------------------------------------------------- sobrevivencia (teto: rede ou ambiente?)
+
+    private sealed record GenomaCarregado(int[] Arquitetura, double[] Genoma);
+
+    /// <summary>
+    /// Carrega um genoma já treinado (formato salvo por <see cref="SalvarGenoma"/> OU pelo
+    /// formato exportado pela tela "Treinamento do Controlador") e avalia quanto ele realmente
+    /// aguenta quando o episódio não é mais cortado em <see cref="ParametrosTreinamento.DuracaoEpisodioSegundos"/>
+    /// -- só termina quando um alvo de fato rompe uma torre
+    /// (<see cref="ParametrosTreinamento.SemLimiteDeDuracao"/>). Responde diretamente à pergunta
+    /// "o teto é da rede ou do ambiente?": se o fitness médio aqui for muito maior que o teto
+    /// observado com episódios de 45 s, o ambiente (duração curta) é o limitador, não o genoma.
+    /// </summary>
+    private static void Sobrevivencia(string[] args)
+    {
+        string caminho = ArgS(args, "genoma", "");
+        if (caminho.Length == 0 || !File.Exists(caminho))
+        {
+            Console.WriteLine("Uso: sobrevivencia --genoma=<caminho.json> [--episodios=20]");
+            return;
+        }
+
+        GenomaCarregado g = CarregarGenoma(caminho);
+        int episodios = (int)Arg(args, "episodios", 20);
+
+        var parametros = new ParametrosTreinamento { SemLimiteDeDuracao = true };
+        var ambiente = new AmbienteTreinamento(parametros, arquitetura: g.Arquitetura);
+
+        var fit = new List<double>();
+        var nasc = new List<int>();
+        var ab = new List<int>();
+        var esc = new List<int>();
+        var duracao = new List<double>();
+
+        for (int s = 0; s < episodios; s++)
+        {
+            EstadoEpisodio estado = ambiente.NovoEpisodio(seed: s);
+            var rede = new RedeNeural(g.Arquitetura, g.Genoma);
+            var controlador = new ControladorHibrido(rede, parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo, tempoDeteccaoRelevanteSegundos: parametros.TempoDeteccaoRelevanteSegundos);
+
+            const double dt = 0.2;
+            while (!estado.Finalizado) ambiente.Avancar(estado, controlador, dt);
+
+            fit.Add(estado.FitnessAcumulado);
+            nasc.Add(estado.AlvosNascidos);
+            ab.Add(estado.AlvosAbatidos);
+            esc.Add(estado.AlvosEscapados);
+            duracao.Add(estado.TempoDecorridoSegundos);
+
+            Console.WriteLine($"  seed {s}: fitness={estado.FitnessAcumulado:0.00} nascidos={estado.AlvosNascidos} abatidos={estado.AlvosAbatidos} escapados={estado.AlvosEscapados} duracao={estado.TempoDecorridoSegundos:0.0}s");
+        }
+
+        Console.WriteLine($"--- SOBREVIVENCIA ({episodios} episodios, sem limite de duracao, genoma de {caminho}) ---");
+        Console.WriteLine($"fitness   : media={fit.Average():0.00} min={fit.Min():0.00} max={fit.Max():0.00}");
+        Console.WriteLine($"nascidos  : media={nasc.Average():0.00} min={nasc.Min()} max={nasc.Max()}");
+        Console.WriteLine($"abatidos  : media={ab.Average():0.00}");
+        Console.WriteLine($"escapados : media={esc.Average():0.00}");
+        Console.WriteLine($"duracao   : media={duracao.Average():0.0}s min={duracao.Min():0.0}s max={duracao.Max():0.0}s (ate invadir uma torre ou atingir a salvaguarda de {parametros.DuracaoMaximaSegurancaSegundos:0}s)");
+    }
+
+    private static GenomaCarregado CarregarGenoma(string caminho)
+    {
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(caminho));
+        JsonElement root = doc.RootElement;
+
+        JsonElement arqElement = root.TryGetProperty("arquitetura", out JsonElement a1) ? a1 : root.GetProperty("Arquitetura");
+        JsonElement genElement = root.TryGetProperty("genoma", out JsonElement g1) ? g1 : root.GetProperty("Genoma");
+
+        int[] arquitetura = arqElement.EnumerateArray().Select(e => e.GetInt32()).ToArray();
+        double[] genoma = genElement.EnumerateArray().Select(e => e.GetDouble()).ToArray();
+
+        return new GenomaCarregado(arquitetura, genoma);
     }
 
     // --------------------------------------------------- hiperparametros (grid do artigo)
