@@ -138,8 +138,8 @@
                         <TextBlock Text="Taxa de mutação (0-1)" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <TextBlock Text="Máximo de alvos simultâneos" Style="{StaticResource ParametroLabel}"/>
-                        <TextBox Text="{Binding MaxAlvosSimultaneos, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="Máximo de alvos por quadrante" Style="{StaticResource ParametroLabel}"/>
+                        <TextBox Text="{Binding MaxAlvosPorQuadrante, UpdateSourceTrigger=PropertyChanged}"/>
 
                         <TextBlock Style="{StaticResource ParametroLabel}" TextWrapping="Wrap" FontStyle="Italic">
                             <Run Text="Alcance de mira e certeza mínima de disparo usados aqui são os mesmos ajustados em "/>

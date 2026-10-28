@@ -29,4 +29,7 @@ public sealed class TorreTreinamento
     /// <summary>Posição do alvo no instante do último disparo — guardada porque o alvo abatido é removido do episódio no mesmo passo em que dispara.</summary>
     public double UltimoAlvoDisparoX { get; set; }
     public double UltimoAlvoDisparoY { get; set; }
+
+    /// <summary>Soma do tempo (s), ao longo do episódio, em que esta torre esteve comprometida com algum alvo (<see cref="Livre"/> == false) — usada só ao fim do episódio para penalizar desequilíbrio entre torres (ver <see cref="ParametrosTreinamento.PenalidadeDesequilibrioTorresPorSegundo"/>), não influencia nenhuma decisão durante o episódio.</summary>
+    public double TempoComprometidoSegundos { get; set; }
 }

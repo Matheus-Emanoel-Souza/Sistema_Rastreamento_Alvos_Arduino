@@ -20,7 +20,7 @@ public enum TipoCenarioTreinamento
     /// <summary>Sorteio padrão (ângulo/velocidade/certeza aleatórios) — comportamento histórico, sem script.</summary>
     Aleatorio,
 
-    /// <summary>Carga/saturação: 6 alvos nascem quase juntos, testando o limite de <see cref="ParametrosTreinamento.MaxAlvosSimultaneos"/>.</summary>
+    /// <summary>Carga/saturação: 6 alvos nascem quase juntos, testando o limite de <see cref="ParametrosTreinamento.MaxAlvosPorQuadrante"/>.</summary>
     EnxameDeSaturacao,
 
     /// <summary>Disputa de torre: dois alvos nascem ao mesmo tempo, próximos um do outro, forçando a escolha de qual uma única torre deve comprometer primeiro.</summary>

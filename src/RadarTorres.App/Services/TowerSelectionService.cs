@@ -45,6 +45,9 @@ public sealed class TowerSelectionService : ITowerSelectionService
     /// <summary>Mesmo padrão usado como velocidade máxima no ambiente de treinamento (ver <see cref="ParametrosTreinamento"/>) — só normaliza a entrada da rede.</summary>
     private const double VelocidadeMaximaAlvoMetrosPorSegundo = 2.5;
 
+    /// <summary>Mesmo padrão usado como tempo de detecção relevante no ambiente de treinamento (<see cref="ParametrosTreinamento.TempoDeteccaoRelevanteSegundos"/>) — só normaliza a entrada da rede.</summary>
+    private const double TempoDeteccaoRelevanteSegundos = 3.0;
+
     /// <summary>Diferença de pontuação (ou de distância, quando não há rede embutida) abaixo da qual duas candidatas são consideradas "empatadas" — usada tanto pela regra 1 (anti-oscilação) quanto pela 4 (balanceamento de carga).</summary>
     private const double MargemEmpateDistanciaMetros = 0.3;
     private const double MargemEmpatePontuacaoRede = 0.1;
@@ -329,6 +332,10 @@ public sealed class TowerSelectionService : ITowerSelectionService
                     anguloGraus: BearingCalculator.AngleTo(candidate, target),
                     velocidadeMetrosPorSegundo: target.SpeedMetersPerSecond,
                     velocidadeMaximaMetrosPorSegundo: VelocidadeMaximaAlvoMetrosPorSegundo,
+                    // Mesma grandeza usada no treinamento (AlvoTreinamento.TempoDeVidaSegundos):
+                    // tempo desde a PRIMEIRA detecção deste alvo, não desde a seleção de torre.
+                    tempoDeteccaoSegundos: (DateTime.UtcNow - target.Timestamp).TotalSeconds,
+                    tempoDeteccaoRelevanteSegundos: TempoDeteccaoRelevanteSegundos,
                     fatorCamada: fatorCamada);
 
                 pontuacao = ControladorHibrido.Pontuar(rede, entradas, fatorCamada);

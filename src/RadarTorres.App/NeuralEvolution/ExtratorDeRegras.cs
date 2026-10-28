@@ -26,14 +26,16 @@ public static class ExtratorDeRegras
         "estar em quadrante adjacente ao do alvo",
         "o ângulo de mira",
         "a velocidade do alvo",
+        "o tempo que o alvo já está sendo detectado sem ser abatido",
         "a camada heurística (torre do próprio quadrante vs. sobressalente)"
     ];
 
     public static RegrasExtraidas Extrair(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo)
     {
         // Ponto de referência: torre do próprio quadrante (fatorCamada=1), alvo a meia distância,
-        // de frente, com velocidade média — a situação "típica" de engajamento.
-        double[] referencia = [0.5, 1.0, 0.0, 0.5, 0.5, 1.0];
+        // de frente, com velocidade média, recém-detectado (tempo de detecção=0) — a situação
+        // "típica" de engajamento.
+        double[] referencia = [0.5, 1.0, 0.0, 0.5, 0.5, 0.0, 1.0];
         double[] saidaReferencia = rede.Ativar(referencia);
 
         var frases = new List<string>();

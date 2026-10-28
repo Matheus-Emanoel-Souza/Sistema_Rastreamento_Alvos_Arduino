@@ -83,7 +83,7 @@ public sealed class AmbienteTreinamento
         estado.SpawnsScriptados = spawns;
         estado.ZonaMortaForcadaQuadrante = CatalogoCenarios.QuadranteZonaMortaParaForcar(cenario);
         estado.ProximoSpawnSegundos = spawns is null
-            ? ProximoIntervaloSpawn(estado.Rng)
+            ? ProximoIntervaloSpawn(estado)
             : spawns.Count > 0 ? spawns[0].InstanteSegundos : double.MaxValue;
 
         return estado;
@@ -129,7 +129,7 @@ public sealed class AmbienteTreinamento
     {
         EstadoEpisodio estado = NovoEpisodio(seed, cenario);
         var rede = new RedeNeural(_arquitetura, genoma);
-        var controlador = new ControladorHibrido(rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo, modo);
+        var controlador = new ControladorHibrido(rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo, modo, _parametros.TempoDeteccaoRelevanteSegundos);
 
         const double dt = 0.2;
         while (!estado.Finalizado)
@@ -193,8 +193,10 @@ public sealed class AmbienteTreinamento
 
         TalvezNascerAlvo(estado);
         MoverAlvos(estado, dt);
+        AcumularTempoComprometido(estado, dt);
         AplicarPenalidadeDeProximidade(estado);
         TratarAlvosNaBase(estado);
+        TratarInvasaoDeTorre(estado);
         SelecionarTorresParaAlvosLivres(estado, controlador);
         DecidirDisparos(estado, controlador);
 
@@ -202,12 +204,84 @@ public sealed class AmbienteTreinamento
 
         if (estado.TempoDecorridoSegundos >= _parametros.DuracaoEpisodioSegundos)
         {
-            estado.Finalizado = true;
+            FinalizarEpisodio(estado);
         }
     }
 
-    private double ProximoIntervaloSpawn(Random rng) =>
-        _parametros.IntervaloSpawnMinSegundos + rng.NextDouble() * (_parametros.IntervaloSpawnMaxSegundos - _parametros.IntervaloSpawnMinSegundos);
+    /// <summary>Única porta de saída de um episódio (fim natural por tempo OU fim antecipado por invasão de torre) — garante que a penalidade de desequilíbrio (ver <see cref="AplicarPenalidadeDesequilibrioTorres"/>) seja aplicada exatamente uma vez.</summary>
+    private void FinalizarEpisodio(EstadoEpisodio estado)
+    {
+        if (estado.Finalizado) return;
+
+        estado.Finalizado = true;
+        AplicarPenalidadeDesequilibrioTorres(estado);
+    }
+
+    /// <summary>Soma, a cada passo, o tempo em que cada torre esteve ocupada — ver <see cref="TorreTreinamento.TempoComprometidoSegundos"/>.</summary>
+    private static void AcumularTempoComprometido(EstadoEpisodio estado, double dt)
+    {
+        foreach (TorreTreinamento torre in estado.Torres.Where(t => !t.Livre))
+        {
+            torre.TempoComprometidoSegundos += dt;
+        }
+    }
+
+    /// <summary>
+    /// Penaliza, ao fim do episódio, a desigualdade de uso entre as torres — um desvio padrão
+    /// alto significa que uma torre carregou praticamente tudo enquanto outra ficou ociosa,
+    /// indicando má gestão de recursos mesmo que o total de abates tenha sido bom (ver
+    /// <see cref="ParametrosTreinamento.PenalidadeDesequilibrioTorresPorSegundo"/>).
+    /// </summary>
+    private void AplicarPenalidadeDesequilibrioTorres(EstadoEpisodio estado)
+    {
+        if (estado.Torres.Count == 0) return;
+
+        double media = estado.Torres.Average(t => t.TempoComprometidoSegundos);
+        double variancia = estado.Torres.Sum(t => Math.Pow(t.TempoComprometidoSegundos - media, 2)) / estado.Torres.Count;
+        double desvioPadrao = Math.Sqrt(variancia);
+
+        estado.FitnessAcumulado -= desvioPadrao * _parametros.PenalidadeDesequilibrioTorresPorSegundo;
+    }
+
+    /// <summary>
+    /// Alvo ainda ativo que chega perto demais de QUALQUER torre rompe a defesa — diferente da
+    /// fuga pela base (<see cref="TratarAlvosNaBase"/>, que só penaliza): aqui o episódio acaba
+    /// ali mesmo, descartando qualquer pontuação futura possível (ver
+    /// <see cref="ParametrosTreinamento.DistanciaInvasaoTorreMetros"/>).
+    /// </summary>
+    private void TratarInvasaoDeTorre(EstadoEpisodio estado)
+    {
+        foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo))
+        {
+            TorreTreinamento? torreInvadida = estado.Torres.FirstOrDefault(t =>
+                DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= _parametros.DistanciaInvasaoTorreMetros);
+            if (torreInvadida is null) continue;
+
+            alvo.Ativo = false;
+            estado.AlvosEscapados++;
+            estado.FitnessAcumulado -= _parametros.PenalidadeInvasaoTorre;
+            LiberarTorreDe(estado, alvo);
+            FinalizarEpisodio(estado);
+            return; // episódio já terminou — nenhum outro alvo deste passo precisa ser avaliado
+        }
+    }
+
+    private double ProximoIntervaloSpawn(EstadoEpisodio estado)
+    {
+        // Escalada de dificuldade: o intervalo entre nascimentos encolhe linearmente do início
+        // (IntervaloSpawnMin/MaxSegundos) ao fim (IntervaloSpawnMinFinalSegundos/MaxFinalSegundos)
+        // do episódio — alvos aparecem cada vez mais rápido conforme o tempo passa.
+        double fracaoDecorrida = _parametros.DuracaoEpisodioSegundos > 0
+            ? Math.Clamp(estado.TempoDecorridoSegundos / _parametros.DuracaoEpisodioSegundos, 0, 1)
+            : 0.0;
+
+        double min = Interpolar(_parametros.IntervaloSpawnMinSegundos, _parametros.IntervaloSpawnMinFinalSegundos, fracaoDecorrida);
+        double max = Interpolar(_parametros.IntervaloSpawnMaxSegundos, _parametros.IntervaloSpawnMaxFinalSegundos, fracaoDecorrida);
+
+        return min + estado.Rng.NextDouble() * (max - min);
+    }
+
+    private static double Interpolar(double inicio, double fim, double fracao) => inicio + (fim - inicio) * fracao;
 
     private void TalvezNascerAlvo(EstadoEpisodio estado)
     {
@@ -218,9 +292,7 @@ public sealed class AmbienteTreinamento
         }
 
         if (estado.TempoDecorridoSegundos < estado.ProximoSpawnSegundos) return;
-        estado.ProximoSpawnSegundos = estado.TempoDecorridoSegundos + ProximoIntervaloSpawn(estado.Rng);
-
-        if (estado.Alvos.Count(a => a.Ativo) >= _parametros.MaxAlvosSimultaneos) return;
+        estado.ProximoSpawnSegundos = estado.TempoDecorridoSegundos + ProximoIntervaloSpawn(estado);
 
         // Nasce num ponto aleatório da borda do mundo (círculo de raio RaioMundoMetros) e se
         // move em direção à base com um pequeno desvio angular — não é uma linha perfeitamente
@@ -228,6 +300,11 @@ public sealed class AmbienteTreinamento
         double anguloNascimento = estado.Rng.NextDouble() * 2 * Math.PI;
         double x = _parametros.RaioMundoMetros * Math.Cos(anguloNascimento);
         double y = _parametros.RaioMundoMetros * Math.Sin(anguloNascimento);
+        Quadrant quadranteNascimento = QuadrantHelper.Determine(x, y);
+
+        // Teto POR QUADRANTE (não mais global): só descarta o nascimento se o quadrante sorteado
+        // já estiver no limite — outro quadrante com folga continua recebendo alvos normalmente.
+        if (estado.Alvos.Count(a => a.Ativo && a.Quadrante == quadranteNascimento) >= _parametros.MaxAlvosPorQuadrante) return;
 
         double desvioRadianos = (estado.Rng.NextDouble() - 0.5) * (Math.PI / 6); // até ±30°
         double anguloMovimento = anguloNascimento + Math.PI + desvioRadianos;
@@ -243,7 +320,7 @@ public sealed class AmbienteTreinamento
             VelocidadeX = velocidade * Math.Cos(anguloMovimento),
             VelocidadeY = velocidade * Math.Sin(anguloMovimento),
             VelocidadeMetrosPorSegundo = velocidade,
-            Quadrante = QuadrantHelper.Determine(x, y),
+            Quadrante = quadranteNascimento,
             // Certeza nasce baixa e SOBE com o tempo de observação (ver AlvoTreinamento.Certeza)
             // — nunca fica presa abaixo do limiar para sempre; só demora mais ou menos conforme
             // a taxa sorteada aqui.
@@ -265,12 +342,15 @@ public sealed class AmbienteTreinamento
             SpawnScriptado spec = spawns[estado.ProximoIndiceSpawnScriptado];
             estado.ProximoIndiceSpawnScriptado++;
 
-            if (estado.Alvos.Count(a => a.Ativo) >= _parametros.MaxAlvosSimultaneos) continue;
-
             double anguloNascimentoRad = spec.AnguloNascimentoGraus * Math.PI / 180.0;
             double raio = _parametros.RaioMundoMetros * spec.FracaoRaioNascimento;
             double x = raio * Math.Cos(anguloNascimentoRad);
             double y = raio * Math.Sin(anguloNascimentoRad);
+            Quadrant quadranteNascimento = QuadrantHelper.Determine(x, y);
+
+            // Teto POR QUADRANTE — ver TalvezNascerAlvo.
+            if (estado.Alvos.Count(a => a.Ativo && a.Quadrante == quadranteNascimento) >= _parametros.MaxAlvosPorQuadrante) continue;
+
             double anguloMovimento = anguloNascimentoRad + Math.PI;
 
             estado.Alvos.Add(new AlvoTreinamento
@@ -281,7 +361,7 @@ public sealed class AmbienteTreinamento
                 VelocidadeX = spec.VelocidadeMetrosPorSegundo * Math.Cos(anguloMovimento),
                 VelocidadeY = spec.VelocidadeMetrosPorSegundo * Math.Sin(anguloMovimento),
                 VelocidadeMetrosPorSegundo = spec.VelocidadeMetrosPorSegundo,
-                Quadrante = QuadrantHelper.Determine(x, y),
+                Quadrante = quadranteNascimento,
                 CertezaBase = spec.CertezaBase,
                 TaxaCrescimentoCertezaPorSegundo = spec.TaxaCrescimentoCertezaPorSegundo
             });

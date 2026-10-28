@@ -180,8 +180,9 @@ public static class SerialProtocolParser
     public static string BuildGenomaCommit() => "GENOMA;COMMIT";
 
     /// <summary>
-    /// Pede ao Arduino que calcule, de forma independente, a saída da rede embutida para estas 6
-    /// entradas (mesma ordem de <see cref="NeuralEvolution.ControladorHibrido.ConstruirEntradas(double,double,bool,bool,double,double,double,double)"/>).
+    /// Pede ao Arduino que calcule, de forma independente, a saída da rede embutida para estas
+    /// <see cref="NeuralEvolution.ControladorHibrido.QuantidadeEntradas"/> entradas (mesma ordem de
+    /// <see cref="NeuralEvolution.ControladorHibrido.ConstruirEntradas(double,double,bool,bool,double,double,double,double,double,double)"/>).
     /// </summary>
     public static string BuildRedeEntradas(IReadOnlyList<double> entradas)
     {

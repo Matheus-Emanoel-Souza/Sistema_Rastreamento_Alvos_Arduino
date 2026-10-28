@@ -42,6 +42,18 @@ public sealed class ControladorTreinadoProvider : IControladorTreinadoProvider
                 return (null, null);
             }
 
+            // Genoma treinado com uma contagem de entradas diferente da atual (ex.: embutido antes
+            // de ControladorHibrido.QuantidadeEntradas mudar) não é compatível — ConstruirEntradas
+            // do sistema real sempre produz o número ATUAL de entradas, então ativar uma rede
+            // antiga com esse vetor lançaria exceção na primeira seleção de torre. Cai para
+            // heurística pura em vez de travar o app; o genoma precisa ser retreinado.
+            if (payload.Arquitetura[0] != ControladorHibrido.QuantidadeEntradas)
+            {
+                logger.Warning(
+                    $"Controlador treinado embutido foi treinado com {payload.Arquitetura[0]} entradas, mas a versão atual usa {ControladorHibrido.QuantidadeEntradas} — incompatível. Usando heurística pura até um novo treinamento ser embutido.");
+                return (null, null);
+            }
+
             var rede = new RedeNeural(payload.Arquitetura, payload.Genoma);
             logger.Info($"Controlador treinado carregado (geração {payload.Geracao}, melhor fitness {payload.MelhorFitness:0.0}).");
             return (rede, payload.Genoma);

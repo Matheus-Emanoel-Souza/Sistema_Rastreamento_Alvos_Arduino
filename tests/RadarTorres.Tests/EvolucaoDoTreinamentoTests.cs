@@ -25,7 +25,7 @@ public sealed class EvolucaoDoTreinamentoTests
         var parametros = new ParametrosTreinamento
         {
             DuracaoEpisodioSegundos = 15,
-            MaxAlvosSimultaneos = 10,
+            MaxAlvosPorQuadrante = 10,
             VelocidadeMinimaAlvoMetrosPorSegundo = 2.0,
             VelocidadeMaximaAlvoMetrosPorSegundo = 4.0,
             IntervaloSpawnMinSegundos = 0.3,

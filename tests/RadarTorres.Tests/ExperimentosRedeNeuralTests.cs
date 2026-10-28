@@ -9,7 +9,7 @@ namespace RadarTorres.Tests;
 /// (ver tools/RadarTorres.Experimentos e Resultados/resultados.json):
 /// <list type="bullet">
 /// <item>o fitness tem um TETO imposto pelo ambiente (quantos alvos chegam a nascer num episódio), não pela qualidade da rede;</item>
-/// <item><see cref="ParametrosTreinamento.MaxAlvosSimultaneos"/> não mexe nesse teto;</item>
+/// <item><see cref="ParametrosTreinamento.MaxAlvosPorQuadrante"/> não mexe nesse teto;</item>
 /// <item>o modo <see cref="ControladorHibrido.ModoDecisao.RedePura"/> realmente remove a heurística das decisões, e o modo híbrido (produção) continua inalterado.</item>
 /// </list>
 /// </summary>
@@ -35,16 +35,18 @@ public class ExperimentosRedeNeuralTests
     /// <summary>
     /// O número de alvos que nascem num episódio é limitado pelo relógio de nascimento
     /// (duração / intervalo mínimo), e cada abate vale no máximo <see cref="ParametrosTreinamento.RecompensaAbate"/>.
-    /// Logo o fitness de um episódio tem um teto duro — com os parâmetros de fábrica,
-    /// 45 / 1,5 = 30 alvos, ou seja 300 pontos em um cenário impossível (todo intervalo sorteado
-    /// no mínimo E todo alvo abatido na borda do mundo). Na média o teto fica muito abaixo disso.
+    /// Logo o fitness de um episódio tem um teto duro — com os parâmetros de fábrica, o intervalo
+    /// de nascimento encolhe ao longo do episódio (escalada de dificuldade, ver
+    /// <see cref="ParametrosTreinamento.IntervaloSpawnMinFinalSegundos"/>), então o pior caso usa
+    /// o intervalo MÍNIMO do FIM do episódio (45 / 0,6 = 75 alvos). Na média o teto fica muito
+    /// abaixo disso.
     /// </summary>
     [Fact]
     public void AlvosNascidosPorEpisodioRespeitamOTetoDoRelogioDeNascimento()
     {
         var p = new ParametrosTreinamento();
         var ambiente = new AmbienteTreinamento(p);
-        int tetoDeNascimentos = (int)Math.Ceiling(p.DuracaoEpisodioSegundos / p.IntervaloSpawnMinSegundos);
+        int tetoDeNascimentos = (int)Math.Ceiling(p.DuracaoEpisodioSegundos / p.IntervaloSpawnMinFinalSegundos);
 
         double[] genoma = GenomaSempreAtira();
         var nascidos = new List<int>();
@@ -57,13 +59,15 @@ public class ExperimentosRedeNeuralTests
         }
 
         // Teto MÉDIO observado — é ele, e não o teto absoluto, que limita o fitness alcançável
-        // por um treinamento: com intervalo sorteado em 1,5..4,0 s a média fica perto de
-        // 45 / 2,75 ≈ 16 alvos, e não dos 30 do pior caso.
-        Assert.InRange(nascidos.Average(), 10.0, 20.0);
+        // por um treinamento. Com a invasão de torre (ver AmbienteTreinamento.TratarInvasaoDeTorre)
+        // encerrando o episódio assim que QUALQUER torre é rompida, a média CAI em relação ao
+        // comportamento anterior (sem fim antecipado): episódios costumam acabar bem antes da
+        // duração total, nascendo poucos alvos — valor observado na ordem de 6 a 9.
+        Assert.InRange(nascidos.Average(), 3.0, 12.0);
     }
 
     /// <summary>
-    /// Elevar <see cref="ParametrosTreinamento.MaxAlvosSimultaneos"/> NÃO eleva o teto de
+    /// Elevar <see cref="ParametrosTreinamento.MaxAlvosPorQuadrante"/> NÃO eleva o teto de
     /// fitness: esse parâmetro só descarta nascimentos quando o controlador já deixou alvos
     /// demais vivos ao mesmo tempo. Para um controlador que abate, o gargalo é o relógio de
     /// nascimento, idêntico nos dois casos.
@@ -71,11 +75,11 @@ public class ExperimentosRedeNeuralTests
     [Theory]
     [InlineData(10)]
     [InlineData(20)]
-    public void AumentarMaxAlvosSimultaneosNaoMudaOEpisodioDeUmControladorQueAbate(int maxAlvos)
+    public void AumentarMaxAlvosPorQuadranteNaoMudaOEpisodioDeUmControladorQueAbate(int maxAlvos)
     {
         double[] genoma = GenomaSempreAtira();
-        var referencia = new AmbienteTreinamento(new ParametrosTreinamento { MaxAlvosSimultaneos = 5 });
-        var ampliado = new AmbienteTreinamento(new ParametrosTreinamento { MaxAlvosSimultaneos = maxAlvos });
+        var referencia = new AmbienteTreinamento(new ParametrosTreinamento { MaxAlvosPorQuadrante = 5 });
+        var ampliado = new AmbienteTreinamento(new ParametrosTreinamento { MaxAlvosPorQuadrante = maxAlvos });
 
         for (int seed = 0; seed < 10; seed++)
         {
