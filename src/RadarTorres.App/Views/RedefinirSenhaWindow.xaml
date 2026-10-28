@@ -1,0 +1,61 @@
+<Window x:Class="RadarTorres.App.Views.RedefinirSenhaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
+        Title="Redefinir senha" Height="340" Width="420"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource Bg.Window}"
+        Foreground="{DynamicResource Text.Primary}"
+        FontFamily="{DynamicResource Font.Body}">
+    <!--
+        Redefinição de senha do usuário selecionado na tabela, antes exibida permanentemente num
+        segundo cartão da barra lateral de UsuariosView. Compartilha a mesma UsuariosViewModel:
+        os campos continuam ligados a NovaSenhaRedefinir/ConfirmarSenhaRedefinir e o botão dispara
+        RedefinirSenhaCommand, que valida e grava de verdade. Fecha sozinha em caso de sucesso.
+    -->
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Style="{StaticResource Modal.Titulo}" Text="Redefinir senha"/>
+            <TextBlock Style="{StaticResource Modal.Subtitulo}">
+                <Run Text="Define uma nova senha para"/>
+                <Run Text="{Binding SelectedUsuario.Nome, Mode=OneWay, TargetNullValue='o usuário selecionado'}" FontWeight="SemiBold"/>
+                <Run Text="— sem precisar da senha atual."/>
+            </TextBlock>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="Nova senha" Style="{StaticResource Modal.Rotulo}"/>
+            <shared:PasswordRevealBox Password="{Binding NovaSenhaRedefinir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+            <TextBlock Text="Confirmar nova senha" Style="{StaticResource Modal.Rotulo}"/>
+            <shared:PasswordRevealBox Password="{Binding ConfirmarSenhaRedefinir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="{Binding MensagemRedefinir}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Modal.Mensagem}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SucessoRedefinir}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancelar" Style="{StaticResource Modal.BotaoSecundario}" IsCancel="True"/>
+                <Button Content="Redefinir" Style="{StaticResource Modal.BotaoPrimario}"
+                        Command="{Binding RedefinirSenhaCommand}" IsDefault="True"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
