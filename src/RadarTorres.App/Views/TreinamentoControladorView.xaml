@@ -131,6 +131,10 @@
                         <TextBlock Text="Tamanho da população" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding TamanhoPopulacao, UpdateSourceTrigger=PropertyChanged}"/>
 
+                        <TextBlock Text="Neurônios na camada oculta" Style="{StaticResource ParametroLabel}"/>
+                        <ComboBox ItemsSource="{Binding NeuroniosOcultosDisponiveis}" SelectedItem="{Binding NeuroniosOcultosSelecionado}"
+                                  ToolTip="Vale a partir do próximo &quot;Iniciar&quot; ou &quot;Resetar&quot; — não afeta um treinamento já em andamento."/>
+
                         <TextBlock Text="Taxa de mutação (0-1)" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"/>
 
@@ -231,13 +235,15 @@
                            Canvas.Left="245" Canvas.Top="14" FontSize="9" Foreground="{DynamicResource Text.Secondary}"
                            FontFamily="{DynamicResource Font.Mono}" IsHitTestVisible="False"/>
 
-                <!-- Círculo interno: alcance de engajamento — limite até onde as torres conseguem
-                     mirar/disparar (mesmo raio do cone de cada torre, ver ConstruirSetorDeVisao). -->
+                <!-- Círculo interno: alcance de engajamento a partir da base — soma a distância da base até
+                     a torre mais afastada com o alcance de mira de cada torre (ver
+                     AlcanceEngajamentoTotalMetros), para o círculo bater com a ponta real dos
+                     cones de visão (que partem já deslocados da origem, não do centro do mundo). -->
                 <Ellipse Width="{Binding DiametroEngajamentoPx}" Height="{Binding DiametroEngajamentoPx}"
                          Canvas.Left="{Binding OffsetEngajamentoPx}" Canvas.Top="{Binding OffsetEngajamentoPx}"
                          Stroke="#F59E0B" StrokeThickness="1.5" StrokeDashArray="3,3" Opacity="0.7"
-                         ToolTip="Alcance de engajamento — limite até onde as torres conseguem mirar"/>
-                <TextBlock Text="{Binding DistanciaEngajamentoMetros, StringFormat={}{0:0} m · alcance de mira}"
+                         ToolTip="Alcance de engajamento a partir da base — limite até onde as torres conseguem mirar"/>
+                <TextBlock Text="{Binding AlcanceEngajamentoTotalMetros, StringFormat={}{0:0.#} m · alcance de mira}"
                            Canvas.Left="245" Canvas.Top="{Binding OffsetEngajamentoPx}" FontSize="9" Foreground="#F59E0B"
                            FontFamily="{DynamicResource Font.Mono}" IsHitTestVisible="False"/>
 

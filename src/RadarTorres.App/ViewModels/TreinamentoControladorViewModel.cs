@@ -125,7 +125,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _marcoFitnessRepository = marcoFitnessRepository;
         _instantaneoRepository = instantaneoRepository;
         _configuracoes = configuracoes;
-        _ambiente = new AmbienteTreinamento(ParametrosAtuais);
+        _ambiente = new AmbienteTreinamento(ParametrosAtuais, arquitetura: ArquiteturaSelecionada);
         DesenharTorresFixas();
         ConstruirDiagramaRedeNeural();
         _cenarioOpcaoSelecionada = CenariosDisponiveis[0];
@@ -185,6 +185,20 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         get => _maxAlvosSimultaneos;
         set => SetProperty(ref _maxAlvosSimultaneos, value);
     }
+
+    /// <summary>Opções de quantidade de neurônios na camada oculta disponíveis na tela — os mesmos três valores do plano experimental da tela "Estatísticas de Treinamento" (ver ConfiguracaoExperimento.NeuroniosDaSerie), para um treinamento manual aqui ser comparável com os resultados registrados lá.</summary>
+    public IReadOnlyList<int> NeuroniosOcultosDisponiveis { get; } = [4, 8, 16];
+
+    private int _neuroniosOcultosSelecionado = ControladorHibrido.ArquiteturaPadrao[1];
+    /// <summary>Quantidade de neurônios da camada oculta usada pelo PRÓXIMO "Iniciar"/"Resetar" — não afeta um treinamento já em andamento (mesmo princípio de <see cref="TamanhoPopulacao"/>).</summary>
+    public int NeuroniosOcultosSelecionado
+    {
+        get => _neuroniosOcultosSelecionado;
+        set => SetProperty(ref _neuroniosOcultosSelecionado, value);
+    }
+
+    /// <summary>Arquitetura completa (entradas → oculta → saídas) a partir de <see cref="NeuroniosOcultosSelecionado"/> — mesma ordem de <see cref="ControladorHibrido.ArquiteturaPadrao"/>, só com a camada oculta parametrizada.</summary>
+    private int[] ArquiteturaSelecionada => [ControladorHibrido.QuantidadeEntradas, _neuroniosOcultosSelecionado, ControladorHibrido.QuantidadeSaidas];
 
     /// <summary>
     /// Lidos de <see cref="ConfiguracoesAplicativo"/> (tela "Configurações") a cada chamada —
@@ -251,15 +265,17 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         if (EmExecucao) return;
 
-        _ambiente = new AmbienteTreinamento(ParametrosAtuais);
+        int[] arquitetura = ArquiteturaSelecionada;
+        _ambiente = new AmbienteTreinamento(ParametrosAtuais, arquitetura: arquitetura);
         DesenharTorresFixas();
+        ConstruirDiagramaRedeNeural();
         // Elitismo proporcional (10% da população, no mínimo 2): com população menor, elitismo
         // fixo em 3 vira uma fração grande demais da população (perde diversidade) ou pequena
         // demais (perde estabilidade) dependendo do tamanho escolhido na tela — proporcional
         // mantém a mesma garantia de não regressão em qualquer tamanho de população.
         int elitismoProporcional = Math.Max(2, ParametrosAtuais.TamanhoPopulacao / 10);
         _algoritmoGenetico = new AlgoritmoGenetico(
-            tamanhoGenoma: RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao),
+            tamanhoGenoma: RedeNeural.TamanhoGenoma(arquitetura),
             tamanhoPopulacao: ParametrosAtuais.TamanhoPopulacao,
             taxaMutacao: ParametrosAtuais.TaxaMutacao,
             elitismo: elitismoProporcional);
@@ -304,7 +320,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _timerPreview.Stop();
         EmExecucao = false;
 
-        _ambiente = new AmbienteTreinamento(ParametrosAtuais);
+        _ambiente = new AmbienteTreinamento(ParametrosAtuais, arquitetura: ArquiteturaSelecionada);
         _algoritmoGenetico = null;
         _melhorGenomaAtual = [];
         _episodioPreview = null;
@@ -431,7 +447,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     private double[] GerarGenomaAleatorio()
     {
-        int tamanho = RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao);
+        int tamanho = RedeNeural.TamanhoGenoma(_ambiente.Arquitetura);
         var genoma = new double[tamanho];
         for (int i = 0; i < tamanho; i++) genoma[i] = (_randomGenomaInicial.NextDouble() * 2.0) - 1.0;
         return genoma;
@@ -448,7 +464,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
             var payload = new
             {
-                Arquitetura = ControladorHibrido.ArquiteturaPadrao,
+                Arquitetura = _ambiente.Arquitetura,
                 Genoma = _melhorGenomaAtual,
                 Geracao = GeracaoAtual,
                 MelhorFitness,
@@ -624,7 +640,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     private void AtualizarRegras(double[] genoma)
     {
-        var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, genoma);
+        var rede = new RedeNeural(_ambiente.Arquitetura, genoma);
         RegrasExtraidas regras = ExtratorDeRegras.Extrair(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
 
         RunOnUi(() =>
@@ -649,14 +665,19 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// </summary>
     private static readonly double[] EntradaDeReferenciaParaDiagrama = [0.5, 1.0, 0.0, 0.5, 0.5, 1.0];
 
-    /// <summary>Monta os nós e conexões do diagrama uma única vez — a ARQUITETURA da rede (quantidade de neurônios por camada) nunca muda, só os pesos.</summary>
+    /// <summary>
+    /// Monta os nós e conexões do diagrama a partir da arquitetura ATUAL de <see cref="_ambiente"/>
+    /// — chamado de novo em "Iniciar"/"Resetar" porque, com <see cref="NeuroniosOcultosSelecionado"/>,
+    /// a quantidade de neurônios da camada oculta pode mudar entre uma sessão de treinamento e a
+    /// seguinte (antes, a arquitetura nunca mudava, então bastava montar uma única vez).
+    /// </summary>
     private void ConstruirDiagramaRedeNeural()
     {
         NeuroniosVisuais.Clear();
         ConexoesVisuais.Clear();
         _chavesDasConexoes.Clear();
 
-        int[] camadas = ControladorHibrido.ArquiteturaPadrao;
+        int[] camadas = _ambiente.Arquitetura;
         var posicoes = new Dictionary<(int Camada, int Indice), (double X, double Y)>();
 
         for (int c = 0; c < camadas.Length; c++)
@@ -720,7 +741,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         if (genoma.Length == 0) return;
 
-        var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, genoma);
+        var rede = new RedeNeural(_ambiente.Arquitetura, genoma);
         double[][] ativacoesPorCamada = rede.AtivarComCamadas(EntradaDeReferenciaParaDiagrama);
 
         RunOnUi(() =>
@@ -745,7 +766,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     }
 
     private string CorBaseDaCamada(int camada) =>
-        camada == 0 ? "86EFAC" : camada == ControladorHibrido.ArquiteturaPadrao.Length - 1 ? "FDE68A" : "93C5FD";
+        camada == 0 ? "86EFAC" : camada == _ambiente.Arquitetura.Length - 1 ? "FDE68A" : "93C5FD";
 
     /// <summary>Usa o canal alfa para mostrar a intensidade da ativação (0 = quase transparente/neutro, 1 = cor cheia) sem precisar de uma segunda escala de cor.</summary>
     private static string CorComIntensidade(string corBaseRgbHex, double intensidade01)
@@ -756,7 +777,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     private string ConstruirTooltipDoNeuronio(NeuronioVisualTreinamento neuronio, double ativacao, RedeNeural rede)
     {
-        int ultimaCamada = ControladorHibrido.ArquiteturaPadrao.Length - 1;
+        int ultimaCamada = _ambiente.Arquitetura.Length - 1;
 
         if (neuronio.Camada == 0)
         {
@@ -808,7 +829,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             _episodioPreview = _ambiente.NovoEpisodio();
         }
 
-        var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, _melhorGenomaAtual);
+        var rede = new RedeNeural(_ambiente.Arquitetura, _melhorGenomaAtual);
         var controlador = new ControladorHibrido(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
 
         _ambiente.Avancar(_episodioPreview, controlador, dt: 0.05);
@@ -902,11 +923,25 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Raio (m) do mundo simulado — fronteira onde os alvos nascem (círculo externo do Canvas).</summary>
     public double RaioMundoMetros => _ambiente.Parametros.RaioMundoMetros;
 
-    /// <summary>Alcance de engajamento (m) — limite até onde as torres conseguem mirar/disparar (círculo interno do Canvas).</summary>
+    /// <summary>Alcance de engajamento (m) — limite até onde as torres conseguem mirar/disparar, a partir de cada torre (mesmo raio do cone, ver <see cref="ConstruirSetorDeVisao"/>).</summary>
     public double DistanciaEngajamentoMetros => _ambiente.Parametros.DistanciaEngajamentoMetros;
 
-    /// <summary>Diâmetro em pixels do círculo interno (alcance de engajamento), já na escala atual do Canvas.</summary>
-    public double DiametroEngajamentoPx => DistanciaEngajamentoMetros * 2 * PixelsPorMetro;
+    /// <summary>
+    /// Alcance de engajamento "a partir da base" (m) — raio do círculo interno do Canvas,
+    /// centralizado na origem do mundo. Soma a distância da base até a torre mais afastada com
+    /// <see cref="DistanciaEngajamentoMetros"/> para o círculo refletir até onde as torres
+    /// realmente alcançam a partir de SUAS posições (não da origem): sem essa soma, um círculo
+    /// de raio = só <see cref="DistanciaEngajamentoMetros"/> fica bem menor do que a ponta dos
+    /// cones de visão de cada torre (que começam já deslocados da origem), dando a falsa
+    /// impressão de alcance menor do que o real.
+    /// </summary>
+    public double AlcanceEngajamentoTotalMetros => DistanciaBaseAteTorreMaisLongeMetros + DistanciaEngajamentoMetros;
+
+    private double DistanciaBaseAteTorreMaisLongeMetros =>
+        _ambiente.TorresBase.Count == 0 ? 0 : _ambiente.TorresBase.Max(t => Math.Sqrt(t.X * t.X + t.Y * t.Y));
+
+    /// <summary>Diâmetro em pixels do círculo interno (<see cref="AlcanceEngajamentoTotalMetros"/>), já na escala atual do Canvas.</summary>
+    public double DiametroEngajamentoPx => AlcanceEngajamentoTotalMetros * 2 * PixelsPorMetro;
 
     /// <summary>Deslocamento (Canvas.Left/Top) do círculo interno para ficar centralizado no mundo.</summary>
     public double OffsetEngajamentoPx => (TamanhoCanvas - DiametroEngajamentoPx) / 2.0;
@@ -915,6 +950,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(RaioMundoMetros));
         OnPropertyChanged(nameof(DistanciaEngajamentoMetros));
+        OnPropertyChanged(nameof(AlcanceEngajamentoTotalMetros));
         OnPropertyChanged(nameof(DiametroEngajamentoPx));
         OnPropertyChanged(nameof(OffsetEngajamentoPx));
     }
