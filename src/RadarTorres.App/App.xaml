@@ -14,6 +14,9 @@
                      ficam fora do ResourceDictionary trocado em runtime por ThemeService.ApplyTheme. -->
                 <ResourceDictionary Source="Resources/Icons.xaml"/>
                 <ResourceDictionary Source="Styles/Typography.xaml"/>
+                <!-- Estilos das janelas modais de formulário (diretriz de UX: ações no canto
+                     superior direito abrindo modal centralizado) — ver Styles/Modal.xaml. -->
+                <ResourceDictionary Source="Styles/Modal.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
