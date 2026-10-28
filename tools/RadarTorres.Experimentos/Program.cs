@@ -28,8 +28,9 @@ public static class Program
             case "teto": Teto(args); return 0;
             case "ga": Ga(args); return 0;
             case "ablacao": Ablacao(args); return 0;
+            case "hiperparametros": Hiperparametros(); return 0;
             default:
-                Console.WriteLine("Comandos: teto | ga | ablacao");
+                Console.WriteLine("Comandos: teto | ga | ablacao | hiperparametros");
                 return 1;
         }
     }
@@ -87,7 +88,7 @@ public static class Program
         int episodios = (int)Arg(args, "episodios", 200);
         var p = new ParametrosTreinamento
         {
-            MaxAlvosSimultaneos = maxAlvos,
+            MaxAlvosPorQuadrante = maxAlvos,
             DuracaoEpisodioSegundos = Arg(args, "dur", 45),
             IntervaloSpawnMinSegundos = Arg(args, "spawnmin", 1.5),
             IntervaloSpawnMaxSegundos = Arg(args, "spawnmax", 4.0)
@@ -113,7 +114,7 @@ public static class Program
             fitnessHeuristico.Add(h.FitnessTotal);
         }
 
-        Console.WriteLine($"--- TETO (MaxAlvosSimultaneos={maxAlvos}, duracao={p.DuracaoEpisodioSegundos}s, spawn={p.IntervaloSpawnMinSegundos}-{p.IntervaloSpawnMaxSegundos}s, {episodios} episodios, seeds 0..{episodios - 1}) ---");
+        Console.WriteLine($"--- TETO (MaxAlvosPorQuadrante={maxAlvos}, duracao={p.DuracaoEpisodioSegundos}s, spawn={p.IntervaloSpawnMinSegundos}-{p.IntervaloSpawnMaxSegundos}s, {episodios} episodios, seeds 0..{episodios - 1}) ---");
         Console.WriteLine($"nascidos (passivo)         : media={nascidosPassivo.Average():0.00} min={nascidosPassivo.Min()} max={nascidosPassivo.Max()}");
         Console.WriteLine($"nascidos (heuristica pura) : media={nascidosHeuristico.Average():0.00} min={nascidosHeuristico.Min()} max={nascidosHeuristico.Max()}");
         Console.WriteLine($"TETO ABSOLUTO (todos abatidos na borda, 10/alvo): media={nascidosHeuristico.Average() * 10:0.0} max={nascidosHeuristico.Max() * 10:0.0}");
@@ -158,7 +159,7 @@ public static class Program
         {
             TamanhoPopulacao = populacao,
             TaxaMutacao = mutacao,
-            MaxAlvosSimultaneos = maxAlvos,
+            MaxAlvosPorQuadrante = maxAlvos,
             DuracaoEpisodioSegundos = duracao,
             IntervaloSpawnMinSegundos = spawnMin,
             IntervaloSpawnMaxSegundos = spawnMax
@@ -256,7 +257,7 @@ public static class Program
 
         // Heurística pura não tem o que evoluir (ignora a rede): basta avaliá-la nas mesmas
         // seeds de validação, com genoma nulo.
-        var parametros = new ParametrosTreinamento { MaxAlvosSimultaneos = maxAlvos };
+        var parametros = new ParametrosTreinamento { MaxAlvosPorQuadrante = maxAlvos };
         var amb = new AmbienteTreinamento(parametros);
         var nulo = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
         var fit = new List<double>(); var nasc = new List<int>(); var ab = new List<int>(); var esc = new List<int>();
@@ -270,6 +271,101 @@ public static class Program
             fit.Average() / Math.Max(1e-9, nasc.Average()), ab.Average() / Math.Max(1e-9, nasc.Average()));
         Console.WriteLine($"[ablacao-HeuristicaPura] VAL fitness={heur.ValFitnessMedio:0.00} nascidos={heur.ValAlvosNascidos:0.00} abatidos={heur.ValAbatidos:0.00} taxaAbate={heur.ValTaxaAbate:0.000}");
         Gravar(heur);
+    }
+
+    // --------------------------------------------------- hiperparametros (grid do artigo)
+
+    private sealed record ConfiguracaoHiperparametro(int Populacao, int Ocultos, double Mutacao);
+
+    private sealed record ResultadoHiperparametro(
+        int Populacao, int Ocultos, double Mutacao, int Geracoes,
+        double FitnessFinal, int GeracaoDoPico,
+        double? FitnessG25, double? FitnessG50, double? FitnessG100, double? FitnessG200,
+        double TempoSegundos);
+
+    /// <summary>
+    /// Reproduz, fora da UI, a MESMA bateria descrita no artigo (Seção "Análise experimental de
+    /// hiperparâmetros"): três séries (camada oculta, população, taxa de mutação) de 300 gerações
+    /// cada, com <see cref="CatalogoCenarios.TodosComScript"/>, usando exatamente a mesma lógica
+    /// de <c>ExecutorExperimentosHiperparametros.TreinarConfiguracao</c> (seeds fixas por geração,
+    /// elitismo 10% da população). Não depende de SQLite/WPF (esse executor roda fora da UI) —
+    /// exporta direto para JSON.
+    /// </summary>
+    private static void Hiperparametros()
+    {
+        const int geracoesPorExperimento = 300;
+        int[] geracoesDaCurva = [25, 50, 100, 200];
+
+        var planejadas = (
+            from pop in new[] { 30, 60, 120 }
+            from oc in new[] { 4, 8, 16 }
+            select new ConfiguracaoHiperparametro(pop, oc, 0.08))
+            .Concat(new[] { 0.04, 0.16 }.Select(m => new ConfiguracaoHiperparametro(60, 8, m)))
+            .ToList();
+
+        Console.WriteLine($"Configurações planejadas: {planejadas.Count} (arquitetura: {ControladorHibrido.QuantidadeEntradas} entradas, {ControladorHibrido.QuantidadeSaidas} saídas)");
+
+        var resultados = new List<ResultadoHiperparametro>();
+        int indice = 0;
+
+        foreach (ConfiguracaoHiperparametro cfg in planejadas)
+        {
+            indice++;
+            int[] arquitetura = [ControladorHibrido.QuantidadeEntradas, cfg.Ocultos, ControladorHibrido.QuantidadeSaidas];
+            var parametros = new ParametrosTreinamento { TamanhoPopulacao = cfg.Populacao, TaxaMutacao = cfg.Mutacao };
+            var ambiente = new AmbienteTreinamento(parametros, arquitetura: arquitetura);
+            var ag = new AlgoritmoGenetico(
+                tamanhoGenoma: RedeNeural.TamanhoGenoma(arquitetura),
+                tamanhoPopulacao: cfg.Populacao,
+                taxaMutacao: cfg.Mutacao,
+                elitismo: Math.Max(2, cfg.Populacao / 10));
+
+            var cronometro = Stopwatch.StartNew();
+            double melhorAteAgora = double.NegativeInfinity;
+            int geracaoDoPico = 0;
+            var curva = new Dictionary<int, double>();
+            ResultadoGeracao? ultimo = null;
+
+            for (int g = 0; g < geracoesPorExperimento; g++)
+            {
+                int[] seeds = Enumerable.Range(0, Math.Max(1, parametros.EpisodiosPorAvaliacao))
+                    .Select(i => ag.GeracaoAtual * 1000 + i)
+                    .ToArray();
+
+                ultimo = ag.EvoluirGeracao(genoma => ambiente.AvaliarFitness(genoma, seeds, CatalogoCenarios.TodosComScript));
+
+                if (ultimo.MelhorFitness > melhorAteAgora)
+                {
+                    melhorAteAgora = ultimo.MelhorFitness;
+                    geracaoDoPico = ultimo.Geracao;
+                }
+
+                if (geracoesDaCurva.Contains(ultimo.Geracao)) curva[ultimo.Geracao] = melhorAteAgora;
+
+                if (ultimo.Geracao % 50 == 0)
+                {
+                    Console.WriteLine($"  [{indice}/{planejadas.Count} pop={cfg.Populacao} ocultos={cfg.Ocultos} mut={cfg.Mutacao:0.##}] ger {ultimo.Geracao}/{geracoesPorExperimento} melhor={melhorAteAgora:0.00} (pico g{geracaoDoPico}) t={cronometro.Elapsed.TotalSeconds:0}s");
+                }
+            }
+
+            cronometro.Stop();
+
+            var resultado = new ResultadoHiperparametro(
+                cfg.Populacao, cfg.Ocultos, cfg.Mutacao, geracoesPorExperimento,
+                melhorAteAgora, geracaoDoPico,
+                curva.TryGetValue(25, out double g25) ? g25 : null,
+                curva.TryGetValue(50, out double g50) ? g50 : null,
+                curva.TryGetValue(100, out double g100) ? g100 : null,
+                curva.TryGetValue(200, out double g200) ? g200 : null,
+                cronometro.Elapsed.TotalSeconds);
+
+            resultados.Add(resultado);
+            Console.WriteLine($"[{indice}/{planejadas.Count}] FIM pop={cfg.Populacao} ocultos={cfg.Ocultos} mut={cfg.Mutacao:0.##}: fitnessFinal={melhorAteAgora:0.00} picoG={geracaoDoPico} tempo={cronometro.Elapsed.TotalSeconds:0.0}s");
+        }
+
+        string jsonPath = Path.Combine(PastaResultados(), "experimentos_hiperparametros_7entradas.json");
+        File.WriteAllText(jsonPath, JsonSerializer.Serialize(resultados, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine($"JSON exportado: {jsonPath} ({resultados.Count} linhas)");
     }
 
     // ----------------------------------------------------------- resultados
