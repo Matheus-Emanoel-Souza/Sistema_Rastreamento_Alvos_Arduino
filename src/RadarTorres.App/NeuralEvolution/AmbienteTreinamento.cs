@@ -21,16 +21,26 @@ public sealed class AmbienteTreinamento
 {
     private readonly List<TorreTreinamento> _torresBase;
     private readonly ParametrosTreinamento _parametros;
+    private readonly int[] _arquitetura;
 
     public ParametrosTreinamento Parametros => _parametros;
 
     /// <summary>Torres na posição base (sem nenhum alvo comprometido) — usado pela tela para desenhar as posições fixas.</summary>
     public IReadOnlyList<TorreTreinamento> TorresBase => _torresBase;
 
-    public AmbienteTreinamento(ParametrosTreinamento? parametros = null, IReadOnlyList<TowerDefinition>? torres = null)
+    /// <summary>
+    /// Arquitetura da rede (quantidade de neurônios por camada) usada por <see cref="ExecutarEpisodioRapido"/>
+    /// para interpretar o genoma — <see cref="ControladorHibrido.ArquiteturaPadrao"/> por padrão,
+    /// ou a arquitetura escolhida na tela (ver análise experimental de hiperparâmetros,
+    /// <c>TreinamentoControladorViewModel.NeuroniosOcultosSelecionado</c>).
+    /// </summary>
+    public int[] Arquitetura => _arquitetura;
+
+    public AmbienteTreinamento(ParametrosTreinamento? parametros = null, IReadOnlyList<TowerDefinition>? torres = null, int[]? arquitetura = null)
     {
         _parametros = parametros ?? new ParametrosTreinamento();
         _torresBase = CarregarTorres(torres ?? AppConfig.Current.Towers);
+        _arquitetura = arquitetura ?? ControladorHibrido.ArquiteturaPadrao;
     }
 
     private static List<TorreTreinamento> CarregarTorres(IReadOnlyList<TowerDefinition> definicoes)
@@ -118,7 +128,7 @@ public sealed class AmbienteTreinamento
     public EpisodioResultado ExecutarEpisodioRapido(double[] genoma, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio)
     {
         EstadoEpisodio estado = NovoEpisodio(seed, cenario);
-        var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, genoma);
+        var rede = new RedeNeural(_arquitetura, genoma);
         var controlador = new ControladorHibrido(rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
 
         const double dt = 0.2;

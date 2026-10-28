@@ -252,6 +252,7 @@ hardware físico real.
 % computacional clássica (a ser informada pelo autor).
 
 \subsection{Procedimentos metodológicos}
+\label{sec:procedimentos-metodologicos}
 
 O percurso metodológico deste trabalho não seguiu o fluxo tradicional de especificação prévia
 seguida de implementação: o protótipo RadarTorres já existia, em desenvolvimento incremental,
@@ -561,6 +562,82 @@ genética.
   \caption{Fluxo de decisão do controlador híbrido: a heurística determinística filtra e, ao final,
   veta; a rede neural decide apenas dentro do espaço já validado (dos autores).}
 \end{figure}
+
+\subsubsection{Análise experimental de hiperparâmetros: população e neurônios ocultos}
+\label{sec:experimento-hiperparametros}
+
+Para justificar tecnicamente a escolha dos hiperparâmetros do algoritmo genético com dados reais de
+treinamento, em vez de apenas por convenção, foi conduzido um experimento controlado com as seis
+combinações do produto cartesiano entre três tamanhos de população (30, 60 e 120 indivíduos) e duas
+arquiteturas de rede (4 e 16 neurônios na camada oculta, mantendo fixas as 6 entradas e as 2 saídas
+descritas na Seção~\ref{sec:controlador-hibrido-inicio}). Cada uma das seis combinações foi treinada
+isoladamente por exatamente 300 gerações, com a mesma função de fitness, os mesmos cenários táticos
+obrigatórios (\texttt{CatalogoCenarios.TodosComScript}) e a mesma taxa de mutação (0,08) do
+treinamento padrão -- apenas a população e a arquitetura variaram entre as seis execuções, de modo a
+isolar o efeito desses dois hiperparâmetros e manter a comparação justa. As seis execuções usaram o
+mesmo \texttt{AmbienteTreinamento}/\texttt{AlgoritmoGenetico} que treina o controlador em produção,
+sem nenhum dado simulado ou estimado manualmente; o resultado de cada combinação -- população,
+gerações executadas, neurônios ocultos, fitness final do melhor indivíduo e data/hora -- foi
+persistido na tabela \texttt{experimentos\_hiperparametros} (ver Seção~\ref{sec:modelo-dados}),
+consultável na própria tela de Treinamento do Controlador.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Fitness final (melhor indivíduo, geração 300) das seis combinações de população ×
+  neurônios ocultos, com todos os demais parâmetros de treinamento mantidos fixos.}
+  \label{tab:experimento-hiperparametros}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{2.4cm}p{3.0cm}p{2.2cm}p{3.0cm}}
+    \hline
+    \textbf{População} & \textbf{Neurônios ocultos} & \textbf{Gerações} & \textbf{Fitness final} \\
+    \hline
+    30  & 4  & 300 & 49,81 \\
+    60  & 4  & 300 & \textbf{52,19} \\
+    120 & 4  & 300 & 49,81 \\
+    30  & 16 & 300 & 49,81 \\
+    60  & 16 & 300 & 49,81 \\
+    120 & 16 & 300 & 49,81 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+O resultado mais evidente da Tabela~\ref{tab:experimento-hiperparametros} não é qual combinação
+"venceu", mas o quanto as seis convergiram para o mesmo valor: cinco das seis execuções
+estabilizaram-se em exatamente 49,81 de fitness ao final das 300 gerações, e apenas a combinação de
+população 60 com 4 neurônios ocultos escapou desse platô, ainda que por uma margem pequena (52,19).
+Esse padrão é mais consistente com as seis execuções convergindo para o mesmo ótimo local acessível
+dentro do horizonte de 300 gerações -- possivelmente próximo do comportamento da heurística pura, com
+um ajuste de rede apenas marginal -- do que com um efeito forte e diferenciado de população ou
+arquitetura sobre a qualidade final do controlador. Em outras palavras, dentro do horizonte testado,
+nem aumentar a população (de 30 para 120 indivíduos) nem aumentar a camada oculta (de 4 para 16
+neurônios) produziu, isoladamente, um controlador mensuravelmente melhor -- sinal de que o fator
+limitante do treinamento, nesse horizonte, é provavelmente o número de gerações, não a capacidade da
+rede nem o tamanho da amostra avaliada por geração.
+
+Duas ressalvas são necessárias para a correta leitura deste experimento, na mesma linha das já
+apontadas na Seção~\ref{sec:procedimentos-metodologicos} para o treinamento do controlador em geral.
+Primeiro, cada combinação corresponde a uma única execução (uma trajetória de evolução), não a uma
+média de repetições independentes; a diferença entre 49,81 e 52,19 é pequena demais, com uma amostra
+de tamanho 1 por combinação, para ser atribuída com confiança ao hiperparâmetro em si, em vez de à
+variação natural entre execuções de um algoritmo estocástico. Segundo, o horizonte de 300 gerações foi
+escolhido para manter o experimento executável em poucos minutos (entre 9,3 e 33,4 segundos por
+combinação, 123,4 segundos no total para as seis, medidos no mesmo processo que gerou a
+Tabela~\ref{tab:experimento-hiperparametros}), não necessariamente para captar a convergência completa
+de cada configuração -- o próprio platô compartilhado por cinco das seis combinações sugere que mais
+gerações poderiam, ainda, diferenciá-las entre si.
+
+Com essas ressalvas, a conclusão prática deste experimento para a escolha de hiperparâmetros do
+RadarTorres é de custo-benefício, não de desempenho: como nenhuma das combinações testadas superou as
+demais de forma consistente, não há evidência, neste horizonte de treinamento, que justifique o custo
+computacional adicional de uma população maior (120 indivíduos, cerca de 3,2$\times$ o tempo de
+execução de uma população de 30 nesta amostra) ou de uma camada oculta maior (16 neurônios, mais que o
+dobro dos parâmetros treináveis de uma rede com 4). A arquitetura de produção -- população de 60
+indivíduos e 8 neurônios na camada oculta, intermediária às duas arquiteturas aqui testadas --
+permanece, portanto, uma escolha razoável dentro da faixa investigada, mas este experimento evidencia
+a necessidade de uma repetição futura com mais gerações e múltiplas sementes por combinação antes de
+se afirmar que ela é estritamente superior às demais, trabalho futuro já na mesma linha da ressalva
+geral sobre a fidelidade do ambiente de treino feita na Seção~\ref{sec:procedimentos-metodologicos}.
 
 \subsection{Diagrama de pacotes}
 

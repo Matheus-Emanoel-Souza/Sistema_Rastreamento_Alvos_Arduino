@@ -75,9 +75,7 @@ Implementada em `Helpers/DistanceCalculator.Euclidean`.
 
 ### Exemplo numérico
 
-Alvo em `(1.98, 1.98)`, Torre 1 em `(1.75, 1.75)` (exemplo ilustrativo — a posição real das
-torres em `appsettings.json` reflete o espaçamento físico de 20 cm entre torres adjacentes,
-bem menor; os valores aqui só servem para mostrar o cálculo, não para refletir o padrão atual):
+Alvo em `(1.98, 1.98)`, Torre 1 em `(1.75, 1.75)` (configuração padrão):
 
 ```
 d = √( (1.98−1.75)² + (1.98−1.75)² )
@@ -208,7 +206,7 @@ neural treinada (antes um valor fixo, por o sistema não medir velocidade ainda)
 
 Alvo #1: `ANGLE=45°`, `DIST=2.80 m` → `(X=1.98, Y=1.98)` → **Q1**.
 
-Torres (exemplo ilustrativo — ver nota da seção 3 sobre o espaçamento real de 20 cm):
+Torres (configuração padrão):
 
 | Torre | Posição | Quadrante próprio | Distância até o alvo |
 |---|---|---|---|

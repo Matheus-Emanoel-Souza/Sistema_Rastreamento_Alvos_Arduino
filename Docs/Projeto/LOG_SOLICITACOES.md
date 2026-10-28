@@ -1742,6 +1742,76 @@ sobre a função de fitness do treinamento, não uma regra do controlador real).
 
 ---
 
+## 2026-10-27 — Análise experimental de hiperparâmetros (população × neurônios ocultos)
+
+**Pedido (texto integral):**
+
+> Claude, quero implementar e testar uma análise experimental no projeto para avaliar como o
+> tamanho da população e a quantidade de neurônios na camada oculta influenciam o desempenho do
+> treinamento da IA.
+>
+> Siga estas etapas:
+>
+> 1. Criar uma tabela no banco de dados com: tamanho da população, número de gerações
+>    executadas, quantidade de neurônios na camada oculta, fitness final obtido e data/hora da
+>    execução.
+> 2. Disponibilizar três configurações de população (30, 60, 120) e redes com 4 ou 16 neurônios
+>    na camada oculta, mantendo os demais parâmetros inalterados.
+> 3. Adicionar seleção da rede neural (4 ou 16 neurônios) antes de iniciar o treinamento.
+> 4. Executar as 6 combinações (4×30, 4×60, 4×120, 16×30, 16×60, 16×120).
+> 5. Registrar automaticamente o resultado real de cada treinamento ao concluir.
+> 6. Garantir a confiabilidade: não inventar nem simular resultados.
+> 7. Disponibilizar os resultados para comparação do fitness final e do custo-benefício entre as
+>    seis configurações.
+>
+> Objetivo: produzir resultados experimentais reais para justificar tecnicamente a escolha dos
+> hiperparâmetros no artigo científico.
+
+**Entregue:**
+
+- Nova tabela `experimentos_hiperparametros` (`IExperimentoHiperparametrosRepository`/
+  `SqliteExperimentoHiperparametrosRepository`, mesmo padrão dos outros repositórios SQLite do
+  projeto).
+- `AmbienteTreinamento` deixou de fixar a arquitetura da rede em
+  `ControladorHibrido.ArquiteturaPadrao` (8 neurônios ocultos): passou a receber a arquitetura
+  por parâmetro, com esse valor como padrão — todos os pontos do
+  `TreinamentoControladorViewModel` que assumiam a arquitetura fixa (diagrama, extração de
+  regras, exportação do genoma, prévia animada) passaram a usar a arquitetura real da sessão em
+  andamento, corrigindo de caminho um bug latente (`RedeNeural` lançaria exceção de tamanho de
+  genoma incompatível caso a arquitetura selecionada nunca fosse 8).
+- Tela de Treinamento do Controlador ganhou um seletor "Neurônios na camada oculta" (só 4 ou 16,
+  conforme pedido) e um botão "Executar os 6 experimentos", que roda as seis combinações em
+  segundo plano (sem travar a UI) com o MESMO `AmbienteTreinamento`/`AlgoritmoGenetico` do
+  treinamento normal, 300 gerações fixas por combinação (mesmo critério para as seis, para a
+  comparação ser justa), gravando cada resultado ao concluir. Uma grade na própria tela lista os
+  resultados para comparação.
+- As seis execuções foram de fato realizadas (não simuladas) através de um executor headless
+  temporário que chama exatamente as mesmas classes de produção, evitando repetir o clique na UI
+  seis vezes — os resultados reais, confirmados por leitura de volta do banco:
+
+  | População | Neurônios ocultos | Gerações | Fitness final |
+  |---|---|---|---|
+  | 30 | 4 | 300 | 49,81 |
+  | 60 | 4 | 300 | **52,19** |
+  | 120 | 4 | 300 | 49,81 |
+  | 30 | 16 | 300 | 49,81 |
+  | 60 | 16 | 300 | 49,81 |
+  | 120 | 16 | 300 | 49,81 |
+
+  Observação honesta repassada ao usuário: 5 das 6 combinações convergiram para o MESMO valor —
+  mais consistente com todas atingindo o mesmo platô/ótimo local dentro de 300 gerações do que
+  com um efeito forte de população/arquitetura. Sugerido (não executado ainda) repetir com mais
+  gerações e múltiplas sementes por combinação para uma conclusão mais forte.
+- Resultado documentado no artigo (`Artigo.tex`): nova seção "Análise experimental de
+  hiperparâmetros: população e neurônios ocultos" dentro de "Controlador neuroevolutivo", com a
+  tabela acima, discussão honesta do platô compartilhado e as ressalvas de amostra única por
+  combinação e horizonte de gerações, na mesma linha das ressalvas já existentes sobre fidelidade
+  do ambiente simulado.
+- `dotnet build`: 0 erros (projeto principal e testes). Nenhum commit feito — aguardando
+  autorização do usuário.
+
+---
+
 ## Ver também
 
 - [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).

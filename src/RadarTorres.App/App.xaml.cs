@@ -234,6 +234,11 @@ public partial class App : Application
         services.AddSingleton<IHistoricoTreinamentoRepository, SqliteHistoricoTreinamentoRepository>();
         services.AddSingleton<IMarcoFitnessTreinamentoRepository, SqliteMarcoFitnessTreinamentoRepository>();
         services.AddSingleton<IInstantaneoComportamentoRepository, SqliteInstantaneoComportamentoRepository>();
+        services.AddSingleton<IExperimentoHiperparametrosRepository, SqliteExperimentoHiperparametrosRepository>();
+
+        // Singleton (não transient): a trava de execução simultânea da bateria de experimentos
+        // vive na instância — ver IExecutorExperimentosHiperparametros.EmExecucao.
+        services.AddSingleton<IExecutorExperimentosHiperparametros, ExecutorExperimentosHiperparametros>();
 
         // --- Layout do painel principal (posição/tamanho dos cards definidos pelo usuário)
         services.AddSingleton<IDashboardLayoutRepository, DashboardLayoutRepository>();
