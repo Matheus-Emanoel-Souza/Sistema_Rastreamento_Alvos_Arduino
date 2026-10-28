@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using Microsoft.Data.Sqlite;
 
 namespace RadarTorres.App.Data;
@@ -21,6 +23,45 @@ namespace RadarTorres.App.Data;
 /// </remarks>
 public static class SqliteSchema
 {
+    /// <summary>
+    /// Chaves "(connection string)||(nome do repositório)" cujo esquema já foi criado/migrado
+    /// nesta execução do processo.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, byte> EsquemasAplicados = new();
+
+    private static int _execucoesDeEsquema;
+
+    /// <summary>Quantas vezes um bloco de criação/migração de esquema foi REALMENTE executado (testes).</summary>
+    internal static int ExecucoesDeEsquema => Volatile.Read(ref _execucoesDeEsquema);
+
+    /// <summary>Esquece o que já foi aplicado — só para testes que trocam o banco no meio do caminho.</summary>
+    internal static void EsquecerEsquemasAplicados() => EsquemasAplicados.Clear();
+
+    /// <summary>
+    /// Executa <paramref name="criarEsquema"/> apenas na PRIMEIRA vez que este banco
+    /// (identificado pela connection string da conexão aberta) e esta <paramref name="chave"/>
+    /// aparecem no processo.
+    /// </summary>
+    /// <remarks>
+    /// Motivo: cada operação de repositório abria a conexão e reexecutava o bloco inteiro de
+    /// <c>CREATE TABLE IF NOT EXISTS</c> + <c>PRAGMA table_info</c> (um por coluna migrada) +
+    /// <c>CREATE INDEX IF NOT EXISTS</c>. Em caminho frio isso é irrelevante; no caminho quente
+    /// da detecção por câmera (uma gravação por quadro, por câmera) e no laço de treinamento
+    /// (uma gravação por geração) são mais de dez instruções desperdiçadas por chamada. O
+    /// esquema não muda enquanto o aplicativo roda, então aplicar uma vez por banco basta.
+    /// Se <paramref name="criarEsquema"/> lançar, nada é marcado e a próxima chamada tenta de novo.
+    /// </remarks>
+    public static void GarantirUmaVez(SqliteConnection connection, string chave, Action<SqliteConnection> criarEsquema)
+    {
+        string marca = connection.ConnectionString + "||" + chave;
+        if (EsquemasAplicados.ContainsKey(marca)) return;
+
+        criarEsquema(connection);
+
+        Interlocked.Increment(ref _execucoesDeEsquema);
+        EsquemasAplicados[marca] = 0;
+    }
+
     /// <summary>
     /// Garante que <paramref name="coluna"/> exista em <paramref name="tabela"/>, criando-a com
     /// <paramref name="definicao"/> (ex.: <c>"TEXT NULL"</c>, <c>"INTEGER NOT NULL DEFAULT 0"</c>)

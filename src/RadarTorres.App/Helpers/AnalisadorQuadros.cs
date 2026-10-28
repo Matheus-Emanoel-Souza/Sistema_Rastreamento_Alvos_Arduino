@@ -88,11 +88,13 @@ public sealed class AnalisadorQuadros : IDisposable
 
     private void Processar(byte[] pixels, int width, int height, int stride)
     {
-        IntPtr ptr = Marshal.AllocHGlobal(stride * height);
+        // O vetor já é uma CÓPIA exclusiva do quadro (feita em Submeter), então é fixado e
+        // entregue direto ao Bitmap. Antes havia um AllocHGlobal + Marshal.Copy aqui: uma
+        // segunda cópia do quadro inteiro, a cada rodada e por câmera, sem necessidade.
+        GCHandle fixado = GCHandle.Alloc(pixels, GCHandleType.Pinned);
         try
         {
-            Marshal.Copy(pixels, 0, ptr, stride * height);
-            using var bmp = new Bitmap(width, height, stride, System.Drawing.Imaging.PixelFormat.Format24bppRgb, ptr);
+            using var bmp = new Bitmap(width, height, stride, System.Drawing.Imaging.PixelFormat.Format24bppRgb, fixado.AddrOfPinnedObject());
 
             AlvoVisualAvaliacao avaliacao = _alvoVisualService.AvaliarFrame(bmp);
 
@@ -104,7 +106,7 @@ public sealed class AnalisadorQuadros : IDisposable
         }
         finally
         {
-            Marshal.FreeHGlobal(ptr);
+            fixado.Free();
         }
     }
 
