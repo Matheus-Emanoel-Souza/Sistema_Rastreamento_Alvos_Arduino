@@ -294,14 +294,16 @@ public static class Program
         string caminho = ArgS(args, "genoma", "");
         if (caminho.Length == 0 || !File.Exists(caminho))
         {
-            Console.WriteLine("Uso: sobrevivencia --genoma=<caminho.json> [--episodios=20]");
+            Console.WriteLine("Uso: sobrevivencia --genoma=<caminho.json> [--episodios=20] [--semlimite=sim]");
             return;
         }
 
         GenomaCarregado g = CarregarGenoma(caminho);
         int episodios = (int)Arg(args, "episodios", 20);
+        bool semLimite = ArgS(args, "semlimite", "sim") == "sim";
+        var modo = Enum.Parse<ControladorHibrido.ModoDecisao>(ArgS(args, "modo", "Hibrido"));
 
-        var parametros = new ParametrosTreinamento { SemLimiteDeDuracao = true };
+        var parametros = new ParametrosTreinamento { SemLimiteDeDuracao = semLimite };
         var ambiente = new AmbienteTreinamento(parametros, arquitetura: g.Arquitetura);
 
         var fit = new List<double>();
@@ -314,7 +316,7 @@ public static class Program
         {
             EstadoEpisodio estado = ambiente.NovoEpisodio(seed: s);
             var rede = new RedeNeural(g.Arquitetura, g.Genoma);
-            var controlador = new ControladorHibrido(rede, parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo, tempoDeteccaoRelevanteSegundos: parametros.TempoDeteccaoRelevanteSegundos);
+            var controlador = new ControladorHibrido(rede, parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo, modo, parametros.TempoDeteccaoRelevanteSegundos);
 
             const double dt = 0.2;
             while (!estado.Finalizado) ambiente.Avancar(estado, controlador, dt);
@@ -328,8 +330,11 @@ public static class Program
             Console.WriteLine($"  seed {s}: fitness={estado.FitnessAcumulado:0.00} nascidos={estado.AlvosNascidos} abatidos={estado.AlvosAbatidos} escapados={estado.AlvosEscapados} duracao={estado.TempoDecorridoSegundos:0.0}s");
         }
 
-        Console.WriteLine($"--- SOBREVIVENCIA ({episodios} episodios, sem limite de duracao, genoma de {caminho}) ---");
-        Console.WriteLine($"fitness   : media={fit.Average():0.00} min={fit.Min():0.00} max={fit.Max():0.00}");
+        double media = fit.Average();
+        double desvioPadrao = Math.Sqrt(fit.Sum(f => Math.Pow(f - media, 2)) / fit.Count);
+
+        Console.WriteLine($"--- SOBREVIVENCIA ({episodios} episodios, semlimite={semLimite}, genoma de {caminho}) ---");
+        Console.WriteLine($"fitness   : media={fit.Average():0.00} desvio={desvioPadrao:0.00} min={fit.Min():0.00} max={fit.Max():0.00}");
         Console.WriteLine($"nascidos  : media={nasc.Average():0.00} min={nasc.Min()} max={nasc.Max()}");
         Console.WriteLine($"abatidos  : media={ab.Average():0.00}");
         Console.WriteLine($"escapados : media={esc.Average():0.00}");
