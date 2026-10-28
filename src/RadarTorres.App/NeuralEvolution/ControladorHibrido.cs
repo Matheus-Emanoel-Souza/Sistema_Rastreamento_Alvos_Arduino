@@ -16,15 +16,15 @@ namespace RadarTorres.App.NeuralEvolution;
 /// </summary>
 public sealed class ControladorHibrido
 {
-    /// <summary>distância normalizada, mesmo quadrante?, quadrante adjacente?, ângulo normalizado, velocidade normalizada, fator da camada heurística.</summary>
-    public const int QuantidadeEntradas = 6;
+    /// <summary>distância normalizada, mesmo quadrante?, quadrante adjacente?, ângulo normalizado, velocidade normalizada, tempo detectado sem abate (normalizado), fator da camada heurística.</summary>
+    public const int QuantidadeEntradas = 7;
 
     /// <summary>ajuste de pontuação da torre candidata, confiança de disparo.</summary>
     public const int QuantidadeSaidas = 2;
 
     public static readonly int[] ArquiteturaPadrao = { QuantidadeEntradas, 8, QuantidadeSaidas };
 
-    /// <summary>Rótulo curto de cada entrada, na mesma ordem de <see cref="ConstruirEntradas(double,double,bool,bool,double,double,double,double)"/> — usado nos nós de entrada do diagrama da rede (ver tela de treinamento).</summary>
+    /// <summary>Rótulo curto de cada entrada, na mesma ordem de <see cref="ConstruirEntradas(double,double,bool,bool,double,double,double,double,double,double)"/> — usado nos nós de entrada do diagrama da rede (ver tela de treinamento).</summary>
     public static readonly string[] RotulosEntradas =
     [
         "Distância até o alvo",
@@ -32,6 +32,7 @@ public sealed class ControladorHibrido
         "Quadrante adjacente",
         "Ângulo de mira",
         "Velocidade do alvo",
+        "Tempo detectado sem abate",
         "Camada heurística"
     ];
 
@@ -47,6 +48,7 @@ public sealed class ControladorHibrido
     private readonly RedeNeural _rede;
     private readonly double _raioMundoMetros;
     private readonly double _velocidadeMaximaAlvoMetrosPorSegundo;
+    private readonly double _tempoDeteccaoRelevanteSegundos;
     private readonly ModoDecisao _modo;
 
     /// <summary>
@@ -76,11 +78,12 @@ public sealed class ControladorHibrido
 
     public ModoDecisao Modo => _modo;
 
-    public ControladorHibrido(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo, ModoDecisao modo = ModoDecisao.Hibrido)
+    public ControladorHibrido(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo, ModoDecisao modo = ModoDecisao.Hibrido, double tempoDeteccaoRelevanteSegundos = 3.0)
     {
         _rede = rede;
         _raioMundoMetros = raioMundoMetros;
         _velocidadeMaximaAlvoMetrosPorSegundo = velocidadeMaximaAlvoMetrosPorSegundo;
+        _tempoDeteccaoRelevanteSegundos = tempoDeteccaoRelevanteSegundos;
         _modo = modo;
     }
 
@@ -191,7 +194,7 @@ public sealed class ControladorHibrido
         bool mesmoQuadrante = torre.QuadrantePreferido == alvo.Quadrante;
         bool quadranteAdjacente = QuadrantHelper.AreAdjacent(torre.QuadrantePreferido, alvo.Quadrante);
 
-        return ConstruirEntradas(distancia, _raioMundoMetros, mesmoQuadrante, quadranteAdjacente, anguloGraus, alvo.VelocidadeMetrosPorSegundo, _velocidadeMaximaAlvoMetrosPorSegundo, fatorCamada);
+        return ConstruirEntradas(distancia, _raioMundoMetros, mesmoQuadrante, quadranteAdjacente, anguloGraus, alvo.VelocidadeMetrosPorSegundo, _velocidadeMaximaAlvoMetrosPorSegundo, alvo.TempoDeVidaSegundos, _tempoDeteccaoRelevanteSegundos, fatorCamada);
     }
 
     /// <summary>
@@ -210,11 +213,16 @@ public sealed class ControladorHibrido
         double anguloGraus,
         double velocidadeMetrosPorSegundo,
         double velocidadeMaximaMetrosPorSegundo,
+        double tempoDeteccaoSegundos,
+        double tempoDeteccaoRelevanteSegundos,
         double fatorCamada)
     {
         double distanciaNormalizada = Math.Clamp(distanciaMetros / raioMundoMetros, 0, 1);
         double anguloNormalizado = anguloGraus / 360.0;
         double velocidadeNormalizada = Math.Clamp(velocidadeMetrosPorSegundo / velocidadeMaximaMetrosPorSegundo, 0, 1);
+        double tempoDeteccaoNormalizado = tempoDeteccaoRelevanteSegundos > 0
+            ? Math.Clamp(tempoDeteccaoSegundos / tempoDeteccaoRelevanteSegundos, 0, 1)
+            : 0.0;
 
         return
         [
@@ -223,6 +231,7 @@ public sealed class ControladorHibrido
             quadranteAdjacente ? 1.0 : 0.0,
             anguloNormalizado,
             velocidadeNormalizada,
+            tempoDeteccaoNormalizado,
             fatorCamada
         ];
     }

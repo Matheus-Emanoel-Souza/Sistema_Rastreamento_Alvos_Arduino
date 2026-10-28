@@ -179,11 +179,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _taxaMutacao, value);
     }
 
-    private int _maxAlvosSimultaneos = 5;
-    public int MaxAlvosSimultaneos
+    private int _maxAlvosPorQuadrante = 5;
+    public int MaxAlvosPorQuadrante
     {
-        get => _maxAlvosSimultaneos;
-        set => SetProperty(ref _maxAlvosSimultaneos, value);
+        get => _maxAlvosPorQuadrante;
+        set => SetProperty(ref _maxAlvosPorQuadrante, value);
     }
 
     /// <summary>Opções de quantidade de neurônios na camada oculta disponíveis na tela — os mesmos três valores do plano experimental da tela "Estatísticas de Treinamento" (ver ConfiguracaoExperimento.NeuroniosDaSerie), para um treinamento manual aqui ser comparável com os resultados registrados lá.</summary>
@@ -215,7 +215,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         TamanhoPopulacao = Math.Max(4, _tamanhoPopulacao),
         TaxaMutacao = Math.Clamp(_taxaMutacao, 0.0, 1.0),
-        MaxAlvosSimultaneos = Math.Max(1, _maxAlvosSimultaneos),
+        MaxAlvosPorQuadrante = Math.Max(1, _maxAlvosPorQuadrante),
         DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
         LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0,
         VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo
@@ -830,7 +830,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         }
 
         var rede = new RedeNeural(_ambiente.Arquitetura, _melhorGenomaAtual);
-        var controlador = new ControladorHibrido(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
+        var controlador = new ControladorHibrido(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo, tempoDeteccaoRelevanteSegundos: _ambiente.Parametros.TempoDeteccaoRelevanteSegundos);
 
         _ambiente.Avancar(_episodioPreview, controlador, dt: 0.05);
         RedesenharAlvos(_episodioPreview);
