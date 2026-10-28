@@ -150,7 +150,11 @@ public sealed class SqliteUsuarioRepository : IUsuarioRepository
         UltimoAcesso = reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
     };
 
-    private static void EnsureTable(SqliteConnection connection)
+    private static void EnsureTable(SqliteConnection connection) =>
+        SqliteSchema.GarantirUmaVez(connection, nameof(SqliteUsuarioRepository), CriarEsquema);
+
+    /// <summary>Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.</summary>
+    private static void CriarEsquema(SqliteConnection connection)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
