@@ -31,6 +31,13 @@ public sealed class UsuariosViewModel : ViewModelBase
 
     public bool PodeGerenciar => _permissionService.PodeGerenciarUsuarios(_authService.CurrentUser?.Perfil ?? PerfilUsuario.Visualizador);
 
+    /// <summary>
+    /// Há uma linha selecionada na tabela. Habilita as ações que operam sobre um registro
+    /// existente ("Editar", "Redefinir senha") na barra do canto superior direito — assim o botão
+    /// aparece desabilitado em vez de o clique simplesmente não fazer nada.
+    /// </summary>
+    public bool TemSelecao => SelectedUsuario is not null;
+
     public RelayCommand NovoCommand { get; }
     public RelayCommand SalvarCommand { get; }
     public RelayCommand RedefinirSenhaCommand { get; }
@@ -74,6 +81,7 @@ public sealed class UsuariosViewModel : ViewModelBase
             {
                 CarregarParaEdicao(value);
             }
+            OnPropertyChanged(nameof(TemSelecao));
             RelayCommand.RaiseCanExecuteChangedForAll();
         }
     }
@@ -324,5 +332,20 @@ public sealed class UsuariosViewModel : ViewModelBase
             NovaSenhaRedefinir = string.Empty;
             ConfirmarSenhaRedefinir = string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Zera campos e mensagem da redefinição de senha. Chamado antes de abrir
+    /// <c>RedefinirSenhaWindow</c>: como o modal compartilha esta ViewModel (singleton), sem a
+    /// limpeza ele reabriria exibindo o "Senha redefinida com sucesso." da operação anterior — e,
+    /// com <see cref="SucessoRedefinir"/> ainda <c>true</c>, o fechamento automático do modal
+    /// (ver <c>JanelaModal.FecharQuando</c>) nunca chegaria a disparar na operação seguinte.
+    /// </summary>
+    public void LimparRedefinicaoSenha()
+    {
+        NovaSenhaRedefinir = string.Empty;
+        ConfirmarSenhaRedefinir = string.Empty;
+        MensagemRedefinir = null;
+        SucessoRedefinir = false;
     }
 }
