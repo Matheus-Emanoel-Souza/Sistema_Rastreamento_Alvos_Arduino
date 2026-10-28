@@ -50,14 +50,25 @@ public static class SqliteConnectionFactory
     public static SqliteConnection OpenConnection()
     {
         var connection = new SqliteConnection(ConnectionString);
-        connection.Open();
+        try
+        {
+            connection.Open();
 
-        using SqliteCommand pragmas = connection.CreateCommand();
-        // journal_mode é propriedade do arquivo (aplicada uma vez e persistida); busy_timeout é
-        // por conexão, por isso as duas são executadas a cada abertura.
-        pragmas.CommandText = "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;";
-        pragmas.ExecuteNonQuery();
+            using SqliteCommand pragmas = connection.CreateCommand();
+            // journal_mode é propriedade do arquivo (aplicada uma vez e persistida); busy_timeout é
+            // por conexão, por isso as duas são executadas a cada abertura.
+            pragmas.CommandText = "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;";
+            pragmas.ExecuteNonQuery();
 
-        return connection;
+            return connection;
+        }
+        catch
+        {
+            // Sem isto, uma falha DEPOIS do Open (ex.: banco somente-leitura recusando o WAL)
+            // deixaria a conexão aberta e o arquivo bloqueado até o GC — quem chama recebe a
+            // exceção e nunca chega a ter a referência para fechar.
+            connection.Dispose();
+            throw;
+        }
     }
 }

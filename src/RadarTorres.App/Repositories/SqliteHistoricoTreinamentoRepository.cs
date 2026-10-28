@@ -86,7 +86,11 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         command.ExecuteNonQuery();
     }
 
-    private static void EnsureTable(SqliteConnection connection)
+    private static void EnsureTable(SqliteConnection connection) =>
+        SqliteSchema.GarantirUmaVez(connection, nameof(SqliteHistoricoTreinamentoRepository), CriarEsquema);
+
+    /// <summary>Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.</summary>
+    private static void CriarEsquema(SqliteConnection connection)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =

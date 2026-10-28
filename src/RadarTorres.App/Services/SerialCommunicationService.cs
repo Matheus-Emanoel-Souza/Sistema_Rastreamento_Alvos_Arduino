@@ -161,12 +161,24 @@ public sealed class SerialCommunicationService : ISerialCommunicationService
         _readLoopCts?.Cancel();
         try
         {
-            _readLoopTask?.Wait(500);
+            // Quando o próprio laço de leitura detecta a queda (HandleUnexpectedDisconnect), quem
+            // chama Disconnect É a task de leitura: esperar por ela seria esperar por si mesma e
+            // gastar o timeout inteiro à toa.
+            if (_readLoopTask is { } tarefa && tarefa.Id != Task.CurrentId)
+            {
+                tarefa.Wait(500);
+            }
         }
         catch
         {
             // A task pode terminar com OperationCanceledException; é esperado durante o Disconnect.
         }
+
+        // O CancellationTokenSource NÃO era descartado: cada ciclo conectar/desconectar deixava
+        // um objeto com handle de kernel vivo até o GC.
+        _readLoopCts?.Dispose();
+        _readLoopCts = null;
+        _readLoopTask = null;
 
         try
         {
