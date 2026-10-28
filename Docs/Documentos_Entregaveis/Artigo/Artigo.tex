@@ -1041,6 +1041,28 @@ específica do controlador híbrido e um ponto de partida concreto para revisar 
 (por exemplo, penalizando explicitamente a recusa de uma oportunidade legítima, não só recompensando
 o abate) como trabalho futuro imediato.
 
+\paragraph{Removendo de vez a duração fixa: o teto é, em parte, do ambiente -- mas não só dele.}
+Como teste final desta investigação, a duração de 45~s do episódio foi removida também do
+TREINAMENTO em si (não só da avaliação pós-treino da Seção anterior): um novo genoma de produção foi
+treinado do zero, 1000 gerações, com \texttt{SemLimiteDeDuracao} ativo durante toda a evolução -- o
+episódio só termina quando um alvo de fato rompe uma torre. O pico de fitness alcançado em
+treinamento subiu para 211,98 (geração 735), contra os 193,57 do treinamento original limitado a
+45~s, e a avaliação fora de amostra (50 seeds novas, também sem limite de duração) chegou a um
+fitness MÁXIMO de 245,94 para a rede e 434,72 para a heurística pura -- muito acima de qualquer teto
+visto anteriormente. Isso confirma, de forma definitiva, que parte real do teto de produção vinha da
+duração fixa do episódio: sem ela, o sistema -- rede ou heurística -- consegue, em episódios
+favoráveis, pontuações 2 a 3 vezes maiores.
+
+Removida essa causa, porém, o segundo problema PERMANECE do mesmo tamanho: o fitness MÉDIO da rede
+treinada sem limite de duração (69,28) continua abaixo da heurística pura no mesmo regime (89,69), e
+a taxa de recusa de disparo desse genoma é 35,8\% -- dentro da mesma faixa (10\% a 56\%) medida nas
+cinco redes treinadas com episódio limitado. Em outras palavras, dar mais tempo de episódio não
+ensinou a rede a disparar melhor; só deu a ela (e à heurística, igualmente) mais tempo para acumular
+pontos quando a sorte do episódio é favorável. Os dois problemas identificados nesta investigação
+são, portanto, independentes: a duração fixa do episódio limitava o TETO alcançável (resolvido
+removendo o limite), e a hesitação aprendida na decisão de disparo limita a MÉDIA alcançável
+(continua sem solução, e aponta para a função de fitness, não para o ambiente, como já discutido).
+
 \subsection{Diagrama de pacotes}
 
 A organização interna da aplicação desktop foi documentada por meio de um diagrama de pacotes,
