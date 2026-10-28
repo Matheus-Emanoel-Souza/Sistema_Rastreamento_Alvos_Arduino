@@ -86,5 +86,12 @@ public sealed record ParametrosTreinamento
     /// genomas — a seleção por torneio e até o elitismo passam a escolher baseado em sorte, não
     /// em mérito, o que parece (e na prática é) estagnação da evolução.
     /// </summary>
-    public int EpisodiosPorAvaliacao { get; init; } = 3;
+    /// <remarks>
+    /// Elevado de 3 para 12 depois de medir, com <c>sobrevivencia --semlimite=nao</c>, que o
+    /// desvio padrão de fitness de um único genoma (treinado ou heurística pura, tanto faz) é da
+    /// mesma ordem de grandeza da própria média (~65 de desvio numa média ~70) sob o ambiente
+    /// endurecido (invasão de torre acaba o episódio de uma vez) — com 3 episódios por avaliação
+    /// essa amostra é ruído demais para a seleção distinguir genoma melhor de genoma sortudo.
+    /// </remarks>
+    public int EpisodiosPorAvaliacao { get; init; } = 12;
 }
