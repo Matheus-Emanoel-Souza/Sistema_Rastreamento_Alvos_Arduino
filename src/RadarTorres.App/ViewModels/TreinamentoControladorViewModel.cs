@@ -95,6 +95,9 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Linhas do cenário desenhado à mão pelo usuário (ver <see cref="SimularCenarioPersonalizado"/>) — cada uma é um alvo com posição e velocidade fixadas, sem sorteio nenhum.</summary>
     public ObservableCollection<SpawnPersonalizadoEditavel> SpawnsPersonalizados { get; } = new();
 
+    /// <summary>Disparado quando o cenário personalizado começa a rodar de fato (ver <see cref="SimularCenarioPersonalizado"/>) — a janela modal de configuração usa isso para se fechar sozinha após confirmar.</summary>
+    public event EventHandler? CenarioPersonalizadoIniciado;
+
     /// <summary>Item do seletor de cenário na tela — nome/descrição vêm de <see cref="CatalogoCenarios"/>, lido só na construção (o catálogo é estático).</summary>
     public sealed record CenarioOpcao(TipoCenarioTreinamento Tipo, string Nome, string Descricao);
 
@@ -133,7 +136,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         SimularCenarioCommand = new RelayCommand(SimularCenarioSelecionado, () => !EmExecucao);
         ExportarMelhorGenomaCommand = new RelayCommand(ExportarMelhorGenoma, () => _melhorGenomaAtual.Length > 0);
         ResetarCommand = new RelayCommand(Resetar);
-        AdicionarSpawnPersonalizadoCommand = new RelayCommand(() => SpawnsPersonalizados.Add(new SpawnPersonalizadoEditavel()));
+        AdicionarSpawnPersonalizadoCommand = new RelayCommand(() => SpawnsPersonalizados.Add(
+            new SpawnPersonalizadoEditavel { Nome = $"Alvo {SpawnsPersonalizados.Count + 1}" }));
         RemoverSpawnPersonalizadoCommand = new RelayCommand(RemoverSpawnPersonalizado);
         SimularCenarioPersonalizadoCommand = new RelayCommand(SimularCenarioPersonalizado, () => !EmExecucao);
 
@@ -422,6 +426,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         MirasVisuais.Clear();
         MostrarStatus($"Simulando cenário personalizado ({spawns.Count} alvo(s)).", sucesso: true);
         _timerPreview.Start();
+        CenarioPersonalizadoIniciado?.Invoke(this, EventArgs.Empty);
     }
 
     private double[] GerarGenomaAleatorio()

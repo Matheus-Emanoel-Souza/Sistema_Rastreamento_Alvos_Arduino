@@ -1,0 +1,104 @@
+<Window x:Class="RadarTorres.App.Views.CenarioPersonalizadoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cenário personalizado" Height="520" Width="620"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        Background="{DynamicResource Bg.Window}"
+        Foreground="{DynamicResource Text.Primary}"
+        FontFamily="{DynamicResource Font.Body}">
+
+    <!--
+        Cadastro dos alvos do cenário personalizado da tela de Treinamento do Controlador, numa
+        janela modal centralizada sobre a tela atual (antes era um card na barra lateral — ver
+        TreinamentoControladorView). Reaproveita a MESMA ViewModel da tela (DataContext setado no
+        code-behind desta janela): nenhuma lógica nova, só uma apresentação diferente das mesmas
+        propriedades/comandos (SpawnsPersonalizados, Adicionar/Remover/SimularCenarioPersonalizadoCommand).
+    -->
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource Bg.Window}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="CENÁRIO PERSONALIZADO" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
+            <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                       Text="Cadastre cada alvo que vai atacar: nome, posição (X,Y em metros a partir da base) e velocidade — sem sorteio. O alvo se move em linha reta na direção da base."/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding SpawnsPersonalizados}" AutoGenerateColumns="False" CanUserAddRows="False"
+                  CanUserDeleteRows="False" CanUserReorderColumns="False" GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column" VerticalScrollBarVisibility="Auto"
+                  Background="{DynamicResource Bg.Card}" Foreground="{DynamicResource Text.Primary}"
+                  BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                  RowBackground="{DynamicResource Bg.Card}" AlternatingRowBackground="{DynamicResource Bg.Card}"
+                  HorizontalGridLinesBrush="{DynamicResource Border.Divider}" VerticalGridLinesBrush="{DynamicResource Border.Divider}">
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Muted}"/>
+                    <Setter Property="FontSize" Value="11"/>
+                    <Setter Property="Padding" Value="4,4"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Nome" Binding="{Binding Nome, Mode=TwoWay}" Width="1.4*"/>
+                <DataGridTextColumn Header="X (m)" Binding="{Binding X, Mode=TwoWay}" Width="1*"/>
+                <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, Mode=TwoWay}" Width="1*"/>
+                <DataGridTextColumn Header="Vel. (m/s)" Binding="{Binding VelocidadeMetrosPorSegundo, Mode=TwoWay}" Width="1*"/>
+                <DataGridTextColumn Header="Nasce em (s)" Binding="{Binding InstanteSegundos, Mode=TwoWay}" Width="1*"/>
+                <DataGridTemplateColumn Width="36">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="✕" Padding="4,0" Margin="0" ToolTip="Remover este alvo"
+                                    Command="{Binding DataContext.RemoverSpawnPersonalizadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock Grid.Row="2" Text="{Binding StatusMensagem}" Margin="0,10,0,0" FontSize="12" TextWrapping="Wrap">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding StatusSucesso}" Value="True">
+                            <Setter Property="Foreground" Value="#4ADE80"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding StatusSucesso}" Value="False">
+                            <Setter Property="Foreground" Value="#F87171"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="+ Adicionar alvo" Command="{Binding AdicionarSpawnPersonalizadoCommand}"/>
+            <Button Content="Cancelar" Click="BotaoCancelar_Click"/>
+            <Button Content="Iniciar cenário" Background="{DynamicResource Accent.Fill}" Foreground="White"
+                    Command="{Binding SimularCenarioPersonalizadoCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>
