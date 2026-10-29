@@ -42,3 +42,7 @@ tools/RadarTorres.Experimentos/Resultados/genoma-*.json
 
 # Backup temporario gerado ao editar a bibliografia do artigo.
 *.bib.bak
+
+# Cache do Python (tools/cad)
+__pycache__/
+*.pyc
