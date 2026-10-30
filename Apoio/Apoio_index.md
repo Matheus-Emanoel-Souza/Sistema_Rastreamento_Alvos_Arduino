@@ -2,13 +2,14 @@ Funcionalidade: índice dos documentos de planejamento — tarefas pendentes, id
 
 # Apoio — Índice
 
-Documentos que ajudam nas próximas decisões, não documentos que registram o que já foi feito (ver
-[[Registro_index]] para isso).
+Documentos que ajudam nas próximas decisões.
 
 ## Artigo e apresentação
 
 - [[Melhoria_de_artigo]] — checklist de revisão acadêmica ainda pendente do `Artigo.tex` e
   propostas registradas (ex.: cooperação entre torres) não implementadas.
+- [[regrasDoArtigo]] — regras obrigatórias de formatação (máximo de páginas, padronização de
+  imagens) e status real de conformidade do `Artigo.tex` contra elas.
 - [[ApoioDeApresentacao]] — detalhamento técnico de apoio à defesa (tipos de mutação, biblioteca de
   neuroevolução em avaliação) retirado do corpo do artigo para manter o texto objetivo.
 - [[ROTEIRO_APRESENTACAO]] — roteiro sugerido para apresentar o projeto à banca.
@@ -19,15 +20,8 @@ Documentos que ajudam nas próximas decisões, não documentos que registram o q
 
 - [[Limitacoes_Conhecidas]] — divergências entre especificação e implementação, usadas para
   decidir o que corrigir a seguir.
-- [[ETAPA2_VISAO_COMPUTACIONAL]] — plano original do pipeline completo de mira por visão
-  computacional (calibração câmera→ângulo, fusão com ultrassônico, comando `AIM`). Parte da
-  detecção já foi implementada de forma diferente da proposta (ver [[DETECCAO_VISAO_YOLO]] em
-  [[Registro_index]]); o restante do pipeline (calibração, fusão, mira) continua sem implementar —
-  é essa parte que torna este documento ainda um plano, não um registro.
 
 ## Pendências gerais do projeto
 
-- [[PROXIMAS_MODIFICACOES]] — tarefas pendentes, itens em avaliação e decisões de ferramental
+- [[Apoio_Modificações]] — tarefas pendentes, itens em avaliação e decisões de ferramental
   ainda em aberto.
-
-Ver também: [[Registro_index]] (o que já foi implementado/decidido sobre os mesmos temas).
