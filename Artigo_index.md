@@ -5,8 +5,10 @@ Funcionalidade: índice temático dos entregáveis acadêmicos do TCC (artigo, U
 Entregáveis oficiais do TCC (o que vai para a banca/orientador) e o material de apoio à redação
 e à defesa.
 
-- **Artigo**: `Docs/Documentos_Entregaveis/Artigo/artigo_revisado.tex` — artigo do TCC em LaTeX
-  (não é markdown, editar direto no `.tex`; `.pdf`/`.docx` são gerados a partir dele).
+- **Artigo**: `Docs/Documentos_Entregaveis/Artigo/Artigo.tex` — artigo do TCC em LaTeX, fonte
+  canônica (não é markdown, editar direto no `.tex`; `.pdf`/`.docx` são gerados a partir dele).
+  `artigo_revisado.tex` era uma cópia de trabalho paralela e foi removido em 30/10/2026 (ver
+  histórico de revisões abaixo).
   - [[Melhoria_de_artigo]] — checklist de revisão acadêmica e decisões pendentes sobre o artigo.
   - [[ApoioDeApresentacao]] — detalhamento técnico (tipos de mutação, biblioteca de
     neuroevolução) retirado do corpo do artigo para a defesa.
@@ -64,11 +66,22 @@ como **inferência** nos respectivos arquivos.
   factuais (numeração de requisitos, contagem de tabelas SQLite, topologia do hardware real
   `RadarTorres_Firmware.ino`, status do projeto de testes), reorganização do vault (notas
   achatadas para no máximo 3 níveis, grupos no grafo do Obsidian) — ver [[LOG_SOLICITACOES]].
-- **2026-10-30**: revisão do autor sobre `artigo_revisado.docx` (remoção da seção "Projeto
-  elétrico e estrutural", da zona morta e do tempo mínimo de mira do corpo do artigo; proposta de
-  cooperação entre torres/câmeras registrada como trabalho futuro) e reorganização do vault em
-  índices temáticos (`index.md` + `RedeNeural_index`/`Arquitetura_index`/`Estrutura_index`/
-  `Artigo_index`/`Projeto_index`) — ver [[Melhoria_de_artigo]] e [[LOG_SOLICITACOES]].
+- **2026-10-30 (manhã)**: revisão do autor aplicada por engano em `artigo_revisado.tex` (cópia de
+  trabalho paralela, não a fonte canônica) — remoção da seção "Projeto elétrico e estrutural", da
+  zona morta e do tempo mínimo de mira do corpo do artigo; proposta de cooperação entre
+  torres/câmeras registrada como trabalho futuro. Reorganização do vault em índices temáticos
+  (`index.md` + `RedeNeural_index`/`Arquitetura_index`/`Estrutura_index`/`Artigo_index`/
+  `Projeto_index`) — ver [[Melhoria_de_artigo]] e [[LOG_SOLICITACOES]].
+- **2026-10-30 (tarde)**: correção de rumo do autor -- o alvo real da revisão é `Artigo.tex`, não
+  `artigo_revisado.tex` (mais completo: já tinha, por exemplo, a grade de 11 execuções de
+  hiperparâmetros e a regra de ajuda de torre adjacente contra alvo rápido, que `artigo_revisado`
+  não tinha). Revisão refeita em `Artigo.tex` a partir dos grifos coloridos do docx de referência
+  (amarelo = revisar, vermelho = remover, verde = já correto, sem ação) combinados com os 42
+  comentários -- mesmas remoções de "Projeto elétrico e estrutural"/zona morta/tempo mínimo de
+  mira, mais remoção de um parágrafo duplicado sobre o bug de certeza estática e correção do
+  número do genoma embutido (estava como geração 5377/fitness 136,98, desatualizado; confirmado no
+  `genoma-controlador.json` real do repositório: geração 159/fitness 188,47).
+  `artigo_revisado.tex` e seus dependentes (`.pdf`/`.docx`/`.bbl`/`.blg`) foram removidos da pasta.
 
 Ver também: [[RedeNeural_index]] (lógica do controlador descrita no artigo),
 [[Arquitetura_index]] (versão técnica detalhada do modelo de dados e da arquitetura),

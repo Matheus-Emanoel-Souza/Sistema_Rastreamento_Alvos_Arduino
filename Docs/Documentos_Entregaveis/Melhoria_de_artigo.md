@@ -1,4 +1,4 @@
-Funcionalidade: checklist de revisão acadêmica do artigo do TCC (`artigo_revisado.tex`) e registro de decisões pendentes levantadas nas rodadas de revisão.
+Funcionalidade: checklist de revisão acadêmica do artigo do TCC (`Artigo.tex`, fonte canônica) e registro de decisões pendentes levantadas nas rodadas de revisão.
 
 # Melhorias do Artigo — RadarTorres
 
@@ -66,65 +66,99 @@ Neuroevolução (survey gratuito, alternativa ao Stanley et al. 2019 que é pago
 
 - [ ] **pendente** — Promover o episódio do bug de certeza estática (`Artigo.tex:238-244`) de parágrafo metodológico para um mini-caso de estudo com dado antes/depois (ver item de gráfico de fitness acima) — é a contribuição mais original do artigo e está subexplorada.
 
-## Revisão de 30/10/2026 — decisões aplicadas
+## Revisão de 30/10/2026 — decisões aplicadas (refeita em `Artigo.tex`)
 
-- [x] **concluída** — Seção "Projeto elétrico e estrutural" removida de `artigo_revisado.tex` (era o conteúdo
-  não confirmado pela documentação técnica, já apontado como PROBLEMA CRÍTICO acima).
+**Correção de rumo**: a primeira passada desta revisão (manhã de 30/10) foi aplicada por engano em
+`artigo_revisado.tex`, uma cópia de trabalho paralela e mais defasada (não tinha, por exemplo, a
+grade completa de 11 execuções de hiperparâmetros nem a regra "ajuda de torre adjacente contra
+alvo rápido" que `Artigo.tex` já tinha). A revisão foi refeita em `Artigo.tex` -- a fonte canônica
+-- a partir dos grifos coloridos do docx de referência (amarelo = revisar, vermelho = remover,
+verde = já correto/sem ação) combinados com os 42 comentários do autor. `artigo_revisado.tex` e
+seus dependentes (`.pdf`/`.docx`/`.bbl`/`.blg`) foram removidos da pasta.
+
+- [x] **concluída** — Seção "Projeto elétrico e estrutural" removida de `Artigo.tex` (conteúdo
+  desatualizado -- ainda Arduino Uno, 74HC595, ULN2003, LEDs -- e já apontado como PROBLEMA
+  CRÍTICO acima).
   - [ ] **pendente** — Substituir por um único parágrafo citando apenas os componentes usados no projeto
     (pedido do autor; aguardando redação final desse parágrafo).
-- [x] **concluída** — Removida do artigo a explicação do "tempo mínimo de mira" (0,3s) e toda menção a
-  "zona morta" (ela não foi validada na parte física do projeto) — a heurística "um limite absoluto ao
-  disparo" no texto agora cita só o limiar mínimo de certeza. **O código não foi alterado**: `ControladorHibrido.TempoMinimoDeMiraSegundos`,
-  `ZonaMortaService`/`ZonaMortaRepository` e toda a lógica de veto continuam ativos e usados no treino —
-  só a descrição no artigo mudou.
+- [x] **concluída** — Removida do artigo a explicação/menção de "zona morta" e "tempo mínimo de mira"
+  nas descrições das regras e vetos de disparo (não validados na parte física do projeto) --
+  "corredor de tiro" saiu da lista de regras de refinamento (de 6 para 5 regras) e o veto de zona
+  morta saiu da lista de vetos finais (de 5 para 4 critérios). **O código não foi alterado**:
+  `ControladorHibrido.TempoMinimoDeMiraSegundos`, `ZonaMortaService`/`ZonaMortaRepository` e toda a
+  lógica de veto continuam ativos e usados no treino -- só a descrição no artigo mudou.
+  - **Ressalva**: as seções de análise experimental que MEDEM o custo do tempo mínimo de mira
+    (ex.: achado de que removê-lo melhora o fitness em ~28%, por volta da linha 1069 de
+    `Artigo.tex`) foram mantidas -- são resultado empírico, não "explicação de propósito", e
+    removê-las perderia um achado real. Avise se quiser que elas saiam também.
+- [x] **concluída** — Removido parágrafo duplicado sobre o bug de certeza estática (a mesma
+  informação já é contada em prosa no parágrafo anterior); corrigido o número do genoma embutido
+  citado nesse trecho e na Tabela de fitness antes/depois, que estava desatualizado (geração
+  5377/fitness 136,98) -- confirmado no `genoma-controlador.json` real do repositório: geração
+  159/fitness 188,47.
 - [x] **concluída** — Adicionada justificativa breve da mutação gaussiana no artigo, com o detalhamento
-  comparativo movido para `ApoioDeApresentacao.md` (novo arquivo, ver abaixo).
+  comparativo movido para `ApoioDeApresentacao.md`.
 - [x] **concluída** — Inserido destaque amarelo em "Controlador neuroevolutivo" sobre possível adoção de
   biblioteca de neuroevolução — ⚠️ **o nome da biblioteca ficou como placeholder**: não há nenhuma
   biblioteca de neuroevolução/ML referenciada no projeto hoje (`RadarTorres.App.csproj` só tem
   `Microsoft.ML.OnnxRuntime`, usado para o YOLO26n, não para o algoritmo genético). Falta o autor confirmar
   o nome real.
+- [x] **concluída** — Removida a frase "denominado RadarTorres" do parágrafo de abertura da
+  Introdução (pedido do autor: não "denominar" o projeto, chamar de protótipo).
+- [x] **concluída** — Adicionada, na Introdução, a frase sobre o limiar de desempenho que um genoma
+  precisa atingir antes de ser promovido a produção (pedido do autor), usando o dado real já
+  existente no artigo: o genoma de produção corrigido ficou a 4% da heurística pura.
+- [x] **concluída** — Removido trecho final do Resumo sobre limitações/validação física (grifo
+  vermelho) e a frase "de custo elevado" na Revisão da literatura (grifo vermelho).
+- **Comentário #27 ("também testei com 8, registre")**: desconsiderado por pedido do autor -- mas
+  nota: `Artigo.tex` **já tinha** a grade completa com 8 neurônios ocultos (3 das 11 execuções da
+  Tabela~\ref{tab:hiperparametros-7entradas}), diferente do que eu tinha avaliado na primeira
+  passada em `artigo_revisado.tex` (que só cobria 4 e 16).
+- **Comentários #36/#37/#38** (determinismo de seeds no experimento de hiperparâmetros): o trecho a
+  que se referiam (o platô de "49,81 repetido em 5 de 6 combinações") **não existe em `Artigo.tex`**
+  -- esse artigo já tem uma versão mais rigorosa do experimento (grade 3×3 completa + 2 taxas de
+  mutação, efeito de teto explicado mecanicamente pelos cenários fixos saturarem, não por
+  determinismo de seed). Adicionei a explicação de "seed" num outro trecho relevante do artigo por
+  via das dúvidas, mas os comentários específicos não tinham onde ancorar.
 
-## Proposta registrada: atenção simultânea de todas as câmeras/torres ao alvo identificado
+## Correção importante: cooperação entre torres já existe parcialmente
 
-**Lógica atual confirmada no código** (`ControladorHibrido.SelecionarTorre`/`DecidirDisparo`,
-`src/RadarTorres.App/NeuralEvolution/ControladorHibrido.cs:98-186`): para cada alvo, o sistema filtra as
-torres candidatas em cascata (próprio quadrante → quadrante adjacente → sobressalente), pontua as
-candidatas elegíveis (heurística ou rede, conforme o modo) e escolhe **exatamente uma** torre vencedora
-(`TorreTreinamento? melhor`, linha 145-162). O disparo dessa torre só é liberado quando a confiança de
-identificação do alvo atinge `LimiarConfiancaDisparoPercentual` (checado pelo chamador,
-`AmbienteTreinamento.DecidirDisparos`/`FireControlService`). A descrição do autor bate com o código.
+Na primeira passada (em `artigo_revisado.tex`), eu tinha avaliado a lógica de seleção de torre só
+por `ControladorHibrido.SelecionarTorre`/`DecidirDisparo` e concluído que o sistema escolhe
+EXATAMENTE uma torre por alvo, sem nenhuma cooperação entre torres. **Isso estava incompleto**:
+`Artigo.tex` já documenta, na seção de regras heurísticas de `TowerSelectionService`, a regra
+"Ajuda de torre adjacente contra alvo rápido (sempre ativa)": alvos com velocidade acima de um
+limiar configurado já recebem, HOJE, além da torre principal, qualquer torre de quadrante
+adjacente a até 2m de distância como reforço de disparo -- um segundo canhão contra o mesmo alvo.
+Ou seja, cooperação entre torres **já existe**, só que condicionada à velocidade do alvo, não a
+todo alvo identificado.
 
-**Proposta nova (registrada, NÃO implementada)**: ao identificar um alvo, todas as câmeras e todas as
-torres (não só a vencedora da seleção) voltam a atenção para ele simultaneamente, em vez da escolha
-exclusiva atual — objetivo: reconhecer o alvo mais rápido (mais câmeras observando ao mesmo tempo
-melhora a confiança de identificação) e acelerar o abate.
+**Proposta do autor (registrada, ainda NÃO implementada)**: generalizar esse comportamento -- ao
+identificar QUALQUER alvo (não só os rápidos), todas as câmeras e todas as torres voltam a atenção
+para ele simultaneamente, objetivo de reconhecer mais rápido (mais câmeras observando ao mesmo
+tempo melhora a confiança de identificação) e acelerar o abate.
 
-- [ ] **pendente** — Projetar a mudança em `TowerSelectionService`/`ControladorHibrido.SelecionarTorre`:
-  decidir se "atenção simultânea" significa só girar as câmeras (sem comprometer a torre pro disparo) ou
-  se mais de uma torre pode ficar "comprometida" com o mesmo alvo ao mesmo tempo — isso muda a regra de
-  `Torre.Livre` e o cálculo de `outrosAlvosAtivos`/`quadrantesComOutrosAlvos` usado na filtragem por
-  quadrante.
-  - Esse ponto já foi levantado antes nos comentários #10 ("quais torres vão assumir, afinal um alvo
-    pode ser registrado por mais de uma") e #15 ("se 2 torres empatarem, 2 torres olhando no alvo") — a
-    mesma pergunta de fundo: hoje o sistema é desenhado para exclusividade 1 torre = 1 alvo.
-- [ ] **pendente** — Re-treinar a rede neural com a nova lógica: as 7 entradas atuais (`quadrante igual`,
-  `quadrante adjacente`, etc.) assumem concorrência por torre única; "atenção simultânea" pode exigir
-  entradas novas ou mudar o que conta como "candidata".
-- [ ] **pendente** — Ligado ao item já existente "Refazer esses testes assim que mudar a lógica do
-  processo" (comentário #26, Seção "Análise experimental de hiperparâmetros"): o experimento de
-  população × neurônios ocultos fica obsoleto de novo quando essa mudança for feita, igual já aconteceu
-  com a introdução da 7ª entrada.
-- [ ] **pendente** — Atualizar o artigo (texto completo da Seção 2.3.5, não só o destaque amarelo já
-  inserido) e `Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md` quando a implementação acontecer.
+- [ ] **pendente** — Decidir se a generalização estende a regra 5 existente (remover a condição de
+  velocidade) ou se é uma lógica nova e mais ampla (toda câmera olha pra todo alvo identificado,
+  não só torres adjacentes a até 2m) -- escopo diferente de esforço de implementação.
+- [ ] **pendente** — Projetar o impacto em `Torre.Livre`/`Target.EngagingTowers` e no cálculo de
+  `outrosAlvosAtivos`/`quadrantesComOutrosAlvos` usado na filtragem por quadrante, hoje desenhado
+  para 1 torre "principal" por alvo mesmo com reforço.
+- [ ] **pendente** — Re-treinar a rede neural com a nova lógica, se ela mudar o que conta como
+  "candidata" nas 7 entradas atuais.
+- [ ] **pendente** — Atualizar o artigo (texto completo da seção, não só o destaque já inserido) e
+  `Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md` quando a implementação acontecer.
 
 **Decisões pendentes após revisão no dia 30/10/2026 às 13:51.**
 
-- **Comentário #3 do `artigo_revisado.docx` ("Revisar trecho")** — ancorado logo após "... até quatro
+- **Comentário #3 do docx de referência ("Revisar trecho")** — ancorado logo após "... até quatro
   milhões de parâmetros, contra os 82 parâmetros da rede do RadarTorres)." (parágrafo sobre
-  `such2017deepneuroevolution`, Seção 2.2/Revisão da literatura). O comentário não diz o quê revisar
-  especificamente. Peço ao autor detalhar o que precisa mudar nesse trecho antes de eu editar.
-- **Comentário #5 do `artigo_revisado.docx` (fusão ultrassom × câmera)** — pedido original: descrever que
+  `such2017deepneuroevolution`, Seção 2.2/Revisão da literatura). Já apliquei uma correção
+  razoável (a citação sustenta "GA é competitivo", não sustenta "não vale aumentar camadas aqui";
+  reformulei para apontar à Seção de hiperparâmetros como a justificativa real) -- mas o comentário
+  original não dizia exatamente o quê revisar, então vale o autor confirmar se a correção aplicada
+  é a que ele tinha em mente.
+- **Comentário #5 do docx de referência (fusão ultrassom × câmera)** — pedido original: descrever que
   a leitura do sensor ultrassônico é cruzada com a distância estimada pela câmera (`CAM;...;Z=...`),
   tirando uma média, com a leitura mais confiável (sensor para alvo próximo, câmera para alvo distante)
   prevalecendo em caso de discrepância grande. **Verificado no código: essa fusão não existe hoje** — o
