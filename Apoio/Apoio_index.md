@@ -12,7 +12,6 @@ Documentos que ajudam nas próximas decisões.
   imagens) e status real de conformidade do `Artigo.tex` contra elas.
 - [[ApoioDeApresentacao]] — detalhamento técnico de apoio à defesa (tipos de mutação, biblioteca de
   neuroevolução em avaliação) retirado do corpo do artigo para manter o texto objetivo.
-- [[ROTEIRO_APRESENTACAO]] — roteiro sugerido para apresentar o projeto à banca.
 - [[Conceito_UML]] — embasamento teórico sobre UML, usado como base para os diagramas do artigo.
 - [[Referencias_Bibliograficas]] — catálogo de artigos/PDFs candidatos a referência bibliográfica.
 
