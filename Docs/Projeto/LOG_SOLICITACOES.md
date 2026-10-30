@@ -1814,9 +1814,50 @@ sobre a função de fitness do treinamento, não uma regra do controlador real).
 
 ---
 
-## Ver também
+## 2026-10-30 — Revisão do artigo a partir do docx grifado, refeita em `Artigo.tex`
 
-- [[CONTEXTO_PROJETO]] — resumo atual do projeto (consequência acumulada destes pedidos).
-- [[INSTALADOR]] — detalhamento técnico do processo de instalação Windows.
-- [[ETAPA1_FUNDACAO]] — detalhamento técnico da fundação multiusuário.
-- [[IDENTIDADE_VISUAL]] — tokens de cor, tipografia e ícones da nova identidade visual.
+**Correção de rumo**: a primeira passada desta revisão (manhã de 30/10) foi aplicada por engano em
+`artigo_revisado.tex`, uma cópia de trabalho paralela e mais defasada (não tinha, por exemplo, a
+grade completa de 11 execuções de hiperparâmetros nem a regra "ajuda de torre adjacente contra
+alvo rápido" que `Artigo.tex` já tinha). A revisão foi refeita em `Artigo.tex` -- a fonte canônica
+-- a partir dos grifos coloridos do docx de referência (amarelo = revisar, vermelho = remover,
+verde = já correto/sem ação) combinados com os 42 comentários do autor. `artigo_revisado.tex` e
+seus dependentes (`.pdf`/`.docx`/`.bbl`/`.blg`) foram removidos da pasta.
+
+- Seção "Projeto elétrico e estrutural" removida de `Artigo.tex` (conteúdo desatualizado -- ainda
+  Arduino Uno, 74HC595, ULN2003, LEDs).
+- Removida do artigo a explicação/menção de "zona morta" e "tempo mínimo de mira" nas descrições
+  das regras e vetos de disparo -- "corredor de tiro" saiu da lista de regras de refinamento (de 6
+  para 5 regras) e o veto de zona morta saiu da lista de vetos finais (de 5 para 4 critérios).
+  **O código não foi alterado**: `ControladorHibrido.TempoMinimoDeMiraSegundos`,
+  `ZonaMortaService`/`ZonaMortaRepository` e toda a lógica de veto continuam ativos e usados no
+  treino -- só a descrição no artigo mudou. As seções de análise experimental que MEDEM o custo
+  do tempo mínimo de mira (achado de ~28% de ganho de fitness ao removê-lo) foram mantidas, por
+  serem resultado empírico, não "explicação de propósito".
+- Removido parágrafo duplicado sobre o bug de certeza estática; corrigido o número do genoma
+  embutido citado nesse trecho e na tabela de fitness antes/depois, que estava desatualizado
+  (geração 5377/fitness 136,98) -- confirmado no `genoma-controlador.json` real do repositório:
+  geração 159/fitness 188,47.
+- Adicionada justificativa breve da mutação gaussiana no artigo, com o detalhamento comparativo
+  movido para o novo `ApoioDeApresentacao.md`.
+- Inserido destaque amarelo em "Controlador neuroevolutivo" sobre possível adoção de biblioteca de
+  neuroevolução (nome ainda placeholder -- nenhuma biblioteca desse tipo está no projeto hoje).
+- Removida a frase "denominado RadarTorres" do parágrafo de abertura da Introdução (pedido do
+  autor); adicionada frase sobre o limiar de desempenho que um genoma precisa atingir antes de ser
+  promovido a produção (usando o dado real já existente: 4% da heurística pura).
+- Removido trecho final do Resumo sobre limitações/validação física e a frase "de custo elevado"
+  na Revisão da literatura (grifos vermelhos).
+- Comentário #27 ("também testei com 8, registre") desconsiderado por pedido do autor -- mas
+  `Artigo.tex` já tinha a grade completa com 8 neurônios ocultos, diferente do que havia sido
+  avaliado na primeira passada em `artigo_revisado.tex`.
+- Comentários #36/#37/#38 (determinismo de seeds): o trecho a que se referiam não existe em
+  `Artigo.tex` -- esse artigo já tem uma versão mais rigorosa do experimento de hiperparâmetros.
+- Descoberta: o sistema já tem cooperação parcial entre torres (regra "ajuda de torre adjacente
+  contra alvo rápido" em `TowerSelectionService`) -- avaliação inicial em `artigo_revisado.tex`
+  não tinha visto essa regra. Proposta de generalização registrada em `Melhoria_de_artigo.md`.
+- Reorganização da documentação do vault Obsidian em índices temáticos
+  (`RedeNeural_index`/`Arquitetura_index`/`Estrutura_index`/`Projeto_index`/`Artigo_index`),
+  depois substituída pela separação Apoio/Registro (ver entrada seguinte).
+
+---
+
