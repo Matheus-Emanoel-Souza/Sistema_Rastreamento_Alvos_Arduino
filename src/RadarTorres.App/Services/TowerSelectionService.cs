@@ -293,7 +293,7 @@ public sealed class TowerSelectionService : ITowerSelectionService
     private (Tower? Best, double BestDistance) EscolherMelhorCandidata(List<Tower> candidatasOriginais, Target target, double fatorCamada)
     {
         ConfiguracoesAplicativo config = _configuracoes.Atual;
-        RedeNeural? rede = _controladorTreinado.Rede;
+        RedeNeat? rede = _controladorTreinado.Rede;
         double raioMundoMetros = config.AlcanceMiraMetros;
 
         // Regra 3 — corredor de tiro: descarta candidatas cuja linha até o alvo atravesse uma

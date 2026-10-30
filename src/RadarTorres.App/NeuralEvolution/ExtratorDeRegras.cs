@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace RadarTorres.App.NeuralEvolution;
@@ -7,7 +7,8 @@ namespace RadarTorres.App.NeuralEvolution;
 public sealed record RegrasExtraidas(IReadOnlyList<string> Frases);
 
 /// <summary>
-/// A rede neural evoluída não tem regras explícitas (é uma matriz de pesos) — esta classe
+/// A rede neural evoluída não tem regras explícitas (é um grafo de pesos produzido pelo
+/// NEAT, cuja própria topologia muda de uma execução para outra) — esta classe
 /// aproxima, por análise de sensibilidade (variação de cada entrada em torno de um ponto de
 /// referência típico), quais tendências ela acabou aprendendo. Não é uma extração exata (uma
 /// rede não-linear pode se comportar diferente em outras regiões do espaço de entrada), mas dá
@@ -30,7 +31,7 @@ public static class ExtratorDeRegras
         "a camada heurística (torre do próprio quadrante vs. sobressalente)"
     ];
 
-    public static RegrasExtraidas Extrair(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo)
+    public static RegrasExtraidas Extrair(RedeNeat rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo)
     {
         // Ponto de referência: torre do próprio quadrante (fatorCamada=1), alvo a meia distância,
         // de frente, com velocidade média, recém-detectado (tempo de detecção=0) — a situação
@@ -89,7 +90,7 @@ public static class ExtratorDeRegras
     /// ponto em que a confiança de disparo cruza zero — aproximação do "alcance de disparo"
     /// aprendido pela rede nesta configuração.
     /// </summary>
-    private static double? EncontrarDistanciaDeDisparo(RedeNeural rede, double[] referencia)
+    private static double? EncontrarDistanciaDeDisparo(RedeNeat rede, double[] referencia)
     {
         double confiancaAnterior = double.NaN;
 

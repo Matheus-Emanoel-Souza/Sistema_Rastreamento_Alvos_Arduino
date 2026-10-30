@@ -21,26 +21,16 @@ public sealed class AmbienteTreinamento
 {
     private readonly List<TorreTreinamento> _torresBase;
     private readonly ParametrosTreinamento _parametros;
-    private readonly int[] _arquitetura;
 
     public ParametrosTreinamento Parametros => _parametros;
 
     /// <summary>Torres na posição base (sem nenhum alvo comprometido) — usado pela tela para desenhar as posições fixas.</summary>
     public IReadOnlyList<TorreTreinamento> TorresBase => _torresBase;
 
-    /// <summary>
-    /// Arquitetura da rede (quantidade de neurônios por camada) usada por <see cref="ExecutarEpisodioRapido"/>
-    /// para interpretar o genoma — <see cref="ControladorHibrido.ArquiteturaPadrao"/> por padrão,
-    /// ou a arquitetura escolhida na tela (ver análise experimental de hiperparâmetros,
-    /// <c>TreinamentoControladorViewModel.NeuroniosOcultosSelecionado</c>).
-    /// </summary>
-    public int[] Arquitetura => _arquitetura;
-
-    public AmbienteTreinamento(ParametrosTreinamento? parametros = null, IReadOnlyList<TowerDefinition>? torres = null, int[]? arquitetura = null)
+    public AmbienteTreinamento(ParametrosTreinamento? parametros = null, IReadOnlyList<TowerDefinition>? torres = null)
     {
         _parametros = parametros ?? new ParametrosTreinamento();
         _torresBase = CarregarTorres(torres ?? AppConfig.Current.Towers);
-        _arquitetura = arquitetura ?? ControladorHibrido.ArquiteturaPadrao;
     }
 
     private static List<TorreTreinamento> CarregarTorres(IReadOnlyList<TowerDefinition> definicoes)
@@ -124,11 +114,15 @@ public sealed class AmbienteTreinamento
         return estado;
     }
 
-    /// <summary>Roda um episódio completo (sem passos intermediários visíveis) e devolve o resultado — é a função de fitness do algoritmo genético.</summary>
-    public EpisodioResultado ExecutarEpisodioRapido(double[] genoma, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio, ControladorHibrido.ModoDecisao modo = ControladorHibrido.ModoDecisao.Hibrido)
+    /// <summary>
+    /// Roda um episódio completo (sem passos intermediários visíveis) e devolve o resultado — é a
+    /// função de fitness da evolução. Recebe a rede JÁ DECODIFICADA (e não mais um vetor de
+    /// pesos + arquitetura): com NEAT a topologia é parte do genoma, então quem decodifica é o
+    /// framework, não o ambiente.
+    /// </summary>
+    public EpisodioResultado ExecutarEpisodioRapido(RedeNeat rede, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio, ControladorHibrido.ModoDecisao modo = ControladorHibrido.ModoDecisao.Hibrido)
     {
         EstadoEpisodio estado = NovoEpisodio(seed, cenario);
-        var rede = new RedeNeural(_arquitetura, genoma);
         var controlador = new ControladorHibrido(rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo, modo, _parametros.TempoDeteccaoRelevanteSegundos);
 
         const double dt = 0.2;
@@ -143,7 +137,7 @@ public sealed class AmbienteTreinamento
     }
 
     /// <summary>
-    /// Fitness de um genoma, calculado como a MÉDIA de vários episódios com <paramref name="seeds"/>
+    /// Fitness de uma rede, calculado como a MÉDIA de vários episódios com <paramref name="seeds"/>
     /// fixas — as MESMAS seeds para todos os indivíduos da geração (ver
     /// <see cref="ViewModels.TreinamentoControladorViewModel.LacoDeTreinamento"/>), então a
     /// comparação dentro da geração continua justa (todo mundo enfrenta os mesmos cenários), mas
@@ -163,14 +157,14 @@ public sealed class AmbienteTreinamento
     /// aleatoriedade restante (erro de disparo, ver <see cref="CalculadoraErroDisparo"/>) nem
     /// precisa variar de geração para geração para o caso continuar isolando a mesma dificuldade.
     /// </param>
-    public double AvaliarFitness(double[] genoma, IReadOnlyList<int> seeds, IReadOnlyList<TipoCenarioTreinamento>? cenariosFixos = null, ControladorHibrido.ModoDecisao modo = ControladorHibrido.ModoDecisao.Hibrido)
+    public double AvaliarFitness(RedeNeat rede, IReadOnlyList<int> seeds, IReadOnlyList<TipoCenarioTreinamento>? cenariosFixos = null, ControladorHibrido.ModoDecisao modo = ControladorHibrido.ModoDecisao.Hibrido)
     {
         double soma = 0;
         int total = 0;
 
         foreach (int seed in seeds)
         {
-            soma += ExecutarEpisodioRapido(genoma, seed, TipoCenarioTreinamento.Aleatorio, modo).FitnessTotal;
+            soma += ExecutarEpisodioRapido(rede, seed, TipoCenarioTreinamento.Aleatorio, modo).FitnessTotal;
             total++;
         }
 
@@ -178,7 +172,7 @@ public sealed class AmbienteTreinamento
         {
             foreach (TipoCenarioTreinamento cenario in cenariosFixos)
             {
-                soma += ExecutarEpisodioRapido(genoma, seed: 0, cenario, modo).FitnessTotal;
+                soma += ExecutarEpisodioRapido(rede, seed: 0, cenario, modo).FitnessTotal;
                 total++;
             }
         }

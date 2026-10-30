@@ -1,4 +1,4 @@
-using RadarTorres.App.Configuration;
+﻿using RadarTorres.App.Configuration;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.NeuralEvolution;
@@ -122,16 +122,16 @@ public sealed class TowerSelectionServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Garante a premissa de compatibilidade do controlador treinado: um genoma zerado (padrão
-    /// de fábrica, antes de qualquer treinamento) produz EXATAMENTE a mesma escolha que a
-    /// heurística pura — porque com pesos/bias zerados a rede sempre devolve ajuste 0, e dentro
+    /// Garante a premissa de compatibilidade do controlador treinado: uma rede de pesos zero
+    /// (o mais próximo de "antes de qualquer treinamento") produz EXATAMENTE a mesma escolha que
+    /// a heurística pura — porque com pesos zerados a rede sempre devolve ajuste 0, e dentro
     /// de uma camada o fator heurístico é igual para todas as candidatas, então a pontuação
     /// final continua ordenada só pela distância (ver ControladorHibrido.Pontuar).
     /// </summary>
     [Fact]
-    public void ComGenomaZeradoEmbutido_EscolheAMesmaTorreQueAHeuristicaPura()
+    public void ComRedeZeradaEmbutida_EscolheAMesmaTorreQueAHeuristicaPura()
     {
-        var redeZerada = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)]);
+        RedeNeat redeZerada = RedesDeTeste.Zerada();
         var servicoComRede = new TowerSelectionService(_logger, new ZonaMortaServiceFalsa(), new ControladorTreinadoProviderFalso { Rede = redeZerada }, new ConfiguracoesAplicativoRepositorioFalso());
 
         Target alvo1 = AlvoEm(1, 1.98, 1.98);  // Q1

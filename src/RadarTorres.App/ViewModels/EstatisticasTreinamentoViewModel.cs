@@ -195,40 +195,40 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
             return;
         }
 
-        // Experimento 1 — varia a camada oculta; cada série é identificada por (população, mutação).
+        // Experimento 1 — varia o teto de complexidade; cada série é identificada por (população, mutação estrutural).
         MontarSeries(
             SeriesCamadaOculta,
             registros,
-            combinacoesTravadas: Combinar(ConfiguracaoExperimento.PopulacoesDaSerie, ConfiguracaoExperimento.TaxasMutacaoDaSerie),
-            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.PopulacaoBaseline && Iguais(t.B, ConfiguracaoExperimento.TaxaMutacaoBaseline),
-            valoresVariados: ConfiguracaoExperimento.NeuroniosDaSerie.Select(n => (double)n),
+            combinacoesTravadas: Combinar(ConfiguracaoExperimento.PopulacoesDaSerie, ConfiguracaoExperimento.ProbabilidadesAdicionarNoDaSerie),
+            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.PopulacaoBaseline && Iguais(t.B, ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline),
+            valoresVariados: ConfiguracaoExperimento.TetosComplexidadeDaSerie.Select(n => (double)n),
             criarConfiguracao: (t, variado) => new ConfiguracaoExperimento((int)t.A, (int)variado, t.B),
-            tituloDaSerie: t => $"População {t.A} · mutação {SerieExperimental.FormatarTaxa(t.B)}",
-            unidadeVariada: "neurônios na camada oculta",
+            tituloDaSerie: t => $"População {t.A} · mutação estrutural {SerieExperimental.FormatarTaxa(t.B)}",
+            unidadeVariada: "conexões de teto de complexidade",
             valorVariado: linha => linha.NeuroniosOcultos.ToString());
 
-        // Experimento 2 — varia a população; cada série é identificada por (neurônios, mutação).
+        // Experimento 2 — varia a população; cada série é identificada por (teto de complexidade, mutação estrutural).
         MontarSeries(
             SeriesPopulacao,
             registros,
-            combinacoesTravadas: Combinar(ConfiguracaoExperimento.NeuroniosDaSerie, ConfiguracaoExperimento.TaxasMutacaoDaSerie),
-            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.NeuroniosBaseline && Iguais(t.B, ConfiguracaoExperimento.TaxaMutacaoBaseline),
+            combinacoesTravadas: Combinar(ConfiguracaoExperimento.TetosComplexidadeDaSerie, ConfiguracaoExperimento.ProbabilidadesAdicionarNoDaSerie),
+            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.TetoComplexidadeBaseline && Iguais(t.B, ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline),
             valoresVariados: ConfiguracaoExperimento.PopulacoesDaSerie.Select(p => (double)p),
             criarConfiguracao: (t, variado) => new ConfiguracaoExperimento((int)variado, (int)t.A, t.B),
-            tituloDaSerie: t => $"Camada oculta {t.A} · mutação {SerieExperimental.FormatarTaxa(t.B)}",
+            tituloDaSerie: t => $"Teto {t.A} · mutação estrutural {SerieExperimental.FormatarTaxa(t.B)}",
             unidadeVariada: "indivíduos na população",
             valorVariado: linha => linha.TamanhoPopulacao.ToString());
 
-        // Experimento 3 — varia a taxa de mutação; cada série é identificada por (população, neurônios).
+        // Experimento 3 — varia a mutação estrutural; cada série é identificada por (população, teto de complexidade).
         MontarSeries(
             SeriesTaxaMutacao,
             registros,
-            combinacoesTravadas: Combinar(ConfiguracaoExperimento.PopulacoesDaSerie, ConfiguracaoExperimento.NeuroniosDaSerie.Select(n => (double)n).ToList()),
-            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.PopulacaoBaseline && (int)t.B == ConfiguracaoExperimento.NeuroniosBaseline,
-            valoresVariados: ConfiguracaoExperimento.TaxasMutacaoDaSerie,
+            combinacoesTravadas: Combinar(ConfiguracaoExperimento.PopulacoesDaSerie, ConfiguracaoExperimento.TetosComplexidadeDaSerie.Select(n => (double)n).ToList()),
+            ehBaselineTravado: t => t.A == ConfiguracaoExperimento.PopulacaoBaseline && (int)t.B == ConfiguracaoExperimento.TetoComplexidadeBaseline,
+            valoresVariados: ConfiguracaoExperimento.ProbabilidadesAdicionarNoDaSerie,
             criarConfiguracao: (t, variado) => new ConfiguracaoExperimento((int)t.A, (int)t.B, variado),
-            tituloDaSerie: t => $"População {t.A} · camada oculta {(int)t.B}",
-            unidadeVariada: "de taxa de mutação",
+            tituloDaSerie: t => $"População {t.A} · teto {(int)t.B}",
+            unidadeVariada: "de probabilidade de mutação estrutural",
             valorVariado: linha => SerieExperimental.FormatarTaxa(linha.TaxaMutacao));
 
         OnPropertyChanged(nameof(CoberturaDoPlano));
@@ -290,8 +290,8 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
 
     private static bool EhBaseline(ConfiguracaoExperimento configuracao) =>
         configuracao.TamanhoPopulacao == ConfiguracaoExperimento.PopulacaoBaseline
-        && configuracao.NeuroniosOcultos == ConfiguracaoExperimento.NeuroniosBaseline
-        && Iguais(configuracao.TaxaMutacao, ConfiguracaoExperimento.TaxaMutacaoBaseline);
+        && configuracao.TetoComplexidade == ConfiguracaoExperimento.TetoComplexidadeBaseline
+        && Iguais(configuracao.ProbabilidadeAdicionarNo, ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline);
 
     /// <summary>
     /// A execução mais recente de uma configuração. Registros anteriores ao campo de taxa de
@@ -305,9 +305,9 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
         ConfiguracaoExperimento configuracao) =>
         registros
             .Where(r => r.TamanhoPopulacao == configuracao.TamanhoPopulacao
-                        && r.NeuroniosOcultos == configuracao.NeuroniosOcultos
+                        && r.NeuroniosOcultos == configuracao.TetoComplexidade
                         && r.Geracoes >= ConfiguracaoExperimento.GeracoesPorExperimento
-                        && Iguais(r.TaxaMutacao ?? ConfiguracaoExperimento.TaxaMutacaoBaseline, configuracao.TaxaMutacao))
+                        && Iguais(r.TaxaMutacao ?? ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline, configuracao.ProbabilidadeAdicionarNo))
             .OrderByDescending(r => r.DataHora)
             .FirstOrDefault();
 
@@ -330,8 +330,8 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
             .Where(l => !l.Executado)
             .Select(ConfiguracaoDa)
             .Distinct()
-            .OrderBy(c => c.TaxaMutacao)
-            .ThenBy(c => c.NeuroniosOcultos)
+            .OrderBy(c => c.ProbabilidadeAdicionarNo)
+            .ThenBy(c => c.TetoComplexidade)
             .ThenBy(c => c.TamanhoPopulacao)
             .ToList();
 
@@ -399,8 +399,8 @@ public sealed class EstatisticasTreinamentoViewModel : ViewModelBase
             aRemover = _experimentoRepository.ObterTodos()
                 .Where(r => exibidas.Any(c =>
                     c.TamanhoPopulacao == r.TamanhoPopulacao
-                    && c.NeuroniosOcultos == r.NeuroniosOcultos
-                    && Iguais(r.TaxaMutacao ?? ConfiguracaoExperimento.TaxaMutacaoBaseline, c.TaxaMutacao)))
+                    && c.TetoComplexidade == r.NeuroniosOcultos
+                    && Iguais(r.TaxaMutacao ?? ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline, c.ProbabilidadeAdicionarNo)))
                 .ToList();
         }
         catch (Exception ex)

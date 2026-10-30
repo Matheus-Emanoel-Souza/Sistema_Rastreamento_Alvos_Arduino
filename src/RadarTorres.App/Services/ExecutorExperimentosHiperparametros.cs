@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,8 +12,9 @@ namespace RadarTorres.App.Services;
 
 /// <summary>
 /// Executa, de verdade (sem UI e sem dado simulado), a análise experimental de hiperparâmetros
-/// pedida no parecer do artigo: séries em que se varia UM hiperparâmetro por vez (camada
-/// oculta, tamanho da população ou taxa de mutação), todo o resto mantido idêntico. Cada configuração concluída é gravada na hora em
+/// pedida no parecer do artigo: séries em que se varia UM hiperparâmetro por vez (teto de
+/// complexidade, tamanho da população ou probabilidade de mutação estrutural), todo o resto
+/// mantido idêntico. Cada configuração concluída é gravada na hora em
 /// <see cref="IExperimentoHiperparametrosRepository"/>, de modo que uma interrupção no meio
 /// preserva o que já rodou.
 /// </summary>
@@ -38,20 +39,30 @@ public interface IExecutorExperimentosHiperparametros
 }
 
 /// <summary>
-/// Uma configuração do plano experimental: população × neurônios ocultos × taxa de mutação.
-/// Uma mesma configuração pode pertencer a mais de uma tabela da tela (a configuração baseline
-/// pertence às três) — ela é treinada UMA vez e reaproveitada em todas, nunca em duplicidade.
+/// Uma configuração do plano experimental: população × teto de complexidade × probabilidade de
+/// mutação estrutural. Uma mesma configuração pode pertencer a mais de uma tabela da tela (a
+/// configuração baseline pertence às três) — ela é treinada UMA vez e reaproveitada em todas,
+/// nunca em duplicidade.
 /// </summary>
-public readonly record struct ConfiguracaoExperimento(int TamanhoPopulacao, int NeuroniosOcultos, double TaxaMutacao)
+/// <remarks>
+/// Os dois últimos eixos MUDARAM DE SIGNIFICADO na migração para o SharpNEAT. Antes eram
+/// "neurônios na camada oculta" e "taxa de mutação por gene" — ambos inexistentes no NEAT, onde
+/// a topologia é evoluída e não configurada. Os substitutos são os hiperparâmetros NEAT que
+/// desempenham o papel equivalente: quanto a rede pode crescer, e com que frequência ela ganha
+/// estrutura nova. As execuções antigas gravadas no banco são de OUTRO método e não são
+/// comparáveis linha a linha com as novas — por isso cada registro passa a gravar
+/// <see cref="Models.ExperimentoHiperparametros.Metodo"/>.
+/// </remarks>
+public readonly record struct ConfiguracaoExperimento(int TamanhoPopulacao, int TetoComplexidade, double ProbabilidadeAdicionarNo)
 {
     /// <summary>População de referência — o padrão da tela de Treinamento do Controlador.</summary>
     public const int PopulacaoBaseline = 60;
 
-    /// <summary>Camada oculta de referência — a de <see cref="ControladorHibrido.ArquiteturaPadrao"/>, isto é, a que o sistema usa em produção.</summary>
-    public const int NeuroniosBaseline = 8;
+    /// <summary>Teto de complexidade de referência — o mesmo padrão de <see cref="TreinadorNeat"/>.</summary>
+    public const int TetoComplexidadeBaseline = 60;
 
-    /// <summary>Taxa de mutação de referência — o padrão de <see cref="ParametrosTreinamento.TaxaMutacao"/>.</summary>
-    public const double TaxaMutacaoBaseline = 0.08;
+    /// <summary>Probabilidade de mutação estrutural de referência — o padrão do SharpNEAT para acrescentar um nó.</summary>
+    public const double ProbabilidadeAdicionarNoBaseline = 0.01;
 
     /// <summary>Gerações rodadas por configuração — fixo e igual para todas, único jeito de isolar o efeito do hiperparâmetro variado (todo mundo para no mesmo ponto).</summary>
     public const int GeracoesPorExperimento = 300;
@@ -59,25 +70,25 @@ public readonly record struct ConfiguracaoExperimento(int TamanhoPopulacao, int 
     /// <summary>Gerações em que o melhor fitness é fotografado, para montar a curva de convergência (ver <see cref="ExperimentoHiperparametros.FitnessGeracao25"/>).</summary>
     public static readonly IReadOnlyList<int> GeracoesDaCurva = [25, 50, 100, 200];
 
-    /// <summary>Série A — varia só a camada oculta.</summary>
-    public static readonly IReadOnlyList<int> NeuroniosDaSerie = [4, 8, 16];
+    /// <summary>Série A — varia só o teto de complexidade: metade, padrão e dobro.</summary>
+    public static readonly IReadOnlyList<int> TetosComplexidadeDaSerie = [30, 60, 120];
 
     /// <summary>Série B — varia só a população.</summary>
     public static readonly IReadOnlyList<int> PopulacoesDaSerie = [30, 60, 120];
 
-    /// <summary>Série C — varia só a taxa de mutação: metade, padrão e dobro do valor do sistema.</summary>
-    public static readonly IReadOnlyList<double> TaxasMutacaoDaSerie = [0.04, 0.08, 0.16];
+    /// <summary>Série C — varia só a probabilidade de mutação estrutural: metade, padrão e dobro do valor do sistema.</summary>
+    public static readonly IReadOnlyList<double> ProbabilidadesAdicionarNoDaSerie = [0.005, 0.01, 0.02];
 
     /// <summary>União das três séries de referência, sem repetir a configuração baseline (que pertence às três).</summary>
     public static IReadOnlyList<ConfiguracaoExperimento> Planejadas { get; } =
-        NeuroniosDaSerie.Select(n => new ConfiguracaoExperimento(PopulacaoBaseline, n, TaxaMutacaoBaseline))
-            .Concat(PopulacoesDaSerie.Select(p => new ConfiguracaoExperimento(p, NeuroniosBaseline, TaxaMutacaoBaseline)))
-            .Concat(TaxasMutacaoDaSerie.Select(t => new ConfiguracaoExperimento(PopulacaoBaseline, NeuroniosBaseline, t)))
+        TetosComplexidadeDaSerie.Select(t => new ConfiguracaoExperimento(PopulacaoBaseline, t, ProbabilidadeAdicionarNoBaseline))
+            .Concat(PopulacoesDaSerie.Select(p => new ConfiguracaoExperimento(p, TetoComplexidadeBaseline, ProbabilidadeAdicionarNoBaseline)))
+            .Concat(ProbabilidadesAdicionarNoDaSerie.Select(pr => new ConfiguracaoExperimento(PopulacaoBaseline, TetoComplexidadeBaseline, pr)))
             .Distinct()
             .ToList();
 
     public override string ToString() =>
-        $"população={TamanhoPopulacao}, neurônios ocultos={NeuroniosOcultos}, mutação={TaxaMutacao:0.###}";
+        $"população={TamanhoPopulacao}, teto de complexidade={TetoComplexidade}, mutação estrutural={ProbabilidadeAdicionarNo:0.###}";
 }
 
 /// <inheritdoc cref="IExecutorExperimentosHiperparametros"/>
@@ -186,28 +197,19 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
         Action<string> aoProgredir,
         CancellationToken token)
     {
-        int[] arquitetura =
-        [
-            ControladorHibrido.QuantidadeEntradas,
-            configuracao.NeuroniosOcultos,
-            ControladorHibrido.QuantidadeSaidas
-        ];
-
         ParametrosTreinamento parametros = parametrosBase with
         {
             TamanhoPopulacao = configuracao.TamanhoPopulacao,
-            TaxaMutacao = configuracao.TaxaMutacao
+            ProbabilidadeAdicionarNo = configuracao.ProbabilidadeAdicionarNo,
+            TetoComplexidade = configuracao.TetoComplexidade
         };
-        var ambiente = new AmbienteTreinamento(parametros, arquitetura: arquitetura);
+        var ambiente = new AmbienteTreinamento(parametros);
 
-        // Elitismo proporcional (10% da população, no mínimo 2) — mesma regra do treinamento
-        // normal; um elitismo fixo seria uma fração grande demais em população 30 e pequena
-        // demais em 120, virando na prática um segundo hiperparâmetro variando junto.
-        var algoritmo = new AlgoritmoGenetico(
-            tamanhoGenoma: RedeNeural.TamanhoGenoma(arquitetura),
+        var algoritmo = new TreinadorNeat(
+            ambiente,
             tamanhoPopulacao: configuracao.TamanhoPopulacao,
-            taxaMutacao: configuracao.TaxaMutacao,
-            elitismo: Math.Max(2, configuracao.TamanhoPopulacao / 10));
+            tetoComplexidade: configuracao.TetoComplexidade,
+            probabilidadeAdicionarNo: configuracao.ProbabilidadeAdicionarNo);
 
         var cronometro = Stopwatch.StartNew();
         ResultadoGeracao? ultimoResultado = null;
@@ -227,8 +229,7 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
                 .Select(i => algoritmo.GeracaoAtual * 1000 + i)
                 .ToArray();
 
-            ultimoResultado = algoritmo.EvoluirGeracao(
-                genoma => ambiente.AvaliarFitness(genoma, seedsDaGeracao, CatalogoCenarios.TodosComScript));
+            ultimoResultado = algoritmo.EvoluirGeracao(seedsDaGeracao, CatalogoCenarios.TodosComScript);
 
             if (ultimoResultado.MelhorFitness > melhorAteAgora)
             {
@@ -258,8 +259,14 @@ public sealed class ExecutorExperimentosHiperparametros : IExecutorExperimentosH
         return new ExperimentoHiperparametros
         {
             TamanhoPopulacao = configuracao.TamanhoPopulacao,
-            NeuroniosOcultos = configuracao.NeuroniosOcultos,
-            TaxaMutacao = configuracao.TaxaMutacao,
+
+            // As duas colunas abaixo guardam, desde a migração para o SharpNEAT, os
+            // hiperparâmetros NEAT equivalentes (ver ConfiguracaoExperimento). Os nomes das
+            // colunas foram mantidos para não invalidar as execuções já gravadas; o que separa
+            // uma geração de dados da outra é a coluna METODO.
+            NeuroniosOcultos = configuracao.TetoComplexidade,
+            TaxaMutacao = configuracao.ProbabilidadeAdicionarNo,
+            Metodo = ExperimentoHiperparametros.MetodoNeat,
             Geracoes = ultimoResultado.Geracao,
 
             // O melhor de TODAS as gerações, não o da última: com elitismo o fitness não deveria

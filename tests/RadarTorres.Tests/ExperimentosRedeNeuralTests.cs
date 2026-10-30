@@ -1,4 +1,4 @@
-using RadarTorres.App.Models;
+﻿using RadarTorres.App.Models;
 using RadarTorres.App.NeuralEvolution;
 using Xunit;
 
@@ -15,20 +15,15 @@ namespace RadarTorres.Tests;
 /// </summary>
 public class ExperimentosRedeNeuralTests
 {
-    private static double[] GenomaNulo() => new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+    /// <summary>Rede inerte: saídas sempre 0, logo o controlador híbrido se comporta como a heurística pura na seleção e nunca autoriza disparo por conta própria.</summary>
+    private static RedeNeat RedeNula() => RedesDeTeste.Zerada();
 
     /// <summary>
-    /// Genoma com todos os genes = 1: toda ativação fica positiva, então a saída de confiança
-    /// de disparo é sempre > 0 ("quer atirar sempre"). Isola a decisão heurística da neural.
+    /// Rede com peso positivo do bias para a saída de confiança: a confiança de disparo é
+    /// sempre > 0 ("quer atirar sempre"), independentemente das entradas. Isola a decisão
+    /// heurística da neural.
     /// </summary>
-    private static double[] GenomaSempreAtira()
-    {
-        var g = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
-        Array.Fill(g, 1.0);
-        return g;
-    }
-
-    private static RedeNeural Rede(double[] genoma) => new(ControladorHibrido.ArquiteturaPadrao, genoma);
+    private static RedeNeat RedeSempreAtira() => RedesDeTeste.ComPesosParaSaidas(pesoAjuste: 1.0, pesoConfianca: 1.0);
 
     // ------------------------------------------------------------- teto
 
@@ -48,11 +43,11 @@ public class ExperimentosRedeNeuralTests
         var ambiente = new AmbienteTreinamento(p);
         int tetoDeNascimentos = (int)Math.Ceiling(p.DuracaoEpisodioSegundos / p.IntervaloSpawnMinFinalSegundos);
 
-        double[] genoma = GenomaSempreAtira();
+        RedeNeat rede = RedeSempreAtira();
         var nascidos = new List<int>();
         for (int seed = 0; seed < 30; seed++)
         {
-            EpisodioResultado r = ambiente.ExecutarEpisodioRapido(genoma, seed);
+            EpisodioResultado r = ambiente.ExecutarEpisodioRapido(rede, seed);
             Assert.InRange(r.AlvosNascidos, 1, tetoDeNascimentos);
             Assert.True(r.FitnessTotal <= r.AlvosNascidos * p.RecompensaAbate);
             nascidos.Add(r.AlvosNascidos);
@@ -77,14 +72,14 @@ public class ExperimentosRedeNeuralTests
     [InlineData(20)]
     public void AumentarMaxAlvosPorQuadranteNaoMudaOEpisodioDeUmControladorQueAbate(int maxAlvos)
     {
-        double[] genoma = GenomaSempreAtira();
+        RedeNeat rede = RedeSempreAtira();
         var referencia = new AmbienteTreinamento(new ParametrosTreinamento { MaxAlvosPorQuadrante = 5 });
         var ampliado = new AmbienteTreinamento(new ParametrosTreinamento { MaxAlvosPorQuadrante = maxAlvos });
 
         for (int seed = 0; seed < 10; seed++)
         {
-            EpisodioResultado a = referencia.ExecutarEpisodioRapido(genoma, seed);
-            EpisodioResultado b = ampliado.ExecutarEpisodioRapido(genoma, seed);
+            EpisodioResultado a = referencia.ExecutarEpisodioRapido(rede, seed);
+            EpisodioResultado b = ampliado.ExecutarEpisodioRapido(rede, seed);
             Assert.Equal(a.AlvosNascidos, b.AlvosNascidos);
             Assert.Equal(a.FitnessTotal, b.FitnessTotal, 6);
         }
@@ -96,7 +91,7 @@ public class ExperimentosRedeNeuralTests
     [Fact]
     public void ModoPadraoDoControladorEhHibrido()
     {
-        var controlador = new ControladorHibrido(Rede(GenomaNulo()), 10.0, 2.5);
+        var controlador = new ControladorHibrido(RedeNula(), 10.0, 2.5);
         Assert.Equal(ControladorHibrido.ModoDecisao.Hibrido, controlador.Modo);
     }
 
@@ -109,10 +104,10 @@ public class ExperimentosRedeNeuralTests
     {
         var alvo = new AlvoTreinamento { Id = 1, X = 3, Y = 3, Quadrante = Quadrant.Q1, TempoDesdeSelecao = 0.0 };
         var torre = new TorreTreinamento { Id = 1, X = 1.75, Y = 1.75, QuadrantePreferido = Quadrant.Q1 };
-        double[] genoma = GenomaSempreAtira();
+        RedeNeat rede = RedeSempreAtira();
 
-        var hibrido = new ControladorHibrido(Rede(genoma), 10.0, 2.5);
-        var pura = new ControladorHibrido(Rede(genoma), 10.0, 2.5, ControladorHibrido.ModoDecisao.RedePura);
+        var hibrido = new ControladorHibrido(rede, 10.0, 2.5);
+        var pura = new ControladorHibrido(rede, 10.0, 2.5, ControladorHibrido.ModoDecisao.RedePura);
 
         Assert.False(hibrido.DecidirDisparo(alvo, torre));
         Assert.True(pura.DecidirDisparo(alvo, torre));
@@ -127,13 +122,12 @@ public class ExperimentosRedeNeuralTests
     [Fact]
     public void RedePuraPodeEscolherTorreForaDoQuadranteDoAlvo()
     {
-        // Genoma cirúrgico: única conexão viva é entrada[1] ("mesmo quadrante") -> oculto[0]
-        // com peso -3, e oculto[0] -> saída[0] com peso +3. Assim a pontuação da rede é
-        // ~-0,99 para a torre do mesmo quadrante e 0 para as demais.
-        var genoma = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
-        const int ocultos = 8;
-        genoma[1 * ocultos + 0] = -3.0;                                       // entrada[1] -> oculto[0]
-        genoma[ControladorHibrido.QuantidadeEntradas * ocultos + ocultos] = 3.0; // oculto[0] -> saída[0]
+        // Rede cirúrgica: única conexão viva vai da entrada[1] ("mesmo quadrante") para a
+        // saída[0] (ajuste de pontuação), com peso -3. A rede PENALIZA a torre do próprio
+        // quadrante: pontuação ~-0,99 para ela e 0 para as demais. No modo híbrido a camada
+        // heurística filtra as candidatas antes disso e a escolha não muda; no modo RedePura
+        // todas as torres livres concorrem e a penalização decide.
+        RedeNeat rede = RedesDeTeste.DeUmaEntradaParaUmaSaida(indiceEntrada: 1, indiceSaida: 0, peso: -3.0);
 
         var alvo = new AlvoTreinamento { Id = 1, X = 3, Y = 3, Quadrante = Quadrant.Q1 };
         var torres = new List<TorreTreinamento>
@@ -142,22 +136,22 @@ public class ExperimentosRedeNeuralTests
             new() { Id = 3, X = -1.75, Y = -1.75, QuadrantePreferido = Quadrant.Q3 },
         };
 
-        var hibrido = new ControladorHibrido(Rede(genoma), 10.0, 2.5);
-        var pura = new ControladorHibrido(Rede(genoma), 10.0, 2.5, ControladorHibrido.ModoDecisao.RedePura);
+        var hibrido = new ControladorHibrido(rede, 10.0, 2.5);
+        var pura = new ControladorHibrido(rede, 10.0, 2.5, ControladorHibrido.ModoDecisao.RedePura);
 
         Assert.Equal(1, hibrido.SelecionarTorre(alvo, torres, [alvo])!.Id);
         Assert.Equal(3, pura.SelecionarTorre(alvo, torres, [alvo])!.Id);
     }
 
     /// <summary>
-    /// A heurística pura ignora a rede: com genoma nulo (rede inerte, que no modo híbrido nunca
+    /// A heurística pura ignora a rede: com a rede inerte (que no modo híbrido nunca
     /// autoriza disparo) ela ainda abate alvos, servindo de baseline inferior do estudo.
     /// </summary>
     [Fact]
     public void HeuristicaPuraAbateMesmoComRedeInerte()
     {
         var ambiente = new AmbienteTreinamento();
-        double[] nulo = GenomaNulo();
+        RedeNeat nulo = RedeNula();
 
         EpisodioResultado inerte = ambiente.ExecutarEpisodioRapido(nulo, seed: 7);
         EpisodioResultado heuristica = ambiente.ExecutarEpisodioRapido(
@@ -181,7 +175,7 @@ public class ExperimentosRedeNeuralTests
         var ambiente = new AmbienteTreinamento(parametros);
 
         EpisodioResultado r = ambiente.ExecutarEpisodioRapido(
-            GenomaSempreAtira(), seed: 3, TipoCenarioTreinamento.Aleatorio, ControladorHibrido.ModoDecisao.RedePura);
+            RedeSempreAtira(), seed: 3, TipoCenarioTreinamento.Aleatorio, ControladorHibrido.ModoDecisao.RedePura);
 
         Assert.Equal(0, r.AlvosAbatidos);
         Assert.Equal(0, r.TirosErrados);

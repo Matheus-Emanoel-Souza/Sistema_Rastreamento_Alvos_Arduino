@@ -8,7 +8,7 @@
              FontFamily="{DynamicResource Font.Body}">
     <!--
         Tela "Treinamento do Controlador": treina, por neuroevolução, a rede neural que combina
-        com a heurística de cooperação entre torres (ver ControladorHibrido/AlgoritmoGenetico em
+        com a heurística de cooperação entre torres (ver ControladorHibrido/TreinadorNeat em
         NeuralEvolution). O Canvas à esquerda anima em tempo real o melhor genoma encontrado até
         agora; as gerações em si rodam em segundo plano, o mais rápido possível (ver
         TreinamentoControladorViewModel).
@@ -131,11 +131,11 @@
                         <TextBlock Text="Tamanho da população" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding TamanhoPopulacao, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <TextBlock Text="Neurônios na camada oculta" Style="{StaticResource ParametroLabel}"/>
+                        <TextBlock Text="Teto de complexidade (conexões)" Style="{StaticResource ParametroLabel}"/>
                         <ComboBox ItemsSource="{Binding NeuroniosOcultosDisponiveis}" SelectedItem="{Binding NeuroniosOcultosSelecionado}"
                                   ToolTip="Vale a partir do próximo &quot;Iniciar&quot; ou &quot;Resetar&quot; — não afeta um treinamento já em andamento."/>
 
-                        <TextBlock Text="Taxa de mutação (0-1)" Style="{StaticResource ParametroLabel}"/>
+                        <TextBlock Text="Mutação estrutural (0-1)" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"/>
 
                         <TextBlock Text="Máximo de alvos por quadrante" Style="{StaticResource ParametroLabel}"/>
@@ -426,11 +426,13 @@
             </StackPanel>
         </Border>
 
-        <!-- Diagrama da rede neural evoluída: entradas (verde) -> camada oculta (azul) -> saídas
-             (amarelo). Passe o mouse sobre um neurônio para ver qual "decisão" ele representa
-             (entradas/saídas tem significado fixo; neurônios ocultos mostram a ativação atual e
-             quais entradas mais os influenciam — ver ConstruirTooltipDoNeuronio). À DIREITA da
-             simulação 2D. -->
+        <!-- Diagrama da rede neural evoluída pelo NEAT: entradas (verde) -> neurônios ocultos
+             (azul) -> saídas (amarelo). A topologia é REMONTADA a cada geração, porque o NEAT
+             cria e remove neurônios e conexões ao longo da evolução (ver
+             RemontarDiagramaRedeNeural). Passe o mouse sobre um neurônio para ver qual "decisão"
+             ele representa — entradas e saídas têm significado fixo e mostram o valor no cenário
+             de referência; os ocultos só exibem a identificação, porque a caixa-preta do
+             SharpNEAT não expõe ativações internas. À DIREITA da simulação 2D. -->
         <Border Style="{StaticResource Card}" VerticalAlignment="Top">
             <StackPanel>
                 <Grid>

@@ -117,7 +117,25 @@ public sealed record ParametrosTreinamento
     public double VelocidadeRapidaMetrosPorSegundo { get; init; } = 1.2;
 
     public int TamanhoPopulacao { get; init; } = 60;
-    public double TaxaMutacao { get; init; } = 0.08;
+
+    /// <summary>
+    /// Probabilidade de um descendente ganhar um neurônio novo (mutação estrutural do NEAT).
+    /// Substitui a antiga <c>TaxaMutacao</c> (probabilidade por gene), que não tem equivalente
+    /// aqui: o SharpNEAT trata mutação de PESO e mutação de ESTRUTURA como eventos distintos, e
+    /// é a segunda que define o quanto a rede pode mudar de forma ao longo da evolução.
+    /// </summary>
+    public double ProbabilidadeAdicionarNo { get; init; } = 0.01;
+
+    /// <summary>
+    /// Número de conexões a partir do qual a evolução passa a SIMPLIFICAR em vez de crescer
+    /// (ver <see cref="TreinadorNeat"/>). Sem teto, a topologia cresce indefinidamente e cada
+    /// avaliação — já são <see cref="EpisodiosPorAvaliacao"/> episódios por indivíduo — fica
+    /// progressivamente mais cara sem ganho de fitness correspondente.
+    /// </summary>
+    public int TetoComplexidade { get; init; } = 60;
+
+    /// <summary>Em quantas espécies a população é dividida. Mecanismo central do NEAT: protege uma topologia recém-criada de competir de igual para igual com redes já otimizadas antes de ter tempo de ser ajustada.</summary>
+    public int QuantidadeEspecies { get; init; } = 6;
 
     /// <summary>
     /// Quantos episódios independentes (seeds diferentes) são rodados e tirada a MÉDIA para
