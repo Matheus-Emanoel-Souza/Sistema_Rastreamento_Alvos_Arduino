@@ -2,7 +2,7 @@ Funcionalidade: material de apoio técnico aprofundado para a defesa do TCC — 
 
 # Apoio de apresentação — RadarTorres
 
-Este documento guarda o detalhamento técnico que foi retirado do corpo do `artigo_revisado.tex` para
+Este documento guarda o detalhamento técnico que foi retirado do corpo do `Artigo.tex` para
 manter o artigo objetivo, mas que é útil ter à mão na apresentação/defesa.
 
 ## Tipos de mutação em algoritmos genéticos e por que o RadarTorres usa gaussiana
