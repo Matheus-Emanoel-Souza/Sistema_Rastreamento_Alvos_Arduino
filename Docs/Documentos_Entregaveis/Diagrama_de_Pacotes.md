@@ -1,4 +1,5 @@
 Funcionalidade: apresenta o diagrama de pacotes/módulos do código-fonte e suas dependências.
+Status: 🚩 alteração_pendente — autor vai alterar este documento.
 
 # Diagrama de Pacotes
 
