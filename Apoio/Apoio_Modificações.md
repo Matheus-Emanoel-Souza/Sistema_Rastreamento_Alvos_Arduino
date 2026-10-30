@@ -17,4 +17,14 @@ Anotações de pontos a revisar/implementar em futuras sessões. Atualizar confo
   por quadro citado em `AlvoVisualService.ObterCandidatos` (estava em ~480 ms com o tiny-YOLOv3
   anterior, em 416×416; não remedido desde a troca). Ver [[DETECCAO_VISAO_YOLO]].
 
+## Documentos com flag `alteração_pendente`
+
+Marcados com `Status: 🚩 alteração_pendente` no topo do arquivo — ainda vão ser alterados pelo
+autor.
+
+- [[Diagrama_de_Pacotes]]
+- [[UML_RadarTorres]] — Seção 5 (Diagrama de Classes).
+- [[Modelo_Banco_de_Dados]] — inclui o DER.
+- [[Casos_de_Uso]]
+
 
