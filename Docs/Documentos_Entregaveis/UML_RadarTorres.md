@@ -1,4 +1,5 @@
 Funcionalidade: aplica os diagramas UML (casos de uso, classes, sequência etc.) ao projeto RadarTorres.
+Status: 🚩 alteração_pendente — autor vai alterar a Seção 5 (Diagrama de Classes).
 
 # UML — Unified Modeling Language aplicada ao RadarTorres
 

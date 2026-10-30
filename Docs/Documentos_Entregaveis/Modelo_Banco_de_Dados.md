@@ -1,4 +1,5 @@
 Funcionalidade: documenta o modelo de banco de dados (schema, tabelas, chaves) do RadarTorres.
+Status: 🚩 alteração_pendente — autor vai alterar este documento (inclui o DER).
 
 # Modelo de Banco de Dados
 

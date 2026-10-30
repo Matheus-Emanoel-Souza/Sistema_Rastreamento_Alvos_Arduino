@@ -1,4 +1,5 @@
 Funcionalidade: lista os casos de uso do RadarTorres (atores, fluxos principais e alternativos) para o entregável acadêmico.
+Status: 🚩 alteração_pendente — autor vai alterar este documento.
 
 # Casos de Uso — RadarTorres
 
