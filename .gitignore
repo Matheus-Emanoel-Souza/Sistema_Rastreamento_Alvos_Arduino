@@ -39,3 +39,10 @@ Docs/Documentos_Entregaveis/**/build*.log
 # sao artefatos de uma execucao especifica, grandes e regeneraveis. O resumo com as metricas de
 # todas as execucoes (Resultados/resultados.json) E versionado, por ser o dado citado no artigo.
 tools/RadarTorres.Experimentos/Resultados/genoma-*.json
+
+# Backup temporario gerado ao editar a bibliografia do artigo.
+*.bib.bak
+
+# Cache do Python (tools/cad)
+__pycache__/
+*.pyc

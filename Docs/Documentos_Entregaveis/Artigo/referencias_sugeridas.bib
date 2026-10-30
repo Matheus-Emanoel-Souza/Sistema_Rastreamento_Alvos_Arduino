@@ -1,0 +1,443 @@
+% ============================================================================
+% referencias_sugeridas.bib -- entradas propostas para cobrir as tres lacunas
+% apontadas no parecer da banca:
+%   (A) modulo de visao sem nenhuma citacao
+%   (B) neuroevolucao com fonte unica (apenas such2017deepneuroevolution)
+%   (C) ausencia de literatura metodologica sobre avaliacao de agentes
+%       estocasticos
+%
+% Uso: mesclar no referencias.bib ou \bibliography{referencias,referencias_sugeridas}
+% ATENCAO: confira paginas/DOIs na fonte original antes da entrega.
+% ============================================================================
+
+% ---------------------------------------------------------------------------
+% (A) MODULO DE VISAO -- Secoes 2.1 (PREENCHER) e 2.3.x
+% ---------------------------------------------------------------------------
+
+% Base canonica para "assinatura do objeto por histograma de matiz e saturacao".
+@article{swain1991colorindexing,
+  author  = {Swain, Michael J. and Ballard, Dana H.},
+  title   = {Color indexing},
+  journal = {International Journal of Computer Vision},
+  volume  = {7},
+  number  = {1},
+  pages   = {11--32},
+  year    = {1991},
+  doi     = {10.1007/BF00130487}
+}
+
+% Justifica escolher matiz/saturacao (HSV) em vez de RGB: separacao entre
+% cromaticidade e intensidade, mais robusta a variacao de iluminacao.
+@article{smith1978hsv,
+  author  = {Smith, Alvy Ray},
+  title   = {Color gamut transform pairs},
+  journal = {ACM SIGGRAPH Computer Graphics},
+  volume  = {12},
+  number  = {3},
+  pages   = {12--19},
+  year    = {1978},
+  doi     = {10.1145/965139.807361}
+}
+
+% Invariancia de cor sob mudanca de iluminacao -- sustenta a ressalva de que o
+% reconhecimento por cor e sensivel as condicoes de captura.
+@article{gevers1999colorobject,
+  author  = {Gevers, Theo and Smeulders, Arnold W. M.},
+  title   = {Color-based object recognition},
+  journal = {Pattern Recognition},
+  volume  = {32},
+  number  = {3},
+  pages   = {453--464},
+  year    = {1999},
+  doi     = {10.1016/S0031-3203(98)00036-3}
+}
+
+% Descritores MPEG-7: o "color layout descriptor" e precisamente a tecnica da
+% "grade espacial de cor media" usada no RadarTorres.
+@article{manjunath2001descriptors,
+  author  = {Manjunath, B. S. and Ohm, Jens-Rainer and Vasudevan, Vinod V. and Yamada, Akio},
+  title   = {Color and texture descriptors},
+  journal = {IEEE Transactions on Circuits and Systems for Video Technology},
+  volume  = {11},
+  number  = {6},
+  pages   = {703--715},
+  year    = {2001},
+  doi     = {10.1109/76.927424}
+}
+
+% Fallback por segmentacao de cor: survey de referencia da area.
+@article{cheng2001colorseg,
+  author  = {Cheng, H. D. and Jiang, X. H. and Sun, Y. and Wang, Jingli},
+  title   = {Color image segmentation: advances and prospects},
+  journal = {Pattern Recognition},
+  volume  = {34},
+  number  = {12},
+  pages   = {2259--2281},
+  year    = {2001},
+  doi     = {10.1016/S0031-3203(00)00149-7}
+}
+
+% Classificacao de FORMA invariante a rotacao/escala/translacao -- base classica
+% para "classificar o alvo por formato e tamanho".
+@article{hu1962moments,
+  author  = {Hu, Ming-Kuei},
+  title   = {Visual pattern recognition by moment invariants},
+  journal = {IRE Transactions on Information Theory},
+  volume  = {8},
+  number  = {2},
+  pages   = {179--187},
+  year    = {1962},
+  doi     = {10.1109/TIT.1962.1057692}
+}
+
+% Livro-texto para cor, segmentacao e descritores de regiao (area, perimetro,
+% circularidade) -- apoia "tamanho" como atributo medido na imagem.
+@book{gonzalez2018dip,
+  author    = {Gonzalez, Rafael C. and Woods, Richard E.},
+  title     = {Digital Image Processing},
+  edition   = {4},
+  publisher = {Pearson},
+  address   = {New York},
+  year      = {2018}
+}
+
+% Referencia geral de visao computacional, incluindo pipelines
+% deteccao -> descricao -> casamento de aparencia.
+@book{szeliski2022cv,
+  author    = {Szeliski, Richard},
+  title     = {Computer Vision: Algorithms and Applications},
+  edition   = {2},
+  publisher = {Springer},
+  address   = {Cham},
+  year      = {2022},
+  doi       = {10.1007/978-3-030-34372-9}
+}
+
+% Paradigma "proponho regioes candidatas e verifico em cascata, do mais barato
+% ao mais caro" -- exatamente a ordenacao de candidatos do modulo de visao.
+@inproceedings{viola2001cascade,
+  author    = {Viola, Paul and Jones, Michael},
+  title     = {Rapid object detection using a boosted cascade of simple features},
+  booktitle = {Proceedings of the 2001 IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR)},
+  volume    = {1},
+  pages     = {511--518},
+  year      = {2001},
+  doi       = {10.1109/CVPR.2001.990517}
+}
+
+% Origem da familia YOLO: deteccao em estagio unico, requisito para tempo real.
+@inproceedings{redmon2016yolo,
+  author    = {Redmon, Joseph and Divvala, Santosh and Girshick, Ross and Farhadi, Ali},
+  title     = {You Only Look Once: Unified, Real-Time Object Detection},
+  booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {779--788},
+  year      = {2016},
+  doi       = {10.1109/CVPR.2016.91}
+}
+
+% Formato de intercambio do modelo embarcado na aplicacao (.onnx).
+@misc{onnx,
+  author       = {{ONNX Community}},
+  title        = {ONNX: Open Neural Network Exchange},
+  howpublished = {\url{https://onnx.ai}},
+  year         = {2024},
+  note         = {Acesso em: 28 out. 2026}
+}
+
+% ---------------------------------------------------------------------------
+% (B) NEUROEVOLUCAO E ALGORITMOS GENETICOS -- Secao 2.3.x
+% ---------------------------------------------------------------------------
+
+% Survey fundador: evoluir pesos e topologia de redes neurais.
+@article{yao1999evolvingann,
+  author  = {Yao, Xin},
+  title   = {Evolving artificial neural networks},
+  journal = {Proceedings of the IEEE},
+  volume  = {87},
+  number  = {9},
+  pages   = {1423--1447},
+  year    = {1999},
+  doi     = {10.1109/5.784219}
+}
+
+% NEAT -- referencia obrigatoria em qualquer texto sobre neuroevolucao.
+@article{stanley2002neat,
+  author  = {Stanley, Kenneth O. and Miikkulainen, Risto},
+  title   = {Evolving neural networks through augmenting topologies},
+  journal = {Evolutionary Computation},
+  volume  = {10},
+  number  = {2},
+  pages   = {99--127},
+  year    = {2002},
+  doi     = {10.1162/106365602320169811}
+}
+
+% Panorama conceitual: quando evoluir e preferivel a treinar por gradiente.
+@article{floreano2008neuroevolution,
+  author  = {Floreano, Dario and D{\"u}rr, Peter and Mattiussi, Claudio},
+  title   = {Neuroevolution: from architectures to learning},
+  journal = {Evolutionary Intelligence},
+  volume  = {1},
+  number  = {1},
+  pages   = {47--62},
+  year    = {2008},
+  doi     = {10.1007/s12065-007-0002-4}
+}
+
+% Estado da arte (2019) assinado pelos principais autores da area.
+@article{stanley2019designing,
+  author  = {Stanley, Kenneth O. and Clune, Jeff and Lehman, Joel and Miikkulainen, Risto},
+  title   = {Designing neural networks through neuroevolution},
+  journal = {Nature Machine Intelligence},
+  volume  = {1},
+  number  = {1},
+  pages   = {24--35},
+  year    = {2019},
+  doi     = {10.1038/s42256-018-0006-z}
+}
+
+% Neuroevolucao em dominios de jogos/decisao tatica -- o cenario mais proximo
+% do controlador de selecao de torre.
+@article{risi2017neuroevogames,
+  author  = {Risi, Sebastian and Togelius, Julian},
+  title   = {Neuroevolution in games: state of the art and open challenges},
+  journal = {IEEE Transactions on Computational Intelligence and AI in Games},
+  volume  = {9},
+  number  = {1},
+  pages   = {25--41},
+  year    = {2017},
+  doi     = {10.1109/TCIAIG.2015.2494596}
+}
+
+% Busca livre de gradiente competitiva com RL -- companhia natural de such2017.
+@misc{salimans2017es,
+  author        = {Salimans, Tim and Ho, Jonathan and Chen, Xi and Sidor, Szymon and Sutskever, Ilya},
+  title         = {Evolution Strategies as a Scalable Alternative to Reinforcement Learning},
+  eprint        = {1703.03864},
+  archivePrefix = {arXiv},
+  year          = {2017}
+}
+
+% Fundamenta os operadores concretos do AlgoritmoGenetico.cs: selecao por
+% torneio, crossover uniforme, mutacao gaussiana, elitismo.
+@book{eiben2015evolutionary,
+  author    = {Eiben, A. E. and Smith, J. E.},
+  title     = {Introduction to Evolutionary Computing},
+  edition   = {2},
+  publisher = {Springer},
+  address   = {Berlin},
+  year      = {2015},
+  doi       = {10.1007/978-3-662-44874-8}
+}
+
+@book{goldberg1989ga,
+  author    = {Goldberg, David E.},
+  title     = {Genetic Algorithms in Search, Optimization, and Machine Learning},
+  publisher = {Addison-Wesley},
+  address   = {Reading, MA},
+  year      = {1989}
+}
+
+% Analise formal de esquemas de selecao -- justifica torneio de tamanho 3.
+@article{blickle1996selection,
+  author  = {Blickle, Tobias and Thiele, Lothar},
+  title   = {A comparison of selection schemes used in evolutionary algorithms},
+  journal = {Evolutionary Computation},
+  volume  = {4},
+  number  = {4},
+  pages   = {361--394},
+  year    = {1996},
+  doi     = {10.1162/evco.1996.4.4.361}
+}
+
+% Metodo Box-Muller usado literalmente no codigo para a mutacao gaussiana.
+@article{box1958normaldeviates,
+  author  = {Box, G. E. P. and Muller, Mervin E.},
+  title   = {A note on the generation of random normal deviates},
+  journal = {The Annals of Mathematical Statistics},
+  volume  = {29},
+  number  = {2},
+  pages   = {610--611},
+  year    = {1958},
+  doi     = {10.1214/aoms/1177706645}
+}
+
+% "Reality gap": fonte canonica para a sua propria constatacao de que premissas
+% equivocadas do ambiente simulado se propagam ao genoma evoluido.
+@inproceedings{jakobi1995realitygap,
+  author    = {Jakobi, Nick and Husbands, Phil and Harvey, Inman},
+  title     = {Noise and the reality gap: The use of simulation in evolutionary robotics},
+  booktitle = {Advances in Artificial Life (ECAL 1995)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {929},
+  pages     = {704--720},
+  publisher = {Springer},
+  year      = {1995},
+  doi       = {10.1007/3-540-59496-5_337}
+}
+
+@article{koos2013transferability,
+  author  = {Koos, Sylvain and Mouret, Jean-Baptiste and Doncieux, St{\'e}phane},
+  title   = {The transferability approach: Crossing the reality gap in evolutionary robotics},
+  journal = {IEEE Transactions on Evolutionary Computation},
+  volume  = {17},
+  number  = {1},
+  pages   = {122--145},
+  year    = {2013},
+  doi     = {10.1109/TEVC.2012.2185849}
+}
+
+% Randomizacao de dominio -- mitigacao recomendada para o gap sim-para-real.
+@misc{tobin2017domainrandomization,
+  author        = {Tobin, Josh and Fong, Rachel and Ray, Alex and Schneider, Jonas and Zaremba, Wojciech and Abbeel, Pieter},
+  title         = {Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World},
+  eprint        = {1703.06907},
+  archivePrefix = {arXiv},
+  year          = {2017}
+}
+
+% ---------------------------------------------------------------------------
+% (C) METODOLOGIA DE AVALIACAO DE AGENTES ESTOCASTICOS
+%     Secoes 2.2 (procedimentos) e experimento de hiperparametros (n=1)
+% ---------------------------------------------------------------------------
+
+% Referencia-mae do problema: variancia entre sementes, n pequeno e conclusoes
+% que nao se sustentam. Sustenta diretamente a ressalva de n=1 por combinacao.
+@inproceedings{henderson2018drlthatmatters,
+  author    = {Henderson, Peter and Islam, Riashat and Bachman, Philip and Pineau, Joelle and Precup, Doina and Meger, David},
+  title     = {Deep Reinforcement Learning that Matters},
+  booktitle = {Proceedings of the 32nd AAAI Conference on Artificial Intelligence},
+  pages     = {3207--3214},
+  year      = {2018},
+  doi       = {10.1609/aaai.v32i1.11694}
+}
+
+% Como reportar resultados com poucas execucoes: intervalos por bootstrap
+% estratificado, media interquartil, perfis de desempenho.
+@inproceedings{agarwal2021precipice,
+  author    = {Agarwal, Rishabh and Schwarzer, Max and Castro, Pablo Samuel and Courville, Aaron and Bellemare, Marc G.},
+  title     = {Deep Reinforcement Learning at the Edge of the Statistical Precipice},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {34},
+  year      = {2021},
+  note      = {arXiv:2108.13264}
+}
+
+% Quantas sementes sao necessarias: analise de poder estatistico. Fornece o
+% numero concreto a citar ao propor a repeticao futura do experimento.
+@misc{colas2018howmanyseeds,
+  author        = {Colas, C{\'e}dric and Sigaud, Olivier and Oudeyer, Pierre-Yves},
+  title         = {How Many Random Seeds? Statistical Power Analysis in Deep Reinforcement Learning Experiments},
+  eprint        = {1806.08295},
+  archivePrefix = {arXiv},
+  year          = {2018}
+}
+
+% Protocolo de avaliacao completo (distribuicao de desempenho, nao so a media).
+@inproceedings{jordan2020evaluating,
+  author    = {Jordan, Scott M. and Chandak, Yash and Cohen, Daniel and Zhang, Mengxue and Thomas, Philip S.},
+  title     = {Evaluating the Performance of Reinforcement Learning Algorithms},
+  booktitle = {Proceedings of the 37th International Conference on Machine Learning (ICML)},
+  year      = {2020},
+  note      = {arXiv:2006.16958}
+}
+
+% Tutorial pratico de testes nao parametricos para COMPARAR ALGORITMOS
+% EVOLUTIVOS -- o teste estatistico que falta no experimento 3x2.
+@article{derrac2011nonparametric,
+  author  = {Derrac, Joaqu{\'i}n and Garc{\'i}a, Salvador and Molina, Daniel and Herrera, Francisco},
+  title   = {A practical tutorial on the use of nonparametric statistical tests as a methodology for comparing evolutionary and swarm intelligence algorithms},
+  journal = {Swarm and Evolutionary Computation},
+  volume  = {1},
+  number  = {1},
+  pages   = {3--18},
+  year    = {2011},
+  doi     = {10.1016/j.swevo.2011.02.002}
+}
+
+@article{demsar2006statistical,
+  author  = {Dem{\v{s}}ar, Janez},
+  title   = {Statistical comparisons of classifiers over multiple data sets},
+  journal = {Journal of Machine Learning Research},
+  volume  = {7},
+  pages   = {1--30},
+  year    = {2006}
+}
+
+% Critica classica ao "teste competitivo" (qual config venceu?) em favor do
+% experimento controlado -- exatamente o reparo que a banca pede na conclusao.
+@article{hooker1995testing,
+  author  = {Hooker, J. N.},
+  title   = {Testing heuristics: We have it all wrong},
+  journal = {Journal of Heuristics},
+  volume  = {1},
+  number  = {1},
+  pages   = {33--42},
+  year    = {1995},
+  doi     = {10.1007/BF02430364}
+}
+
+@incollection{johnson2002theoreticians,
+  author    = {Johnson, David S.},
+  title     = {A theoretician's guide to the experimental analysis of algorithms},
+  booktitle = {Data Structures, Near Neighbor Searches, and Methodology},
+  series    = {DIMACS Series in Discrete Mathematics and Theoretical Computer Science},
+  volume    = {59},
+  pages     = {215--250},
+  publisher = {American Mathematical Society},
+  year      = {2002}
+}
+
+% Boas praticas e armadilhas em benchmarking de otimizacao (incl. orcamento de
+% avaliacoes fixo e sementes).
+@misc{bartzbeielstein2020benchmarking,
+  author        = {Bartz-Beielstein, Thomas and Doerr, Carola and van den Berg, Daan and Bossek, Jakob and others},
+  title         = {Benchmarking in Optimization: Best Practice and Open Issues},
+  eprint        = {2007.03488},
+  archivePrefix = {arXiv},
+  year          = {2020}
+}
+
+% Fitness ruidoso / avaliacao em ambientes incertos: por que reavaliar com
+% sementes variadas em vez de reusar episodios deterministicos.
+@article{jin2005uncertain,
+  author  = {Jin, Yaochu and Branke, J{\"u}rgen},
+  title   = {Evolutionary optimization in uncertain environments -- a survey},
+  journal = {IEEE Transactions on Evolutionary Computation},
+  volume  = {9},
+  number  = {3},
+  pages   = {303--317},
+  year    = {2005},
+  doi     = {10.1109/TEVC.2005.846356}
+}
+
+% Sobreajuste a cenarios/sementes fixas: fundamenta a critica da banca de que
+% seeds dependentes so da geracao e cenarios roteirizados com seed 0 tornam a
+% avaliacao deterministica e inflam a aparencia de convergencia.
+@misc{zhang2018overfitting,
+  author        = {Zhang, Chiyuan and Vinyals, Oriol and Munos, Remi and Bengio, Samy},
+  title         = {A Study on Overfitting in Deep Reinforcement Learning},
+  eprint        = {1804.06893},
+  archivePrefix = {arXiv},
+  year          = {2018}
+}
+
+@inproceedings{cobbe2020procgen,
+  author    = {Cobbe, Karl and Hesse, Christopher and Hilton, Jacob and Schulman, John},
+  title     = {Leveraging Procedural Generation to Benchmark Reinforcement Learning},
+  booktitle = {Proceedings of the 37th International Conference on Machine Learning (ICML)},
+  year      = {2020},
+  note      = {arXiv:1912.01588}
+}
+
+% Reprodutibilidade: checklist e politica de relato (sementes, ambiente,
+% numero de execucoes) -- apoia a secao de procedimentos metodologicos.
+@article{pineau2021reproducibility,
+  author  = {Pineau, Joelle and Vincent-Lamarre, Philippe and Sinha, Koustuv and Larivi{\`e}re, Vincent and Beygelzimer, Alina and d'Alch{\'e}-Buc, Florence and Fox, Emily and Larochelle, Hugo},
+  title   = {Improving reproducibility in machine learning research (a report from the NeurIPS 2019 reproducibility program)},
+  journal = {Journal of Machine Learning Research},
+  volume  = {22},
+  number  = {164},
+  pages   = {1--20},
+  year    = {2021}
+}

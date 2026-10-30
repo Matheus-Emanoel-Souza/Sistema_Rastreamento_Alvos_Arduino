@@ -260,7 +260,19 @@ próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussian
 sem dependência de biblioteca de aprendizado de máquina. \citeonline{such2017deepneuroevolution}
 mostram que algoritmos genéticos são uma alternativa competitiva ao treino por gradiente em tarefas
 de aprendizado por reforço, em redes de porte bem maior do que a aqui empregada (até quatro milhões
-de parâmetros, contra os 82 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
+de parâmetros, contra os 82 parâmetros da rede do RadarTorres). Na mesma direção,
+\citeonline{salimans2017es} mostram que estratégias de evolução -- também livres de gradiente e
+baseadas apenas na avaliação do retorno de episódios completos -- competem com métodos de gradiente
+de política em tarefas contínuas de controle, com a vantagem de dispensarem retropropagação,
+diferenciabilidade da recompensa e atribuição temporal de crédito. São exatamente essas três
+dispensas que tornam o método aplicável ao RadarTorres, cujo sinal de desempenho (alvo abatido ou
+alvo que escapa) só se materializa ao final do episódio simulado e não é diferenciável em relação
+aos pesos da rede. O emprego de neuroevolução para controlar agentes em ambientes de decisão tática
+com múltiplas entidades, aliás, é um domínio consolidado: \citeonline{risi2017neuroevogames}
+revisam o estado da arte da neuroevolução em jogos e identificam, entre seus usos mais
+estabelecidos, precisamente a evolução de controladores de comportamento avaliados por simulação
+episódica -- o papel desempenhado pela rede do RadarTorres na seleção de torre. Esse conjunto de
+resultados sustenta a escolha
 do algoritmo genético como método de treinamento, mas não implica, por si só, que aumentar o número
 de camadas ou neurônios seja desnecessário; por isso, a estratégia adotada para ampliar o
 desempenho do controlador prioriza o ajuste dos hiperparâmetros da busca evolutiva (tamanho de
@@ -314,8 +326,36 @@ concebida para limitar o pior caso de uma generalização imperfeita do treino v
 arbitrária; trata-se, porém, de uma propriedade de projeto ainda não submetida a validação em
 hardware físico real.
 
-% PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
-% computacional clássica (a ser informada pelo autor).
+A classificação do alvo pelo módulo de visão -- por cor, formato e tamanho -- apoia-se em três
+técnicas clássicas de visão computacional, cada uma correspondendo a um dos três atributos. A
+identificação por \textbf{cor} segue o princípio estabelecido por
+\citeonline{swain1991colorindexing}: um objeto pode ser reconhecido pelo histograma de sua
+distribuição de cores, que é robusto a mudanças de orientação, a oclusões parciais e a variações
+de escala justamente porque descarta a informação espacial dos pixels. É esse resultado que
+sustenta a assinatura adotada no RadarTorres, composta por um histograma de matiz e saturação do
+objeto de referência -- a escolha de matiz e saturação, em vez dos canais RGB, isola a
+cromaticidade da intensidade luminosa e reduz a sensibilidade do reconhecimento à iluminação do
+ambiente. A classificação por \textbf{formato}, por sua vez, remete aos momentos invariantes de
+\citeonline{hu1962moments}, que demonstrou ser possível derivar, a partir dos momentos de uma
+região binária, um conjunto de descritores cujo valor não se altera sob translação, rotação ou
+mudança de escala -- propriedade indispensável quando o mesmo alvo é observado por câmeras de
+quadrantes distintos, a distâncias diferentes. Já o \textbf{tamanho} é tratado como um descritor de
+região no sentido de \citeonline{gonzalez2018dip}, medido em área de pixels da região segmentada e
+só interpretável como grandeza física quando combinado à distância informada pelos sensores
+ultrassônicos -- razão pela qual ele opera, no protótipo, como critério de desempate entre
+candidatas, e não como medida absoluta.
+
+A proposição das regiões candidatas que alimentam essas três comparações é delegada a um detector
+de objetos de estágio único: o RadarTorres executa localmente o modelo YOLO26, na variante
+\textit{nano}, exportado para o formato ONNX \cite{ultralytics_yolo26}. A divisão de papéis é
+deliberada: o detector resolve o problema de \textit{onde} há objetos no quadro, tarefa para a qual
+um modelo treinado em grande escala é superior a qualquer heurística manual, enquanto a decisão de
+\textit{qual} daqueles objetos corresponde ao perfil cadastrado permanece com as três técnicas
+clássicas acima, auditáveis e ajustáveis pelo operador sem necessidade de retreinamento. Essa
+escolha também preserva o comportamento degradado do sistema: quando o detector não propõe nenhuma
+caixa compatível com a cor do perfil, a proposição de candidatas recai sobre segmentação de cor
+direta, de modo que a falha do modelo neural reduz a qualidade da detecção, mas não interrompe o
+funcionamento do módulo.
 
 \parecerAjuste{O próprio \texttt{.tex} fonte contém, neste ponto, um comentário não renderizado
 "PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho" -- uma lacuna
@@ -771,6 +811,45 @@ Tabela~\ref{tab:experimento-hiperparametros}), não necessariamente para captar 
 de cada configuração -- o próprio platô compartilhado por cinco das seis combinações sugere que mais
 gerações poderiam, ainda, diferenciá-las entre si.
 
+Ambas as ressalvas acima são instâncias de um problema metodológico já bem documentado na
+literatura de avaliação de agentes treinados por métodos estocásticos.
+\citeonline{henderson2018drlthatmatters} demonstram, em aprendizado por reforço profundo, que a
+variabilidade entre execuções que diferem apenas pela semente aleatória é frequentemente maior do
+que a diferença de desempenho entre algoritmos distintos -- a ponto de dois conjuntos de execuções
+do \textit{mesmo} algoritmo, separados apenas por sementes, produzirem curvas que, comparadas
+ingenuamente, sugeririam superioridade de um sobre o outro. Transposto para a
+Tabela~\ref{tab:experimento-hiperparametros}, esse resultado implica que a margem observada entre
+52,19 e 49,81 não pode ser atribuída ao hiperparâmetro sem que a variação intrínseca entre
+execuções da \textit{mesma} configuração seja medida primeiro, o que o desenho atual, com uma única
+trajetória por célula, não permite fazer. \citeonline{colas2018howmanyseeds} formalizam essa
+exigência em termos de poder estatístico e oferecem o procedimento para dimensionar o número de
+repetições a partir do tamanho de efeito que se deseja detectar e da variância observada entre
+execuções -- procedimento que, aplicado a este experimento, é o caminho objetivo para substituir a
+recomendação genérica de "mais sementes" por um número justificado de repetições por combinação.
+Uma vez disponíveis essas repetições, a comparação entre as seis configurações deixa de ser uma
+leitura direta da tabela e passa a exigir testes de hipótese adequados a distribuições de
+desempenho não normais e a amostras pequenas, para os quais
+\citeonline{derrac2011nonparametric} fornecem o protocolo consolidado na literatura de computação
+evolutiva -- testes não paramétricos de comparação par a par e múltipla, com correção para
+comparações simultâneas, aplicáveis diretamente a um arranjo fatorial como o aqui adotado.
+
+Vale registrar, por fim, uma ressalva sobre a própria natureza da pergunta respondida neste
+experimento. \citeonline{hooker1995testing} argumenta que o \textit{teste competitivo} -- executar
+configurações concorrentes e relatar qual venceu -- é um instrumento fraco de conhecimento
+científico, porque mede o desempenho conjunto de fatores que não foram isolados e não explica
+\textit{por que} uma configuração se comporta como se comporta, devendo ser substituído, sempre
+que possível, pelo experimento controlado que testa hipóteses sobre o mecanismo. Essa crítica se
+aplica diretamente à leitura da Tabela~\ref{tab:experimento-hiperparametros}: o experimento
+compara desempenhos finais, mas não testa nenhuma hipótese sobre a causa do platô compartilhado --
+embora uma hipótese mecânica concorrente e mais parcimoniosa para a coincidência exata de cinco
+valores de fitness esteja disponível e não tenha sido investigada: o determinismo parcial do
+próprio ambiente de avaliação, cujas sementes de episódio dependem apenas do número da geração e
+cujos cenários roteirizados são idênticos entre as seis combinações, o que faz genomas
+convergentes para a mesma estratégia percorrerem trajetórias idênticas. Distinguir essa hipótese
+da convergência para um mesmo ótimo local exigiria um experimento controlado -- variar as sementes
+de avaliação por configuração, mantendo todo o resto fixo --, não uma nova rodada de teste
+competitivo.
+
 \parecerElogio{Transparência genuína e rara: o texto reconhece explicitamente n=1 por combinação e
 o horizonte curto de gerações, em vez de apresentar a tabela sem ressalvas. Isso não substitui a
 investigação da causa determinística (ver comentário acima), mas é um mérito de honestidade
@@ -787,6 +866,13 @@ permanece, portanto, \grifo{uma escolha razoável dentro da faixa investigada}, 
 a necessidade de uma repetição futura com mais gerações e múltiplas sementes por combinação antes de
 se afirmar que ela é estritamente superior às demais, trabalho futuro já na mesma linha da ressalva
 geral sobre a fidelidade do ambiente de treino feita na Seção~\ref{sec:procedimentos-metodologicos}.
+Cabe explicitar, nos termos de \citeonline{hooker1995testing}, o que esse resultado não autoriza
+concluir: a ausência, neste experimento, de uma configuração comprovadamente melhor não constitui
+evidência positiva a favor da configuração já em produção. Com $n = 1$ por combinação, horizonte
+curto de gerações e avaliação parcialmente determinística, o poder do experimento para detectar
+uma diferença real é baixo, de modo que a configuração de produção permanece validada apenas por
+não ter sido contestada -- o que é um estado de conhecimento distinto, e mais fraco, do que ter
+sido confirmada.
 
 \parecerAjuste{Esta conclusão usa a AUSÊNCIA de uma combinação melhor (n=1 cada) para validar, por
 omissão de alternativa, a configuração já em produção -- um raciocínio de "ausência de evidência

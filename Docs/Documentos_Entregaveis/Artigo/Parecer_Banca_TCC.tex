@@ -3,6 +3,11 @@
 % Gerado automaticamente pelo agente Banca_TCC -- não editar à mão
 % sem regenerar a partir de uma nova análise.
 % Compile com pdfLaTeX.
+%
+% Esta é a SEGUNDA revisão. A anterior (27/10, nota 6,33) foi
+% substituída por esta, que audita a versão do artigo com
+% arquitetura de 7 entradas, ambiente endurecido e a investigação
+% da hesitação no gatilho.
 % ============================================================
 \documentclass[11pt,a4paper]{article}
 
@@ -12,9 +17,10 @@
 \usepackage{array}
 
 \title{\textbf{Parecer da Banca Examinadora — TCC ``RadarTorres''}\\[0.3em]
-\large Gerado pelo agente \texttt{Banca\_TCC}}
+\large Segunda revisão — gerado pelo agente \texttt{Banca\_TCC}}
 \author{}
-\date{Análise referente a \texttt{Artigo.tex}/\texttt{Artigo.pdf} (RadarTorres, TCC de Engenharia da Computação, UCL)}
+\date{Análise referente a \texttt{Artigo.tex}/\texttt{Artigo.pdf} (RadarTorres, TCC de Engenharia da Computação, UCL)\\[0.3em]
+Auditado contra o código-fonte, os resultados em JSON e o banco \texttt{radartorres.db}}
 
 \newcommand{\critico}{\textbf{\color{red!60!black}[CRÍTICO]}}
 \newcommand{\alto}{\textbf{\color{orange!70!black}[ALTO]}}
@@ -24,287 +30,558 @@
 \begin{document}
 \maketitle
 
-\section*{A. Parecer executivo}
+\section*{A. Síntese}
 
-O RadarTorres é um trabalho tecnicamente substancial, com um ponto forte raro em TCCs de
-graduação: uma contribuição empírica real e verificável (a identificação e correção do bug de
-certeza estática de alvo, commit \texttt{a02d46a}), com rastreabilidade consistente entre o texto,
-o código e o histórico de commits -- confirmada diretamente no repositório. A honestidade
-científica sobre o escopo (hardware físico não montado, validação só em simulação) é reiterada de
-forma consistente do resumo à conclusão, mérito metodológico incomum. Entretanto, o artigo tem três
-fragilidades que comprometem seu rigor: (1) a seção ``Análise experimental de hiperparâmetros''
-relata 5 de 6 combinações convergindo para \emph{exatamente} o mesmo fitness (49,81) sem investigar
-a causa mecânica mais provável -- encontrada no próprio código-fonte (seeds de avaliação amarradas
-apenas ao número da geração, e cenários roteirizados com seed fixa, idênticos entre todas as
-configurações); (2) o texto apresenta como fato consolidado, nas seções de projeto elétrico/
-estrutural e parte do módulo de visão, detalhes técnicos que os próprios comentários do
-\texttt{.tex} fonte admitem não estarem confirmados em código nem na documentação do repositório --
-e que, em alguns casos, contradizem a documentação técnica existente -- sem que esse aviso chegue
-ao leitor do PDF; (3) o genoma embutido citado como resultado (geração 5377, fitness 136,98) já
-estava desatualizado em relação ao arquivo presente na árvore de trabalho no momento desta revisão
-(alteração não commitada), evidenciando a fragilidade de ancorar uma afirmação empírica a um
-artefato mutável sem versioná-lo junto ao próprio artigo.
+O artigo melhorou substancialmente em maturidade investigativa e em honestidade declarada desde o
+parecer de 27/10. A Seção 2.3.7 deixou de ser uma tabela de hiperparâmetros com leitura
+interpretativa frouxa e passou a ser uma investigação encadeada de verdade: hipótese, medição
+direta, falsificação da própria hipótese (elevar \texttt{EpisodiosPorAvaliacao} de 3 para 12 não
+resolveu), replicação em quatro sementes de algoritmo genético, correção dirigida da função de
+fitness e um resultado negativo assumido --- ``a rede convergiu para replicar a heurística, não
+para superá-la''. Isso é raro em TCC de graduação e é o que o trabalho tem de melhor.
+
+O problema é que, justamente por ter gerado afirmações mais verificáveis, parte delas não
+sobreviveu à auditoria: (a) a decisão de disparo da rede --- objeto de toda a nova investigação ---
+não é consultada em produção, onde \texttt{FireControlService.Authorize} aplica apenas vetos
+heurísticos, de modo que o Resumo, o Abstract, a Introdução e a Seção 2.3.5 afirmam uma
+funcionalidade que o código não executa; (b) a bateria de onze execuções apresenta fitness
+bit-idêntico até o 15º dígito entre arquiteturas de 4 e 16 neurônios já na geração 25, e pico na
+geração 222 em todas as onze, o que é evidência de que o genoma não influencia a medição ---
+explicação muito mais forte do que o ``teto de pontuação'' que o texto oferece, e que o artigo não
+testa; (c) a Tabela 1 não é mais reproduzível a partir do banco que ela cita como fonte, e o genoma
+embutido em produção (geração 159, fitness 188,47) não corresponde a nenhum número relatado.
+
+O saldo é um trabalho tecnicamente competente e cada vez mais transparente, mas cuja camada de
+resultados ainda afirma mais do que o código e os dados sustentam.
 
 \section*{B. Nota geral}
 
-\textbf{Nota ponderada: $\approx 6{,}33\,/\,10$.}
+\textbf{Nota ponderada: $\approx 6{,}20\,/\,10$} \quad (parecer anterior: $6{,}33$).
 
 \renewcommand{\arraystretch}{1.3}
-\begin{longtable}{|p{5.3cm}|p{1.3cm}|p{1.5cm}|p{1.8cm}|p{5.0cm}|}
+\begin{longtable}{|p{4.1cm}|p{1.1cm}|p{1.1cm}|p{1.4cm}|p{6.6cm}|}
 \hline
 \textbf{Critério} & \textbf{Peso} & \textbf{Nota} & \textbf{Contrib.} & \textbf{Justificativa (resumo)} \\
 \hline
 \endhead
-Problema de pesquisa, objetivos e relevância & 10\% & 7,5 & 0,75 &
-Problema bem delimitado e mensurável, mas ``replicável em laboratório'' antecipa uma validação
-física nunca alcançada. \\
+Fundamentação teórica & 20\% & 6,5 & 1,300 &
+Poucas referências, mas cada uma amarrada a uma decisão de projeto --- qualidade de uso acima da
+média. Penalizada por: módulo de visão sem nenhuma citação, neuroevolução com fonte única, e
+ausência total de literatura metodológica sobre avaliação de agentes estocásticos. \\
 \hline
-Fundamentação teórica e qualidade das referências & 20\% & 6,5 & 1,30 &
-As 2 citações centrais (Such 2017; Huang \& Ontañón 2020) foram verificadas e são fiéis; base
-bibliográfica estreita (7 refs) e uma citação pendente (``PREENCHER'' no \texttt{.tex}). \\
+Metodologia & 20\% & 6,0 & 1,200 &
+Sobe de 5,5. Investigação madura: falsificação da hipótese preferida, replicação em 4 sementes,
+medição direta do mecanismo. Puxada para baixo pelo confundimento de sementes não divulgado (e
+afirmado ao contrário), pela atribuição de 24 pontos a um de dois fatores simultâneos e pelos
+\texttt{\% CONFIRMAR} intactos. \\
 \hline
-Metodologia e rigor científico & 20\% & 5,5 & 1,10 &
-Rastreabilidade RF/RNF$\rightarrow$código é um mérito, mas contradita por partes do texto
-(hardware/visão) que os próprios comentários-fonte admitem não serem rastreáveis. \\
+Resultados e análise & 25\% & 5,5 & 1,375 &
+Cai de 6,0 --- não por ter menos dados, mas por ter mais dados verificáveis que não sobreviveram à
+verificação. Tabela 1 não reproduz; Tabela 8 tem fitness bit-idêntico entre arquiteturas; Tabela 10
+sem artefato de dados; genoma de produção divergente. Nenhuma inferência estatística. \\
 \hline
-Resultados, análise dos dados e discussão & 20\% & 6,0 & 1,20 &
-Tabela 1 (bug de certeza) é robusta e verificada; Tabela 2 (hiperparâmetros) tem leitura
-interpretativa incompleta. \\
+Redação e estrutura & 15\% & 6,5 & 0,975 &
+Prosa clara e ressalvas bem escritas (\texttt{sec:ambiente-computacional} é modelar). Penalizada
+pela Seção 2.3.7 em formato de diário de laboratório, 25+ ênfases em caixa-alta, quatro referências
+cruzadas quebradas e contradição direta entre 2.3.5 e 2.3.6. \\
 \hline
-Coerência, argumentação e conclusões & 15\% & 6,5 & 0,975 &
-Conclusão não extrapola os dados e reconhece limitações, mas há contradição não resolvida entre
-metodologia declarada e conteúdo de hardware/visão. \\
+Contribuição e originalidade & 10\% & 7,5 & 0,750 &
+Sobe. Três achados próprios, específicos e honestos. Reportar que o próprio diferencial técnico não
+superou a baseline é postura científica rara em TCC. Não chega a 8 porque a contribuição permanece
+confinada ao simulador. \\
 \hline
-Redação científica, estrutura e apresentação & 10\% & 7,0 & 0,70 &
-Prosa clara, boas figuras; placeholder não preenchido no rodapé do orientador e \textit{hboxes}
-pendentes no log de compilação. \\
+Reprodutibilidade & 10\% & 6,0 & 0,600 &
+Ganhos reais (ambiente documentado, JSON versionado, bateria executável por CLI) compensados por
+perdas reais (banco sobrescrito, genoma não rastreável, Tabela 10 sem artefato). \\
 \hline
-Reprodutibilidade e transparência & 5\% & 6,0 & 0,30 &
-Código aberto, commits citados, schema documentado; mas o artefato citado (genoma) já diverge do
-estado atual do repositório, e não há acesso ao \texttt{.db} para auditoria independente. \\
-\hline
-\textbf{Total} & 100\% & -- & \textbf{$\approx$ 6,33} & \\
+\multicolumn{3}{|r|}{\textbf{TOTAL}} & \textbf{6,20} & \\
 \hline
 \end{longtable}
 
-\section*{C. Principais problemas encontrados}
+\subsection*{Por que a nota praticamente não mudou --- e por que isso não significa estagnação}
 
-\subsection*{Críticos}
+O artigo melhorou de forma clara em três dimensões: método investigativo, transparência sobre
+limitações e qualidade bibliográfica. Contribuição subiu de 7,0 para 7,5; metodologia de 5,5 para
+6,0.
 
-\noindent\textbf{1.} \critico\ \textbf{Confundimento metodológico não discutido na Tabela de
-hiperparâmetros.}
-As seeds estocásticas de cada geração dependem apenas do número da geração
-(\texttt{algoritmo.GeracaoAtual * 1000 + i}), não da configuração (população/arquitetura); e a
-maioria dos episódios por avaliação de fitness usa \texttt{CatalogoCenarios.TodosComScript} com
-seed fixa 0 -- cenários roteirizados idênticos, geração após geração, nas seis combinações. Isso
-explica mecanicamente a convergência exata (``5 de 6 execuções em 49,81'') de forma muito mais
-parcimoniosa do que ``convergência coincidente para o mesmo ótimo local'', e o artigo não discute
-essa característica do desenho experimental.
+O que segurou a nota foi o outro lado da mesma moeda: \textbf{a versão anterior afirmava menos e,
+por isso, era menos falsificável}. Esta versão fez afirmações empíricas muito mais específicas ---
+taxas de recusa, comparação entre três modos, convergência idêntica, genoma de produção --- e todas
+puderam ser testadas contra o código e o banco. Três não passaram. Esses problemas são mais graves
+que os do parecer anterior, e dois deles são críticos.
 
-\noindent\textbf{2.} \critico\ \textbf{Descrição de hardware apresentada como fato verificado, mas
-contradita pelos próprios comentários-fonte do artigo.} Motores 28BYJ-48, drivers ULN2003,
-registradores 74HC595, fonte 5V/15A, rolamento axial 51108 e dimensões citadas são descritos sem
-ressalva no PDF, mas comentários \texttt{\% CONFIRMAR} do próprio \texttt{.tex} afirmam que esse
-conteúdo ``foi informado pelo autor e ainda não consta da documentação técnica do repositório'', e
-que \texttt{Diagrama\_Eletrico.md} descreve um arranjo diferente. O mesmo vale para número de
-câmeras e resolução (720p). Esses avisos não chegam ao leitor do PDF.
+A boa notícia: \textbf{todos os problemas críticos são corrigíveis em texto ou com uma execução de
+experimento cada}, sem reescrever o sistema. Não há defeito conceitual irreparável. Com as cinco
+primeiras pendências da Seção~I resolvidas, este artigo vale realisticamente 7,5--8,0, porque a
+espinha dorsal investigativa já está correta --- é a camada de afirmações sobre ela que precisa ser
+alinhada ao que o código faz.
 
-\subsection*{Altos}
+\section*{C. Evolução desde o parecer anterior}
 
-\noindent\textbf{3.} \alto\ Citação bibliográfica ausente para a técnica central de classificação
-por cor/forma/tamanho do módulo de visão (comentário ``PREENCHER'' no \texttt{.tex}).
+\subsection*{C.1 Corrigido ou materialmente melhorado}
 
-\noindent\textbf{4.} \alto\ A conclusão do experimento de hiperparâmetros usa a ausência de uma
-combinação melhor (n=1 por combinação) para validar, por omissão de alternativa, a configuração já
-em produção.
-
-\noindent\textbf{5.} \alto\ Divergência entre o genoma relatado no artigo (geração 5377, fitness
-136,98) e o arquivo \texttt{genoma-controlador.json} presente na árvore de trabalho no momento
-desta revisão.
-
-\subsection*{Moderados}
-
-\noindent\textbf{6.} \moderado\ A métrica ``taxa de cobertura $\approx$70\%'' na Tabela 1 é
-explicitamente estimada, mas aparece sem marcação ao lado de valores medidos com duas casas
-decimais.
-
-\noindent\textbf{7.} \moderado\ Sem acesso ao \texttt{radartorres.db} para auditar os números
-brutos das Tabelas 1 e 2 -- avaliação restrita à consistência interna do relato.
-
-\noindent\textbf{8.} \moderado\ Referências bibliográficas sem DOI/volume/páginas para a maioria
-dos itens.
-
-\noindent\textbf{9.} \moderado\ ``Replicável em laboratório'' no objetivo/problema de pesquisa
-nunca demonstrado.
-
-\subsection*{Baixos}
-
-\noindent\textbf{10.} \baixo\ Placeholder não preenchido: ``Mestre em xxx pela xxx'' no rodapé do
-orientador.
-
-\noindent\textbf{11.} \baixo\ \textit{Overfull/underfull hboxes} no log de compilação.
-
-\noindent\textbf{12.} \baixo\ Macros de revisão (\texttt{\textbackslash revmudar} etc.) definidas
-mas não utilizadas no corpo do documento.
-
-\section*{D. Análise seção por seção}
-
-\textbf{Resumo/Abstract}: bons, antecipam a limitação de hardware -- ponto forte.
-
-\textbf{2.1 Revisão da literatura}: melhor seção do artigo -- cada citação é amarrada
-explicitamente a uma decisão de projeto concreta; as duas citações mais centrais foram verificadas
-e são fiéis (ver Seção F). Lacuna: citação pendente sobre classificação por cor/forma/tamanho.
-
-\textbf{2.2 Procedimentos metodológicos}: contém a contribuição mais sólida do trabalho (bug de
-certeza, bate com o commit real) e a declaração de limitação de hardware mais completa. Fragilidade:
-a alegação de rastreabilidade total ao código é desmentida pelas subseções seguintes.
-
-\textbf{2.3.1--2.3.4 (detecção, elétrico/estrutural, visão, fluxo operacional)}: detecção/fluxo
-consistentes com a documentação; elétrico/estrutural e parte de visão são o ponto fraco (problema
-crítico 2).
-
-\textbf{2.3.5 Controlador neuroevolutivo}: excelente correspondência verificada linha a linha com o
-código (\texttt{RedeNeural.cs}, \texttt{AlgoritmoGenetico.cs}) -- subseção mais confiável do artigo.
-
-\textbf{2.3.6 Análise experimental de hiperparâmetros}: mérito de transparência (reconhece n=1,
-horizonte curto), mas falta investigar a causa determinística da convergência exata (problema
-crítico 1).
-
-\textbf{2.4/2.5 Diagrama de pacotes e modelo de dados}: sólidas, com diagramas claros; reconhecimento
-honesto de ciclos de dependência reais é um ponto de rigor positivo.
-
-\textbf{Conclusão}: coerente, não extrapola além dos dados, reconhece as limitações centrais.
-
-\section*{E. Argumentos fracos e afirmações questionáveis}
-
-\textbf{1. (Seção 2.3.6, hiperparâmetros)}: ``Esse padrão é mais consistente com as seis execuções
-convergindo para o mesmo ótimo local acessível (...) do que com um efeito forte e diferenciado de
-população ou arquitetura.''
-\emph{Problema}: ignora que o desenho experimental (seeds amarradas só à geração, cenários
-roteirizados com seed fixa) já produz estímulos quase idênticos entre as seis configurações a cada
-geração.
-\emph{Evidência necessária}: repetir cada combinação com seeds independentes de verdade e reportar
-a decomposição por tipo de episódio (aleatório vs. roteirizado).
-\emph{Sugestão}: reconhecer no texto que parte da avaliação é determinística por configuração do
-experimento, e que essa é uma explicação alternativa plausível -- talvez mais provável.
-
-\textbf{2. (Seção 2.3.2, projeto elétrico)}: descrição de motores/drivers/registradores sem
-ressalva.
-\emph{Problema}: contradiz comentário-fonte do próprio autor e \texttt{Diagrama\_Eletrico.md}.
-\emph{Evidência necessária}: atualização de \texttt{Diagrama\_Eletrico.md} ou marca explícita no
-PDF de que o arranjo ainda não foi reconciliado com a documentação técnica.
-\emph{Sugestão}: inserir no corpo do PDF uma frase de ressalva equivalente à já usada em outros
-pontos do artigo.
-
-\textbf{3. (Introdução)}: ``...de forma auditável e replicável em laboratório, sem depender de
-sensores ou atuadores de uso industrial.''
-\emph{Problema}: nenhuma replicação em bancada física ocorreu.
-\emph{Sugestão}: reformular para deixar claro que é uma propriedade de projeto, não um resultado
-obtido.
-
-\section*{F. Auditoria das referências}
-
-\textbf{Verificadas} (busca externa):
 \begin{itemize}
-\item Such et al. (2017), \emph{Deep Neuroevolution} (arXiv:1712.06567) -- confirmado: o Deep GA
-evolui redes com mais de 4 milhões de parâmetros livres, batendo com o número citado no artigo. A
-representação é fiel ao conteúdo original.
-\item Huang \& Ontañón (2020), \emph{A Closer Look at Invalid Action Masking} -- confirmado: o
-trabalho prova justificativa teórica para mascaramento de ações, com importância crescente
-conforme a fração de ações inválidas aumenta -- representado com fidelidade no artigo.
+  \item \textbf{Alto \#4} (conclusão de hiperparâmetros validava a configuração de produção por
+  omissão): \textbf{corrigido}. O texto agora diz que a configuração ``permanece sustentada não por
+  superar as demais, mas por ser a escolha de fábrica mais testada''.
+  \item \textbf{Moderado \#8} (\texttt{.bib} sem DOI/veículo): \textbf{corrigido}.
+  \texttt{majoni2025} tem DOI, volume e páginas; as demais têm \texttt{eprint}/\texttt{archivePrefix}
+  arXiv verificáveis.
+  \item \textbf{Ausência de ambiente computacional}: \textbf{corrigido e bem feito}. A subseção
+  \texttt{sec:ambiente-computacional} é exemplar: documenta hardware/SO/runtime, justifica por que o
+  registro importa (laço em CPU, sem CUDA) e declara explicitamente que a descrição \emph{não} cobre
+  o genoma de produção. Essa delimitação é o padrão que o resto do artigo deveria seguir.
+  \item \textbf{Interpretação da convergência}: \textbf{parcialmente corrigido}. O texto reconhece a
+  saturação como propriedade do conjunto fixo de cenários, reconhece $n=1$ por configuração e aponta
+  a repetição com cenários aleatórios como próximo passo.
 \end{itemize}
 
-\textbf{Não verificadas} (sem DOI/link no \texttt{.bib} que permitisse localizar a fonte com
-segurança): \texttt{majoni2025}, \texttt{curbscan}, \texttt{alshiekh2017shielding},
-\texttt{tewa2009}/\texttt{tewa\_multiameaca2009}. São plausíveis pelo título/veículo, mas não lidas
-na íntegra -- classificadas como não verificadas, não como corretas por omissão.
+\subsection*{C.2 Melhorias novas, não pedidas no parecer anterior}
 
-\section*{G. Auditoria de figuras, tabelas e dados}
+\begin{itemize}
+  \item \textbf{Catálogo de regras heurísticas} (\texttt{sec:regras-heuristicas}): conferido contra
+  \texttt{ControladorHibrido.SelecionarTorre} (cascata 1,0/0,5/0,0) e
+  \texttt{FireControlService.Authorize} (5 vetos, mesma ordem). \textbf{A descrição bate com o
+  código} --- é a seção mais fielmente rastreável do artigo.
+  \item \textbf{Ressalva de confundimento assumida}: ``este trabalho \emph{não} isola o efeito de ter
+  mais uma entrada do efeito de o ambiente ter ficado mais difícil''. Exatamente o tipo de declaração
+  que faltava.
+  \item \textbf{Investigação da hesitação no gatilho}: hipótese formulada, medida via
+  \texttt{OportunidadesDeDisparo}/\texttt{DisparosRecusadosPelaRede}, replicada em 4 sementes,
+  corrigida via \texttt{PenalidadeRecusaDisparo = 3,0}, e com o ganho atribuído honestamente à
+  eliminação de um defeito, ``não de a rede ter aprendido algo que a heurística não sabia''.
+\end{itemize}
 
-\textbf{Tabela 1 (fitness antes/depois)}: números internamente consistentes; causa raiz bate
-exatamente com a mensagem do commit \texttt{a02d46a} real. Sem acesso ao \texttt{.db} para auditar
-os valores brutos.
-
-\textbf{Tabela 2 (hiperparâmetros)}: números internamente consistentes; o problema é
-interpretativo, não numérico (ver Seções C e E).
-
-\textbf{Figuras (maquete, fluxogramas, diagrama de pacotes, DERs)}: legíveis e consistentes com
-texto e código, incluindo o reconhecimento honesto de ciclos de dependência no diagrama de
-pacotes.
-
-\section*{H. Perguntas que uma banca examinadora faria}
+\subsection*{C.3 Persiste, idêntico}
 
 \begin{enumerate}
-\item A convergência exata em 5/6 configurações do experimento de hiperparâmetros pode vir do
-desenho do experimento (seeds por geração, cenários com seed fixa), e não de uma propriedade real
-do espaço de busca?
-\item Como reconciliar a alegação de rastreabilidade total ao código com o conteúdo elétrico não
-registrado em código nem em documentação?
-\item O número de câmeras e a resolução citados são decisão de projeto já tomada, ou aspiração
-ainda não implementada?
-\item Por que o genoma embutido no executável mudou entre a redação do artigo e esta revisão? Como
-garantir que os números do artigo final correspondem ao software entregue?
-\item Que evidência sustenta a forma funcional assumida para certeza/erro de disparo no ambiente
-simulado, sem calibração com dados reais?
-\item Como o trabalho sustenta ``replicável em laboratório'' sem montagem física?
-\item Os limiares de segurança (0,3s de mira, certeza mínima) fazem sentido físico para sensores/
-câmeras reais, nunca calibrados em campo?
+  \item \textbf{Crítico \#2 anterior} --- hardware/visão não confirmados. Os comentários
+  \texttt{\% CONFIRMAR} estão \textbf{inalterados, palavra por palavra}, incluindo ``o
+  \texttt{Diagrama\_Eletrico.md} atual descreve um arranjo diferente''. O leitor do PDF continua sem
+  saber.
+  \item \textbf{Alto \#3} --- citação \texttt{\% PREENCHER} sobre classificação por cor/forma/tamanho:
+  inalterada.
+  \item \textbf{Crítico \#1, camada mecânica} --- o confundimento de sementes não só não foi
+  corrigido: o artigo agora \textbf{afirma o contrário} (ver Problema D.3).
+  \item \textbf{Moderado \#6} --- ``$\approx$70\%'' estimado na Tabela 1, sem marcação, ao lado de
+  valores com duas casas decimais.
+  \item \textbf{Moderado \#9} --- ``replicável em laboratório'' sem montagem física.
+  \item \textbf{Baixo \#10} --- ``Mestre em xxx pela xxx'' no cabeçalho do orientador.
+  \item \textbf{Baixo \#11} --- 41 \texttt{Overfull/Underfull hbox} no log.
+  \item \textbf{Baixo \#12} --- macros \texttt{\textbackslash revmudar}/\texttt{\textbackslash
+  revbom}/\texttt{\textbackslash revfaltou} definidas e nunca usadas. Somou-se a elas o
+  \texttt{pgfplots}, agora com \textbf{zero} ambientes \texttt{axis} no documento.
 \end{enumerate}
 
-\section*{I. Plano de correção priorizado}
+\subsection*{C.4 Piorou ou surgiu}
 
-\renewcommand{\arraystretch}{1.25}
-\begin{longtable}{|p{1.4cm}|p{6.0cm}|p{7.0cm}|}
+\begin{itemize}
+  \item \textbf{Alto \#5 anterior (genoma divergente) $\rightarrow$ agora CRÍTICO.}
+  \item \critico\ A saída de disparo da rede não existe em produção (D.1).
+  \item \critico\ Contradição interna sobre tempo mínimo de mira e limiar de certeza (D.2).
+  \item \critico\ A bateria de 11 execuções não mede o genoma (D.3).
+  \item \alto\ Tabela 1 deixou de ser auditável contra o banco (D.4).
+  \item \alto\ Nenhuma inferência estatística nas comparações centrais (D.6).
+\end{itemize}
+
+\section*{D. Problemas}
+
+\subsection*{D.1 \critico\ A decisão de disparo da rede não é usada em produção}
+
+\textbf{Onde:} Resumo (``refinar essa escolha \emph{e o instante do acionamento}''); Abstract
+(``\emph{and the activation timing}''); Introdução; Seção 2.3.5 (``um valor de confiança de disparo,
+cujo sinal positivo autoriza o acionamento''); legenda da figura do fluxo híbrido (``Rede neural
+decide a torre \emph{e o instante}'').
+
+\textbf{Fato verificado no código:} \texttt{ControladorHibrido.DecidirDisparo} é a única função que
+lê a saída $[1]$ da rede. Rastreando todos os chamadores: \texttt{AmbienteTreinamento.cs:481} ---
+\textbf{e mais nenhum}. É código exclusivo de treino. Em produção,
+\texttt{FireControlService.Authorize} aplica cinco testes (alvo ativo, modo \texttt{Disparar}, zona
+morta, limiar de certeza, \texttt{EngagingTowers}) e \textbf{nenhum consulta a rede}. A rede entra em
+produção apenas por \texttt{TowerSelectionService} $\rightarrow$ \texttt{ControladorHibrido.Pontuar}
+(saída $[0]$, ajuste de pontuação).
+
+\textbf{Por que é problema:} é a afirmação mais destacada do artigo --- está no resumo em dois
+idiomas e na figura central --- e é falsa para o sistema entregue. Pior: \emph{toda} a investigação
+nova da Seção 2.3.7 (taxa de recusa de 10,0\% a 55,9\%, a \texttt{PenalidadeRecusaDisparo}, o
+retreino que levou a recusa a 0,0\%) mede e corrige um comportamento que o executável nunca
+exercita. O ``resultado mais consistente da neuroevolução deste trabalho'' não tem efeito algum
+sobre o produto.
+
+\textbf{O que fazer:} corrigir Resumo, Abstract, Introdução, 2.3.5 e a legenda da figura para: a rede
+refina \emph{a escolha da torre}; o instante do disparo é decidido pela rede \emph{apenas no
+ambiente de treino}. Acrescentar, no início da Seção 2.3.7, que seus resultados valem para o
+simulador. Alternativamente, \emph{implementar} a consulta em produção e dizer que foi feito.
+
+\subsection*{D.2 \critico\ Contradição interna sobre os vetos de disparo}
+
+\textbf{Onde:} Seção 2.3.5 --- ``a heurística impõe \emph{dois limites absolutos ao disparo, nunca
+delegados à rede}: um tempo mínimo de mira de 0,3 s e um limiar mínimo de certeza''. Seção 2.3.6 ---
+``\emph{Duas regras adicionais valem apenas durante a simulação de treino, nunca em produção},
+porque em produção o instante do disparo é sempre decidido manualmente por um operador''.
+
+\textbf{Três afirmações conflitantes, e o código dá uma quarta resposta:}
+
+\begin{enumerate}
+  \item 2.3.5 diz: ambos são limites absolutos. \textbf{Falso para o tempo mínimo de mira.}
+  \item 2.3.6 diz: ambos valem só no treino. \textbf{Falso para o limiar de certeza} ---
+  \texttt{FireControlService} o aplica em produção, e o próprio artigo o lista como veto nº 4 de
+  produção, 15 linhas antes.
+  \item 2.3.6 diz: ``em produção o disparo é sempre decidido manualmente''. \textbf{Contradito pelo
+  código}: \texttt{MainViewModel} dispara automaticamente, em laço, sempre que
+  \texttt{CurrentMode == SystemMode.Disparar}.
+  \item Realidade: limiar de certeza --- produção \textbf{sim}; tempo mínimo de mira --- produção
+  \textbf{não}; disparo --- \textbf{automático}.
+\end{enumerate}
+
+\textbf{Consequência metodológica:} o regime real de produção (seleção heurística+rede, sem tempo
+mínimo de mira, sem decisão de disparo pela rede) \textbf{não é nenhum dos três medidos na Tabela de
+três modos}. As três linhas descrevem configurações do simulador; nenhuma descreve o sistema
+entregue.
+
+\subsection*{D.3 \critico\ A bateria de onze execuções não mede o genoma}
+
+\textbf{Fatos verificados} em \texttt{experimentos\_hiperparametros\_7entradas.json}:
+
+\begin{itemize}
+  \item Só existem \textbf{três} valores distintos de \texttt{FitnessFinal} nas onze execuções.
+  \item \texttt{FitnessG25} tem três valores distintos, repetidos \textbf{bit a bit} entre
+  configurações estruturalmente diferentes: população 30 com 4 ocultos e população 120 com 8 ocultos
+  registram ambos \texttt{57{,}478385750587236} --- quinze dígitos idênticos, com populações 4$\times$
+  diferentes e redes 2$\times$ diferentes, já na geração 25.
+  \item \texttt{GeracaoDoPico} $= 222$ nas \textbf{onze} execuções.
+\end{itemize}
+
+\textbf{Fato verificado no código:} as sementes de episódio são \texttt{ag.GeracaoAtual * 1000 + i},
+função \emph{apenas} do número da geração --- idênticas entre as onze configurações; e os cenários
+são \texttt{CatalogoCenarios.TodosComScript}, determinísticos. O \texttt{AlgoritmoGenetico} é
+construído \emph{sem} semente, então as populações iniciais diferem de fato.
+
+\textbf{Inferência (forte):} se as populações iniciais diferem e ainda assim o fitness do melhor
+indivíduo é idêntico ao 15º dígito já na geração 25, então o fitness medido \textbf{não depende do
+genoma} nessa bateria --- é função apenas do conjunto de sementes daquela geração. O pico ser sempre
+a geração 222 confirma: aquela é simplesmente a geração cujas sementes geram o cenário de maior
+pontuação possível. \textbf{A bateria mede a sequência de sementes, não os hiperparâmetros.}
+
+\textbf{Por que a explicação do artigo não cobre isso:} o texto atribui a uniformidade a ``um teto de
+pontuação que qualquer genoma minimamente competente atinge com folga''. Um teto explicaria valores
+iguais \emph{no fim}; não explica igualdade bit a bit na \emph{geração 25}, bem antes do teto, nem
+por que o experimento anterior de 6 entradas (picos dispersos nas gerações 46, 96, 116, 191, 235,
+244) não exibia o fenômeno sob o \emph{mesmo} esquema de sementes.
+
+\textbf{Erro factual associado:} o artigo afirma que ``a coincidência de picos exatamente na geração
+222 em onze execuções \emph{sem semente fixa compartilhada}'' indica determinismo. As sementes de
+ambiente \textbf{são} fixas e compartilhadas. A frase informa o oposto do que o código faz.
+
+\textbf{O que fazer (barato e decisivo):} rodar a mesma bateria com genoma nulo/aleatório e em modo
+\texttt{HeuristicaPura}. Se der o mesmo fitness com pico em 222, a bateria está provadamente vazia e
+deve ser reapresentada como diagnóstico de ambiente. Corrigir a frase sobre sementes. Variar a
+semente de ambiente por configuração e repetir.
+
+\subsection*{D.4 \alto\ A Tabela 1 não é reproduzível a partir do banco que cita como fonte}
+
+\begin{longtable}{|p{7.0cm}|p{7.6cm}|}
 \hline
-\textbf{Prioridade} & \textbf{Ação} & \textbf{Motivo} \\
+\textbf{Afirmação do artigo} & \textbf{Banco hoje} \\
 \hline
 \endhead
-Máxima & Discutir a causa determinística provável da convergência exata na Seção 2.3.6 &
-Afeta diretamente a validade da conclusão mais recente e mais citada do artigo \\
+``amostra recente de 300 gerações (27/10, gerações 1141--1440)'', fitness médio 134,17 &
+300 linhas, mas de \textbf{26/10}, gerações \textbf{9326--9623}, média \textbf{127,71} \\
 \hline
-Máxima & Reconciliar as seções de hardware/visão com a documentação técnica real, ou sinalizar a
-incerteza explicitamente no PDF & Contradição direta com a alegação metodológica central \\
+melhor fitness 137,35 em média & média do melhor: \textbf{128,02} \\
 \hline
-Alta & Preencher a citação pendente sobre classificação por cor/forma/tamanho & Lacuna teórica
-central já identificada pelo próprio autor \\
+``51 blocos de 500 gerações\ldots\ fitness médio $\approx$9,11'' &
+\textbf{390} blocos, gerações 500--195000, \texttt{FitnessMedioDoBloco} entre \textbf{126,29 e
+128,71}. \textbf{Nenhum registro de fitness $\approx$9} \\
 \hline
-Alta & Atualizar/versionar o genoma embutido junto com a versão final do artigo & O artefato citado
-já diverge do estado atual do repositório \\
-\hline
-Média & Completar o \texttt{.bib} com DOI/veículo/páginas & Abaixo do padrão mínimo de
-rastreabilidade bibliográfica \\
-\hline
-Média & Marcar explicitamente, na Tabela 1, qual célula é estimativa vs. medição & Evita confundir
-o leitor sobre a natureza do número \\
-\hline
-Baixa & Preencher o placeholder do orientador & Pendência de formatação antes de submissão formal \\
-\hline
-Baixa & Resolver \textit{hboxes} e remover macros de revisão não usadas & Polimento final \\
+cobertura ``100\% (5/5 amostras)'' &
+\textbf{195} instantâneos disponíveis; \textbf{11 deles entre 0,9231 e 0,9375} \\
 \hline
 \end{longtable}
 
-\section*{J. Parecer final}
+As tabelas são buffers rolantes sobrescritos por cada novo treinamento. A evidência da contribuição
+que o artigo chama de ``mais original'' \textbf{não existe mais no banco} e não foi preservada em
+artefato versionado.
 
-O RadarTorres tem méritos reais e verificáveis: a arquitetura do controlador híbrido está
-implementada exatamente como descrita -- conferido linha a linha no código -- e a contribuição
-central do trabalho (achado e correção do bug de certeza estática) é uma das histórias de depuração
-empírica mais bem documentadas em um TCC, com commit real, causa raiz identificada e efeito
-mensurado. A postura de transparência sobre as limitações de hardware é consistente e genuína do
-início ao fim.
+\subsection*{D.5 \alto\ O genoma embutido não corresponde a nenhum número relatado}
 
-Dito isso, o artigo mistura, sem sinalização ao leitor, afirmações com proveniência muito diferente
--- algumas rastreáveis ao código linha a linha, outras admitidamente não confirmadas nem pelo
-próprio código nem pela documentação técnica -- o que contradiz diretamente a alegação metodológica
-central do trabalho. Some-se a isso uma leitura interpretativa incompleta do resultado mais recente
-(a convergência suspeitosamente exata da Tabela 2), e o quadro geral é de um trabalho tecnicamente
-competente, mas que, na sua forma atual, apresentaria à banca um nível de confiança no texto
-superior ao nível de confiança real nos dados subjacentes. As duas correções de prioridade máxima
-do plano acima são, a meu ver, as mudanças que mais elevariam a credibilidade científica do trabalho
-antes da defesa.
+\textbf{Artigo:} ``geração 5377, \texttt{MelhorFitness} = 136,98''.
+\textbf{Arquivo real} (\texttt{genoma-controlador.json}): \texttt{Geracao} = \textbf{159},
+\texttt{MelhorFitness} = \textbf{188,4651038156916}, \textbf{82} genes, exportado
+\textbf{2026-10-28T17:02:44}.
 
-\vspace{1em}
-\noindent\textit{Este parecer não altera nenhum arquivo do \texttt{Artigo.tex} original. Uma cópia
-anotada do artigo, com os trechos problemáticos grifados e os comentários desta revisão inseridos
-no ponto exato a que se referem, está em \texttt{artigo\_revisado.pdf}, gerada na mesma análise.}
+Além de não bater, 136,98 refere-se a um genoma de \textbf{74} genes, da arquitetura de 6 entradas
+--- que o próprio artigo declara invalidada. E 188,47 não corresponde a nenhum pico relatado (193,57
+do treino limitado, 211,98 do treino sem limite). A geração 159 também não é compatível com as ``1000
+gerações'' descritas para o retreino. É a \textbf{terceira versão diferente do genoma em três
+revisões}; o problema foi apontado no parecer anterior e piorou.
+
+\subsection*{D.6 \alto\ Nenhuma inferência estatística nas comparações centrais}
+
+O artigo declara, sem teste algum, que duas diferenças são nulas (66,69 vs 74,34; 86,09 vs 89,69) e
+que uma terceira é real (114,12 vs 89,69) --- todas do mesmo desenho, com $n=50$ e desvios da ordem
+de 60--67. ``Estatisticamente indistinguível'' é uma afirmação estatística e exige um teste.
+Agravante: o desenho é \textbf{pareado} (as mesmas 50 sementes em todos os modos), o que permitiria um
+teste muito mais potente. Agravante adicional: média 86,09 com máximo 434,59 indica distribuição
+fortemente assimétrica --- média $\pm$ desvio é a estatística errada; faltam mediana e IQR.
+
+\subsection*{D.7 \alto\ Os 24 pontos do ``custo do tempo mínimo de mira'' atribuídos a um de dois fatores}
+
+O modo \texttt{RedePura} remove \textbf{duas} coisas simultaneamente --- o filtro de candidatas por
+quadrante \emph{e} o tempo mínimo de mira --- mas a conclusão atribui a diferença inteira a uma
+delas. É o mesmo erro de confundimento que o artigo reconhece e evita, com louvor, no caso da 7ª
+entrada. O experimento de ablação limpo é trivial: rodar \texttt{Hibrido} com
+\texttt{TempoMinimoDeMiraSegundos = 0} nas mesmas 50 sementes.
+
+\subsection*{D.8 \alto\ A Conclusão e o Resumo ignoram os resultados negativos}
+
+A Conclusão descreve o controlador como entregue e funcional e lista três limitações, todas
+anteriores a esta revisão. \textbf{Nada sobre:} a rede não superou a heurística pura em nenhuma das
+cinco sementes; a correção da hesitação a fez apenas \emph{empatar}; o modo rede pura superou os
+dois; a bateria de hiperparâmetros saturou. Um leitor que só leia Resumo e Conclusão sai com a
+impressão oposta à dos dados. É também oportunidade perdida --- o resultado negativo bem documentado
+é mais defensável diante de uma banca do que um sucesso vago.
+
+\subsection*{D.9 \moderado\ Quatro definições incompatíveis de fitness circulam sem mapa}
+
+Convivem no texto: $\approx$9 e $\approx$134--137 (Tabela 1, ambiente antigo, 6 entradas);
+55,59--57,27 (bateria antiga); 68,33--68,34 (bateria nova, ambiente endurecido); 193,57 / 211,98 /
+188,47 (produção); 66,69 / 74,34 / 86,09 / 89,69 / 114,12 (50 sementes, três modos); 443,23 / 434,72
+/ 449,00 (sem limite de duração). O artigo avisa sobre os \emph{tempos} não serem comparáveis, mas
+nunca faz o mesmo para o \emph{fitness}, embora a função tenha ganhado
+\texttt{PenalidadeInvasaoTorre}, \texttt{PenalidadeDesequilibrioTorres} e
+\texttt{PenalidadeRecusaDisparo} ao longo do trabalho.
+
+\subsection*{D.10 \moderado\ As ``50 seeds de teste'' se sobrepõem às de treino}
+
+O comando que produz média, desvio e taxa de recusa usa sementes \textbf{0--49}. As sementes de
+treino são \texttt{geracao*1000 + i}, de modo que a geração 0 treina nas sementes \textbf{0--11}.
+Logo $\approx$12 das 50 sementes de avaliação (24\%) foram vistas no treino. O artigo chama
+explicitamente de ``avaliação fora de amostra (50 seeds novas)''. Correção: trocar para 90000--90049
+(uma linha) e reexecutar.
+
+\subsection*{D.11 \moderado\ ``Sem direção consistente'' é contradito pela própria tabela}
+
+O texto diz que o tempo varia ``sem uma direção consistente'' com o número de ocultos. Os dados:
+população 120 $\rightarrow$ 11,3 / 13,4 / \textbf{20,5} segundos --- monotônico, $+81\%$ de 4 para 16
+ocultos. Em dois dos três blocos, 16 ocultos é o mais lento.
+
+\subsection*{D.12 \moderado\ Referências cruzadas quebradas}
+
+\begin{itemize}
+  \item \texttt{sec:modelo-dados} (Seção 2.5, schema SQLite) usada \textbf{duas vezes} para remeter
+  ao ``treinamento com cenários aleatórios'' e ao ``controlador de produção''.
+  \item ``descrito na Seção 2.1'' (número fixo) para o treinamento neuroevolutivo --- 2.1 é a Revisão
+  da literatura.
+  \item Remissão à saturação de 3 s para a Seção 2.3.7, que não a discute.
+  \item Remissão à ``ablação heurística-vs-rede já conduzida (Seção 2.3.7, modo \texttt{RedePura})
+  sob a arquitetura e o ambiente antigos'': \textbf{essa ablação não existe no artigo atual} --- saiu
+  junto com os gráficos. O leitor é remetido a resultados inexistentes.
+  \item \textbf{Visão computacional sem citação}: o \texttt{\% PREENCHER} continua aberto, e o
+  \textbf{YOLO26n} --- confirmado em \texttt{ComputerVision/Models/YoloModel/yolo26n.onnx} --- é usado
+  sem nenhuma referência.
+\end{itemize}
+
+\subsection*{D.13 \moderado\ Seção 2.3.7 é um diário de laboratório}
+
+Organizada cronologicamente (``O teste anterior levanta uma suspeita incômoda''; ``O resultado,
+\emph{infelizmente}, não confirma''), não por questão de pesquisa. Mais de 25 ocorrências de
+caixa-alta para ênfase, que não é registro científico --- o padrão é itálico ou negrito.
+
+\subsection*{D.14 \baixo\ Pendências de formatação}
+
+\texttt{pgfplots} carregado com zero ambientes \texttt{axis}, e comentário de preâmbulo ainda
+anunciando ``gráficos da Seção 2.3.7''; macros \texttt{\textbackslash rev*} órfãs; ``Mestre em xxx
+pela xxx''; 41 \texttt{hbox} mal ajustadas; \textbf{31 páginas} --- não foi possível verificar o
+limite do modelo UCL, mas se houver teto (tipicamente 15--25), o artigo excede.
+
+\section*{E. Auditoria de dados e tabelas}
+
+\begin{longtable}{|p{3.6cm}|p{6.4cm}|p{4.6cm}|}
+\hline
+\textbf{Elemento} & \textbf{O que foi conferido} & \textbf{Veredicto} \\
+\hline
+\endhead
+Tabela de ambiente computacional & 11 linhas de \texttt{experimentos\_hiperparametros} datam de
+28/10 00:12--00:19, lote único; tempos 14,25--74,85 s batem com ``entre 14 e 75 segundos'' &
+\textbf{Confere.} Hardware é autodeclarado, não verificável independentemente \\
+\hline
+Tabela das 11 execuções (7 entradas) & Cada linha conferida contra o JSON: fitness, picos, tempos &
+\textbf{Números transcritos corretamente; interpretação inválida} (ver D.3) \\
+\hline
+Faixa ``55,59 a 57,27'' (experimento antigo) & Banco: mín 55,592, máx 57,272 &
+\textbf{Confere exatamente} \\
+\hline
+Tabela 1 (fitness antes/depois) & Três tabelas de treinamento no banco &
+\textbf{Não reproduz} --- nem a coluna ``antes'' nem a ``depois'' \\
+\hline
+Genoma de produção & \texttt{genoma-controlador.json} &
+\textbf{Diverge} (ger. 159 / 188,47 / 82 genes vs ger. 5377 / 136,98) \\
+\hline
+Tabela dos três modos & Não há JSON exportado; o comando imprime no console sem persistir &
+\textbf{Não verificável} --- único conjunto de resultados centrais sem artefato \\
+\hline
+Taxas de recusa & Instrumentação confirmada em código; valores não persistidos &
+Mecanismo confere; números \textbf{não verificáveis} \\
+\hline
+Arquitetura 7-8-2, 82 parâmetros & \texttt{QuantidadeEntradas = 7}, \texttt{QuantidadeSaidas = 2};
+$(7{\times}8{+}8)+(8{\times}2{+}2) = 82$; antiga $= 74$; $+10{,}81\%$ & \textbf{Confere integralmente} \\
+\hline
+Guarda de compatibilidade & \texttt{ControladorTreinadoProvider} compara
+\texttt{Arquitetura[0]} com \texttt{QuantidadeEntradas} e degrada para heurística pura &
+\textbf{Confere} \\
+\hline
+Parâmetros citados & \texttt{PenalidadeRecusaDisparo = 3,0}; \texttt{SemLimiteDeDuracao};
+\texttt{DuracaoMaximaSegurancaSegundos = 1800}; \texttt{DuracaoEpisodioSegundos = 45};
+\texttt{EpisodiosPorAvaliacao = 12} & \textbf{Todos conferem} \\
+\hline
+Cascata heurística e seis regras & \texttt{SelecionarTorre} e \texttt{Authorize} &
+\textbf{Confere} --- seção mais fiel do artigo \\
+\hline
+Decisão de disparo em produção & \texttt{DecidirDisparo} chamado só de treino;
+\texttt{Authorize} não consulta a rede; disparo automático &
+\textbf{Diverge do texto} (D.1, D.2) \\
+\hline
+YOLO26n & Modelo presente; serviço registrado em \texttt{App.xaml.cs} &
+\textbf{Confere} (sem citação bibliográfica) \\
+\hline
+``quatro câmeras de 720p'' & 1280$\times$720 aparece como \emph{opção}; nenhuma constante de
+número de câmeras & \textbf{Não confirmado}, como o próprio \texttt{\% CONFIRMAR} admite \\
+\hline
+Figuras & Maquete, fluxogramas, diagrama de pacotes, DERs & \textbf{Adequadas}, mas
+\textbf{nenhuma figura de resultado sobrou} no artigo \\
+\hline
+\end{longtable}
+
+\textbf{Sobre a substituição dos gráficos por tabelas:} foi uma \emph{perda líquida}. A tabela mostra
+fitness final e pico; a curva mostraria visualmente que as onze trajetórias são sobreponíveis --- que
+é justamente a evidência do problema D.3. Os dados de curva (G25/G50/G100/G200) estão no JSON e não
+aparecem em nenhuma tabela, só no texto corrido.
+
+\section*{F. Referências}
+
+\textbf{Adequação.} As 7 referências são pertinentes e --- este é o mérito real --- \textbf{cada uma
+é amarrada a uma decisão de projeto concreta}, não citada decorativamente: Such et al. (2017)
+justifica o AG em vez de gradiente; Huang \& Ontañón (2020) justifica o filtro heurístico como
+\emph{action masking}; Alshiekh et al. (2017) justifica o veto final como \emph{shielding}; Naeem et
+al. posiciona o problema como TEWA. Essa disciplina é acima da média.
+
+\textbf{Lacunas, todas em pontos centrais:}
+
+\begin{enumerate}
+  \item \textbf{Visão computacional: zero referências.} O \texttt{\% PREENCHER} continua aberto e o
+  YOLO26n não tem citação. Um módulo inteiro do protótipo está sem fundamentação.
+  \item \textbf{Neuroevolução: uma única referência.} Para um trabalho cujo título é ``controlador
+  heurístico-neuroevolutivo'', citar apenas Such et al. é insuficiente. Faltam, no mínimo, Stanley \&
+  Miikkulainen (NEAT) --- relevante porque o artigo discute exatamente mudança de arquitetura e
+  incompatibilidade de genoma --- e Salimans et al. (2017).
+  \item \textbf{Metodologia experimental: nenhuma referência}, e é onde o artigo mais erra. Faltam
+  fontes sobre avaliação de agentes estocásticos (número de sementes, variância, teste pareado). Uma
+  única dessas referências teria evitado os problemas D.6 e D.10.
+  \item \textbf{Sensoriamento ultrassônico:} adequadas mas insuficientes para sustentar o modelo de
+  ruído assumido --- que o artigo honestamente declara não calibrado.
+  \item \textbf{ABNT:} 7 referências é baixo para um TCC de 31 páginas.
+\end{enumerate}
+
+\section*{G. Pontos fortes}
+
+\begin{enumerate}
+  \item \textbf{Resultado negativo publicado e analisado}: ``a rede convergiu para replicá-la na
+  decisão de disparo, sem demonstrar ganho próprio''. Poucos TCCs reportam que o próprio diferencial
+  técnico não funcionou.
+  \item \textbf{Encadeamento investigativo real}: hipótese $\rightarrow$ medição $\rightarrow$
+  falsificação da hipótese $\rightarrow$ replicação multi-semente $\rightarrow$ correção dirigida
+  $\rightarrow$ nova medição. É método, não narrativa.
+  \item \textbf{Falsificação da própria hipótese preferida}: elevar \texttt{EpisodiosPorAvaliacao}
+  para 12 não produziu o ganho esperado, e isso é relatado em vez de omitido.
+  \item \textbf{Replicação em 4 sementes de AG} para separar azar de tendência sistemática ---
+  exatamente o controle que faltava.
+  \item \textbf{Subseção de ambiente computacional}, com delimitação explícita do que \emph{não}
+  cobre.
+  \item \textbf{Catálogo de regras heurísticas fiel ao código}, verificado linha a linha.
+  \item \textbf{Ressalvas de confundimento declaradas} nos dois pontos onde havia duas mudanças
+  simultâneas.
+  \item \textbf{Dados exportados em JSON versionado}, e bateria reproduzível por linha de comando sem
+  depender da interface.
+\end{enumerate}
+
+\section*{H. Nota final}
+
+\begin{center}
+\Large\textbf{6,2 / 10} \quad\normalsize (parecer anterior: 6,33)
+\end{center}
+
+\section*{I. Pendências prioritárias}
+
+\subsection*{Bloqueiam a defesa}
+
+\begin{enumerate}
+  \item Alinhar Resumo, Abstract, Introdução, Seção 2.3.5 e a legenda da figura ao fato de que
+  \textbf{a saída de confiança de disparo da rede não é consultada em produção}; abrir a Seção 2.3.7
+  declarando que seus resultados valem para o ambiente simulado. \emph{(D.1 --- é a afirmação mais
+  visível do artigo e é falsa para o sistema entregue; a banca vai abrir o código.)}
+
+  \item Resolver a contradição 2.3.5 $\times$ 2.3.6 a partir do código: limiar de certeza vale em
+  produção, tempo mínimo de mira \textbf{não}, e o disparo é \textbf{automático}. Acrescentar que
+  nenhum dos três modos medidos corresponde ao regime de produção. \emph{(D.2)}
+
+  \item Rodar a bateria de 11 execuções com genoma nulo e em \texttt{HeuristicaPura}. Se der o mesmo
+  fitness com pico em 222, retirar a tabela como experimento de hiperparâmetros e reapresentá-la como
+  diagnóstico de saturação. Corrigir a frase ``sem semente fixa compartilhada''. \emph{(D.3 --- uma
+  execução de $\approx$20 s decide se a tabela vale alguma coisa.)}
+
+  \item Exportar dump congelado e versionado das três tabelas de treinamento; recalcular a Tabela 1 a
+  partir dele; recalcular a cobertura com os 195 instantâneos (há 11 abaixo de 100\%) em vez de $n=5$.
+  \emph{(D.4 --- a contribuição que o artigo chama de principal não tem hoje evidência verificável.)}
+
+  \item Congelar o genoma de produção, copiá-lo para a pasta de resultados com o rótulo do treino que
+  o gerou, e citar os campos reais do arquivo. \emph{(D.5 --- terceiro desencontro consecutivo; a
+  banca pode abrir o JSON em 10 segundos.)}
+\end{enumerate}
+
+\subsection*{Alto impacto, esforço baixo}
+
+\begin{enumerate}\setcounter{enumi}{5}
+  \item Teste pareado (Wilcoxon) nas 50 sementes para cada par de modos; reportar mediana/IQR;
+  substituir ``estatisticamente indistinguível'' e ``supera'' por afirmações com intervalo de
+  confiança. \emph{(D.6)}
+  \item Rodar \texttt{Hibrido} com \texttt{TempoMinimoDeMiraSegundos = 0} para desacoplar os 24
+  pontos. \emph{(D.7)}
+  \item Reescrever o parágrafo de contribuições da Conclusão e o Resumo para incluir os resultados
+  negativos. \emph{(D.8 --- é também a melhor defesa possível diante da banca.)}
+  \item Inserir tabela de mapeamento ``números de fitness $\rightarrow$ versão da função / arquitetura
+  / ambiente / cenário / máquina''. \emph{(D.9 --- meia página elimina a maior fonte de confusão.)}
+  \item Trocar as sementes de avaliação de 0--49 para 90000--90049 e reexecutar. \emph{(D.10)}
+\end{enumerate}
+
+\subsection*{Correções de texto}
+
+\begin{enumerate}\setcounter{enumi}{10}
+  \item Preencher o \texttt{\% PREENCHER} e citar o YOLO26n; acrescentar referências de neuroevolução
+  e de metodologia de avaliação de agentes estocásticos.
+  \item Reconciliar as seções de hardware/visão com o \texttt{Diagrama\_Eletrico.md}, ou levar a
+  ressalva dos \texttt{\% CONFIRMAR} para o corpo do PDF.
+  \item Corrigir as quatro referências cruzadas quebradas e a remissão à ablação inexistente.
+  \item Reorganizar a Seção 2.3.7 por pergunta de pesquisa; eliminar as ênfases em caixa-alta.
+  \item Preencher ``Mestre em xxx pela xxx''; remover \texttt{pgfplots} e as macros
+  \texttt{\textbackslash rev*}; resolver as \texttt{hbox}; conferir o limite de páginas do modelo UCL.
+\end{enumerate}
+
+\section*{J. Escopo e limitações desta auditoria}
+
+Nenhum arquivo do projeto foi alterado na produção deste parecer. As fontes bibliográficas originais
+não foram reverificadas nesta rodada (as duas centrais foram verificadas na revisão anterior; as
+cinco restantes permanecem \textbf{não verificadas}, não ``corretas por omissão''). Os números da
+tabela de três modos e as taxas de recusa \textbf{não são auditáveis} porque não há artefato de dados
+persistido para eles --- isso é limitação da auditoria, não acusação de incorreção. As especificações
+de hardware são autodeclaradas e não foram verificadas de forma independente.
+
+\textbf{Artefatos consultados:} \texttt{Artigo.tex}, \texttt{Artigo.log}, \texttt{referencias.bib},
+parecer anterior; \texttt{NeuralEvolution/\{ControladorHibrido, AlgoritmoGenetico,
+ParametrosTreinamento\}.cs}; \texttt{Services/\{FireControlService, ControladorTreinadoProvider,
+TowerSelectionService\}.cs}; \texttt{ViewModels/MainViewModel.cs};
+\texttt{Resources/ControladorTreinado/genoma-controlador.json};
+\texttt{tools/RadarTorres.Experimentos/Program.cs} e seus resultados em JSON; banco
+\texttt{radartorres.db}.
 
 \end{document}
