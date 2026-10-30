@@ -3,7 +3,7 @@ Funcionalidade: catálogo dos artigos (PDF) usados como embasamento teórico/bib
 # Referências bibliográficas — material de apoio
 
 Material de apoio conceitual/teórico usado como base de estudo para o TCC — **não** faz parte
-dos documentos entregáveis (ver [[Artigo_index]] para esses).
+dos documentos entregáveis (ver [[Registro_index]] para esses).
 
 | Arquivo | Conteúdo |
 |---|---|

@@ -66,60 +66,10 @@ Neuroevolução (survey gratuito, alternativa ao Stanley et al. 2019 que é pago
 
 - [ ] **pendente** — Promover o episódio do bug de certeza estática (`Artigo.tex:238-244`) de parágrafo metodológico para um mini-caso de estudo com dado antes/depois (ver item de gráfico de fitness acima) — é a contribuição mais original do artigo e está subexplorada.
 
-## Revisão de 30/10/2026 — decisões aplicadas (refeita em `Artigo.tex`)
-
-**Correção de rumo**: a primeira passada desta revisão (manhã de 30/10) foi aplicada por engano em
-`artigo_revisado.tex`, uma cópia de trabalho paralela e mais defasada (não tinha, por exemplo, a
-grade completa de 11 execuções de hiperparâmetros nem a regra "ajuda de torre adjacente contra
-alvo rápido" que `Artigo.tex` já tinha). A revisão foi refeita em `Artigo.tex` -- a fonte canônica
--- a partir dos grifos coloridos do docx de referência (amarelo = revisar, vermelho = remover,
-verde = já correto/sem ação) combinados com os 42 comentários do autor. `artigo_revisado.tex` e
-seus dependentes (`.pdf`/`.docx`/`.bbl`/`.blg`) foram removidos da pasta.
-
-- [x] **concluída** — Seção "Projeto elétrico e estrutural" removida de `Artigo.tex` (conteúdo
-  desatualizado -- ainda Arduino Uno, 74HC595, ULN2003, LEDs -- e já apontado como PROBLEMA
-  CRÍTICO acima).
-  - [ ] **pendente** — Substituir por um único parágrafo citando apenas os componentes usados no projeto
-    (pedido do autor; aguardando redação final desse parágrafo).
-- [x] **concluída** — Removida do artigo a explicação/menção de "zona morta" e "tempo mínimo de mira"
-  nas descrições das regras e vetos de disparo (não validados na parte física do projeto) --
-  "corredor de tiro" saiu da lista de regras de refinamento (de 6 para 5 regras) e o veto de zona
-  morta saiu da lista de vetos finais (de 5 para 4 critérios). **O código não foi alterado**:
-  `ControladorHibrido.TempoMinimoDeMiraSegundos`, `ZonaMortaService`/`ZonaMortaRepository` e toda a
-  lógica de veto continuam ativos e usados no treino -- só a descrição no artigo mudou.
-  - **Ressalva**: as seções de análise experimental que MEDEM o custo do tempo mínimo de mira
-    (ex.: achado de que removê-lo melhora o fitness em ~28%, por volta da linha 1069 de
-    `Artigo.tex`) foram mantidas -- são resultado empírico, não "explicação de propósito", e
-    removê-las perderia um achado real. Avise se quiser que elas saiam também.
-- [x] **concluída** — Removido parágrafo duplicado sobre o bug de certeza estática (a mesma
-  informação já é contada em prosa no parágrafo anterior); corrigido o número do genoma embutido
-  citado nesse trecho e na Tabela de fitness antes/depois, que estava desatualizado (geração
-  5377/fitness 136,98) -- confirmado no `genoma-controlador.json` real do repositório: geração
-  159/fitness 188,47.
-- [x] **concluída** — Adicionada justificativa breve da mutação gaussiana no artigo, com o detalhamento
-  comparativo movido para `ApoioDeApresentacao.md`.
-- [x] **concluída** — Inserido destaque amarelo em "Controlador neuroevolutivo" sobre possível adoção de
-  biblioteca de neuroevolução — ⚠️ **o nome da biblioteca ficou como placeholder**: não há nenhuma
-  biblioteca de neuroevolução/ML referenciada no projeto hoje (`RadarTorres.App.csproj` só tem
-  `Microsoft.ML.OnnxRuntime`, usado para o YOLO26n, não para o algoritmo genético). Falta o autor confirmar
-  o nome real.
-- [x] **concluída** — Removida a frase "denominado RadarTorres" do parágrafo de abertura da
-  Introdução (pedido do autor: não "denominar" o projeto, chamar de protótipo).
-- [x] **concluída** — Adicionada, na Introdução, a frase sobre o limiar de desempenho que um genoma
-  precisa atingir antes de ser promovido a produção (pedido do autor), usando o dado real já
-  existente no artigo: o genoma de produção corrigido ficou a 4% da heurística pura.
-- [x] **concluída** — Removido trecho final do Resumo sobre limitações/validação física (grifo
-  vermelho) e a frase "de custo elevado" na Revisão da literatura (grifo vermelho).
-- **Comentário #27 ("também testei com 8, registre")**: desconsiderado por pedido do autor -- mas
-  nota: `Artigo.tex` **já tinha** a grade completa com 8 neurônios ocultos (3 das 11 execuções da
-  Tabela~\ref{tab:hiperparametros-7entradas}), diferente do que eu tinha avaliado na primeira
-  passada em `artigo_revisado.tex` (que só cobria 4 e 16).
-- **Comentários #36/#37/#38** (determinismo de seeds no experimento de hiperparâmetros): o trecho a
-  que se referiam (o platô de "49,81 repetido em 5 de 6 combinações") **não existe em `Artigo.tex`**
-  -- esse artigo já tem uma versão mais rigorosa do experimento (grade 3×3 completa + 2 taxas de
-  mutação, efeito de teto explicado mecanicamente pelos cenários fixos saturarem, não por
-  determinismo de seed). Adicionei a explicação de "seed" num outro trecho relevante do artigo por
-  via das dúvidas, mas os comentários específicos não tinham onde ancorar.
+> O registro do que já foi aplicado na revisão de 30/10/2026 (remoção de seção obsoleta, zona
+> morta, tempo mínimo de mira, correção de número de genoma, etc.) está em [[LOG_SOLICITACOES]],
+> entrada "2026-10-30 — Revisão do artigo a partir do docx grifado". Esta nota (Apoio) guarda só o
+> que ainda está pendente ou é proposta de trabalho futuro.
 
 ## Correção importante: cooperação entre torres já existe parcialmente
 
