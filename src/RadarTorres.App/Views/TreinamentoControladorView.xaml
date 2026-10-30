@@ -15,6 +15,18 @@
     -->
     <UserControl.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolParaVisibilidade"/>
+        <Style x:Key="MetricaRotulo" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="MetricaValor" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
@@ -83,14 +95,79 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <TextBlock Text="TREINAMENTO DO CONTROLADOR" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
             <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
-                       Text="Evolui, por algoritmo genético (neuroevolução), a rede neural que combina com a heurística de cooperação entre torres adjacentes. Cada geração roda o episódio em segundo plano; o Canvas abaixo mostra em tempo real como o melhor indivíduo atual se comporta."/>
+                       Text="Evolui por NEAT (neuroevolução de topologias aumentantes) a rede neural que combina com a heurística de cooperação entre torres adjacentes — pesos E topologia são evoluídos, então o número de neurônios e as conexões são resultado do treinamento, não configuração. Cada geração roda em segundo plano; o Canvas abaixo mostra em tempo real como o campeão atual se comporta e o painel à direita acompanha a evolução."/>
         </StackPanel>
 
         <!-- Conteúdo principal: Canvas 2D + painel lateral -->
         <DockPanel Grid.Row="1">
         <!-- Painel de controle / estatísticas, à direita -->
-        <ScrollViewer DockPanel.Dock="Right" Width="280" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer DockPanel.Dock="Right" Width="320" VerticalScrollBarVisibility="Auto">
             <StackPanel>
+                <!--
+                    Painel de acompanhamento do treinamento. Todos os números vêm do próprio
+                    processo evolutivo (ver ResultadoGeracao em NeuralEvolution/TreinadorNeat.cs e
+                    EpisodioResultado) — nenhum é estimado na tela.
+                -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel LastChildFill="False" Margin="0,0,0,10">
+                            <TextBlock DockPanel.Dock="Left" Text="ESTADO DO TREINAMENTO" Style="{StaticResource CardTitle}" Margin="0" VerticalAlignment="Center"/>
+                            <Border DockPanel.Dock="Right" CornerRadius="3" Padding="6,2" Background="#1F2937">
+                                <TextBlock Text="{Binding EstadoTexto}" FontSize="10" FontWeight="Bold"
+                                           FontFamily="{DynamicResource Font.Mono}" Foreground="{Binding EstadoCor}"/>
+                            </Border>
+                        </DockPanel>
+
+                        <TextBlock Text="{Binding GeracaoAtual, StringFormat={}{0:N0}}" Style="{StaticResource CardValue}"/>
+                        <TextBlock Text="gerações concluídas" Style="{StaticResource MetricaRotulo}" Margin="0,0,0,10"/>
+
+                        <!-- Progresso até a meta. O NEAT desta aplicação não tem condição de parada
+                             própria (EsquemaAvaliacaoAmbiente.TestForStopCondition devolve false),
+                             então "percentual concluído" só existe contra uma meta declarada pelo
+                             usuário. Sem meta, resta o avanço até o próximo marco gravado. -->
+                        <ProgressBar Height="8" Minimum="0" Maximum="1" Value="{Binding ProgressoFracao, Mode=OneWay}"
+                                     Foreground="{DynamicResource Accent.Fill}" Background="#1F2937" BorderThickness="0"
+                                     Visibility="{Binding TemMeta, Converter={StaticResource BoolParaVisibilidade}}"/>
+                        <TextBlock Text="{Binding ProgressoTexto}" Style="{StaticResource MetricaRotulo}" Margin="0,4,0,8"/>
+
+                        <ProgressBar Height="4" Minimum="0" Maximum="1" Value="{Binding ProgressoNoBlocoFracao, Mode=OneWay}"
+                                     Foreground="{DynamicResource Text.Secondary}" Background="#1F2937" BorderThickness="0"/>
+                        <TextBlock Text="{Binding ProgressoNoBlocoTexto}" Style="{StaticResource MetricaRotulo}" Margin="0,4,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Fase da evolução" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Enquanto a complexidade média está abaixo do teto a evolução pode acrescentar neurônios e conexões (complexificando); ao passar do teto ela enxuga a rede (simplificando)."/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FaseTexto}" Style="{StaticResource MetricaValor}"
+                                       Foreground="{Binding FaseCor}" FontWeight="Bold"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Tempo decorrido" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TempoDecorridoTexto}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Gerações por minuto" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding GeracoesPorMinuto, StringFormat={}{0:0.0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Indivíduos avaliados" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Cada avaliação roda vários episódios completos (ver 'episódios por avaliação' em Parâmetros em uso), por isso cresce muito mais rápido que a geração."/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TotalAvaliacoes, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Avaliações por segundo" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding AvaliacoesPorSegundo, StringFormat={}{0:0.0}}" Style="{StaticResource MetricaValor}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="CONTROLE" Style="{StaticResource CardTitle}"/>
@@ -128,6 +205,10 @@
                             </TextBlock.Style>
                         </TextBlock>
 
+                        <TextBlock Text="Meta de gerações (0 = sem meta)" Style="{StaticResource ParametroLabel}"/>
+                        <TextBox Text="{Binding MetaGeracoes, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Com meta definida, a barra de progresso mostra o percentual concluído e o treinamento para sozinho ao alcançá-la. Com 0, o treinamento roda até você mandar parar — o NEAT não tem condição de parada própria nesta aplicação."/>
+
                         <TextBlock Text="Tamanho da população" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding TamanhoPopulacao, UpdateSourceTrigger=PropertyChanged}"/>
 
@@ -162,31 +243,262 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="GERAÇÃO ATUAL" Style="{StaticResource CardTitle}"/>
-                        <TextBlock Text="{Binding GeracaoAtual}" Style="{StaticResource CardValue}"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
                         <TextBlock Text="MELHOR FITNESS" Style="{StaticResource CardTitle}"/>
                         <TextBlock Text="{Binding MelhorFitness, StringFormat={}{0:0.0}}" Style="{StaticResource CardValue}"/>
-                        <TextBlock Style="{StaticResource ParametroLabel}" Margin="0,8,0,0">
-                            <Run Text="Fitness médio da população: "/>
-                            <Run Text="{Binding FitnessMedio, StringFormat={}{0:0.0}, Mode=OneWay}"/>
-                        </TextBlock>
+                        <TextBlock Text="campeão da geração atual" Style="{StaticResource MetricaRotulo}" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Melhor da sessão" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Pico alcançado desde o início desta sessão. Pode ser maior que o fitness da geração atual: as seeds mudam a cada geração, então o campeão de hoje pode tirar uma nota menor que o de ontem no mesmo mérito."/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricaValor}" Foreground="#4ADE80">
+                                <Run Text="{Binding MelhorFitnessDaSessao, StringFormat={}{0:0.0}, Mode=OneWay}"/>
+                                <Run Text="{Binding GeracaoDoMelhorFitness, StringFormat={} (ger. {0:N0}), Mode=OneWay}"/>
+                            </TextBlock>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Média da população" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FitnessMedio, StringFormat={}{0:0.0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Média móvel (50 gerações)" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Média do melhor fitness nas últimas 50 gerações — alisa o ruído de sorteio do ambiente para mostrar a tendência."/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FitnessMediaMovel, StringFormat={}{0:0.0}}" Style="{StaticResource MetricaValor}"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
-                <!-- Gráfico de evolução do fitness por geração -->
-                <Border Style="{StaticResource Card}" Height="160">
+                <!-- Gráfico de evolução do fitness por geração. A série é a DESTA sessão
+                     (HistoricoDaSessao), não o histórico persistido: alimentá-lo com o banco fazia
+                     a curva começar com dados de treinos anteriores. Eixos e grade são desenhados
+                     no code-behind, junto das linhas. -->
+                <Border Style="{StaticResource Card}" Height="220">
                     <Grid>
-                        <TextBlock Text="EVOLUÇÃO DO FITNESS" Style="{StaticResource CardTitle}" VerticalAlignment="Top"/>
-                        <Canvas x:Name="GraficoCanvas" Margin="0,20,0,0">
-                            <Polyline x:Name="LinhaMelhorFitness" Stroke="{DynamicResource Accent.Fill}" StrokeThickness="2"/>
-                            <Polyline x:Name="LinhaFitnessMedio" Stroke="{DynamicResource Text.Secondary}" StrokeThickness="1"/>
-                        </Canvas>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="EVOLUÇÃO DO FITNESS (ESTA SESSÃO)" Style="{StaticResource CardTitle}" Margin="0"/>
+                        <TextBlock Grid.Row="1" Style="{StaticResource MetricaRotulo}" Margin="0,2,0,6" FontSize="10">
+                            <Run Text="— " Foreground="{DynamicResource Accent.Fill}"/><Run Text="melhor  "/>
+                            <Run Text="— " Foreground="#94A3B8"/><Run Text="média da população  "/>
+                            <Run Text="— " Foreground="#F472B6"/><Run Text="média móvel"/>
+                        </TextBlock>
+                        <Canvas x:Name="GraficoCanvas" Grid.Row="2" ClipToBounds="True"/>
+                        <TextBlock x:Name="GraficoEixoX" Grid.Row="3" Style="{StaticResource MetricaRotulo}" FontSize="10"
+                                   FontFamily="{DynamicResource Font.Mono}" Margin="0,4,0,0"/>
                     </Grid>
+                </Border>
+
+                <!-- Indicadores de aprendizado: dizem se a rede está evoluindo, estabilizando ou
+                     com dificuldade. Ambos são medidos, não estimados — a variação vem da própria
+                     série de fitness e a estagnação vem do BirthGeneration do genoma campeão. -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="INDICADORES DE APRENDIZADO" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="{Binding DiagnosticoAprendizado}" Style="{StaticResource RegraTexto}" FontWeight="SemiBold"/>
+
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Variação do fitness na janela" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Média móvel atual menos a de 50 gerações atrás. Positiva = aprendendo; perto de zero = estabilizou; negativa = regredindo. Vazia até haver duas janelas completas para comparar."/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VariacaoNaJanela, StringFormat={}{0:+0.0;-0.0;0.0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Gerações sem campeão novo" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Distância entre a geração atual e a geração em que o campeão nasceu. É estagnação medida: nenhuma estrutura nova conseguiu superá-lo nesse intervalo."/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding GeracoesSemCampeaoNovo, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Complexidade: o eixo que não existia no método anterior. Com topologia fixa
+                     (7-8-2) este número era constante; com NEAT ele é o retrato do crescimento
+                     estrutural da rede, e faz par com a fase da regulação de complexidade. -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="COMPLEXIDADE DA REDE (CONEXÕES)" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="{Binding ComplexidadeMelhor, StringFormat={}{0:0}}" Style="{StaticResource CardValue}"/>
+                        <TextBlock Text="conexões no campeão" Style="{StaticResource MetricaRotulo}" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Média da população" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ComplexidadeMedia, StringFormat={}{0:0.0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Maior da população" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ComplexidadeMaxima, StringFormat={}{0:0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Teto em uso" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Acima deste número de conexões a evolução passa a simplificar — é o que define a troca de fase."/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TetoComplexidadeEmUso, StringFormat={}{0:0}}" Style="{StaticResource MetricaValor}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Arquitetura do campeão. Substitui a antiga exibição da arquitetura fixa: aqui
+                     os ocultos e as conexões são RESULTADO da evolução, não configuração. -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="ARQUITETURA DO CAMPEÃO" Style="{StaticResource CardTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Entradas (+ bias)" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding EntradasDaRede, StringFormat={}{0} + 1}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Neurônios ocultos" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Criados pela evolução. No algoritmo genético anterior este número era escolhido por nós e nunca mudava."/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OcultosDoCampeao, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}" Foreground="#93C5FD"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Saídas" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SaidasDaRede}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Conexões diretas entrada→saída" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Conexões que pulam os ocultos. Comuns no NEAT e impossíveis na rede em camadas anterior — a rede pode aprender um atalho direto para uma decisão."/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ConexoesDiretasEntradaSaida, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Espécies na população" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding QuantidadeEspecies, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Genoma / nascimento" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Identificador do genoma campeão e a geração em que ele surgiu."/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource MetricaValor}">
+                                <Run Text="{Binding IdDoCampeao, StringFormat={}#{0}, Mode=OneWay}"/>
+                                <Run Text="{Binding GeracaoDeNascimentoDoCampeao, StringFormat={} · ger. {0:N0}, Mode=OneWay}"/>
+                            </TextBlock>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Ativação" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding FuncaoAtivacaoTexto}" Style="{StaticResource MetricaValor}"/>
+                        </Grid>
+                        <TextBlock Text="{Binding TopologiaTexto}" Style="{StaticResource MetricaRotulo}" Margin="0,6,0,0" FontStyle="Italic"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Espécies: o mecanismo central do NEAT, sem equivalente no método anterior
+                     (população única). A barra é o tamanho relativo; a espécie do campeão aparece
+                     destacada em âmbar com a estrela. -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="ESPÉCIES DA POPULAÇÃO" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource MetricaRotulo}" Margin="0,0,0,8" FontSize="10"
+                                   Text="Cada espécie agrupa topologias parecidas e recebe filhotes em proporção ao próprio desempenho. ★ = contém o campeão. Passe o mouse para os números completos."/>
+                        <ItemsControl ItemsSource="{Binding Especies}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,4" ToolTip="{Binding DescricaoCompleta}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="42"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Rotulo}" Style="{StaticResource MetricaRotulo}"
+                                                   FontFamily="{DynamicResource Font.Mono}" Foreground="{Binding Cor}"/>
+                                        <Rectangle Grid.Column="1" Height="10" HorizontalAlignment="Left" RadiusX="2" RadiusY="2"
+                                                   Width="{Binding LarguraBarraPx}" Fill="{Binding Cor}" Opacity="0.75"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource MetricaValor}">
+                                            <Run Text="{Binding Tamanho, Mode=OneWay}"/>
+                                            <Run Text="{Binding FitnessMedio, StringFormat={} · {0:0.0}, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Comportamento do campeão no episódio de verificação que cada geração roda
+                     (ver LacoDeTreinamento → ExecutarEpisodioRapido). Até aqui só abatidos e
+                     escapados chegavam à tela; as recusas de disparo, que motivaram a penalidade
+                     de hesitação, só apareciam no instantâneo gravado a cada 1.000 gerações. -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="COMPORTAMENTO DO CAMPEÃO" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource MetricaRotulo}" Margin="0,0,0,8" FontSize="10"
+                                   Text="Medido num episódio de verificação rodado a cada geração com o campeão atual."/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Alvos abatidos" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AlvosAbatidos, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}" Foreground="#4ADE80"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Alvos escapados" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AlvosEscapados, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}" Foreground="#F87171"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Alvos que apareceram" Style="{StaticResource MetricaRotulo}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AlvosNascidos, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Tiros errados" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Disparos autorizados que erraram — distinto de fuga (nem chegou a disparar)."/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TirosErrados, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Taxa de acerto" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Abates sobre tentativas de disparo."/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TaxaDeAcerto, StringFormat={}{0:P0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Taxa de cobertura" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Abates sobre alvos que apareceram — quanto da ameaça o controlador deu conta, não só a precisão do tiro."/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding TaxaDeCobertura, StringFormat={}{0:P0}}" Style="{StaticResource MetricaValor}"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Recusas de disparo" Style="{StaticResource MetricaRotulo}"
+                                       ToolTip="Oportunidades legítimas (os vetos inegociáveis já liberaram) em que a rede, ainda assim, não disparou. A heurística pura recusaria zero — é a medida direta da hesitação da rede."/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Style="{StaticResource MetricaValor}" Foreground="#FBBF24">
+                                <Run Text="{Binding DisparosRecusadosPelaRede, Mode=OneWay}"/>
+                                <Run Text="{Binding OportunidadesDeDisparo, StringFormat={}/{0}, Mode=OneWay}"/>
+                                <Run Text="{Binding TaxaDeRecusa, StringFormat={} ({0:P0}), Mode=OneWay}"/>
+                            </TextBlock>
+                        </Grid>
+                    </StackPanel>
                 </Border>
 
                 <!-- Cenário personalizado: abre uma janela modal centralizada onde o usuário
@@ -211,6 +523,30 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding}" Style="{StaticResource RegraTexto}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Parâmetros EM USO. Distinto dos campos editáveis acima, que valem a partir do
+                     próximo "Iniciar"/"Resetar": aqui está o que a execução em andamento está
+                     realmente aplicando, incluindo o que não é editável na tela (episódios por
+                     avaliação, elitismo, paralelismo, ativação) e o que vem de Configurações. -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="PARÂMETROS EM USO" Style="{StaticResource CardTitle}"/>
+                        <ItemsControl ItemsSource="{Binding ParametrosEmUso}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,3" ToolTip="{Binding Explicacao}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Nome}" Style="{StaticResource MetricaRotulo}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Valor}" Style="{StaticResource MetricaValor}"/>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -446,6 +782,29 @@
                     <Run Text="● " Foreground="#FDE68A"/><Run Text="Saída  "/>
                     <Run Text="— " Foreground="#3B82F6"/><Run Text="Peso positivo  "/>
                     <Run Text="— " Foreground="#EF4444"/><Run Text="Peso negativo (espessura = magnitude)"/>
+                    <LineBreak/>
+                    <Run Text="● " Foreground="#F472B6"/><Run Text="Neurônio/conexão que surgiu nesta atualização (mutação estrutural)"/>
+                </TextBlock>
+
+                <!-- Aviso quando a ativação dos ocultos não pôde ser calculada (ver
+                     AtivacoesRedeNeat): nesse caso eles aparecem em cor neutra, e é melhor dizer
+                     isso do que deixar a cor sugerir um valor que não corresponde a nada. -->
+                <!-- O texto padrão vem do Setter (e não de um atributo Text local) porque um valor
+                     local tem precedência sobre o setter do DataTrigger e o impediria de trocar a
+                     mensagem quando a ativação não estiver disponível. -->
+                <TextBlock Margin="0,0,0,8" FontSize="11" TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource ParametroLabel}">
+                            <Setter Property="FontStyle" Value="Italic"/>
+                            <Setter Property="Text" Value="A intensidade da cor de cada neurônio é a ativação real dele no cenário de referência — inclusive nos ocultos, recalculada sobre a mesma topologia e os mesmos pesos do campeão."/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding AtivacoesOcultasDisponiveis}" Value="False">
+                                    <Setter Property="Text" Value="Ativação dos neurônios ocultos indisponível para esta rede — eles aparecem em cor neutra. Entradas e saídas continuam coloridas pelo valor real."/>
+                                    <Setter Property="Foreground" Value="#FBBF24"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
                 </TextBlock>
                 <Border x:Name="RedeNeuralViewport" ClipToBounds="True" Width="620" Height="320"
                         PreviewMouseWheel="RedeNeuralViewport_PreviewMouseWheel" Background="Transparent">
@@ -512,8 +871,18 @@
         <GridSplitter x:Name="DivisoriaHistorico" Grid.Row="2" HorizontalAlignment="Stretch" Height="6" Background="{DynamicResource Border.Control}"
                       ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" Cursor="SizeNS"/>
 
+        <!-- Área inferior: tabela de gerações à esquerda e histórico de ACONTECIMENTOS à direita.
+             São coisas diferentes: a tabela é a série numérica geração a geração (persistida no
+             banco); o histórico de execução registra o que ocorreu — início, parada, falha, novo
+             recorde de fitness, troca de fase, marco gravado — que antes só ia para o log. -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1*" MinWidth="240"/>
+            </Grid.ColumnDefinitions>
+
         <!-- Histórico de gerações (até 300 registros, mais antigo removido ao estourar — ver IHistoricoTreinamentoRepository) -->
-        <Border Grid.Row="3" Style="{StaticResource Card}">
+        <Border Grid.Column="0" Style="{StaticResource Card}">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
                     <TextBlock DockPanel.Dock="Left" Text="HISTÓRICO DE GERAÇÕES (ÚLTIMOS 300 REGISTROS)" Style="{StaticResource CardTitle}" Margin="0" VerticalAlignment="Center"/>
@@ -549,10 +918,46 @@
                         <DataGridTextColumn Header="Fitness médio" Binding="{Binding FitnessMedio, StringFormat={}{0:0.0}}" Width="1*" MinWidth="90"/>
                         <DataGridTextColumn Header="Abatidos" Binding="{Binding AlvosAbatidos}" Width="80" MinWidth="70"/>
                         <DataGridTextColumn Header="Escapados" Binding="{Binding AlvosEscapados}" Width="80" MinWidth="80"/>
+                        <!-- Colunas que só passam a existir com o NEAT: com a topologia fixa
+                             anterior a complexidade era constante e não havia espécies. Ficam
+                             vazias nas linhas gravadas antes da migração. -->
+                        <DataGridTextColumn Header="Conexões" Binding="{Binding ComplexidadeMelhor, StringFormat={}{0:0}}" Width="80" MinWidth="70"/>
+                        <DataGridTextColumn Header="Espécies" Binding="{Binding QuantidadeEspecies}" Width="80" MinWidth="70"/>
                         <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="2*" MinWidth="140"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
         </Border>
+
+        <Border Grid.Column="1" Style="{StaticResource Card}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="HISTÓRICO DE EXECUÇÃO" Style="{StaticResource CardTitle}" Margin="0,0,0,8"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding EventosExecucao}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding DataHora, StringFormat={}{0:HH:mm:ss}}"
+                                               FontSize="10" FontFamily="{DynamicResource Font.Mono}"
+                                               Foreground="{DynamicResource Text.Muted}" Margin="0,0,6,0" VerticalAlignment="Top"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding GeracaoTexto}" FontSize="10"
+                                               FontFamily="{DynamicResource Font.Mono}" Foreground="{DynamicResource Text.Muted}"
+                                               Margin="0,0,6,0" VerticalAlignment="Top" MinWidth="34" TextAlignment="Right"
+                                               ToolTip="Geração em que o evento ocorreu"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Mensagem}" FontSize="11" TextWrapping="Wrap"
+                                               Foreground="{Binding Cor}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+        </Grid>
     </Grid>
 </UserControl>

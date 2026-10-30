@@ -24,15 +24,21 @@ public sealed class TreinadorNeatTests
     private static TreinadorNeat TreinadorRapido(AmbienteTreinamento ambiente) =>
         new(ambiente, tamanhoPopulacao: 12, quantidadeEspecies: 3, grauParalelismo: 1);
 
+    /// <summary>
+    /// A primeira chamada só cria e avalia a população INICIAL — nenhuma reprodução aconteceu —, e
+    /// o SharpNEAT numera isso como geração 0. Fixado em teste porque a numeração vai para o
+    /// histórico, para os marcos e para o artigo: se ela deslizar, dois experimentos deixam de ser
+    /// comparáveis.
+    /// </summary>
     [Fact]
-    public void EvoluirGeracao_PrimeiraChamada_DevolveGeracaoUm()
+    public void EvoluirGeracao_PrimeiraChamada_AvaliaAPopulacaoInicialComoGeracaoZero()
     {
         TreinadorNeat treinador = TreinadorRapido(AmbienteRapido());
 
         ResultadoGeracao resultado = treinador.EvoluirGeracao([1]);
 
-        Assert.Equal(1, resultado.Geracao);
-        Assert.Equal(1, treinador.GeracaoAtual);
+        Assert.Equal(0, resultado.Geracao);
+        Assert.Equal(0, treinador.GeracaoAtual);
     }
 
     [Fact]
@@ -40,11 +46,11 @@ public sealed class TreinadorNeatTests
     {
         TreinadorNeat treinador = TreinadorRapido(AmbienteRapido());
 
-        treinador.EvoluirGeracao([1]);
-        treinador.EvoluirGeracao([2]);
+        treinador.EvoluirGeracao([1]); // população inicial (geração 0)
+        treinador.EvoluirGeracao([2]); // geração 1
         ResultadoGeracao terceira = treinador.EvoluirGeracao([3]);
 
-        Assert.Equal(3, terceira.Geracao);
+        Assert.Equal(2, terceira.Geracao);
     }
 
     /// <summary>
@@ -97,5 +103,74 @@ public sealed class TreinadorNeatTests
         ResultadoGeracao resultado = treinador.EvoluirGeracao([5]);
 
         Assert.True(resultado.QuantidadeEspecies > 0);
+    }
+
+    /// <summary>
+    /// As métricas que a tela de treinamento usa para mostrar o que está acontecendo (complexidade
+    /// da população, fase da regulação, vazão, ocultos do campeão) têm que sair preenchidas de
+    /// verdade — antes elas eram calculadas pelo framework e simplesmente descartadas.
+    /// </summary>
+    [Fact]
+    public void EvoluirGeracao_PreencheAsMetricasDeAcompanhamento()
+    {
+        TreinadorNeat treinador = TreinadorRapido(AmbienteRapido());
+
+        ResultadoGeracao resultado = treinador.EvoluirGeracao([13]);
+
+        Assert.True(resultado.ComplexidadeMedia > 0, "a complexidade média da população não pode ser zero: todo genoma do NEAT nasce com conexões.");
+        Assert.True(resultado.ComplexidadeMaxima >= resultado.ComplexidadeMedia);
+        Assert.True(resultado.ComplexidadeMaxima >= resultado.ComplexidadeMelhor);
+        Assert.True(resultado.TotalAvaliacoes > 0);
+        Assert.True(resultado.NeuroniosOcultosDoCampeao >= 0);
+
+        // Na primeira geração o campeão acabou de nascer, então não há estagnação possível.
+        Assert.Equal(0, resultado.GeracoesSemCampeaoNovo);
+
+        // Com o teto padrão (60 conexões) e redes mínimas na primeira geração, a evolução está
+        // necessariamente na fase de complexificação.
+        Assert.False(resultado.Simplificando);
+    }
+
+    /// <summary>
+    /// O retrato por espécie é a informação que o algoritmo genético anterior não tinha como
+    /// produzir (população única). A soma dos tamanhos tem que fechar com a população configurada,
+    /// senão a tela mostraria uma divisão que não corresponde à população real.
+    /// </summary>
+    [Fact]
+    public void EvoluirGeracao_ResumeCadaEspecieEExatamenteUmaContemOCampeao()
+    {
+        TreinadorNeat treinador = TreinadorRapido(AmbienteRapido());
+
+        ResultadoGeracao resultado = treinador.EvoluirGeracao([17]);
+
+        Assert.NotNull(resultado.Especies);
+        Assert.Equal(resultado.QuantidadeEspecies, resultado.Especies!.Count);
+
+        int soma = 0;
+        int comCampeao = 0;
+        foreach (ResumoEspecie especie in resultado.Especies)
+        {
+            soma += especie.Tamanho;
+            if (especie.ContemCampeao) comCampeao++;
+        }
+
+        Assert.Equal(12, soma); // mesmo tamanho de população de TreinadorRapido
+        Assert.Equal(1, comCampeao);
+    }
+
+    /// <summary>
+    /// Mesmo motivo de <see cref="EvoluirGeracao_RelataOFitnessBrutoSemODeslocamentoInterno"/>: o
+    /// fitness por espécie também é exibido na tela e não pode vir inflado pelo deslocamento que
+    /// o framework exige internamente.
+    /// </summary>
+    [Fact]
+    public void EvoluirGeracao_FitnessPorEspecieVemSemODeslocamentoInterno()
+    {
+        TreinadorNeat treinador = TreinadorRapido(AmbienteRapido());
+
+        ResultadoGeracao resultado = treinador.EvoluirGeracao([19]);
+
+        Assert.NotNull(resultado.Especies);
+        Assert.All(resultado.Especies!, e => Assert.True(e.FitnessMedio < AvaliadorAmbiente.DeslocamentoFitness));
     }
 }

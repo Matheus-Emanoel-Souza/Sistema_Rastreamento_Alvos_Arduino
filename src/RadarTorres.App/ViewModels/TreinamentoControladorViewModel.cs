@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -62,6 +63,40 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly DispatcherTimer _timerPreview;
 
+    /// <summary>
+    /// Atualiza só os indicadores que mudam com a passagem do tempo (tempo decorrido, gerações
+    /// por minuto). Separado de <see cref="_timerPreview"/> porque a prévia pode estar parada
+    /// (episódio único já terminado) enquanto o treinamento continua rodando atrás — nesse caso o
+    /// relógio da tela não pode congelar junto.
+    /// </summary>
+    private readonly DispatcherTimer _timerEstado;
+
+    /// <summary>Mede o tempo de parede da sessão de treinamento, base de "tempo decorrido" e "gerações/min".</summary>
+    private readonly Stopwatch _cronometroSessao = new();
+
+    /// <summary>
+    /// Intervalo mínimo entre duas remontagens do diagrama/regras. As gerações rodam o mais rápido
+    /// possível e cada remontagem converte o genoma, propaga a rede, extrai regras e troca dezenas
+    /// de itens em coleções ligadas à tela: fazer isso a cada geração inunda o dispatcher e trava
+    /// a interface. O campeão exibido passa a ser o da última geração dentro da janela — nenhum
+    /// número é alterado, só a frequência do redesenho.
+    /// </summary>
+    private static readonly TimeSpan IntervaloMinimoRemontagemDiagrama = TimeSpan.FromMilliseconds(700);
+
+    private readonly Stopwatch _cronometroDiagrama = Stopwatch.StartNew();
+
+    /// <summary>
+    /// Posição vertical já atribuída a cada neurônio oculto, por id de nó. Mantida entre gerações
+    /// para que um oculto que continua existindo não mude de lugar no diagrama só porque outro
+    /// nasceu ou morreu — sem isso os nós "saltavam" a cada remontagem e ficava impossível
+    /// acompanhar visualmente o crescimento da rede.
+    /// </summary>
+    private readonly Dictionary<int, double> _yDoOcultoPorId = new();
+
+    /// <summary>Ocultos e conexões do diagrama anterior — o que não está aqui é NOVO e recebe destaque na geração em que surge.</summary>
+    private readonly HashSet<int> _ocultosDaRemontagemAnterior = new();
+    private readonly HashSet<(int Origem, int Destino)> _conexoesDaRemontagemAnterior = new();
+
     // Acumulador do bloco de 500 gerações em andamento — zerado a cada marco registrado (ver
     // RegistrarMarcoFitnessSeCompletouBloco) e também em Iniciar/Resetar, para não misturar
     // gerações de sessões diferentes no mesmo marco.
@@ -94,6 +129,23 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     public ObservableCollection<HistoricoGeracaoTreinamento> HistoricoRecente { get; } = new();
     public ObservableCollection<NeuronioVisualTreinamento> NeuroniosVisuais { get; } = new();
     public ObservableCollection<ConexaoVisualTreinamento> ConexoesVisuais { get; } = new();
+
+    /// <summary>
+    /// Série de gerações desta SESSÃO de treinamento — é o que o gráfico de evolução desenha.
+    /// Distinta de <see cref="HistoricoRecente"/>, que vem do banco e traz as últimas 300 gerações
+    /// de qualquer execução: alimentar o gráfico com ela fazia a curva começar com dados de treinos
+    /// anteriores e dar um degrau artificial a cada "Iniciar".
+    /// </summary>
+    public ObservableCollection<HistoricoGeracaoTreinamento> HistoricoDaSessao { get; } = new();
+
+    /// <summary>Espécies da geração mais recente (ver <see cref="LinhaEspecieTreinamento"/>).</summary>
+    public ObservableCollection<LinhaEspecieTreinamento> Especies { get; } = new();
+
+    /// <summary>Acontecimentos da execução, do mais recente para o mais antigo (ver <see cref="EventoTreinamento"/>).</summary>
+    public ObservableCollection<EventoTreinamento> EventosExecucao { get; } = new();
+
+    /// <summary>Configuração efetivamente em uso na execução em andamento (ver <see cref="AtualizarParametrosEmUso"/>).</summary>
+    public ObservableCollection<ParametroEmUso> ParametrosEmUso { get; } = new();
 
     public RelayCommand IniciarCommand { get; }
     public RelayCommand PararCommand { get; }
@@ -159,6 +211,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _timerPreview = new DispatcherTimer { Interval = TimeSpan.FromSeconds(IntervaloPreviaSegundos) };
         _timerPreview.Tick += (_, _) => AvancarPreview();
 
+        _timerEstado = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _timerEstado.Tick += (_, _) => TempoDecorrido = _cronometroSessao.Elapsed;
+
+        AtualizarParametrosEmUso(ParametrosAtuais, treinador: null);
         CarregarHistorico();
     }
 
@@ -295,18 +351,306 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _emExecucao, value))
             {
                 RelayCommand.RaiseCanExecuteChangedForAll();
+                OnPropertyChanged(nameof(EstadoTexto));
+                OnPropertyChanged(nameof(EstadoCor));
             }
         }
     }
 
+    /// <summary>
+    /// Ligado quando o laço de treinamento morre por exceção. Antes disso não existir, uma falha
+    /// na thread de fundo deixava <see cref="EmExecucao"/> em <c>true</c> para sempre: a tela
+    /// seguia anunciando "rodando" com os números congelados e sem nenhuma mensagem de erro.
+    /// </summary>
+    private bool _falhou;
+    public bool Falhou
+    {
+        get => _falhou;
+        private set
+        {
+            if (SetProperty(ref _falhou, value))
+            {
+                OnPropertyChanged(nameof(EstadoTexto));
+                OnPropertyChanged(nameof(EstadoCor));
+            }
+        }
+    }
+
+    /// <summary>Estado em uma palavra, para o selo no topo da tela.</summary>
+    public string EstadoTexto => Falhou ? "FALHOU" : EmExecucao ? "TREINANDO" : GeracaoAtual > 0 ? "PARADO" : "PRONTO";
+
+    public string EstadoCor => Falhou ? "#F87171" : EmExecucao ? "#4ADE80" : "#94A3B8";
+
     private int _geracaoAtual;
-    public int GeracaoAtual { get => _geracaoAtual; private set => SetProperty(ref _geracaoAtual, value); }
+    public int GeracaoAtual
+    {
+        get => _geracaoAtual;
+        private set
+        {
+            if (SetProperty(ref _geracaoAtual, value))
+            {
+                OnPropertyChanged(nameof(EstadoTexto));
+                OnPropertyChanged(nameof(ProgressoFracao));
+                OnPropertyChanged(nameof(ProgressoTexto));
+                OnPropertyChanged(nameof(ProgressoNoBlocoFracao));
+                OnPropertyChanged(nameof(ProgressoNoBlocoTexto));
+            }
+        }
+    }
 
     private double _melhorFitness;
     public double MelhorFitness { get => _melhorFitness; private set => SetProperty(ref _melhorFitness, value); }
 
     private double _fitnessMedio;
     public double FitnessMedio { get => _fitnessMedio; private set => SetProperty(ref _fitnessMedio, value); }
+
+    // ------------------------------------------------- Melhor resultado acumulado da sessão
+
+    private double _melhorFitnessDaSessao;
+    /// <summary>Pico de fitness alcançado desde o início desta sessão — distinto de <see cref="MelhorFitness"/>, que é o campeão da geração mais recente e pode regredir quando as seeds mudam.</summary>
+    public double MelhorFitnessDaSessao { get => _melhorFitnessDaSessao; private set => SetProperty(ref _melhorFitnessDaSessao, value); }
+
+    private int _geracaoDoMelhorFitness;
+    public int GeracaoDoMelhorFitness { get => _geracaoDoMelhorFitness; private set => SetProperty(ref _geracaoDoMelhorFitness, value); }
+
+    /// <summary>Quantas gerações entram na média móvel e na comparação "antes × agora" do fitness.</summary>
+    public const int JanelaIndicadoresAprendizado = 50;
+
+    private double _fitnessMediaMovel;
+    /// <summary>Média do melhor fitness nas últimas <see cref="JanelaIndicadoresAprendizado"/> gerações — alisa o ruído de seed para mostrar a tendência, não o sobe-e-desce geração a geração.</summary>
+    public double FitnessMediaMovel { get => _fitnessMediaMovel; private set => SetProperty(ref _fitnessMediaMovel, value); }
+
+    private double? _variacaoNaJanela;
+    /// <summary>
+    /// Diferença entre a média móvel atual e a de <see cref="JanelaIndicadoresAprendizado"/>
+    /// gerações atrás. Positiva = aprendendo; perto de zero = estabilizou; negativa = regredindo.
+    /// <c>null</c> enquanto não houver gerações suficientes para a comparação existir.
+    /// </summary>
+    public double? VariacaoNaJanela
+    {
+        get => _variacaoNaJanela;
+        private set
+        {
+            if (SetProperty(ref _variacaoNaJanela, value)) OnPropertyChanged(nameof(DiagnosticoAprendizado));
+        }
+    }
+
+    private int _geracoesSemCampeaoNovo;
+    /// <summary>
+    /// Gerações desde que o campeão atual nasceu (<c>BirthGeneration</c> do genoma). É estagnação
+    /// MEDIDA: nenhum indivíduo novo conseguiu superá-lo nesse intervalo.
+    /// </summary>
+    public int GeracoesSemCampeaoNovo
+    {
+        get => _geracoesSemCampeaoNovo;
+        private set
+        {
+            if (SetProperty(ref _geracoesSemCampeaoNovo, value)) OnPropertyChanged(nameof(DiagnosticoAprendizado));
+        }
+    }
+
+    /// <summary>
+    /// Leitura em uma frase dos dois indicadores acima — serve para quem olha a tela não precisar
+    /// interpretar os números sozinho. Deriva só de valores medidos; não há nenhum limiar de
+    /// "qualidade" embutido além do tempo de estagnação.
+    /// </summary>
+    public string DiagnosticoAprendizado
+    {
+        get
+        {
+            if (VariacaoNaJanela is not { } variacao) return $"Coletando as primeiras {JanelaIndicadoresAprendizado} gerações…";
+
+            string tendencia = variacao switch
+            {
+                > 1.0 => $"Evoluindo (+{variacao:0.0} em {JanelaIndicadoresAprendizado} gerações)",
+                < -1.0 => $"Regredindo ({variacao:0.0} em {JanelaIndicadoresAprendizado} gerações)",
+                _ => $"Estável ({variacao:+0.0;-0.0;0.0} em {JanelaIndicadoresAprendizado} gerações)"
+            };
+
+            return GeracoesSemCampeaoNovo >= JanelaIndicadoresAprendizado
+                ? $"{tendencia} · campeão sem ser superado há {GeracoesSemCampeaoNovo} gerações"
+                : tendencia;
+        }
+    }
+
+    // ------------------------------------------------- Complexidade e fase da evolução
+
+    private double _complexidadeMelhor;
+    /// <summary>Conexões do campeão. Com NEAT isso cresce ao longo da evolução — no método anterior a topologia era fixa e esse número nunca mudava.</summary>
+    public double ComplexidadeMelhor { get => _complexidadeMelhor; private set => SetProperty(ref _complexidadeMelhor, value); }
+
+    private double _complexidadeMedia;
+    public double ComplexidadeMedia { get => _complexidadeMedia; private set => SetProperty(ref _complexidadeMedia, value); }
+
+    private double _complexidadeMaxima;
+    public double ComplexidadeMaxima { get => _complexidadeMaxima; private set => SetProperty(ref _complexidadeMaxima, value); }
+
+    private int _tetoComplexidadeEmUso;
+    /// <summary>Teto em vigor na execução atual — é a referência que dá sentido às três medidas acima.</summary>
+    public int TetoComplexidadeEmUso { get => _tetoComplexidadeEmUso; private set => SetProperty(ref _tetoComplexidadeEmUso, value); }
+
+    private bool _simplificando;
+    /// <summary>Fase da regulação de complexidade do NEAT — ver <see cref="FaseTexto"/>.</summary>
+    public bool Simplificando
+    {
+        get => _simplificando;
+        private set
+        {
+            if (SetProperty(ref _simplificando, value))
+            {
+                OnPropertyChanged(nameof(FaseTexto));
+                OnPropertyChanged(nameof(FaseCor));
+            }
+        }
+    }
+
+    /// <summary>
+    /// A "etapa" em que o treinamento está, no único sentido que o NEAT tem: enquanto a
+    /// complexidade média está abaixo do teto a evolução COMPLEXIFICA (pode acrescentar neurônios
+    /// e conexões); ao passar do teto ela SIMPLIFICA, enxugando a rede até voltar a caber.
+    /// </summary>
+    public string FaseTexto => Simplificando ? "SIMPLIFICANDO" : "COMPLEXIFICANDO";
+
+    public string FaseCor => Simplificando ? "#FBBF24" : "#60A5FA";
+
+    private int _quantidadeEspecies;
+    public int QuantidadeEspecies { get => _quantidadeEspecies; private set => SetProperty(ref _quantidadeEspecies, value); }
+
+    // ------------------------------------------------- Vazão e progresso
+
+    private long _totalAvaliacoes;
+    /// <summary>Indivíduos avaliados desde o início da execução. Cada avaliação roda <see cref="ParametrosTreinamento.EpisodiosPorAvaliacao"/> episódios completos, então este número cresce bem mais rápido que a geração.</summary>
+    public long TotalAvaliacoes { get => _totalAvaliacoes; private set => SetProperty(ref _totalAvaliacoes, value); }
+
+    private double _avaliacoesPorSegundo;
+    public double AvaliacoesPorSegundo { get => _avaliacoesPorSegundo; private set => SetProperty(ref _avaliacoesPorSegundo, value); }
+
+    private TimeSpan _tempoDecorrido;
+    public TimeSpan TempoDecorrido
+    {
+        get => _tempoDecorrido;
+        private set
+        {
+            if (SetProperty(ref _tempoDecorrido, value))
+            {
+                OnPropertyChanged(nameof(TempoDecorridoTexto));
+                OnPropertyChanged(nameof(GeracoesPorMinuto));
+            }
+        }
+    }
+
+    public string TempoDecorridoTexto => TempoDecorrido.ToString(TempoDecorrido.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
+
+    /// <summary>Gerações por minuto medidas no relógio de parede — complementa <see cref="AvaliacoesPorSegundo"/>, que é a vazão interna do framework.</summary>
+    public double GeracoesPorMinuto =>
+        TempoDecorrido.TotalMinutes > 0 ? _geracoesNestaSessao / TempoDecorrido.TotalMinutes : 0.0;
+
+    private int _geracoesNestaSessao;
+
+    private int _metaGeracoes;
+    /// <summary>
+    /// Meta de gerações desta execução, ou 0 para "sem meta". Existe porque o NEAT aqui não tem
+    /// condição de parada própria (ver <see cref="EsquemaAvaliacaoAmbiente.TestForStopCondition"/>):
+    /// sem um alvo declarado não existe "percentual concluído" honesto. Com meta definida, o
+    /// treinamento para sozinho ao alcançá-la.
+    /// </summary>
+    public int MetaGeracoes
+    {
+        get => _metaGeracoes;
+        set
+        {
+            if (SetProperty(ref _metaGeracoes, value))
+            {
+                OnPropertyChanged(nameof(TemMeta));
+                OnPropertyChanged(nameof(ProgressoFracao));
+                OnPropertyChanged(nameof(ProgressoTexto));
+            }
+        }
+    }
+
+    public bool TemMeta => _metaGeracoes > 0;
+
+    /// <summary>Progresso até <see cref="MetaGeracoes"/>, de 0 a 1 — 0 quando não há meta.</summary>
+    public double ProgressoFracao => TemMeta ? Math.Clamp(GeracaoAtual / (double)_metaGeracoes, 0.0, 1.0) : 0.0;
+
+    public string ProgressoTexto => TemMeta
+        ? $"{ProgressoFracao:P0} — geração {GeracaoAtual:N0} de {_metaGeracoes:N0}"
+        : $"Sem meta definida — geração {GeracaoAtual:N0}";
+
+    /// <summary>Avanço dentro do bloco de <see cref="TamanhoBlocoMarco"/> gerações que será gravado como marco — sempre disponível, mesmo sem meta.</summary>
+    public double ProgressoNoBlocoFracao => (GeracaoAtual % TamanhoBlocoMarco) / (double)TamanhoBlocoMarco;
+
+    public string ProgressoNoBlocoTexto =>
+        $"{GeracaoAtual % TamanhoBlocoMarco} de {TamanhoBlocoMarco} gerações até o próximo marco gravado";
+
+    // ------------------------------------------------- Arquitetura do campeão (resultado da evolução, não configuração)
+
+    private int _ocultosDoCampeao;
+    /// <summary>Neurônios ocultos do campeão. Com NEAT é RESULTADO da evolução — era fixo em 8 no algoritmo anterior.</summary>
+    public int OcultosDoCampeao { get => _ocultosDoCampeao; private set => SetProperty(ref _ocultosDoCampeao, value); }
+
+    private int _conexoesDiretasEntradaSaida;
+    /// <summary>Conexões que pulam direto de uma entrada para uma saída, sem passar por oculto nenhum — impossíveis na rede em camadas anterior, comuns no NEAT.</summary>
+    public int ConexoesDiretasEntradaSaida { get => _conexoesDiretasEntradaSaida; private set => SetProperty(ref _conexoesDiretasEntradaSaida, value); }
+
+    private int _idDoCampeao;
+    public int IdDoCampeao { get => _idDoCampeao; private set => SetProperty(ref _idDoCampeao, value); }
+
+    private int _geracaoDeNascimentoDoCampeao;
+    public int GeracaoDeNascimentoDoCampeao { get => _geracaoDeNascimentoDoCampeao; private set => SetProperty(ref _geracaoDeNascimentoDoCampeao, value); }
+
+    /// <summary>Entradas reais da rede (sem o nó de bias) — ver <see cref="ControladorHibrido.QuantidadeEntradas"/>.</summary>
+    public int EntradasDaRede => ControladorHibrido.QuantidadeEntradas;
+
+    public int SaidasDaRede => ControladorHibrido.QuantidadeSaidas;
+
+    public string FuncaoAtivacaoTexto => TreinadorNeat.FuncaoAtivacao.ToString();
+
+    public string TopologiaTexto => TreinadorNeat.Aciclica ? "Acíclica (sem memória entre ativações)" : "Cíclica";
+
+    private bool _ativacoesOcultasDisponiveis;
+    /// <summary>
+    /// Se o diagrama está conseguindo mostrar a ativação real dos neurônios ocultos (ver
+    /// <see cref="AtivacoesRedeNeat"/>). Quando falso, os ocultos aparecem em cor neutra e a
+    /// legenda avisa o motivo — em vez de exibir uma cor que não corresponde a valor nenhum.
+    /// </summary>
+    public bool AtivacoesOcultasDisponiveis { get => _ativacoesOcultasDisponiveis; private set => SetProperty(ref _ativacoesOcultasDisponiveis, value); }
+
+    // ------------------------------------------------- Comportamento do campeão (episódio de verificação de cada geração)
+
+    private int _alvosAbatidos;
+    public int AlvosAbatidos { get => _alvosAbatidos; private set => SetProperty(ref _alvosAbatidos, value); }
+
+    private int _alvosEscapados;
+    public int AlvosEscapados { get => _alvosEscapados; private set => SetProperty(ref _alvosEscapados, value); }
+
+    private int _alvosNascidos;
+    public int AlvosNascidos { get => _alvosNascidos; private set => SetProperty(ref _alvosNascidos, value); }
+
+    private int _tirosErrados;
+    public int TirosErrados { get => _tirosErrados; private set => SetProperty(ref _tirosErrados, value); }
+
+    private double? _taxaDeAcerto;
+    /// <summary>Abates sobre tentativas de disparo — <c>null</c> quando o campeão não disparou nenhuma vez no episódio.</summary>
+    public double? TaxaDeAcerto { get => _taxaDeAcerto; private set => SetProperty(ref _taxaDeAcerto, value); }
+
+    private double? _taxaDeCobertura;
+    /// <summary>Abates sobre alvos que apareceram — mede quanto da ameaça o controlador deu conta, não só a precisão do tiro.</summary>
+    public double? TaxaDeCobertura { get => _taxaDeCobertura; private set => SetProperty(ref _taxaDeCobertura, value); }
+
+    private int _oportunidadesDeDisparo;
+    public int OportunidadesDeDisparo { get => _oportunidadesDeDisparo; private set => SetProperty(ref _oportunidadesDeDisparo, value); }
+
+    private int _disparosRecusadosPelaRede;
+    public int DisparosRecusadosPelaRede { get => _disparosRecusadosPelaRede; private set => SetProperty(ref _disparosRecusadosPelaRede, value); }
+
+    private double? _taxaDeRecusa;
+    /// <summary>
+    /// Fração das oportunidades legítimas que a rede recusou — a heurística pura recusaria zero.
+    /// É a medida direta da hesitação que motivou <see cref="ParametrosTreinamento.PenalidadeRecusaDisparo"/>,
+    /// e até agora só aparecia no instantâneo gravado a cada 1.000 gerações.
+    /// </summary>
+    public double? TaxaDeRecusa { get => _taxaDeRecusa; private set => SetProperty(ref _taxaDeRecusa, value); }
 
     // ---------------------------------------------------------------- Comandos
 
@@ -325,12 +669,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             tetoComplexidade: parametros.TetoComplexidade,
             probabilidadeAdicionarNo: parametros.ProbabilidadeAdicionarNo);
 
-        GeracaoAtual = 0;
-        MelhorFitness = 0;
-        FitnessMedio = 0;
-        _somaFitnessMedioBloco = 0;
-        _melhorFitnessBloco = 0;
-        _contagemGeracoesNoBloco = 0;
+        ZerarIndicadoresDaSessao();
         _melhorGenomaAtual = null;
         _melhorRedeAtual = null;
         _episodioPreview = null;
@@ -338,10 +677,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         MirasVisuais.Clear();
         RegrasAprendidas.Clear();
 
+        TetoComplexidadeEmUso = parametros.TetoComplexidade;
+        AtualizarParametrosEmUso(parametros, _treinador);
+
+        RegistrarEvento(
+            MetaGeracoes > 0
+                ? $"Treinamento iniciado — população {parametros.TamanhoPopulacao}, {parametros.QuantidadeEspecies} espécies, teto de {parametros.TetoComplexidade} conexões, meta de {MetaGeracoes:N0} gerações."
+                : $"Treinamento iniciado — população {parametros.TamanhoPopulacao}, {parametros.QuantidadeEspecies} espécies, teto de {parametros.TetoComplexidade} conexões, sem meta de gerações.",
+            geracao: null,
+            TipoEventoTreinamento.Informacao);
+
         _previewContinuo = true;
         _cts = new CancellationTokenSource();
+        _cronometroSessao.Restart();
         _tarefaTreinamento = Task.Run(() => LacoDeTreinamento(_cts.Token));
         _timerPreview.Start();
+        _timerEstado.Start();
         EmExecucao = true;
     }
 
@@ -351,7 +702,69 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         _cts?.Cancel();
         _timerPreview.Stop();
+        _timerEstado.Stop();
+        _cronometroSessao.Stop();
+        TempoDecorrido = _cronometroSessao.Elapsed;
         EmExecucao = false;
+
+        RegistrarEvento(
+            $"Treinamento parado pelo usuário após {_geracoesNestaSessao:N0} gerações em {TempoDecorridoTexto}.",
+            GeracaoAtual,
+            TipoEventoTreinamento.Informacao);
+    }
+
+    /// <summary>
+    /// Zera tudo que é medido POR SESSÃO — contadores, série do gráfico, espécies e indicadores de
+    /// aprendizado. Chamado em "Iniciar" e "Resetar" para que nenhum número da execução anterior
+    /// sobreviva misturado ao da nova (era exatamente o que acontecia com o gráfico, alimentado
+    /// pelo histórico persistido do banco).
+    /// </summary>
+    private void ZerarIndicadoresDaSessao()
+    {
+        GeracaoAtual = 0;
+        MelhorFitness = 0;
+        FitnessMedio = 0;
+        MelhorFitnessDaSessao = 0;
+        GeracaoDoMelhorFitness = 0;
+        FitnessMediaMovel = 0;
+        VariacaoNaJanela = null;
+        GeracoesSemCampeaoNovo = 0;
+        ComplexidadeMelhor = 0;
+        ComplexidadeMedia = 0;
+        ComplexidadeMaxima = 0;
+        QuantidadeEspecies = 0;
+        Simplificando = false;
+        TotalAvaliacoes = 0;
+        AvaliacoesPorSegundo = 0;
+        TempoDecorrido = TimeSpan.Zero;
+        OcultosDoCampeao = 0;
+        ConexoesDiretasEntradaSaida = 0;
+        IdDoCampeao = 0;
+        GeracaoDeNascimentoDoCampeao = 0;
+        AtivacoesOcultasDisponiveis = false;
+        AlvosAbatidos = 0;
+        AlvosEscapados = 0;
+        AlvosNascidos = 0;
+        TirosErrados = 0;
+        TaxaDeAcerto = null;
+        TaxaDeCobertura = null;
+        OportunidadesDeDisparo = 0;
+        DisparosRecusadosPelaRede = 0;
+        TaxaDeRecusa = null;
+        Falhou = false;
+
+        _somaFitnessMedioBloco = 0;
+        _melhorFitnessBloco = 0;
+        _contagemGeracoesNoBloco = 0;
+        _geracoesNestaSessao = 0;
+        _cronometroSessao.Reset();
+
+        _yDoOcultoPorId.Clear();
+        _ocultosDaRemontagemAnterior.Clear();
+        _conexoesDaRemontagemAnterior.Clear();
+
+        HistoricoDaSessao.Clear();
+        Especies.Clear();
     }
 
     /// <summary>
@@ -364,21 +777,21 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         _cts?.Cancel();
         _timerPreview.Stop();
+        _timerEstado.Stop();
         EmExecucao = false;
 
-        _ambiente = new AmbienteTreinamento(ParametrosAtuais);
+        ParametrosTreinamento parametros = ParametrosAtuais;
+        _ambiente = new AmbienteTreinamento(parametros);
         _treinador = null;
         _melhorGenomaAtual = null;
         _melhorRedeAtual = null;
         _episodioPreview = null;
         _previewContinuo = true;
 
-        GeracaoAtual = 0;
-        MelhorFitness = 0;
-        FitnessMedio = 0;
-        _somaFitnessMedioBloco = 0;
-        _melhorFitnessBloco = 0;
-        _contagemGeracoesNoBloco = 0;
+        ZerarIndicadoresDaSessao();
+        TetoComplexidadeEmUso = parametros.TetoComplexidade;
+        AtualizarParametrosEmUso(parametros, treinador: null);
+        EventosExecucao.Clear();
 
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
@@ -502,25 +915,65 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             ResultadoGeracao inicial = _treinador.EvoluirGeracao(seeds, CatalogoCenarios.TodosComScript);
 
             AdotarCampeao(inicial.MelhorGenoma);
-            RunOnUi(() => GeracaoAtual = inicial.Geracao);
+
+            RunOnUi(() =>
+            {
+                GeracaoAtual = inicial.Geracao;
+                MelhorFitness = inicial.MelhorFitness;
+                FitnessMedio = inicial.FitnessMedio;
+                ComplexidadeMelhor = inicial.ComplexidadeMelhor;
+                ComplexidadeMedia = inicial.ComplexidadeMedia;
+                ComplexidadeMaxima = inicial.ComplexidadeMaxima;
+                QuantidadeEspecies = inicial.QuantidadeEspecies;
+                Simplificando = inicial.Simplificando;
+                OcultosDoCampeao = inicial.NeuroniosOcultosDoCampeao;
+                IdDoCampeao = inicial.MelhorGenoma.Id;
+                GeracaoDeNascimentoDoCampeao = inicial.GeracaoDeNascimentoDoCampeao;
+                TetoComplexidadeEmUso = _ambiente.Parametros.TetoComplexidade;
+                AtualizarEspecies(inicial);
+                AtualizarParametrosEmUso(_ambiente.Parametros, _treinador);
+            });
+
+            RegistrarEvento(
+                "População inicial criada para a prévia — uma geração foi avaliada para obter um campeão (um genoma NEAT só existe dentro de uma população).",
+                inicial.Geracao,
+                TipoEventoTreinamento.Informacao);
+
             return true;
         }
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível criar a população inicial para a prévia: {ex.Message}");
             MostrarStatus($"Não foi possível criar a população inicial: {ex.Message}", sucesso: false);
+            RegistrarEvento($"Não foi possível criar a população inicial: {ex.Message}", geracao: null, TipoEventoTreinamento.Falha);
             return false;
         }
     }
 
-    /// <summary>Guarda o campeão da geração, decodifica a rede e atualiza regras e diagrama a partir dela.</summary>
-    private void AdotarCampeao(NeatGenome<double> genoma)
+    /// <summary>
+    /// Guarda o campeão da geração e decodifica a rede. O diagrama e as regras só são refeitos
+    /// quando <paramref name="remontarDiagrama"/> permite (ver
+    /// <see cref="IntervaloMinimoRemontagemDiagrama"/>) — a decodificação em si é barata e precisa
+    /// acontecer sempre, porque a prévia animada e a exportação usam esta rede.
+    /// </summary>
+    private void AdotarCampeao(NeatGenome<double> genoma, bool remontarDiagrama = true)
     {
         _melhorGenomaAtual = genoma;
         _melhorRedeAtual = _treinador!.Decodificar(genoma);
 
+        if (!remontarDiagrama) return;
+
         AtualizarRegras(_melhorRedeAtual);
         RemontarDiagramaRedeNeural(genoma, _melhorRedeAtual);
+    }
+
+    /// <summary>Consome a janela do <i>throttle</i> do diagrama: devolve <c>true</c> (e reinicia a contagem) só quando já passou tempo suficiente desde a última remontagem.</summary>
+    private bool PodeRemontarDiagrama()
+    {
+        if (_cronometroDiagrama.Elapsed < IntervaloMinimoRemontagemDiagrama) return false;
+
+        _cronometroDiagrama.Restart();
+        return true;
     }
 
     /// <summary>
@@ -543,17 +996,54 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
             _logger.Success($"Rede exportada: {caminho}");
             MostrarStatus($"Rede exportada com sucesso! ({Path.GetFileName(caminho)})", sucesso: true);
+            RegistrarEvento(
+                $"Rede exportada ({Path.GetFileName(caminho)}) — {ComplexidadeMelhor:0} conexões, {OcultosDoCampeao} ocultos, fitness {MelhorFitness:0.0}.",
+                GeracaoAtual,
+                TipoEventoTreinamento.Informacao);
         }
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível exportar a rede: {ex.Message}");
             MostrarStatus($"Não foi possível exportar a rede: {ex.Message}", sucesso: false);
+            RegistrarEvento($"Não foi possível exportar a rede: {ex.Message}", GeracaoAtual, TipoEventoTreinamento.Falha);
         }
     }
 
     // ---------------------------------------------------------------- Laço de treinamento (thread de fundo)
 
+    /// <summary>
+    /// Envelope do laço: qualquer exceção aqui matava a thread de fundo em silêncio, deixando a
+    /// tela anunciando "treinando" com os números congelados. Agora a falha é registrada no
+    /// histórico de execução, aparece no selo de estado e libera os botões.
+    /// </summary>
     private void LacoDeTreinamento(CancellationToken token)
+    {
+        try
+        {
+            Evoluir(token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Parada pedida pelo usuário — nada a relatar.
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"O treinamento foi interrompido por um erro: {ex}");
+
+            RunOnUi(() =>
+            {
+                Falhou = true;
+                EmExecucao = false;
+                _timerPreview.Stop();
+                _timerEstado.Stop();
+                _cronometroSessao.Stop();
+                MostrarStatus($"O treinamento parou por um erro: {ex.Message}", sucesso: false);
+                RegistrarEvento($"Treinamento interrompido por erro: {ex.Message}", GeracaoAtual, TipoEventoTreinamento.Falha);
+            });
+        }
+    }
+
+    private void Evoluir(CancellationToken token)
     {
         TreinadorNeat algoritmo = _treinador!;
 
@@ -575,23 +1065,219 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // porque o sorteio raramente o produz.
             ResultadoGeracao resultado = algoritmo.EvoluirGeracao(seedsDaGeracao, CatalogoCenarios.TodosComScript);
 
-            AdotarCampeao(resultado.MelhorGenoma);
+            // O diagrama e as regras são custosos de remontar e só valem por geração exibida —
+            // ver IntervaloMinimoRemontagemDiagrama. O campeão em si é sempre adotado, porque a
+            // prévia animada e a exportação dependem dele.
+            AdotarCampeao(resultado.MelhorGenoma, remontarDiagrama: PodeRemontarDiagrama());
 
             // Reavalia o melhor genoma uma vez mais só para capturar como ele se comportou
-            // (abatidos/escapados) — o fitness em si já saiu de dentro da evolução, mas esses
-            // dois números não são devolvidos por ela.
+            // (abatidos/escapados/recusas) — o fitness em si já saiu de dentro da evolução, mas
+            // esses números não são devolvidos por ela.
             EpisodioResultado comportamento = _ambiente.ExecutarEpisodioRapido(_melhorRedeAtual!, seed: resultado.Geracao);
             RegistrarHistorico(resultado, comportamento);
             RegistrarMarcoFitnessSeCompletouBloco(resultado);
             RegistrarInstantaneoDeComportamentoSeCompletouBloco(resultado, comportamento);
 
-            RunOnUi(() =>
+            RunOnUi(() => AplicarResultadoNaTela(resultado, comportamento));
+
+            if (MetaGeracoes > 0 && resultado.Geracao >= MetaGeracoes)
             {
-                GeracaoAtual = resultado.Geracao;
-                MelhorFitness = resultado.MelhorFitness;
-                FitnessMedio = resultado.FitnessMedio;
-            });
+                RunOnUi(() => ConcluirPorMeta(resultado.Geracao));
+                return;
+            }
         }
+    }
+
+    /// <summary>Publica na tela tudo o que a geração produziu — roda na thread de UI.</summary>
+    private void AplicarResultadoNaTela(ResultadoGeracao resultado, EpisodioResultado comportamento)
+    {
+        bool fasesTrocaram = Simplificando != resultado.Simplificando;
+
+        GeracaoAtual = resultado.Geracao;
+        MelhorFitness = resultado.MelhorFitness;
+        FitnessMedio = resultado.FitnessMedio;
+        ComplexidadeMelhor = resultado.ComplexidadeMelhor;
+        ComplexidadeMedia = resultado.ComplexidadeMedia;
+        ComplexidadeMaxima = resultado.ComplexidadeMaxima;
+        QuantidadeEspecies = resultado.QuantidadeEspecies;
+        Simplificando = resultado.Simplificando;
+        TotalAvaliacoes = resultado.TotalAvaliacoes;
+        AvaliacoesPorSegundo = resultado.AvaliacoesPorSegundo;
+        OcultosDoCampeao = resultado.NeuroniosOcultosDoCampeao;
+        IdDoCampeao = resultado.MelhorGenoma.Id;
+        GeracaoDeNascimentoDoCampeao = resultado.GeracaoDeNascimentoDoCampeao;
+        GeracoesSemCampeaoNovo = resultado.GeracoesSemCampeaoNovo;
+
+        AlvosAbatidos = comportamento.AlvosAbatidos;
+        AlvosEscapados = comportamento.AlvosEscapados;
+        AlvosNascidos = comportamento.AlvosNascidos;
+        TirosErrados = comportamento.TirosErrados;
+        OportunidadesDeDisparo = comportamento.OportunidadesDeDisparo;
+        DisparosRecusadosPelaRede = comportamento.DisparosRecusadosPelaRede;
+
+        int tentativas = comportamento.AlvosAbatidos + comportamento.TirosErrados;
+        TaxaDeAcerto = tentativas > 0 ? comportamento.AlvosAbatidos / (double)tentativas : null;
+
+        int apareceram = comportamento.AlvosAbatidos + comportamento.AlvosEscapados;
+        TaxaDeCobertura = apareceram > 0 ? comportamento.AlvosAbatidos / (double)apareceram : null;
+
+        TaxaDeRecusa = comportamento.OportunidadesDeDisparo > 0
+            ? comportamento.DisparosRecusadosPelaRede / (double)comportamento.OportunidadesDeDisparo
+            : null;
+
+        _geracoesNestaSessao++;
+        TempoDecorrido = _cronometroSessao.Elapsed;
+
+        AtualizarEspecies(resultado);
+        AtualizarIndicadoresDeAprendizado(resultado);
+
+        if (fasesTrocaram)
+        {
+            RegistrarEvento(
+                resultado.Simplificando
+                    ? $"A evolução passou a SIMPLIFICAR — a complexidade média ({resultado.ComplexidadeMedia:0.0} conexões) ultrapassou o teto de {TetoComplexidadeEmUso}."
+                    : "A evolução voltou a COMPLEXIFICAR — a rede pode ganhar neurônios e conexões novamente.",
+                resultado.Geracao,
+                TipoEventoTreinamento.Atencao);
+        }
+    }
+
+    /// <summary>Para o treinamento por ter alcançado <see cref="MetaGeracoes"/> — roda na thread de UI.</summary>
+    private void ConcluirPorMeta(int geracao)
+    {
+        _cts?.Cancel();
+        _timerEstado.Stop();
+        _cronometroSessao.Stop();
+        TempoDecorrido = _cronometroSessao.Elapsed;
+        EmExecucao = false;
+
+        MostrarStatus($"Meta alcançada: {geracao:N0} gerações. Melhor fitness da sessão: {MelhorFitnessDaSessao:0.0}.", sucesso: true);
+        RegistrarEvento(
+            $"Meta de {MetaGeracoes:N0} gerações alcançada em {TempoDecorridoTexto} — melhor fitness da sessão {MelhorFitnessDaSessao:0.0} (geração {GeracaoDoMelhorFitness:N0}).",
+            geracao,
+            TipoEventoTreinamento.Avanco);
+    }
+
+    /// <summary>
+    /// Atualiza melhor da sessão, média móvel e variação na janela a partir da série desta sessão
+    /// (<see cref="HistoricoDaSessao"/>, alimentada em <see cref="RegistrarHistorico"/>). Roda na
+    /// thread de UI.
+    /// </summary>
+    private void AtualizarIndicadoresDeAprendizado(ResultadoGeracao resultado)
+    {
+        if (GeracaoDoMelhorFitness == 0 || resultado.MelhorFitness > MelhorFitnessDaSessao)
+        {
+            MelhorFitnessDaSessao = resultado.MelhorFitness;
+            GeracaoDoMelhorFitness = resultado.Geracao;
+
+            // Só vira evento depois da primeira geração DESTA sessão: o "recorde" inicial é apenas
+            // o ponto de partida, não um avanço, e anunciá-lo encheria o histórico de ruído.
+            // Contado pela sessão, não pelo número da geração, porque a numeração do framework
+            // começa em 0 (ver TreinadorNeat.EvoluirGeracao).
+            if (_geracoesNestaSessao > 1)
+            {
+                RegistrarEvento($"Novo melhor fitness da sessão: {resultado.MelhorFitness:0.0}.", resultado.Geracao, TipoEventoTreinamento.Avanco);
+            }
+        }
+
+        int total = HistoricoDaSessao.Count;
+        if (total == 0) return;
+
+        int tamanhoJanela = Math.Min(JanelaIndicadoresAprendizado, total);
+        double somaRecente = 0;
+        for (int i = total - tamanhoJanela; i < total; i++) somaRecente += HistoricoDaSessao[i].MelhorFitness;
+        double mediaRecente = somaRecente / tamanhoJanela;
+        FitnessMediaMovel = mediaRecente;
+
+        // A comparação só existe quando há duas janelas inteiras para comparar — com menos que
+        // isso, qualquer número seria média de amostras de tamanhos diferentes.
+        if (total < JanelaIndicadoresAprendizado * 2)
+        {
+            VariacaoNaJanela = null;
+            return;
+        }
+
+        double somaAnterior = 0;
+        int inicioAnterior = total - (JanelaIndicadoresAprendizado * 2);
+        for (int i = inicioAnterior; i < inicioAnterior + JanelaIndicadoresAprendizado; i++) somaAnterior += HistoricoDaSessao[i].MelhorFitness;
+
+        VariacaoNaJanela = mediaRecente - (somaAnterior / JanelaIndicadoresAprendizado);
+    }
+
+    /// <summary>Largura máxima, em pixels, da barra de tamanho de espécie no card (ver <see cref="LinhaEspecieTreinamento"/>).</summary>
+    private const double LarguraMaximaBarraEspeciePx = 150.0;
+
+    /// <summary>Republica as espécies da geração. Roda na thread de UI.</summary>
+    private void AtualizarEspecies(ResultadoGeracao resultado)
+    {
+        Especies.Clear();
+        if (resultado.Especies is null) return;
+
+        int maiorTamanho = 0;
+        foreach (ResumoEspecie especie in resultado.Especies) maiorTamanho = Math.Max(maiorTamanho, especie.Tamanho);
+
+        foreach (ResumoEspecie especie in resultado.Especies)
+        {
+            Especies.Add(LinhaEspecieTreinamento.De(especie, maiorTamanho, LarguraMaximaBarraEspeciePx));
+        }
+    }
+
+    /// <summary>Limite de linhas guardadas no histórico de execução — o suficiente para rolar e entender a sessão sem crescer sem limite numa execução de horas.</summary>
+    private const int LimiteEventosExecucao = 200;
+
+    /// <summary>
+    /// Acrescenta uma linha ao histórico de execução (mais recente no topo) e espelha no
+    /// <see cref="ILoggingService"/>, que continua sendo o registro permanente.
+    /// </summary>
+    private void RegistrarEvento(string mensagem, int? geracao, TipoEventoTreinamento tipo)
+    {
+        RunOnUi(() =>
+        {
+            EventosExecucao.Insert(0, new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo });
+            while (EventosExecucao.Count > LimiteEventosExecucao) EventosExecucao.RemoveAt(EventosExecucao.Count - 1);
+        });
+    }
+
+    /// <summary>
+    /// Monta o card "parâmetros em uso". <paramref name="treinador"/> é <c>null</c> antes do
+    /// primeiro "Iniciar" — nesse caso elitismo e paralelismo mostram o padrão que SERÁ aplicado,
+    /// não um valor em vigor.
+    /// </summary>
+    private void AtualizarParametrosEmUso(ParametrosTreinamento parametros, TreinadorNeat? treinador)
+    {
+        ParametrosEmUso.Clear();
+
+        void Adicionar(string nome, string valor, string explicacao) =>
+            ParametrosEmUso.Add(new ParametroEmUso(nome, valor, explicacao));
+
+        Adicionar("População", parametros.TamanhoPopulacao.ToString("N0"),
+            "Indivíduos avaliados por geração.");
+        Adicionar("Espécies", parametros.QuantidadeEspecies.ToString("N0"),
+            "Em quantas espécies a população é dividida. Protege uma topologia recém-criada de competir de igual para igual com redes já otimizadas.");
+        Adicionar("Teto de complexidade", $"{parametros.TetoComplexidade:N0} conexões",
+            "Acima deste número de conexões a evolução passa a simplificar em vez de crescer.");
+        Adicionar("Mutação estrutural", parametros.ProbabilidadeAdicionarNo.ToString("P1"),
+            "Probabilidade de um descendente ganhar um neurônio novo. Com NEAT, mutação de peso e mutação de estrutura são eventos distintos — este é o segundo.");
+        Adicionar("Episódios por avaliação", parametros.EpisodiosPorAvaliacao.ToString("N0"),
+            "Quantos episódios independentes são rodados e cuja média vira o fitness de um indivíduo. Reduz o ruído de sorteio do ambiente.");
+        Adicionar("Casos táticos fixos", CatalogoCenarios.TodosComScript.Count.ToString("N0"),
+            "Cenários roteirizados avaliados em TODA geração, além dos episódios sorteados.");
+        Adicionar("Elitismo", (treinador?.ProporcaoElitismo ?? 0.05).ToString("P0"),
+            "Fração dos melhores de cada espécie preservada sem alteração de uma geração para a outra.");
+        Adicionar("Paralelismo", treinador is null or { GrauParalelismo: -1 } ? "todos os núcleos" : treinador.GrauParalelismo.ToString("N0"),
+            "Quantos indivíduos são avaliados ao mesmo tempo.");
+        Adicionar("Rede", $"{ControladorHibrido.QuantidadeEntradas} entradas + bias → {ControladorHibrido.QuantidadeSaidas} saídas",
+            "Entradas e saídas são fixas (é o contrato com o controlador); tudo entre elas é evoluído.");
+        Adicionar("Ativação", $"{TreinadorNeat.FuncaoAtivacao} · {(TreinadorNeat.Aciclica ? "acíclica" : "cíclica")}",
+            "TanH mantém as saídas entre -1 e 1, a faixa que o controlador híbrido assume. Acíclica = sem memória entre ativações.");
+        Adicionar("Máx. alvos por quadrante", parametros.MaxAlvosPorQuadrante.ToString("N0"),
+            "Teto de alvos ativos simultâneos no mesmo quadrante.");
+        Adicionar("Alcance de mira", $"{parametros.DistanciaEngajamentoMetros:0.##} m",
+            "Vem de Configurações → Radar e mira. Vale a partir do próximo Iniciar/Resetar.");
+        Adicionar("Certeza mínima", parametros.LimiarConfiancaDisparoFracao.ToString("P0"),
+            "Vem de Configurações → Disparo. Veto inegociável: abaixo disso nenhum disparo é autorizado, decida a rede o que decidir.");
+        Adicionar("Duração do episódio", parametros.SemLimiteDeDuracao ? "sem limite" : $"{parametros.DuracaoEpisodioSegundos:0.#} s",
+            "Tempo simulado de cada episódio de avaliação.");
     }
 
     /// <summary>
@@ -609,7 +1295,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _melhorFitnessBloco = Math.Max(_melhorFitnessBloco, resultado.MelhorFitness);
         _contagemGeracoesNoBloco++;
 
-        if (resultado.Geracao % TamanhoBlocoMarco != 0) return;
+        // Geração 0 é a população INICIAL (ver TreinadorNeat.EvoluirGeracao) e também satisfaz
+        // "múltiplo de 500" — sem esta guarda, todo "Iniciar" gravava na hora um marco de um
+        // bloco de uma única geração, poluindo o painel de longo prazo com um ponto que não
+        // representa 500 gerações de nada.
+        if (resultado.Geracao <= 0 || resultado.Geracao % TamanhoBlocoMarco != 0) return;
 
         var marco = new MarcoFitnessTreinamento
         {
@@ -623,10 +1313,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         {
             _marcoFitnessRepository.Registrar(marco);
             _logger.Success($"Marco de treinamento registrado: geração {marco.GeracaoMarco}, fitness médio do bloco {marco.FitnessMedioDoBloco:0.0}.");
+            RegistrarEvento(
+                $"Marco gravado — fitness médio do bloco {marco.FitnessMedioDoBloco:0.0}, melhor do bloco {marco.MelhorFitnessDoBloco:0.0}.",
+                marco.GeracaoMarco,
+                TipoEventoTreinamento.Informacao);
         }
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível registrar o marco de fitness da geração {marco.GeracaoMarco}: {ex.Message}");
+            RegistrarEvento($"Não foi possível gravar o marco de fitness: {ex.Message}", marco.GeracaoMarco, TipoEventoTreinamento.Falha);
         }
 
         _somaFitnessMedioBloco = 0;
@@ -644,7 +1339,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// </summary>
     private void RegistrarInstantaneoDeComportamentoSeCompletouBloco(ResultadoGeracao resultado, EpisodioResultado comportamento)
     {
-        if (resultado.Geracao % TamanhoBlocoInstantaneo != 0) return;
+        // Mesma guarda do marco: a geração 0 (população inicial) é múltipla de qualquer bloco.
+        if (resultado.Geracao <= 0 || resultado.Geracao % TamanhoBlocoInstantaneo != 0) return;
 
         int tentativasDeDisparo = comportamento.AlvosAbatidos + comportamento.TirosErrados;
         int alvosQueApareceram = comportamento.AlvosAbatidos + comportamento.AlvosEscapados;
@@ -671,10 +1367,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             _logger.Success(
                 $"Instantâneo de comportamento registrado: geração {instantaneo.GeracaoMarco}, " +
                 $"acerto {instantaneo.TaxaDeAcerto:P0}, cobertura {instantaneo.TaxaDeCobertura:P0}.");
+            RegistrarEvento(
+                $"Instantâneo de comportamento gravado — acerto {instantaneo.TaxaDeAcerto:P0}, cobertura {instantaneo.TaxaDeCobertura:P0}.",
+                instantaneo.GeracaoMarco,
+                TipoEventoTreinamento.Informacao);
         }
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível registrar o instantâneo de comportamento da geração {instantaneo.GeracaoMarco}: {ex.Message}");
+            RegistrarEvento($"Não foi possível gravar o instantâneo de comportamento: {ex.Message}", instantaneo.GeracaoMarco, TipoEventoTreinamento.Falha);
         }
     }
 
@@ -687,8 +1388,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             FitnessMedio = resultado.FitnessMedio,
             AlvosAbatidos = comportamento.AlvosAbatidos,
             AlvosEscapados = comportamento.AlvosEscapados,
+            ComplexidadeMelhor = resultado.ComplexidadeMelhor,
+            QuantidadeEspecies = resultado.QuantidadeEspecies,
             DataHora = DateTime.Now
         };
+
+        bool gravou = true;
 
         try
         {
@@ -697,15 +1402,29 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível registrar o histórico de treinamento: {ex.Message}");
-            return;
+            gravou = false;
         }
 
+        // A série da sessão (que alimenta o gráfico e os indicadores de aprendizado) é atualizada
+        // mesmo que a gravação no banco falhe: o número foi medido de verdade, e perder o gráfico
+        // inteiro por causa de um erro de persistência seria esconder informação válida.
         RunOnUi(() =>
         {
+            HistoricoDaSessao.Add(registro);
+            while (HistoricoDaSessao.Count > LimiteSerieDaSessao) HistoricoDaSessao.RemoveAt(0);
+
+            if (!gravou) return;
+
             HistoricoRecente.Add(registro);
             while (HistoricoRecente.Count > 300) HistoricoRecente.RemoveAt(0);
         });
     }
+
+    /// <summary>
+    /// Gerações mantidas na série do gráfico. Igual ao limite do histórico persistido (300) por
+    /// coerência: as duas visões mostram a mesma janela de tempo, uma por sessão e outra do banco.
+    /// </summary>
+    private const int LimiteSerieDaSessao = 300;
 
     /// <summary>Serializa a rede no formato <c>.net</c> do SharpNEAT, em memória — ver <see cref="RegistrarInstantaneoDeComportamentoSeCompletouBloco"/>.</summary>
     private static string SerializarRede(NeatGenome<double> genoma)
@@ -769,16 +1488,34 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// direto da entrada para a saída (comuns no NEAT, impossíveis na rede anterior).
     /// </para>
     /// <para>
-    /// A ativação individual de cada neurônio OCULTO não é mais exibida: a caixa-preta do
-    /// SharpNEAT expõe apenas entradas e saídas, não os valores internos. Entradas e saídas
-    /// continuam coloridas pelo valor real no cenário de referência; os ocultos usam cor neutra.
-    /// Preferiu-se isso a estimar um valor que o framework não fornece.
+    /// A ativação de cada neurônio OCULTO voltou a ser exibida (era um recurso da rede própria
+    /// anterior, perdido na migração porque a caixa-preta do SharpNEAT expõe apenas entradas e
+    /// saídas): <see cref="AtivacoesRedeNeat"/> refaz a propagação sobre a mesma topologia e os
+    /// mesmos pesos, então o valor mostrado é o real, não uma estimativa. Se a rede não for do
+    /// tipo que aquela propagação sabe reproduzir, os ocultos voltam à cor neutra e
+    /// <see cref="AtivacoesOcultasDisponiveis"/> avisa o motivo na legenda.
+    /// </para>
+    /// <para>
+    /// Duas coisas são preservadas entre remontagens para a tela não "piscar": a posição vertical
+    /// de cada oculto que continua existindo (<see cref="_yDoOcultoPorId"/>) e a lembrança do que
+    /// havia antes, usada para destacar neurônios e conexões que acabaram de surgir.
     /// </para>
     /// </remarks>
     private void RemontarDiagramaRedeNeural(NeatGenome<double> genoma, RedeNeat rede)
     {
         NetFileModel modelo = NeatGenomeConverter.ToNetFileModel(genoma);
         double[] saidas = rede.Ativar(EntradaDeReferenciaParaDiagrama);
+
+        // Entradas na convenção do SharpNEAT (bias na posição 0) — é o que a propagação espera.
+        double[] entradasComBias = new double[modelo.InputCount];
+        entradasComBias[0] = 1.0;
+        for (int i = 1; i < entradasComBias.Length && i - 1 < EntradaDeReferenciaParaDiagrama.Length; i++)
+        {
+            entradasComBias[i] = EntradaDeReferenciaParaDiagrama[i - 1];
+        }
+
+        IReadOnlyDictionary<int, double>? ativacoes = AtivacoesRedeNeat.Calcular(modelo, entradasComBias);
+        bool temAtivacoesOcultas = ativacoes is not null;
 
         // Convenção de ids do SharpNEAT: [0, InputCount) são entradas (0 = bias),
         // [InputCount, InputCount+OutputCount) são saídas, e qualquer id acima disso é oculto.
@@ -787,12 +1524,29 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         int primeiroIdOculto = totalEntradas + modelo.OutputCount;
 
         var idsOcultos = new List<int>();
+        int conexoesDiretas = 0;
+
         foreach (ConnectionLine conexao in modelo.Connections)
         {
             if (conexao.SourceId >= primeiroIdOculto && !idsOcultos.Contains(conexao.SourceId)) idsOcultos.Add(conexao.SourceId);
             if (conexao.TargetId >= primeiroIdOculto && !idsOcultos.Contains(conexao.TargetId)) idsOcultos.Add(conexao.TargetId);
+
+            if (conexao.SourceId < totalEntradas && conexao.TargetId >= primeiroIdSaida && conexao.TargetId < primeiroIdOculto)
+            {
+                conexoesDiretas++;
+            }
         }
-        idsOcultos.Sort();
+
+        // Ordenar por posição já ocupada antes de por id: assim os ocultos que sobreviveram
+        // mantêm a ordem vertical de antes, e os novos entram nos espaços restantes em vez de
+        // empurrar todos os outros para baixo.
+        idsOcultos.Sort((a, b) =>
+        {
+            double ya = _yDoOcultoPorId.TryGetValue(a, out double va) ? va : double.MaxValue;
+            double yb = _yDoOcultoPorId.TryGetValue(b, out double vb) ? vb : double.MaxValue;
+            int comparacao = ya.CompareTo(yb);
+            return comparacao != 0 ? comparacao : a.CompareTo(b);
+        });
 
         var posicoes = new Dictionary<int, (double X, double Y)>();
         var novosNeuronios = new List<NeuronioVisualTreinamento>();
@@ -826,10 +1580,19 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         }
 
         // Ocultos — quantos e quais são resultado da evolução, não configuração.
+        var novosYPorOculto = new Dictionary<int, double>(idsOcultos.Count);
+
         for (int i = 0; i < idsOcultos.Count; i++)
         {
+            int idOculto = idsOcultos[i];
             double y = DiagramaAltura * (i + 1) / (idsOcultos.Count + 1);
-            posicoes[idsOcultos[i]] = (xOculto, y);
+            posicoes[idOculto] = (xOculto, y);
+            novosYPorOculto[idOculto] = y;
+
+            bool recemSurgido = _ocultosDaRemontagemAnterior.Count > 0 && !_ocultosDaRemontagemAnterior.Contains(idOculto);
+            string detalheAtivacao = ativacoes is not null && ativacoes.TryGetValue(idOculto, out double ativacaoOculto)
+                ? $"Ativação no cenário de referência: {ativacaoOculto:0.00}"
+                : "Ativação indisponível para este tipo de rede.";
 
             novosNeuronios.Add(new NeuronioVisualTreinamento
             {
@@ -837,9 +1600,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                 Indice = i,
                 CanvasX = xOculto,
                 CanvasY = y,
-                Raio = 13,
-                Cor = CorComIntensidade("93C5FD", 0.5),
-                Rotulo = $"NEURÔNIO OCULTO #{i + 1} (nó {idsOcultos[i]})\nCriado pela evolução — o SharpNEAT não expõe a ativação interna, só entradas e saídas.",
+                // Nó novo ganha um pouco mais de raio, além da cor de destaque: é o sinal visual
+                // de mutação estrutural acontecendo, que no método anterior nunca existia.
+                Raio = recemSurgido ? 17 : 13,
+                Cor = recemSurgido
+                    ? "#FFF472B6"
+                    : ativacoes is not null && ativacoes.TryGetValue(idOculto, out double intensidade)
+                        ? CorComIntensidade("93C5FD", Math.Abs(intensidade))
+                        : CorComIntensidade("93C5FD", 0.5),
+                Rotulo = $"NEURÔNIO OCULTO #{i + 1} (nó {idOculto})\n{detalheAtivacao}" +
+                         (recemSurgido ? "\nSURGIU NESTA ATUALIZAÇÃO — mutação estrutural do NEAT." : "\nCriado pela evolução, não configurado."),
                 RotuloCurto = string.Empty
             });
         }
@@ -869,11 +1639,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         }
 
         var novasConexoes = new List<ConexaoVisualTreinamento>();
+        var chavesDasConexoes = new HashSet<(int Origem, int Destino)>();
 
         foreach (ConnectionLine conexao in modelo.Connections)
         {
             if (!posicoes.TryGetValue(conexao.SourceId, out (double X, double Y) origem)) continue;
             if (!posicoes.TryGetValue(conexao.TargetId, out (double X, double Y) destino)) continue;
+
+            (int, int) chave = (conexao.SourceId, conexao.TargetId);
+            chavesDasConexoes.Add(chave);
+            bool recemSurgida = _conexoesDaRemontagemAnterior.Count > 0 && !_conexoesDaRemontagemAnterior.Contains(chave);
 
             novasConexoes.Add(new ConexaoVisualTreinamento
             {
@@ -881,13 +1656,25 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                 Y1 = origem.Y,
                 X2 = destino.X,
                 Y2 = destino.Y,
-                Cor = conexao.Weight >= 0 ? "#3B82F6" : "#EF4444",
+                Cor = recemSurgida ? "#F472B6" : conexao.Weight >= 0 ? "#3B82F6" : "#EF4444",
                 Espessura = Math.Clamp(0.5 + Math.Abs(conexao.Weight) * 1.5, 0.5, 4.0)
             });
         }
 
+        _yDoOcultoPorId.Clear();
+        foreach ((int id, double y) in novosYPorOculto) _yDoOcultoPorId[id] = y;
+
+        _ocultosDaRemontagemAnterior.Clear();
+        foreach (int id in idsOcultos) _ocultosDaRemontagemAnterior.Add(id);
+
+        _conexoesDaRemontagemAnterior.Clear();
+        foreach ((int Origem, int Destino) chave in chavesDasConexoes) _conexoesDaRemontagemAnterior.Add(chave);
+
         RunOnUi(() =>
         {
+            AtivacoesOcultasDisponiveis = temAtivacoesOcultas;
+            ConexoesDiretasEntradaSaida = conexoesDiretas;
+
             NeuroniosVisuais.Clear();
             foreach (NeuronioVisualTreinamento neuronio in novosNeuronios) NeuroniosVisuais.Add(neuronio);
 
@@ -1228,5 +2015,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         _cts?.Cancel();
         _timerPreview.Stop();
+        _timerEstado.Stop();
+        _cronometroSessao.Stop();
     }
 }
