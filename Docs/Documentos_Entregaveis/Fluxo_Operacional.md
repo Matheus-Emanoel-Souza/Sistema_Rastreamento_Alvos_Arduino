@@ -50,4 +50,4 @@ flowchart TD
 - [[Diagrama_de_Implantacao]] — topologia física PC ↔ Arduino.
 - [[ALGORITMO_SELECAO_TORRE]] — critério de seleção de torre em detalhe.
 - [[CONTROLADOR_NEUROEVOLUTIVO]] — controlador híbrido que decide dentro da etapa de seleção.
-- [[index|Índice]] (raiz do vault), [[Registro_index|Registro]].
+- [[Registro_index|Registro]].
