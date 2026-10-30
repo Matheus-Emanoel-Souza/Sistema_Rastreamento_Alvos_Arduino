@@ -7,19 +7,22 @@ verificado contra o `.tex`/`.pdf` atual, não a intenção.
 
 ## 1. Máximo de 20 páginas
 
-**Status: ⚠️ violada.** `Artigo.pdf` compilado hoje (30/10/2026) tem **30 páginas** — 10 acima do
-limite.
+**Status: ⚠️ violada, mas melhorando.** `Artigo.pdf` compilado hoje (30/10/2026) tem **27 páginas**
+— 7 acima do limite (era 30 antes da rodada de cortes de hoje).
 
-Candidatos a corte/condensação, do mais ao menos custoso:
-- Seção "Análise experimental de hiperparâmetros" tem discussão extensa (3 parágrafos longos)
-  sobre o efeito do endurecimento do ambiente; pode condensar sem perder a tabela nem a conclusão.
-- Parágrafo "Impacto de acrescentar uma entrada" lista 4 impactos em detalhe (quase uma página) —
-  candidato a resumir em uma lista mais compacta.
-- Seções de investigação da hesitação no gatilho (certeza estática, penalização de recusa,
+Cortes já aplicados:
+- [x] Seção "Análise experimental de hiperparâmetros" -- 4 parágrafos longos condensados em 1.
+- [x] Parágrafo "Impacto de acrescentar uma entrada" -- 4 impactos resumidos em lista enxuta.
+- [x] "Modelo de dados" -- 3 figuras de página cheia reduzidas a 1; prosa de relacionamento FK a FK
+  e o histórico do modelo CSV antigo removidos (já cobertos em `Modelo_Banco_de_Dados.md`).
+
+Ainda pendente (candidatos restantes):
+- [ ] Seções de investigação da hesitação no gatilho (certeza estática, penalização de recusa,
   comparação com `RedePura`) têm sobreposição narrativa; são a contribuição mais original do
   artigo, então condensar com cuidado, não cortar o achado.
-- Verificar se alguma figura grande (DER, diagrama de pacotes) pode ir para apêndice ou ter o
-  tamanho reduzido, já que ocupam página cheia hoje (ver regra 2).
+- [ ] Conclusão não menciona a investigação de hesitação/recusa de disparo (mais rica que o achado
+  da certeza estática que ela cita) -- atualizar, não só cortar.
+- [ ] Verificar se o diagrama de pacotes pode ir para apêndice ou ter o tamanho reduzido.
 
 ## 2. Imagens padronizadas
 
