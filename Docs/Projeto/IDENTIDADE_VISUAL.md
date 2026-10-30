@@ -1,3 +1,5 @@
+Funcionalidade: define a identidade visual (cores, estilo) usada na interface do RadarTorres.
+
 # Identidade visual
 
 Referência viva da identidade visual do RadarTorres (tokens de cor, tipografia, ícones) —

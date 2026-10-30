@@ -1,3 +1,5 @@
+Funcionalidade: apresenta o diagrama de pacotes/módulos do código-fonte e suas dependências.
+
 # Diagrama de Pacotes
 
 > Organização por pastas/namespaces reais do repositório (nenhum pacote foi inventado — cada um

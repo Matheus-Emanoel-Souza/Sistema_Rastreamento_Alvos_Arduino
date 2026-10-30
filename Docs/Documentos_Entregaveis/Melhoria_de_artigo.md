@@ -1,3 +1,5 @@
+Funcionalidade: checklist de revisão acadêmica do artigo do TCC (`artigo_revisado.tex`) e registro de decisões pendentes levantadas nas rodadas de revisão.
+
 # Melhorias do Artigo — RadarTorres
 
 Checklist de revisão acadêmica do `Artigo.tex`. Status real de aplicação no documento, não intenção.
@@ -63,6 +65,73 @@ Neuroevolução (survey gratuito, alternativa ao Stanley et al. 2019 que é pago
 ## Caso de estudo — bug da certeza estática
 
 - [ ] **pendente** — Promover o episódio do bug de certeza estática (`Artigo.tex:238-244`) de parágrafo metodológico para um mini-caso de estudo com dado antes/depois (ver item de gráfico de fitness acima) — é a contribuição mais original do artigo e está subexplorada.
+
+## Revisão de 30/10/2026 — decisões aplicadas
+
+- [x] **concluída** — Seção "Projeto elétrico e estrutural" removida de `artigo_revisado.tex` (era o conteúdo
+  não confirmado pela documentação técnica, já apontado como PROBLEMA CRÍTICO acima).
+  - [ ] **pendente** — Substituir por um único parágrafo citando apenas os componentes usados no projeto
+    (pedido do autor; aguardando redação final desse parágrafo).
+- [x] **concluída** — Removida do artigo a explicação do "tempo mínimo de mira" (0,3s) e toda menção a
+  "zona morta" (ela não foi validada na parte física do projeto) — a heurística "um limite absoluto ao
+  disparo" no texto agora cita só o limiar mínimo de certeza. **O código não foi alterado**: `ControladorHibrido.TempoMinimoDeMiraSegundos`,
+  `ZonaMortaService`/`ZonaMortaRepository` e toda a lógica de veto continuam ativos e usados no treino —
+  só a descrição no artigo mudou.
+- [x] **concluída** — Adicionada justificativa breve da mutação gaussiana no artigo, com o detalhamento
+  comparativo movido para `ApoioDeApresentacao.md` (novo arquivo, ver abaixo).
+- [x] **concluída** — Inserido destaque amarelo em "Controlador neuroevolutivo" sobre possível adoção de
+  biblioteca de neuroevolução — ⚠️ **o nome da biblioteca ficou como placeholder**: não há nenhuma
+  biblioteca de neuroevolução/ML referenciada no projeto hoje (`RadarTorres.App.csproj` só tem
+  `Microsoft.ML.OnnxRuntime`, usado para o YOLO26n, não para o algoritmo genético). Falta o autor confirmar
+  o nome real.
+
+## Proposta registrada: atenção simultânea de todas as câmeras/torres ao alvo identificado
+
+**Lógica atual confirmada no código** (`ControladorHibrido.SelecionarTorre`/`DecidirDisparo`,
+`src/RadarTorres.App/NeuralEvolution/ControladorHibrido.cs:98-186`): para cada alvo, o sistema filtra as
+torres candidatas em cascata (próprio quadrante → quadrante adjacente → sobressalente), pontua as
+candidatas elegíveis (heurística ou rede, conforme o modo) e escolhe **exatamente uma** torre vencedora
+(`TorreTreinamento? melhor`, linha 145-162). O disparo dessa torre só é liberado quando a confiança de
+identificação do alvo atinge `LimiarConfiancaDisparoPercentual` (checado pelo chamador,
+`AmbienteTreinamento.DecidirDisparos`/`FireControlService`). A descrição do autor bate com o código.
+
+**Proposta nova (registrada, NÃO implementada)**: ao identificar um alvo, todas as câmeras e todas as
+torres (não só a vencedora da seleção) voltam a atenção para ele simultaneamente, em vez da escolha
+exclusiva atual — objetivo: reconhecer o alvo mais rápido (mais câmeras observando ao mesmo tempo
+melhora a confiança de identificação) e acelerar o abate.
+
+- [ ] **pendente** — Projetar a mudança em `TowerSelectionService`/`ControladorHibrido.SelecionarTorre`:
+  decidir se "atenção simultânea" significa só girar as câmeras (sem comprometer a torre pro disparo) ou
+  se mais de uma torre pode ficar "comprometida" com o mesmo alvo ao mesmo tempo — isso muda a regra de
+  `Torre.Livre` e o cálculo de `outrosAlvosAtivos`/`quadrantesComOutrosAlvos` usado na filtragem por
+  quadrante.
+  - Esse ponto já foi levantado antes nos comentários #10 ("quais torres vão assumir, afinal um alvo
+    pode ser registrado por mais de uma") e #15 ("se 2 torres empatarem, 2 torres olhando no alvo") — a
+    mesma pergunta de fundo: hoje o sistema é desenhado para exclusividade 1 torre = 1 alvo.
+- [ ] **pendente** — Re-treinar a rede neural com a nova lógica: as 7 entradas atuais (`quadrante igual`,
+  `quadrante adjacente`, etc.) assumem concorrência por torre única; "atenção simultânea" pode exigir
+  entradas novas ou mudar o que conta como "candidata".
+- [ ] **pendente** — Ligado ao item já existente "Refazer esses testes assim que mudar a lógica do
+  processo" (comentário #26, Seção "Análise experimental de hiperparâmetros"): o experimento de
+  população × neurônios ocultos fica obsoleto de novo quando essa mudança for feita, igual já aconteceu
+  com a introdução da 7ª entrada.
+- [ ] **pendente** — Atualizar o artigo (texto completo da Seção 2.3.5, não só o destaque amarelo já
+  inserido) e `Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md` quando a implementação acontecer.
+
+**Decisões pendentes após revisão no dia 30/10/2026 às 13:51.**
+
+- **Comentário #3 do `artigo_revisado.docx` ("Revisar trecho")** — ancorado logo após "... até quatro
+  milhões de parâmetros, contra os 82 parâmetros da rede do RadarTorres)." (parágrafo sobre
+  `such2017deepneuroevolution`, Seção 2.2/Revisão da literatura). O comentário não diz o quê revisar
+  especificamente. Peço ao autor detalhar o que precisa mudar nesse trecho antes de eu editar.
+- **Comentário #5 do `artigo_revisado.docx` (fusão ultrassom × câmera)** — pedido original: descrever que
+  a leitura do sensor ultrassônico é cruzada com a distância estimada pela câmera (`CAM;...;Z=...`),
+  tirando uma média, com a leitura mais confiável (sensor para alvo próximo, câmera para alvo distante)
+  prevalecendo em caso de discrepância grande. **Verificado no código: essa fusão não existe hoje** — o
+  campo `DIST` do ultrassom só alimenta a posição no radar; não há nenhum cruzamento com o `Z` da câmera
+  em `SerialProtocolParser`/`SimulationService`/`AlvoVisualService`. Decisão pendente do autor: (a)
+  implementar essa fusão de verdade no software antes de descrevê-la no artigo, ou (b) registrar como
+  proposta de trabalho futuro (como fizemos com a cooperação entre torres), ou (c) descartar a ideia.
 
 ---
 

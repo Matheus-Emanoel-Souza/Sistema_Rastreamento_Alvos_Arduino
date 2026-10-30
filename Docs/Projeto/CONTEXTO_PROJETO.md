@@ -1,3 +1,5 @@
+Funcionalidade: resume o contexto, objetivo e escopo do projeto RadarTorres como TCC.
+
 # Contexto do Projeto — RadarTorres (TCC)
 
 > Documento-resumo pensado para ser colado/anexado em **outra IA** (ChatGPT, Gemini, uma nova

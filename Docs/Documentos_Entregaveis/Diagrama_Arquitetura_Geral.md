@@ -1,3 +1,5 @@
+Funcionalidade: apresenta o diagrama de arquitetura geral do sistema (camadas, componentes e integrações).
+
 # Diagrama de Arquitetura Geral
 
 Diagrama visual (`.drawio`) da arquitetura de implantação completa do RadarTorres — PC +

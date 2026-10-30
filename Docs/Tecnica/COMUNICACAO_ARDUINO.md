@@ -1,3 +1,5 @@
+Funcionalidade: especifica o protocolo de comunicação serial entre o PC e o Arduino.
+
 # Comunicação Serial PC ↔ Arduino
 
 Este documento especifica o protocolo textual usado entre o aplicativo C# (`RadarTorres.App`)

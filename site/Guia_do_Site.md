@@ -1,3 +1,5 @@
+Funcionalidade: guia do site estático do projeto RadarTorres.
+
 # Site RadarTorres
 
 > Ver também: [Índice](../Índice.md) (raiz do vault).

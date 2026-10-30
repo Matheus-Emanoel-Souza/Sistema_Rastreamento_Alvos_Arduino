@@ -1,3 +1,5 @@
+Funcionalidade: lista divergências conhecidas entre a especificação/documentação e a implementação real.
+
 # Limitações Conhecidas e Divergências entre Especificação e Implementação
 
 Este documento reúne dois tipos de conteúdo que **não** devem aparecer como requisito atendido

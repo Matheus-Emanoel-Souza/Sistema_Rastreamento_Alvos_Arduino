@@ -1,3 +1,5 @@
+Funcionalidade: rastreia requisitos até sua implementação no código, para o entregável acadêmico.
+
 # Matriz de Rastreabilidade
 
 Relaciona cada requisito ao(s) componente(s) real(is) que o implementam, comprovando que o

@@ -1,3 +1,5 @@
+Funcionalidade: apresenta o projeto RadarTorres (visão geral, como rodar, estrutura do repositório) para quem abre o repositório.
+
 # 🛰️ RadarTorres — Sistema de Detecção e Seleção de Torres
 
 ![Plataforma](https://img.shields.io/badge/plataforma-Windows%2010%2F11%20x64-0078D6?logo=windows&logoColor=white)

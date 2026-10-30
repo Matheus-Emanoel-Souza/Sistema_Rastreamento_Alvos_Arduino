@@ -1,3 +1,5 @@
+Funcionalidade: define a diretriz de UX do aplicativo (padrão de ações e formulários na interface).
+
 # Diretriz de UX — Ações no topo, formulários em modal
 
 Padrão de interface adotado nas telas administrativas do RadarTorres. Serve como referência

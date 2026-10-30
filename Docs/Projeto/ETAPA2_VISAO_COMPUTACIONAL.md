@@ -1,3 +1,5 @@
+Funcionalidade: documenta a Etapa 2 do desenvolvimento: módulo de visão computacional (detecção YOLO e mira pan/tilt).
+
 # Etapa 2 — Módulo de visão computacional (detecção YOLO + mira pan/tilt)
 
 > Documento de **planejamento apenas** — nenhum código foi escrito nesta etapa. Objetivo:

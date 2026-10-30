@@ -1,3 +1,5 @@
+Funcionalidade: descreve o fluxo operacional do sistema, da leitura dos sensores à ação da torre.
+
 # Fluxo Operacional
 
 Fluxograma do ciclo completo de operação do RadarTorres, do início da varredura até o registro

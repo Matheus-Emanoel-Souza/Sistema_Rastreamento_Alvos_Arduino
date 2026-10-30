@@ -1,3 +1,5 @@
+Funcionalidade: guia geral de navegação por toda a documentação do repositório (Docs/).
+
 # Docs/
 
 Guia rápido de onde procurar cada tipo de documento do projeto.

@@ -1,3 +1,5 @@
+Funcionalidade: registra cronologicamente as solicitações e mudanças pedidas ao longo do projeto.
+
 # Log de Solicitações
 
 Registro cronológico das solicitações feitas ao assistente (Claude Code) para trabalhos

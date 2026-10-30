@@ -1,3 +1,5 @@
+Funcionalidade: detalha a fundamentação matemática do algoritmo de seleção de torre.
+
 # Algoritmo de Seleção de Torre — Fundamentação Matemática
 
 Este documento detalha, com exemplos numéricos, toda a matemática por trás do radar e da

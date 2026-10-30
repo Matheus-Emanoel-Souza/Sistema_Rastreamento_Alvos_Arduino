@@ -1,3 +1,5 @@
+Funcionalidade: lista as próximas modificações planejadas para o projeto.
+
 # Próximas Modificações
 
 Anotações de pontos a revisar/implementar em futuras sessões. Atualizar conforme itens forem resolvidos ou surgirem novos.

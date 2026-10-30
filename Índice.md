@@ -1,3 +1,5 @@
+Funcionalidade: índice geral de toda a documentação do repositório do TCC.
+
 # Índice — RadarTorres (TCC)
 
 Mapa de navegação (MOC) do vault. Ponto de partida para encontrar qualquer documento do

@@ -1,3 +1,5 @@
+Funcionalidade: índice dos documentos de documentação técnica (Docs/Tecnica/).
+
 # Tecnica/
 
 Referência técnica interna: arquitetura, protocolo de comunicação com o Arduino, modelo de

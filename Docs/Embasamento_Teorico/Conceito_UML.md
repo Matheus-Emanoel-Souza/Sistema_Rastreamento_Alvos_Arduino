@@ -1,3 +1,5 @@
+Funcionalidade: explica os conceitos teóricos de UML usados como base para os diagramas do projeto.
+
 # UML — Unified Modeling Language
 
 ## O que é

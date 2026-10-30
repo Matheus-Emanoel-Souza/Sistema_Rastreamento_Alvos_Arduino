@@ -1,3 +1,5 @@
+Funcionalidade: explica em linguagem acessível como o controlador heurístico-neuroevolutivo decide a torre e o disparo, para leitores não técnicos.
+
 # Como a IA funciona no RadarTorres
 
 Este documento explica, em linguagem acessível, como funciona o controlador "inteligente" das

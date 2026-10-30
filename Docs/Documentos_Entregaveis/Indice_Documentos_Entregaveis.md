@@ -1,3 +1,5 @@
+Funcionalidade: índice de navegação dos documentos entregáveis do TCC.
+
 # Documentos_Entregaveis/
 
 Entregáveis oficiais do TCC (o que vai para a banca/orientador). Todas as notas desta área ficam

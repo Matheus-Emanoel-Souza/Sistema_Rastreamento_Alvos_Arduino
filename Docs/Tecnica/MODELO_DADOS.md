@@ -1,3 +1,5 @@
+Funcionalidade: documenta o modelo de dados técnico (entidades, relacionamentos) usado pelo sistema.
+
 # Modelo de Dados
 
 Este documento descreve as "tabelas" criadas para a Etapa 1 (fundação multiusuário):

@@ -1,3 +1,5 @@
+Funcionalidade: índice dos documentos de embasamento teórico do TCC.
+
 # Embasamento Teórico
 
 Material de apoio conceitual/teórico usado como base de estudo para o TCC — **não** faz parte
