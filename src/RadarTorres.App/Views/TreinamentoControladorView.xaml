@@ -16,6 +16,7 @@
     <UserControl.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolParaVisibilidade"/>
+        <conv:TipoEventoTreinamentoToBrushConverter x:Key="TipoEventoParaCor"/>
         <Style x:Key="MetricaRotulo" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
@@ -932,7 +933,9 @@
 
         <Border Grid.Column="1" Style="{StaticResource Card}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="HISTÓRICO DE EXECUÇÃO" Style="{StaticResource CardTitle}" Margin="0,0,0,8"/>
+                <TextBlock DockPanel.Dock="Top" Text="HISTÓRICO DE EXECUÇÃO" Style="{StaticResource CardTitle}" Margin="0,0,0,2"/>
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource MetricaRotulo}" FontSize="10" Margin="0,0,0,8"
+                           Text="Gravado no banco e mantido entre sessões — um treinamento que falhar durante a noite deixa aqui o motivo. Apagar de vez: Configurações → Resetar treinamento da IA."/>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding EventosExecucao}">
                         <ItemsControl.ItemTemplate>
@@ -951,7 +954,7 @@
                                                Margin="0,0,6,0" VerticalAlignment="Top" MinWidth="34" TextAlignment="Right"
                                                ToolTip="Geração em que o evento ocorreu"/>
                                     <TextBlock Grid.Column="2" Text="{Binding Mensagem}" FontSize="11" TextWrapping="Wrap"
-                                               Foreground="{Binding Cor}"/>
+                                               Foreground="{Binding Tipo, Converter={StaticResource TipoEventoParaCor}}"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

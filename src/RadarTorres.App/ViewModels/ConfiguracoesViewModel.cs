@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -37,6 +37,7 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
     private readonly ILoggingService _logger;
     private readonly IHistoricoTreinamentoRepository _historicoTreinamentoRepository;
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
+    private readonly IEventoTreinamentoRepository _eventoTreinamentoRepository;
 
     private ConfiguracoesAplicativo _edicao;
 
@@ -47,7 +48,8 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         ITermosDeUsoService termosDeUsoService,
         ILoggingService logger,
         IHistoricoTreinamentoRepository historicoTreinamentoRepository,
-        IMarcoFitnessTreinamentoRepository marcoFitnessRepository)
+        IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
+        IEventoTreinamentoRepository eventoTreinamentoRepository)
     {
         _repositorio = repositorio;
         _localizationService = localizationService;
@@ -56,6 +58,7 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         _logger = logger;
         _historicoTreinamentoRepository = historicoTreinamentoRepository;
         _marcoFitnessRepository = marcoFitnessRepository;
+        _eventoTreinamentoRepository = eventoTreinamentoRepository;
 
         _edicao = repositorio.Atual.Clonar();
 
@@ -477,14 +480,15 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
     /// <summary>
     /// Apaga o histórico de treinamento gravado em disco: os até 300 registros recentes por
     /// geração (<see cref="IHistoricoTreinamentoRepository"/>) e os marcos de melhor fitness /
-    /// fitness médio a cada 500 gerações (<see cref="IMarcoFitnessTreinamentoRepository"/>).
+    /// fitness médio a cada 500 gerações (<see cref="IMarcoFitnessTreinamentoRepository"/>) e o
+    /// histórico de execução — início, parada, falhas, recordes (<see cref="IEventoTreinamentoRepository"/>).
     /// Não afeta uma sessão de treinamento em andamento na tela "Treinamento do Controlador"
     /// (essa usa o botão "Resetar" próprio, que também zera o estado em memória).
     /// </summary>
     private void ResetarTreinamentoIA()
     {
         bool confirmado = System.Windows.MessageBox.Show(
-            "Isso vai apagar permanentemente o histórico de treinamento da IA: os registros por geração e os marcos de melhor fitness / fitness médio. Essa ação não pode ser desfeita. Continuar?",
+            "Isso vai apagar permanentemente o histórico de treinamento da IA: os registros por geração, os marcos de melhor fitness / fitness médio e o histórico de execução (início, parada, falhas, recordes). Essa ação não pode ser desfeita. Continuar?",
             "Resetar treinamento da IA",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
@@ -494,9 +498,10 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
         {
             _historicoTreinamentoRepository.LimparTudo();
             _marcoFitnessRepository.LimparTudo();
+            _eventoTreinamentoRepository.LimparTudo();
 
             MensagemStatus = "Histórico de treinamento da IA apagado.";
-            _logger.Success("Histórico de treinamento da IA apagado (registros por geração e marcos de fitness).");
+            _logger.Success("Histórico de treinamento da IA apagado (registros por geração, marcos de fitness e histórico de execução).");
         }
         catch (Exception ex)
         {

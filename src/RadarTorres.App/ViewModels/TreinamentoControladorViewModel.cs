@@ -60,6 +60,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
     private readonly IInstantaneoComportamentoRepository _instantaneoRepository;
     private readonly ITelemetriaSimulacaoService _telemetria;
+    private readonly IEventoTreinamentoRepository _eventoRepository;
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly DispatcherTimer _timerPreview;
 
@@ -184,6 +185,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
         IInstantaneoComportamentoRepository instantaneoRepository,
         ITelemetriaSimulacaoService telemetria,
+        IEventoTreinamentoRepository eventoRepository,
         IConfiguracoesAplicativoRepository configuracoes)
     {
         _logger = logger;
@@ -191,6 +193,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _marcoFitnessRepository = marcoFitnessRepository;
         _instantaneoRepository = instantaneoRepository;
         _telemetria = telemetria;
+        _eventoRepository = eventoRepository;
         _configuracoes = configuracoes;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
@@ -216,6 +219,27 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         AtualizarParametrosEmUso(ParametrosAtuais, treinador: null);
         CarregarHistorico();
+        CarregarEventos();
+    }
+
+    /// <summary>
+    /// Traz do banco o histórico de execução das sessões anteriores — é o que permite abrir a tela
+    /// no dia seguinte e descobrir por que o treinamento da madrugada parou.
+    /// </summary>
+    private void CarregarEventos()
+    {
+        try
+        {
+            EventosExecucao.Clear();
+            foreach (EventoTreinamento evento in _eventoRepository.ObterUltimos(LimiteEventosExecucao))
+            {
+                EventosExecucao.Add(evento);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível carregar o histórico de execução do treinamento: {ex.Message}");
+        }
     }
 
     private void CarregarHistorico()
@@ -803,7 +827,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         ZerarIndicadoresDaSessao();
         TetoComplexidadeEmUso = parametros.TetoComplexidade;
         AtualizarParametrosEmUso(parametros, treinador: null);
-        EventosExecucao.Clear();
+
+        // O histórico de execução NÃO é apagado aqui, pelo mesmo princípio já aplicado ao
+        // histórico por geração: "Resetar" reinicia a sessão na tela, não apaga dados gravados.
+        // Apagar de vez é ação explícita da tela Configurações → Resetar treinamento da IA.
+        RegistrarEvento("Treinamento reiniciado — geração, fitness e genoma voltaram ao zero.", geracao: null, TipoEventoTreinamento.Informacao);
 
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
@@ -1238,14 +1266,32 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private const int LimiteEventosExecucao = 200;
 
     /// <summary>
-    /// Acrescenta uma linha ao histórico de execução (mais recente no topo) e espelha no
-    /// <see cref="ILoggingService"/>, que continua sendo o registro permanente.
+    /// Grava o evento (ver <see cref="IEventoTreinamentoRepository"/>) e o acrescenta ao topo do
+    /// histórico de execução na tela.
     /// </summary>
+    /// <remarks>
+    /// A linha aparece na tela mesmo que a gravação falhe: o acontecimento é real, e esconder um
+    /// erro de persistência justamente na hora de relatar um problema seria o pior momento
+    /// possível para a tela ficar em silêncio. A falha de gravação em si vai para o
+    /// <see cref="ILoggingService"/> — e não vira outro evento, para um banco indisponível não
+    /// gerar uma cascata de eventos sobre não conseguir gravar eventos.
+    /// </remarks>
     private void RegistrarEvento(string mensagem, int? geracao, TipoEventoTreinamento tipo)
     {
+        var evento = new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo };
+
+        try
+        {
+            _eventoRepository.Registrar(evento);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível gravar o evento de treinamento: {ex.Message}");
+        }
+
         RunOnUi(() =>
         {
-            EventosExecucao.Insert(0, new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo });
+            EventosExecucao.Insert(0, evento);
             while (EventosExecucao.Count > LimiteEventosExecucao) EventosExecucao.RemoveAt(EventosExecucao.Count - 1);
         });
     }
