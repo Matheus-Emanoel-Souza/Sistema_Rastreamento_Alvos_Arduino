@@ -243,7 +243,19 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _tamanhoPopulacao, value);
     }
 
-    private double _taxaMutacao = 0.08;
+    /// <summary>
+    /// Probabilidade de mutação ESTRUTURAL (acrescentar neurônio) — ver
+    /// <see cref="ParametrosTreinamento.ProbabilidadeAdicionarNo"/>.
+    /// </summary>
+    /// <remarks>
+    /// O padrão é o mesmo baseline do plano experimental da tela "Estatísticas de Treinamento"
+    /// (<see cref="Services.ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline"/>), para um
+    /// treinamento manual aqui nascer comparável com os resultados registrados lá — mesma razão de
+    /// <see cref="NeuroniosOcultosDisponiveis"/>. Herdava 0,08 da antiga taxa de mutação POR GENE
+    /// do algoritmo genético, que é outra grandeza: 8% de chance de ganhar um neurônio a cada
+    /// descendente infla a topologia muito acima do que o plano experimental mede.
+    /// </remarks>
+    private double _taxaMutacao = Services.ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline;
     public double TaxaMutacao
     {
         get => _taxaMutacao;

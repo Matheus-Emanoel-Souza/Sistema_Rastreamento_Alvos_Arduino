@@ -8,6 +8,7 @@ using SharpNeat.Neat.ComplexityRegulation;
 using SharpNeat.Neat.EvolutionAlgorithm;
 using SharpNeat.Neat.Genome;
 using SharpNeat.Neat.Genome.Double;
+using SharpNeat.Neat.Reproduction.Asexual;
 using SharpNeat.Neat.Speciation;
 using SharpNeat.NeuralNets;
 
@@ -142,7 +143,7 @@ public sealed class TreinadorNeat
 
         experimento.EvolutionAlgorithmSettings.SpeciesCount = quantidadeEspecies;
         experimento.EvolutionAlgorithmSettings.ElitismProportion = proporcaoElitismo;
-        experimento.ReproductionAsexualSettings.AddNodeMutationProbability = probabilidadeAdicionarNo;
+        AjustarProbabilidadeDeMutacaoEstrutural(experimento.ReproductionAsexualSettings, probabilidadeAdicionarNo);
 
         _algoritmo = NeatUtils.CreateNeatEvolutionAlgorithm(experimento);
         _decodificador = NeatGenomeDecoderFactory.CreateGenomeDecoder(Aciclica, enableHardwareAcceleration: false);
@@ -237,6 +238,65 @@ public sealed class TreinadorNeat
         }
 
         return resumos;
+    }
+
+    /// <summary>
+    /// Define a probabilidade da mutação ESTRUTURAL "acrescentar neurônio" e redistribui o que
+    /// sobra entre as outras três mutações (peso, acrescentar conexão, remover conexão),
+    /// preservando a proporção original entre elas.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// O SharpNEAT sorteia qual mutação aplicar a partir dessas quatro probabilidades e, por isso,
+    /// exige que somem exatamente 1,0 — <c>Validate</c> lança "Mutation probabilities must sum to
+    /// 1.0" caso contrário. Escrever só <c>AddNodeMutationProbability</c>, como era feito antes,
+    /// só não quebrava quando o valor coincidia com o padrão de fábrica (0,01): qualquer outro
+    /// valor — inclusive os 0,005 e 0,02 do plano experimental — derrubava o treinamento logo no
+    /// "Iniciar".
+    /// </para>
+    /// <para>
+    /// Redistribuir proporcionalmente (em vez de fixar as outras três) mantém o significado do
+    /// parâmetro: ele controla QUANTO a topologia pode mudar, sem alterar o equilíbrio entre
+    /// ajustar pesos e mexer em conexões que o framework traz como padrão.
+    /// </para>
+    /// </remarks>
+    private static void AjustarProbabilidadeDeMutacaoEstrutural(NeatReproductionAsexualSettings configuracao, double probabilidadeAdicionarNo)
+    {
+        double adicionarNo = Math.Clamp(probabilidadeAdicionarNo, 0.0, 1.0);
+        double restante = 1.0 - adicionarNo;
+
+        double somaDasOutras = configuracao.ConnectionWeightMutationProbability
+            + configuracao.AddConnectionMutationProbability
+            + configuracao.DeleteConnectionMutationProbability;
+
+        configuracao.AddNodeMutationProbability = adicionarNo;
+
+        if (somaDasOutras <= 0.0)
+        {
+            // Sem proporção de referência não há como redistribuir: tudo que sobra vai para a
+            // mutação de pesos, a única que funciona em qualquer topologia.
+            configuracao.AddConnectionMutationProbability = 0.0;
+            configuracao.DeleteConnectionMutationProbability = 0.0;
+            configuracao.ConnectionWeightMutationProbability = restante;
+        }
+        else
+        {
+            double fator = restante / somaDasOutras;
+            configuracao.AddConnectionMutationProbability *= fator;
+            configuracao.DeleteConnectionMutationProbability *= fator;
+
+            // A mutação de pesos (a maior das três) absorve o que falta para fechar 1,0 em vez de
+            // ser escalada junto: assim o arredondamento de ponto flutuante das outras duas não
+            // deixa a soma fora do que o framework aceita.
+            configuracao.ConnectionWeightMutationProbability = 1.0
+                - configuracao.AddNodeMutationProbability
+                - configuracao.AddConnectionMutationProbability
+                - configuracao.DeleteConnectionMutationProbability;
+        }
+
+        // Falha aqui, na construção, em vez de dentro da primeira geração: a mensagem do
+        // framework sozinha não diz qual parâmetro da tela causou o problema.
+        configuracao.Validate();
     }
 
     /// <summary>Transforma um genoma (grafo) na rede pronta para uso — é o que a tela usa para animar o campeão e o que <see cref="ExtratorDeRegras"/> analisa.</summary>

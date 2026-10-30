@@ -106,6 +106,40 @@ public sealed class TreinadorNeatTests
     }
 
     /// <summary>
+    /// O SharpNEAT sorteia qual mutação aplicar a partir de quatro probabilidades e exige que
+    /// somem exatamente 1,0. Escrever só a de "acrescentar neurônio" quebrava o treinamento com
+    /// qualquer valor diferente do padrão de fábrica — inclusive os do plano experimental — com
+    /// "Mutation probabilities must sum to 1.0" logo no "Iniciar".
+    /// </summary>
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.005)]
+    [InlineData(0.01)]
+    [InlineData(0.02)]
+    [InlineData(0.08)]
+    [InlineData(0.5)]
+    [InlineData(1.0)]
+    public void Construtor_ComQualquerProbabilidadeDeMutacaoEstrutural_NaoRejeitaAConfiguracao(double probabilidade)
+    {
+        AmbienteTreinamento ambiente = AmbienteRapido();
+
+        TreinadorNeat treinador = new(
+            ambiente,
+            tamanhoPopulacao: 12,
+            quantidadeEspecies: 3,
+            probabilidadeAdicionarNo: probabilidade,
+            grauParalelismo: 1);
+
+        // Evoluir de fato é o que exercita a reprodução: a validação da soma acontece ao criar a
+        // estratégia de mutação, não só ao montar o experimento.
+        ResultadoGeracao inicial = treinador.EvoluirGeracao([23]);
+        ResultadoGeracao seguinte = treinador.EvoluirGeracao([24]);
+
+        Assert.Equal(0, inicial.Geracao);
+        Assert.Equal(1, seguinte.Geracao);
+    }
+
+    /// <summary>
     /// As métricas que a tela de treinamento usa para mostrar o que está acontecendo (complexidade
     /// da população, fase da regulação, vazão, ocultos do campeão) têm que sair preenchidas de
     /// verdade — antes elas eram calculadas pelo framework e simplesmente descartadas.

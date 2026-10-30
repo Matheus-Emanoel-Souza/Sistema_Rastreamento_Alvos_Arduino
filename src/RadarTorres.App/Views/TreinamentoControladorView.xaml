@@ -217,7 +217,8 @@
                                   ToolTip="Vale a partir do próximo &quot;Iniciar&quot; ou &quot;Resetar&quot; — não afeta um treinamento já em andamento."/>
 
                         <TextBlock Text="Mutação estrutural (0-1)" Style="{StaticResource ParametroLabel}"/>
-                        <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Probabilidade de um descendente ganhar um NEURÔNIO novo. Não é a antiga taxa de mutação por gene: aqui mutação de peso e mutação de estrutura são eventos distintos, e o que sobra é redistribuído entre as outras mutações. Valores do plano experimental: 0,005 · 0,01 (padrão) · 0,02."/>
 
                         <TextBlock Text="Máximo de alvos por quadrante" Style="{StaticResource ParametroLabel}"/>
                         <TextBox Text="{Binding MaxAlvosPorQuadrante, UpdateSourceTrigger=PropertyChanged}"/>
