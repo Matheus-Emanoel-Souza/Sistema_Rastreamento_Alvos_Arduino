@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -28,6 +28,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 {
     private const double JanelaFlashDisparoSegundos = 0.3;
 
+    /// <summary>
+    /// Passo da prévia visual, em segundos — vale ao mesmo tempo como intervalo do relógio e como
+    /// <c>dt</c> entregue à simulação. Serem o mesmo número é o que faz a prévia correr em TEMPO
+    /// NORMAL (um segundo simulado por segundo real), condição do experimento de integração com o
+    /// sistema físico: nenhuma aceleração artificial entre o que se vê e o que seria enviado ao
+    /// hardware.
+    /// </summary>
+    private const double IntervaloPreviaSegundos = 0.05;
+
     /// <summary>Abertura angular do campo de visão de cada torre/canhão — fixa, voltada para fora da base (ver DesenharTorresFixas).</summary>
     public const double AnguloCampoDeVisaoGraus = 90.0;
 
@@ -46,6 +55,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly IHistoricoTreinamentoRepository _historicoRepository;
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
     private readonly IInstantaneoComportamentoRepository _instantaneoRepository;
+    private readonly ITelemetriaSimulacaoService _telemetria;
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly DispatcherTimer _timerPreview;
     private readonly Random _randomGenomaInicial = new();
@@ -118,12 +128,14 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         IHistoricoTreinamentoRepository historicoRepository,
         IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
         IInstantaneoComportamentoRepository instantaneoRepository,
+        ITelemetriaSimulacaoService telemetria,
         IConfiguracoesAplicativoRepository configuracoes)
     {
         _logger = logger;
         _historicoRepository = historicoRepository;
         _marcoFitnessRepository = marcoFitnessRepository;
         _instantaneoRepository = instantaneoRepository;
+        _telemetria = telemetria;
         _configuracoes = configuracoes;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais, arquitetura: ArquiteturaSelecionada);
         DesenharTorresFixas();
@@ -141,7 +153,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         RemoverSpawnPersonalizadoCommand = new RelayCommand(RemoverSpawnPersonalizado);
         SimularCenarioPersonalizadoCommand = new RelayCommand(SimularCenarioPersonalizado, () => !EmExecucao);
 
-        _timerPreview = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _timerPreview = new DispatcherTimer { Interval = TimeSpan.FromSeconds(IntervaloPreviaSegundos) };
         _timerPreview.Tick += (_, _) => AvancarPreview();
 
         CarregarHistorico();
@@ -186,6 +198,32 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _maxAlvosPorQuadrante, value);
     }
 
+    private bool _eixoZHabilitado;
+    /// <summary>
+    /// Liga a terceira dimensão na simulação — ver <see cref="ParametrosTreinamento.EixoZHabilitado"/>.
+    /// Como os demais parâmetros do ambiente, vale a partir do próximo "Iniciar"/"Resetar" ou da
+    /// próxima simulação avulsa: um episódio já em curso não muda de dimensão no meio.
+    /// </summary>
+    public bool EixoZHabilitado
+    {
+        get => _eixoZHabilitado;
+        set
+        {
+            if (SetProperty(ref _eixoZHabilitado, value)) OnPropertyChanged(nameof(DescricaoEixoZ));
+        }
+    }
+
+    /// <summary>Explica, em uma linha, o que o estado atual do controle significa para a simulação.</summary>
+    public string DescricaoEixoZ => EixoZHabilitado
+        ? $"Alvos nascem com altura entre 0 e {AlturaMaximaAlvoMetros:0.#} m; acima de {AlturaVisivelPorTodasAsTorresMetros:0.#} m todas as torres passam a enxergá-los."
+        : "Simulação bidimensional: todos os alvos no solo (Z = 0) e cobertura apenas por quadrante.";
+
+    /// <summary>Altura máxima sorteada para um alvo com o eixo Z ligado — exposta para a tela e para a descrição acima.</summary>
+    public double AlturaMaximaAlvoMetros => _ambiente.Parametros.AlturaMaximaAlvoMetros;
+
+    /// <summary>Altura a partir da qual todas as torres enxergam o alvo.</summary>
+    public double AlturaVisivelPorTodasAsTorresMetros => _ambiente.Parametros.AlturaVisivelPorTodasAsTorresMetros;
+
     /// <summary>Opções de quantidade de neurônios na camada oculta disponíveis na tela — os mesmos três valores do plano experimental da tela "Estatísticas de Treinamento" (ver ConfiguracaoExperimento.NeuroniosDaSerie), para um treinamento manual aqui ser comparável com os resultados registrados lá.</summary>
     public IReadOnlyList<int> NeuroniosOcultosDisponiveis { get; } = [4, 8, 16];
 
@@ -216,6 +254,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         TamanhoPopulacao = Math.Max(4, _tamanhoPopulacao),
         TaxaMutacao = Math.Clamp(_taxaMutacao, 0.0, 1.0),
         MaxAlvosPorQuadrante = Math.Max(1, _maxAlvosPorQuadrante),
+        EixoZHabilitado = _eixoZHabilitado,
         DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
         LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0,
         VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo
@@ -425,7 +464,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                     VelocidadeMetrosPorSegundo: Math.Max(0, linha.VelocidadeMetrosPorSegundo),
                     CertezaBase: 0.5,
                     TaxaCrescimentoCertezaPorSegundo: 0.15,
-                    FracaoRaioNascimento: fracaoRaio);
+                    FracaoRaioNascimento: fracaoRaio,
+                    AlturaMetros: Math.Clamp(linha.AlturaMetros, 0.0, _ambiente.Parametros.AlturaMaximaAlvoMetros));
             })
             .ToList();
 
@@ -832,15 +872,60 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         var rede = new RedeNeural(_ambiente.Arquitetura, _melhorGenomaAtual);
         var controlador = new ControladorHibrido(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo, tempoDeteccaoRelevanteSegundos: _ambiente.Parametros.TempoDeteccaoRelevanteSegundos);
 
-        _ambiente.Avancar(_episodioPreview, controlador, dt: 0.05);
+        _ambiente.Avancar(_episodioPreview, controlador, dt: IntervaloPreviaSegundos);
         RedesenharAlvos(_episodioPreview);
         AtualizarMiras(_episodioPreview);
         AtualizarCamposDeVisao(_episodioPreview);
+        PublicarTelemetria(_episodioPreview);
 
         if (_episodioPreview.Finalizado && !_previewContinuo)
         {
             _timerPreview.Stop();
         }
+    }
+
+    /// <summary>
+    /// Entrega o estado atual dos alvos a <see cref="ITelemetriaSimulacaoService"/> — o ponto por
+    /// onde a futura ponte com o Arduino vai consumir a simulação.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Publicado daqui, e não do laço de treinamento, porque é a prévia que roda em TEMPO NORMAL:
+    /// <see cref="IntervaloPreviaSegundos"/> de tempo simulado por tique de relógio do mesmo
+    /// tamanho. O laço de treinamento avança o mais rápido possível de propósito — milhares de
+    /// episódios para avaliar fitness —, e o tempo simulado dele não corresponde a nada que possa
+    /// ser enviado ao hardware "ao vivo".
+    /// </para>
+    /// <para>
+    /// Ainda não há transmissão nenhuma: isto apenas disponibiliza os dados, já com a referência
+    /// temporal, para quem for implementá-la.
+    /// </para>
+    /// </remarks>
+    private void PublicarTelemetria(EstadoEpisodio estado)
+    {
+        var alvos = new List<AlvoTelemetria>(estado.Alvos.Count);
+
+        foreach (AlvoTreinamento alvo in estado.Alvos)
+        {
+            if (!alvo.Ativo) continue;
+
+            alvos.Add(new AlvoTelemetria(
+                Id: alvo.Id,
+                X: alvo.X,
+                Y: alvo.Y,
+                AlturaMetros: alvo.AlturaMetros,
+                VelocidadeMetrosPorSegundo: alvo.VelocidadeMetrosPorSegundo,
+                Quadrante: alvo.Quadrante,
+                VisivelPorTodasAsTorres: alvo.VisivelPorTodasAsTorres,
+                TorreComprometidaId: alvo.TorreSelecionadaId,
+                Certeza: alvo.Certeza));
+        }
+
+        _telemetria.Publicar(new QuadroTelemetriaSimulacao(
+            TempoSimulacaoSegundos: estado.TempoDecorridoSegundos,
+            DataHora: DateTime.Now,
+            EixoZHabilitado: _ambiente.Parametros.EixoZHabilitado,
+            Alvos: alvos));
     }
 
     /// <summary>
@@ -1066,6 +1151,9 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             visual.CanvasX = ParaCanvasX(alvo.X);
             visual.CanvasY = ParaCanvasY(alvo.Y);
             visual.Cor = alvo.TorreSelecionadaId is null ? "#F87171" : "#FBBF24";
+            // Alvo alto o bastante para ser visto por todas as torres ganha contorno próprio: a
+            // altura muda o comportamento da simulação, então precisa ser visível na tela.
+            visual.Destacado = alvo.VisivelPorTodasAsTorres;
         }
     }
 

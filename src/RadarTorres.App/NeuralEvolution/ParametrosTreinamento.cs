@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using RadarTorres.App.Models;
 
 namespace RadarTorres.App.NeuralEvolution;
@@ -22,6 +22,37 @@ public sealed record ParametrosTreinamento
 
     /// <summary>Teto de alvos ATIVOS simultaneamente no MESMO quadrante — não é mais um teto global: quadrantes diferentes podem estar cada um no próprio limite ao mesmo tempo, forçando o controlador a lidar com concentração local em vez de só a contagem total.</summary>
     public int MaxAlvosPorQuadrante { get; init; } = 5;
+
+    /// <summary>
+    /// Liga a terceira dimensão: com <c>true</c>, cada alvo nasce com uma altura entre 0 e
+    /// <see cref="AlturaMaximaAlvoMetros"/> e essa altura passa a influenciar quais torres
+    /// conseguem enxergá-lo (ver <see cref="AlturaVisivelPorTodasAsTorresMetros"/>). Com
+    /// <c>false</c> — o padrão — todo alvo fica em <c>Z = 0</c> e a simulação se comporta
+    /// exatamente como antes, em duas dimensões.
+    /// </summary>
+    /// <remarks>
+    /// O padrão é desligado de propósito: é o modo bidimensional que já foi usado em todos os
+    /// treinamentos e experimentos registrados até aqui, e trocar o padrão mudaria em silêncio o
+    /// significado de qualquer comparação com os resultados anteriores. Quem quiser a terceira
+    /// dimensão liga explicitamente — na tela de treinamento há um controle para isso.
+    /// </remarks>
+    public bool EixoZHabilitado { get; init; } = false;
+
+    /// <summary>Altura máxima (m) que um alvo pode ter quando <see cref="EixoZHabilitado"/> está ligado; o sorteio é uniforme entre 0 e este valor.</summary>
+    public double AlturaMaximaAlvoMetros { get; init; } = 2.0;
+
+    /// <summary>
+    /// Altura (m) a partir da qual o alvo deixa de ser coberto apenas pelas torres do próprio
+    /// quadrante (e das adjacentes) e passa a ser visível para TODAS as torres: acima desta altura
+    /// ele sobe o suficiente para aparecer no campo de visão de todas elas.
+    /// </summary>
+    /// <remarks>
+    /// Não é um atalho que ignora as demais condições — ser visível apenas amplia o conjunto de
+    /// torres CANDIDATAS. Zona morta, certeza mínima, tempo mínimo de mira e disponibilidade da
+    /// torre continuam valendo exatamente como antes (ver <see cref="ControladorHibrido"/> e
+    /// <see cref="AmbienteTreinamento.DecidirDisparos"/>).
+    /// </remarks>
+    public double AlturaVisivelPorTodasAsTorresMetros { get; init; } = 0.5;
 
     public double RecompensaAbate { get; init; } = 10.0;
     public double PenalidadeEscape { get; init; } = 8.0;

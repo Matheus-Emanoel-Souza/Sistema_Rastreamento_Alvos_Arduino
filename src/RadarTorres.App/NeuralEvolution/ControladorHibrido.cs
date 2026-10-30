@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using RadarTorres.App.Helpers;
@@ -124,7 +124,15 @@ public sealed class ControladorHibrido
             .Select(a => a.Quadrante)
             .ToHashSet();
 
-        List<TorreTreinamento> doProprioQuadrante = livres.Where(t => t.QuadrantePreferido == alvo.Quadrante).ToList();
+        // Eixo Z: um alvo alto o bastante (ver AlvoTreinamento.VisivelPorTodasAsTorres) aparece no
+        // campo de visão de TODAS as torres, então todas as livres entram na primeira camada em
+        // vez de só as do quadrante dele. Não é um atalho: a camada escolhida apenas define QUEM
+        // concorre — a rede continua decidindo qual vence, e os vetos de disparo (zona morta,
+        // certeza mínima, tempo mínimo de mira) seguem intactos em DecidirDisparo.
+        // Com o eixo Z desligado a propriedade é sempre falsa e nada aqui muda.
+        List<TorreTreinamento> doProprioQuadrante = alvo.VisivelPorTodasAsTorres
+            ? livres
+            : livres.Where(t => t.QuadrantePreferido == alvo.Quadrante).ToList();
 
         List<TorreTreinamento> adjacentes = doProprioQuadrante.Count > 0
             ? []

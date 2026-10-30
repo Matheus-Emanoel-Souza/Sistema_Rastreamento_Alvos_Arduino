@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using RadarTorres.App.Configuration;
@@ -318,11 +318,17 @@ public sealed class AmbienteTreinamento
         double velocidade = _parametros.VelocidadeMinimaAlvoMetrosPorSegundo +
             estado.Rng.NextDouble() * (_parametros.VelocidadeMaximaAlvoMetrosPorSegundo - _parametros.VelocidadeMinimaAlvoMetrosPorSegundo);
 
+        // Altura sorteada ANTES do alvo existir, porque ela decide, já no nascimento, se ele será
+        // visível para todas as torres (ver VisivelPorTodasAsTorres).
+        double altura = SortearAltura(estado);
+
         estado.Alvos.Add(new AlvoTreinamento
         {
             Id = estado.ProximoIdAlvo(),
             X = x,
             Y = y,
+            AlturaMetros = altura,
+            VisivelPorTodasAsTorres = VisivelPorTodasAsTorres(altura),
             VelocidadeX = velocidade * Math.Cos(anguloMovimento),
             VelocidadeY = velocidade * Math.Sin(anguloMovimento),
             VelocidadeMetrosPorSegundo = velocidade,
@@ -359,11 +365,18 @@ public sealed class AmbienteTreinamento
 
             double anguloMovimento = anguloNascimentoRad + Math.PI;
 
+            // Altura vem do próprio roteiro, nunca sorteada: estes são casos táticos mapeados,
+            // cujo valor está justamente em serem 100% reproduzíveis. Um caso com alvo alto é um
+            // caso declarado como tal (ver SpawnScriptado.AlturaMetros), não um efeito do sorteio.
+            double alturaScriptada = _parametros.EixoZHabilitado ? spec.AlturaMetros : 0.0;
+
             estado.Alvos.Add(new AlvoTreinamento
             {
                 Id = estado.ProximoIdAlvo(),
                 X = x,
                 Y = y,
+                AlturaMetros = alturaScriptada,
+                VisivelPorTodasAsTorres = VisivelPorTodasAsTorres(alturaScriptada),
                 VelocidadeX = spec.VelocidadeMetrosPorSegundo * Math.Cos(anguloMovimento),
                 VelocidadeY = spec.VelocidadeMetrosPorSegundo * Math.Sin(anguloMovimento),
                 VelocidadeMetrosPorSegundo = spec.VelocidadeMetrosPorSegundo,
@@ -377,6 +390,34 @@ public sealed class AmbienteTreinamento
             ? spawns[estado.ProximoIndiceSpawnScriptado].InstanteSegundos
             : double.MaxValue;
     }
+
+    /// <summary>
+    /// Sorteia a altura de um alvo que está nascendo: uniforme entre 0 e
+    /// <see cref="ParametrosTreinamento.AlturaMaximaAlvoMetros"/> com o eixo Z ligado, e
+    /// exatamente 0 com ele desligado.
+    /// </summary>
+    /// <remarks>
+    /// Usa o <see cref="EstadoEpisodio.Rng"/> do episódio, e não um gerador próprio, para que um
+    /// episódio com a mesma seed continue sendo reproduzível ponta a ponta — é disso que dependem
+    /// a comparação justa entre genomas da mesma geração e a reprodução visual de um episódio já
+    /// avaliado.
+    /// </remarks>
+    private double SortearAltura(EstadoEpisodio estado) =>
+        _parametros.EixoZHabilitado ? estado.Rng.NextDouble() * _parametros.AlturaMaximaAlvoMetros : 0.0;
+
+    /// <summary>
+    /// Regra do eixo Z: acima de <see cref="ParametrosTreinamento.AlturaVisivelPorTodasAsTorresMetros"/>
+    /// o alvo sobe o bastante para entrar no campo de visão de TODAS as torres, e não só das do
+    /// próprio quadrante e adjacentes.
+    /// </summary>
+    /// <remarks>
+    /// Amplia apenas o conjunto de torres candidatas. Todas as demais condições continuam valendo
+    /// sem exceção — zona morta, certeza mínima, tempo mínimo de mira e torre livre —, por isso a
+    /// regra vive aqui e não dentro de <see cref="ControladorHibrido"/>: ela é uma propriedade do
+    /// mundo simulado, não da política de decisão.
+    /// </remarks>
+    private bool VisivelPorTodasAsTorres(double alturaMetros) =>
+        _parametros.EixoZHabilitado && alturaMetros > _parametros.AlturaVisivelPorTodasAsTorresMetros;
 
     private static void MoverAlvos(EstadoEpisodio estado, double dt)
     {
@@ -498,9 +539,12 @@ public sealed class AmbienteTreinamento
             // errar cresce com a velocidade, ver CalculadoraErroDisparo).
             if (alvo.VelocidadeMetrosPorSegundo >= _parametros.VelocidadeRapidaMetrosPorSegundo)
             {
+                // Com o eixo Z ligado e o alvo alto o bastante, a restrição de quadrante adjacente
+                // cai pelo mesmo motivo de ControladorHibrido.SelecionarTorre: todas as torres o
+                // enxergam. O raio de proximidade continua valendo — visibilidade não é alcance.
                 TorreTreinamento? ajuda = estado.Torres.FirstOrDefault(t =>
                     t.Id != torre.Id &&
-                    QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante) &&
+                    (alvo.VisivelPorTodasAsTorres || QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante)) &&
                     DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= RaioAjudaTorreAdjacenteMetros);
 
                 if (ajuda is not null) Disparar(estado, ajuda, alvo);

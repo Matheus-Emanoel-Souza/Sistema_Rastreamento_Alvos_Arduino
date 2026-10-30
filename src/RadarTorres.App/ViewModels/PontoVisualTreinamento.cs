@@ -1,4 +1,4 @@
-namespace RadarTorres.App.ViewModels;
+﻿namespace RadarTorres.App.ViewModels;
 
 /// <summary>Um ponto (torre ou alvo) já convertido para coordenadas de tela, para o Canvas da tela de treinamento.</summary>
 public sealed class PontoVisualTreinamento : ViewModelBase
@@ -16,6 +16,14 @@ public sealed class PontoVisualTreinamento : ViewModelBase
 
     private string _cor = "#60A5FA";
     public string Cor { get => _cor; set => SetProperty(ref _cor, value); }
+
+    private bool _destacado;
+    /// <summary>
+    /// Marca o alvo que está alto o bastante para ser enxergado por TODAS as torres (eixo Z
+    /// ligado — ver <see cref="NeuralEvolution.AlvoTreinamento.VisivelPorTodasAsTorres"/>). A
+    /// altura muda o comportamento da simulação, então precisa aparecer na tela, não só no número.
+    /// </summary>
+    public bool Destacado { get => _destacado; set => SetProperty(ref _destacado, value); }
 
     /// <summary>
     /// Ângulo (bearing, 0°-360°) para onde esta torre está apontando agora — só usado pelo cano

@@ -8,9 +8,42 @@ public sealed class AlvoTreinamento
     public int Id { get; init; }
     public double X { get; set; }
     public double Y { get; set; }
+
+    /// <summary>
+    /// Altura do alvo acima do solo, em metros (eixo Z). Sempre <c>0</c> quando o eixo Z está
+    /// desligado (ver <see cref="ParametrosTreinamento.EixoZHabilitado"/>), o que reproduz
+    /// exatamente o comportamento bidimensional anterior.
+    /// </summary>
+    /// <remarks>
+    /// Acompanha o alvo por todo o episódio, igual a <see cref="X"/> e <see cref="Y"/>: é parte do
+    /// estado dele, não um atributo calculado na hora de decidir. Constante ao longo da
+    /// trajetória — o alvo nasce numa altura e a mantém, porque o que se quer medir aqui é o
+    /// efeito da altura sobre a visibilidade, não um modelo de voo.
+    /// </remarks>
+    public double AlturaMetros { get; set; }
     public double VelocidadeX { get; init; }
     public double VelocidadeY { get; init; }
     public double VelocidadeMetrosPorSegundo { get; init; }
+
+    /// <summary>
+    /// Se este alvo está alto o bastante para ser enxergado por TODAS as torres, e não apenas
+    /// pelas do próprio quadrante e adjacentes (ver
+    /// <see cref="ParametrosTreinamento.AlturaVisivelPorTodasAsTorresMetros"/>).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Resolvido uma única vez, no nascimento do alvo, por <see cref="AmbienteTreinamento"/> — é
+    /// ele que conhece os parâmetros do episódio, e <see cref="AlturaMetros"/> não muda ao longo
+    /// da trajetória. Assim <see cref="ControladorHibrido"/> consulta um booleano já decidido em
+    /// vez de precisar receber os parâmetros de altura, o que manteria o contrato dele atado a
+    /// uma regra de mundo que não lhe pertence.
+    /// </para>
+    /// <para>
+    /// Sempre <c>false</c> com o eixo Z desligado, que é o que garante o comportamento
+    /// bidimensional idêntico ao anterior.
+    /// </para>
+    /// </remarks>
+    public bool VisivelPorTodasAsTorres { get; set; }
 
     public Quadrant Quadrante { get; set; }
     public bool Ativo { get; set; } = true;
