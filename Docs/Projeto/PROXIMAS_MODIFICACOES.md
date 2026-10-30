@@ -23,15 +23,7 @@ Anotações de pontos a revisar/implementar em futuras sessões. Atualizar confo
 
 - IDE escolhida: Arduino IDE 2.x. Interface moderna, autocomplete, debugger integrado, board manager melhor. Alternativa avaliada: PlatformIO (VS Code) — melhor pra projeto grande/versionamento de libs, mas curva de aprendizado maior; não necessário por enquanto.
 
-## Feito
 
-- [x] Instalador Arduino IDE (`instalar_arduino_ide.bat`) — winget com fallback download direto.
-- [x] Modelo de Banco de Dados documentado (coluna "Persistência" já removida, DER com as 11
-  tabelas reais) — ver [[Modelo_Banco_de_Dados]].
-- [x] Diagrama de implantação e diagrama de classes criados — ver [[Diagrama_de_Implantacao]] e
-  [[UML_RadarTorres]] (Seção 5, inclui a discussão sobre máquina de estados).
-- [x] Diagrama dos requisitos por usuário/ação — ver [[Casos_de_Uso]] e
-  [[Matriz_de_Rastreabilidade]].
 
 ## Referência — ferramentas de diagrama UML
 
@@ -46,7 +38,3 @@ resolvidos e o arquivo só tinha essa lista de ferramentas como conteúdo não-t
 - PlantUML — baseado em texto (sem drag-drop), mas rápido e versionável junto do código — usado
   em vários diagramas desta pasta (`.puml`).
 
-## Ver também
-
-- [[Diagrama_Eletrico]] — ligações elétricas mencionadas no item "Usar app Wokwi".
-- [[COMUNICACAO_ARDUINO]] — contexto da configuração de ambiente Arduino.

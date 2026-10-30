@@ -2,7 +2,7 @@ Funcionalidade: roteiro de apoio para a apresentação/defesa do TCC.
 
 # Roteiro de apresentação — RadarTorres
 
-> Ver também: [[index|Índice]] (raiz do vault), [[Artigo_index|Artigo]].
+> Ver também: [[index|Índice]] (raiz do vault), [[Apoio_index|Apoio]].
 
 ## O que é
 
