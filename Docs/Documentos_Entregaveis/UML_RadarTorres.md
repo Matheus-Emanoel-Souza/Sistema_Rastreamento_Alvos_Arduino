@@ -1,3 +1,5 @@
+Funcionalidade: aplica os diagramas UML (casos de uso, classes, sequência etc.) ao projeto RadarTorres.
+
 # UML — Unified Modeling Language aplicada ao RadarTorres
 
 ## 1. Introdução à UML

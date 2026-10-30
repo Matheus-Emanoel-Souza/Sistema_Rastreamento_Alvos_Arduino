@@ -1,3 +1,5 @@
+Funcionalidade: referência técnica das classes e serviços do código-fonte.
+
 # Documentação Técnica — Referência de Classes e Serviços
 
 Para o racional arquitetural geral, veja [`ARQUITETURA.md`](ARQUITETURA.md). Este documento

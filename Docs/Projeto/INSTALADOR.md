@@ -1,3 +1,5 @@
+Funcionalidade: documenta o processo de instalação do RadarTorres no Windows.
+
 # Processo de Instalação (Windows)
 
 Este documento registra o processo de instalação Windows criado para o RadarTorres: as
