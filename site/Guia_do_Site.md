@@ -2,7 +2,7 @@ Funcionalidade: guia do site estático do projeto RadarTorres.
 
 # Site RadarTorres
 
-> Ver também: [Índice](../Índice.md) (raiz do vault).
+> Ver também: [[index|Índice]] (raiz do vault).
 
 Site oficial do projeto (documentação técnica, apresentação do TCC e portfólio),
 publicado via **GitHub Pages**. Stack: React 19 + TypeScript + Tailwind CSS v4 + Vite.

@@ -1,11 +1,9 @@
-Funcionalidade: índice dos documentos de embasamento teórico do TCC.
+Funcionalidade: catálogo dos artigos (PDF) usados como embasamento teórico/bibliográfico do artigo do TCC, com o que cada um sustenta no texto.
 
-# Embasamento Teórico
+# Referências bibliográficas — material de apoio
 
 Material de apoio conceitual/teórico usado como base de estudo para o TCC — **não** faz parte
-dos documentos entregáveis (ver `Docs/Documentos_Entregaveis/` para esses).
-
-## Documentos desta pasta
+dos documentos entregáveis (ver [[Artigo_index]] para esses).
 
 | Arquivo | Conteúdo |
 |---|---|
@@ -18,3 +16,8 @@ dos documentos entregáveis (ver `Docs/Documentos_Entregaveis/` para esses).
 | [`ActionMasking_Huang2020.pdf`](ActionMasking_Huang2020.pdf) | arXiv:2006.14171 (Huang & Ontañón) — mascaramento de ações inválidas em algoritmos de gradiente de política, fundamenta a heurística filtrando candidatas antes da rede decidir |
 | [`ActionMasking_ConhecimentoHumano_PesquisaOperacional_2025.pdf`](ActionMasking_ConhecimentoHumano_PesquisaOperacional_2025.pdf) | arXiv:2504.02662 — mascaramento de ações injetando conhecimento humano/regra de negócio em RL para pesquisa operacional, caso de uso próximo ao da heurística do projeto |
 | [`ControleHibrido_MLRegrasDeterministicas_2022.pdf`](ControleHibrido_MLRegrasDeterministicas_2022.pdf) | arXiv:2201.12819 — controle de decisão crítico combinando aprendizado de máquina e regras determinísticas, arquitetura próxima à do `ControladorHibrido` do projeto |
+
+## Ver também
+
+- [[Conceito_UML]] — embasamento teórico geral sobre UML, aplicado em [[UML_RadarTorres]].
+- [[Melhoria_de_artigo]] — candidatas de referência ainda não incorporadas ao `referencias.bib`.
