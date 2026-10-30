@@ -1,3 +1,5 @@
+Funcionalidade: documenta o modelo de banco de dados (schema, tabelas, chaves) do RadarTorres.
+
 # Modelo de Banco de Dados
 
 ## 1. Situação real hoje: SQLite é a única persistência

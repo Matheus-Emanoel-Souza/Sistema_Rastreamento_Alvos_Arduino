@@ -1,3 +1,5 @@
+Funcionalidade: índice dos documentos de histórico/gestão do projeto (Docs/Projeto/).
+
 # Projeto/
 
 Acompanhamento do trabalho em si: contexto, etapas, notas de apoio, log de solicitações,

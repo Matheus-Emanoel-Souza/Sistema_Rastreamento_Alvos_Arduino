@@ -1,3 +1,5 @@
+Funcionalidade: documenta o diagrama elétrico conceitual/funcional do hardware (pinagem, sensores, motores).
+
 # Diagrama Elétrico (conceitual/funcional)
 
 > Hardware real implementado em `Arduino/RadarTorres_Firmware/RadarTorres_Firmware.ino` (983 linhas,

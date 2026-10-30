@@ -1,3 +1,5 @@
+Funcionalidade: roteiro de apoio para a apresentação/defesa do TCC.
+
 # Roteiro de apresentação — RadarTorres
 
 > Ver também: [Índice](Índice.md) (raiz do vault).

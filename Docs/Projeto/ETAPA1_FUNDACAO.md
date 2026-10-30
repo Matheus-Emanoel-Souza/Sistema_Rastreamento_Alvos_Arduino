@@ -1,3 +1,5 @@
+Funcionalidade: documenta a Etapa 1 (parte A) do desenvolvimento: fundação multiusuário do sistema.
+
 # Etapa 1 (parte A) — Fundação multiusuário
 
 Este documento registra a primeira parte da Etapa 1 do plano de melhorias de interface e

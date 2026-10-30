@@ -1,3 +1,5 @@
+Funcionalidade: documenta o controlador híbrido heurística+rede neural evoluída (arquitetura, treino, parâmetros).
+
 # Controlador Neuroevolutivo (Heurística + Rede Neural)
 
 Documentação técnica do controlador híbrido que combina a heurística em camadas de seleção de
