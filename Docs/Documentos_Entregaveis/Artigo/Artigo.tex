@@ -563,73 +563,36 @@ elitismo, e o genoma final é embutido na aplicação como um vetor de pesos fix
 de treinamento em tempo de execução.
 
 \paragraph{Impacto de acrescentar uma entrada.}
-A sétima entrada (tempo detectado sem abate) não fazia parte do projeto original -- a rede nasceu
-com seis entradas e cinco indicadores de contexto, e essa sétima foi incluída posteriormente para
-dar à rede um sinal que faltava: por quanto tempo um alvo específico já vem sendo observado sem ter
-sido abatido, de modo que a evolução pudesse aprender a priorizar alvos "esquecidos" em vez de
-tratar todos como igualmente urgentes. Mudar a contagem de entradas de uma rede já evoluída, porém,
-não é uma alteração isolada, e vale registrar os quatro impactos concretos que ela trouxe, cada um
-observado diretamente neste trabalho e não apenas previsto em teoria.
+A sétima entrada (tempo detectado sem abate) foi incluída depois do projeto original (seis
+entradas) para dar à rede um sinal que faltava: por quanto tempo um alvo específico já vem sendo
+observado sem ter sido abatido, para priorizar alvos "esquecidos" em vez de tratar todos como
+igualmente urgentes. Mudar a contagem de entradas de uma rede já evoluída trouxe quatro impactos
+concretos, observados diretamente neste trabalho:
 
-O primeiro impacto é no tamanho da rede: de 74 para 82 parâmetros (aumento de \textbf{8 pesos}, um
-por neurônio da camada oculta, ligando a nova entrada a cada um deles -- a camada oculta continuou
-com 8 neurônios e as duas saídas não mudaram). É um acréscimo de 10,8\% no genoma, mas, como a
-Seção~\ref{sec:experimento-hiperparametros} confirma experimentalmente, o tempo de treinamento
-continua dominado pela quantidade de episódios simulados por geração (função do tamanho da
-\emph{população}), não pelo tamanho da rede avaliada em cada episódio -- oito pesos adicionais são
-imperceptíveis nesse custo, e nenhuma das onze execuções da grade mostrou um tempo de treinamento
-mensuravelmente maior apenas por ter mais ocultos do que antes.
+\begin{enumerate}
+  \item \textbf{Tamanho da rede}: de 74 para 82 parâmetros (+8 pesos, um por neurônio da camada
+  oculta) -- 10,8\% maior, mas imperceptível no tempo de treinamento, que continua dominado pelo
+  tamanho da população, não da rede (Seção~\ref{sec:experimento-hiperparametros}).
+  \item \textbf{Incompatibilidade retroativa total}: um genoma de 74 pesos não pode ser usado por
+  uma rede que exige 82 -- não há conversão nem "completar" o genoma antigo. Isso invalidou o
+  controlador de produção embutido e as 11 execuções da grade de hiperparâmetros, ambos
+  precisando ser retreinados do zero. Toda entrada nova é, na prática, um \textit{breaking change}
+  no formato do genoma.
+  \item \textbf{Impacto operacional}: como o executável real chama a mesma função
+  \texttt{ControladorHibrido.ConstruirEntradas} usada no treino, acrescentar uma entrada exige
+  atualizar os dois lados e achar, no sistema real, um valor de verdade equivalente ao conceito
+  simulado -- aqui simples, porque \texttt{Target.Timestamp} já existia; uma entrada sem
+  contrapartida real exigiria sensoriamento novo antes de a rede treinada poder ser usada.
+  \item \textbf{Guarda preventiva}: para a incompatibilidade do item 2 nunca travar o aplicativo em
+  produção, \texttt{ControladorTreinadoProvider} passou a comparar o número de entradas do genoma
+  embutido com o da arquitetura atual, degradando para a heurística pura em caso de divergência --
+  o mesmo princípio de segurança das demais camadas do controlador híbrido.
+\end{enumerate}
 
-O segundo impacto, esse sim severo, é a \textbf{incompatibilidade retroativa total}: qualquer genoma
-evoluído sob a arquitetura antiga (seis entradas, 74 pesos) deixou de ser utilizável, porque
-\texttt{RedeNeural.Ativar} exige que o vetor de entradas tenha exatamente o tamanho declarado pela
-arquitetura -- não há conversão possível entre um genoma de 74 e um de 82 números, nem forma de
-"completar" o genoma antigo com os oito pesos que faltam sem reavaliar do zero o que a evolução
-faria com eles. Isso invalidou, de uma só vez, o controlador de produção já embutido no executável
-(\texttt{Resources/ControladorTreinado/genoma-controlador.json}, treinado sob a arquitetura antiga)
-e todas as 11 execuções da Seção~\ref{sec:experimento-hiperparametros} documentadas anteriormente --
-ambos precisaram ser retreinados do zero sob a nova arquitetura (e, no mesmo retreinamento, sob o
-ambiente também endurecido, ver próximo parágrafo) para voltarem a valer. Esse acoplamento rígido
-entre arquitetura e genoma é uma propriedade conhecida de redes neurais simples sem camadas de
-embedding ou \textit{padding}: cada entrada nova é, na prática, uma mudança de \textit{breaking
-change} no formato do genoma, nunca uma extensão compatível com versões anteriores.
-
-O terceiro impacto é operacional, não só experimental: como o próprio executável em produção
-(\texttt{TowerSelectionService}) chama a mesma função estática \texttt{ControladorHibrido.ConstruirEntradas}
-usada pelo treinamento -- por design, para garantir que a rede treinada receba em campo exatamente a
-mesma entrada que recebeu durante a evolução --, acrescentar uma entrada obriga a atualizar os DOIS
-lados ao mesmo tempo, simulação e sistema real, e a localizar, no sistema real, um valor de verdade
-que corresponda ao conceito simulado. Neste caso a atualização foi simples porque a grandeza já
-existia no sistema real: \texttt{Target.Timestamp} já registrava o instante da primeira detecção de
-cada alvo (usado para outros fins), bastando calcular \texttt{(DateTime.UtcNow - Target.Timestamp)}
-no ponto de decisão. Esse não é o caso geral -- uma entrada hipotética sem contrapartida instrumentada
-no hardware real teria exigido adicionar sensoriamento ou lógica nova ao sistema físico antes de a
-rede treinada em simulação poder ser usada de verdade, e não apenas ajustar uma fórmula de
-normalização.
-
-O quarto impacto foi preventivo: para que a incompatibilidade do segundo impacto não se manifestasse
-como uma exceção não tratada na primeira seleção de torre real (o que teria travado o aplicativo em
-produção com o genoma antigo ainda embutido, entre o momento em que o código mudou e o momento em
-que um novo genoma foi treinado e reembutido), foi adicionada uma verificação explícita de
-compatibilidade em \texttt{ControladorTreinadoProvider}: antes de instanciar a rede a partir do
-genoma embutido, o número de entradas declarado no arquivo é comparado ao
-\texttt{ControladorHibrido.QuantidadeEntradas} atual, e qualquer divergência faz o sistema
-degradar, deliberadamente, para a heurística pura -- o mesmo comportamento seguro de "nunca travar,
-na pior hipótese operar só com a heurística" já descrito para as demais camadas de segurança do
-controlador híbrido. Esse guarda não existia antes da mudança de arquitetura; passou a existir
-\emph{por causa} dela, e é hoje o que torna seguro acrescentar uma oitava, nona ou décima entrada no
-futuro sem risco de travar o aplicativo de alguém que ainda não retreinou.
-
-Uma ressalva metodológica fecha esta discussão: a entrada nova e o endurecimento do ambiente de
-treino (ver próximo parágrafo) foram introduzidos na mesma leva de mudanças e avaliados juntos nas
-onze execuções da Seção~\ref{sec:experimento-hiperparametros}, de modo que este trabalho \textbf{não}
-isola o efeito de ter mais uma entrada do efeito de o ambiente ter ficado mais difícil -- os dados
-aqui não permitem afirmar que a sétima entrada, por si só, melhorou (ou piorou) a qualidade do
-controlador. Uma comparação controlada, com a sétima entrada mas no ambiente ANTIGO (sem invasão de
-torre nem teto por quadrante), ou vice-versa, é o experimento de ablação natural para isolar essa
-pergunta, e fica registrada aqui como trabalho futuro específico, distinto da ablação
-heurística-\textit{vs}-rede já conduzida (Seção~\ref{sec:experimento-hiperparametros}) e distinto
-também da repetição com múltiplas sementes já apontada como limitação geral.
+Ressalva metodológica: a entrada nova e o endurecimento do ambiente de treino (próximo parágrafo)
+foram introduzidos juntos e avaliados nas mesmas onze execuções, de modo que este trabalho
+\textbf{não} isola o efeito de uma coisa do efeito da outra -- uma comparação controlada com a
+sétima entrada no ambiente antigo (ou vice-versa) fica registrada como trabalho futuro específico.
 
 A combinação entre os dois mecanismos é, portanto, sequencial e hierárquica, nunca uma mistura
 indiferenciada: a heurística primeiro filtra quais torres são elegíveis e calcula as
@@ -872,76 +835,27 @@ Tabela~\ref{tab:hiperparametros-7entradas} e exportado em
   \end{tabular}
 \end{table}
 
-\paragraph{Efeito sobre a qualidade final do controlador: o teto desapareceu por completo.}
-A Tabela~\ref{tab:hiperparametros-7entradas} substitui integralmente a Figura de fitness final da
-versão anterior deste experimento (seis entradas, ambiente sem invasão de torre nem penalidade de
-desequilíbrio): naquela versão, as nove combinações de população e arquitetura terminavam numa
-faixa estreita mas ainda perceptível, de 55,59 a 57,27 (variação de 3\%). Com o ambiente endurecido
-e a arquitetura de sete entradas, essa faixa praticamente desaparece -- as onze execuções terminam
-entre 68,33 e 68,34, uma variação de 0,01 ponto, e \textbf{todas atingem esse valor exatamente na
-mesma geração, 222}, independentemente de população (30 a 120), arquitetura (4 a 16 neurônios
-ocultos) ou taxa de mutação (0,04 a 0,16). Isso não é o mesmo resultado do experimento anterior
-levado ao extremo por acaso: é uma mudança estrutural na tarefa. Os cenários táticos obrigatórios
-(\texttt{CatalogoCenarios.TodosComScript}) são um conjunto pequeno e fixo de situações
-determinísticas; sob o ambiente endurecido, há um teto de pontuação alcançável nesse conjunto fixo
-de cenários que qualquer genoma minimamente competente atinge com folga antes mesmo de terminar as
-300 gerações -- a partir daí, não existe mais recompensa disponível para diferenciar um
-hiperparâmetro do outro, e a busca genética simplesmente para de ter o que otimizar. Em outras
-palavras, o endurecimento do ambiente tornou a bateria de cenários fixos \emph{mais fácil de
-saturar}, não mais difícil de aprender -- o oposto do que se esperaria de regras mais punitivas, e
-evidência de que o verdadeiro desafio do ambiente atual está no treinamento com cenários aleatórios
-(Seção~\ref{sec:modelo-dados}), não nesta bateria fixa historicamente usada para comparar
-hiperparâmetros.
+\paragraph{Resultado: o teto desapareceu, e os hiperparâmetros deixaram de importar.}
+Diferente da versão anterior deste experimento (seis entradas, variação de 3\% entre as nove
+combinações), as onze execuções agora terminam entre 68,33 e 68,34 -- uma variação de 0,01 ponto --
+e todas atingem esse valor na mesma geração, 222, independentemente de população (30 a 120),
+arquitetura (4 a 16 neurônios) ou mutação (0,04 a 0,16). A causa é estrutural: os cenários táticos
+obrigatórios (\texttt{CatalogoCenarios.TodosComScript}) são um conjunto pequeno e fixo, e o ambiente
+endurecido tornou esse conjunto fácil de saturar -- qualquer genoma competente esgota a recompensa
+disponível bem antes das 300 gerações, e a partir daí não há mais nada que diferencie um
+hiperparâmetro do outro. As curvas de convergência (gerações 25--200) ainda mostram o padrão
+esperado antes do teto -- mutação alta explora rápido e trava, mutação baixa refina mais devagar --,
+mas todas convergem ao mesmo valor por volta da geração 222. O tempo de treinamento continua
+escalando só com a população (3,3--3,6 s em 30; 6,3--8,2 s em 60; 11,3--20,5 s em 120), não com a
+arquitetura, pela mesma razão de sempre: o custo é dominado pelos episódios simulados por geração,
+não pelo tamanho da rede.
 
-\paragraph{Efeito sobre a velocidade de evolução: ainda existe, mas só antes do teto.}
-Apesar do teto final idêntico, as curvas de convergência (gerações 25, 50, 100 e 200, disponíveis no
-JSON exportado) ainda diferem entre as taxas de mutação antes de alcançá-lo. Com população 60 e 8
-neurônios ocultos, a mutação 0,16 lidera no início (59,13 na geração 25, contra 57,48 das outras
-duas) mas estagna logo depois (62,43 na geração 200); a mutação 0,08 é a que mais se aproxima do
-teto antes do fim (68,31 já na geração 200); e a mutação 0,04 fica no meio (65,68 na geração 200).
-O padrão é o mesmo do experimento anterior -- mutação alta explora rápido e depois trava, mutação
-baixa refina mais lentamente --, só que agora as três acabam convergindo ao mesmo teto por volta da
-geração 222, em vez de pararem em valores finais diferentes. O compromisso clássico entre exploração
-e explotação continua presente na trajetória; deixou de ser visível no resultado final porque o
-resultado final deixou de ter margem para diferenciá-las.
-
-\paragraph{Custo computacional: a população continua sendo o único fator relevante.}
-A última coluna da Tabela~\ref{tab:hiperparametros-7entradas} confirma, com o ambiente novo, a mesma
-conclusão do experimento anterior: o tempo de treinamento escala com o tamanho da população (3,3 a
-3,6 s em população 30; 6,3 a 8,2 s em população 60; 11,3 a 20,5 s em população 120 -- um fator de
-aproximadamente $3\times$ a $6\times$ entre os extremos) e varia muito menos, e sem uma direção
-consistente, com o número de neurônios ocultos. A razão é a mesma de antes: o custo é dominado pela
-quantidade de episódios simulados por geração (um por indivíduo da população), não pelo tamanho da
-rede avaliada em cada episódio -- mesmo com 7 entradas em vez de 6, a rede continua pequena demais
-para que sua propagação pese diante do custo de simular o ambiente. A maior variação não-monotônica
-entre arquiteturas nesta rodada (por exemplo, 120/16 levando 20,5 s contra 11,3 s de 120/4) é
-compatível com a nova mecânica de fim antecipado de episódio por invasão de torre: episódios que
-terminam mais cedo custam menos tempo de simulação, e qual genoma de uma população específica sofre
-invasão antecipada em qual geração é, em si, estocástico -- uma fonte de ruído de tempo que o
-ambiente anterior, sem fim antecipado, não tinha.
-
-\paragraph{Conclusão e escolha dos hiperparâmetros.}
-A conclusão para o RadarTorres permanece de custo-benefício, agora ainda mais categórica: com todas
-as onze configurações atingindo o mesmo teto de fitness na mesma geração, não há absolutamente
-nenhuma evidência -- nem mesmo a variação de 3\% observada antes do endurecimento do ambiente -- que
-justifique o gasto adicional de uma população maior ou de uma camada oculta maior. A configuração de
-produção (população 60, 8 neurônios ocultos, mutação 0,08) permanece sustentada não por superar as
-demais, mas por ser a escolha de fábrica mais testada e por não haver custo de oportunidade
-mensurável em mantê-la.
-
-Duas ressalvas, na mesma linha das já apontadas na Seção~\ref{sec:procedimentos-metodologicos},
-delimitam o alcance desta conclusão. A primeira é que a saturação observada é uma propriedade do
-conjunto FIXO de cenários táticos usado nesta bateria (\texttt{CatalogoCenarios.TodosComScript}), e
-não necessariamente do treinamento de produção, que também avalia cenários aleatórios -- o teto
-idêntico documentado aqui não implica que o controlador de produção (Seção~\ref{sec:modelo-dados})
-tenha convergido do mesmo jeito sob nascimentos sorteados e um horizonte de treinamento muito maior.
-A segunda é a mesma de antes: cada configuração corresponde a uma única execução (não a uma média de
-sementes independentes), de modo que a coincidência de picos exatamente na geração 222 em onze
-execuções sem semente fixa compartilhada é, ela própria, um indício de quão determinístico o teto
-se tornou nesta bateria específica -- mas não prova que o mesmo valha fora dela. Repetir esta mesma
-bateria com cenários aleatórios, em vez dos fixos, é o próximo passo natural para saber se a
-saturação observada é exclusiva dos cenários táticos obrigatórios ou uma característica mais geral
-do ambiente endurecido.
+A conclusão para o RadarTorres permanece de custo-benefício, agora mais categórica: sem nenhuma
+evidência que justifique população ou camada oculta maiores, a configuração de produção (60
+indivíduos, 8 neurônios, mutação 0,08) segue sustentada por ser a mais testada, não por superar as
+demais. Duas ressalvas delimitam o alcance disso: a saturação é uma propriedade do conjunto FIXO de
+cenários desta bateria, não necessariamente do treinamento de produção (que também usa cenários
+aleatórios); e cada configuração é uma única execução, não uma média de sementes independentes.
 
 \paragraph{Teste direto: o teto é da rede ou da duração fixa do episódio?}
 Uma forma mais direta de responder a essa pergunta, sem depender dos cenários táticos fixos, é
@@ -1205,19 +1119,13 @@ exclusivas do treinamento neuroevolutivo, que persistem a evolução do controla
   \end{tabular}
 \end{table}
 
-O modelo de dados atual (SQLite, 11 tabelas, chaves estrangeiras reais) é apresentado a seguir em
-três grupos, por legibilidade: o núcleo de usuários e preferências (Figura~\ref{fig:der-usuarios}),
-o núcleo de detecção, câmeras e auditoria (Figura~\ref{fig:der-cameras}) e as tabelas de
-treinamento neuroevolutivo, independentes entre si (Figura~\ref{fig:der-treinamento}) -- diagramas
-entidade-relacionamento levantados a partir do código-fonte do projeto.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.85\textwidth]{DER_Usuarios_Modo_Preferencias.png}
-  \caption{Núcleo de usuários: \texttt{usuarios}, \texttt{modo\_atual\_torre} e
-  \texttt{preferencias\_usuario} (dos autores).}
-  \label{fig:der-usuarios}
-\end{figure}
+O modelo completo (diagramas entidade-relacionamento dos três núcleos -- usuários/preferências,
+detecção/câmeras/auditoria e treinamento neuroevolutivo -- e o detalhamento de cada relacionamento
+por chave estrangeira) está em \texttt{Modelo\_Banco\_de\_Dados.md} e na versão técnica
+\texttt{MODELO\_DADOS.md}, ambos levantados diretamente do código-fonte. A Figura~\ref{fig:der-cameras} ilustra o núcleo de
+detecção e auditoria, o mais conectado dos três; as quatro tabelas de treinamento (última linha da
+Tabela~\ref{tab:tabelas-sqlite}) não se relacionam por chave estrangeira com as demais nem entre
+si -- são séries temporais independentes, identificadas pelo número da geração.
 
 \begin{figure}[htbp]
   \centering
@@ -1227,37 +1135,6 @@ entidade-relacionamento levantados a partir do código-fonte do projeto.
   autores).}
   \label{fig:der-cameras}
 \end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{DER_Tabelas_Treinamento.png}
-  \caption{Tabelas de treinamento neuroevolutivo -- séries temporais independentes entre si:
-  \texttt{historico\_treinamento\_geracoes}, \texttt{marcos\_fitness\_treinamento} e
-  \texttt{instantaneos\_comportamento\_melhor\_gene} (dos autores).}
-  \label{fig:der-treinamento}
-\end{figure}
-
-\texttt{usuarios} se relaciona 1:1 com \texttt{preferencias\_usuario} (chave
-\texttt{UsuarioId} $\rightarrow$ \texttt{usuarios.Id}) e 1:N com \texttt{modo\_atual\_torre}
-(\texttt{ID\_USER} $\rightarrow$ \texttt{usuarios.Id}) -- em ambos os casos por chave estrangeira
-real de inteiro, não mais por login em texto. \texttt{objetos\_detectados} se relaciona 1:N com
-\texttt{acoes\_realizadas} (quando há alvo associado ao acionamento), com
-\texttt{ocorrencia\_estados} (histórico de transição de estado) e com
-\texttt{classificacoes\_alvo} (\texttt{ObjetoDetectadoId} $\rightarrow$
-\texttt{objetos\_detectados.Id}); \texttt{cameras} se relaciona 1:N com
-\texttt{objetos\_\allowbreak detectados} pelo quadrante monitorado. As quatro tabelas de treinamento não se relacionam por FK com as demais
-nem entre si: são séries temporais independentes, cada uma identificada pelo número da geração
-(\texttt{GERACAO}/\texttt{GeracaoMarco}) e pelo instante de registro, cobrindo da granularidade
-mais fina (\texttt{historico\_treinamento\_geracoes}, uma linha por geração) à mais agregada
-(\texttt{instantaneos\_comportamento\_melhor\_gene}, uma linha por marco, com o genoma completo em
-JSON).
-
-Como registro histórico do projeto, o modelo original em arquivos CSV tinha seis entidades (sem
-\texttt{ChamadoAjuda}, removida do código) e nenhuma chave estrangeira real -- os vínculos entre
-\texttt{Usuario} e \texttt{AcaoRealizada}/\texttt{ModoAtualTorre} eram feitos por login em texto. A
-migração efetivamente realizada seguiu a proposta elaborada a partir desse modelo original para as
-sete entidades que já existiam, mas foi além dela ao acrescentar as quatro tabelas de treinamento
-neuroevolutivo, inexistentes na época em que a proposta foi desenhada.
 
 \section{Conclusão}
 
