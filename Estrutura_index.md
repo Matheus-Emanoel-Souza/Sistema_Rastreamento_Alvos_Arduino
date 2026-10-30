@@ -1,20 +1,13 @@
-Funcionalidade: índice temático dos documentos sobre arquitetura de software, hardware/firmware, protocolo de comunicação e modelo de dados técnico.
+Funcionalidade: índice temático dos documentos sobre a estrutura física (hardware, pinagem, comunicação com o Arduino).
 
-# Estrutura — Índice
+# Estrutura física — Índice
 
-Referência técnica interna do aplicativo e do firmware — como o sistema é construído, não o que
-ele decide (ver [[RedeNeural_index]] para isso).
+Hardware real do protótipo e o protocolo que liga o Arduino à aplicação — não a organização
+interna do código (ver [[Arquitetura_index]]).
 
-- [[ARQUITETURA]] — decisões arquiteturais e diagramas (camadas, concorrência, fluxos de dados).
-- [[DOCUMENTACAO_TECNICA]] — referência classe a classe/serviço a serviço, limitações e bugs
-  conhecidos.
-- [[INVENTARIO_FUNCOES]] — mapa de navegação do código: funções e classes relevantes de cada
-  fluxo (simulação, sensores, rede neural, algoritmo genético, persistência, UI, autenticação).
-- [[MODELO_DADOS]] — schema técnico completo das tabelas SQLite e seus relacionamentos.
-- [[COMUNICACAO_ARDUINO]] — protocolo serial PC ↔ Arduino completo.
-- [[DIRETRIZ_UX]] — padrão de interface das telas administrativas (ações no topo, formulários em
-  modal).
+- [[Diagrama_Eletrico]] — componentes e pinagem real do Arduino MEGA 2560 (sensores, motores,
+  drivers). Também é um entregável acadêmico, ver [[Artigo_index]].
+- [[COMUNICACAO_ARDUINO]] — protocolo serial PC ↔ Arduino completo (mensagens, formato, limites).
 
-Ver também: [[RedeNeural_index]] (controlador que usa esta arquitetura e este protocolo),
-[[Artigo_index]] (versão condensada do modelo de dados e do diagrama elétrico para o entregável
-acadêmico).
+Ver também: [[Arquitetura_index]] (camadas de software que leem este hardware/protocolo),
+[[RedeNeural_index]] (decisões que chegam ao Arduino via este protocolo).
