@@ -254,13 +254,13 @@ exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem 
 abordagem multiameaça fica como trabalho futuro.
 
 O refinamento dessa escolha por proximidade -- e o instante de disparo -- é feito por uma pequena
-rede neural \textit{feedforward} (6 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
+rede neural \textit{feedforward} (7 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
 tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por um algoritmo genético
 próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), auditável e
 sem dependência de biblioteca de aprendizado de máquina. \citeonline{such2017deepneuroevolution}
 mostram que algoritmos genéticos são uma alternativa competitiva ao treino por gradiente em tarefas
 de aprendizado por reforço, em redes de porte bem maior do que a aqui empregada (até quatro milhões
-de parâmetros, contra os 74 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
+de parâmetros, contra os 82 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
 do algoritmo genético como método de treinamento, mas não implica, por si só, que aumentar o número
 de camadas ou neurônios seja desnecessário; por isso, a estratégia adotada para ampliar o
 desempenho do controlador prioriza o ajuste dos hiperparâmetros da busca evolutiva (tamanho de
@@ -400,13 +400,7 @@ todas as cinco amostras de comportamento do melhor indivíduo registradas na mes
 fitness médio da população em uma amostra recente de 300 gerações (27/10, gerações 1141--1440) sobe
 para 134,17, muito mais próximo do fitness do melhor indivíduo (137,35) do que o patamar de 9
 observado antes da correção. O genoma embutido no executável (\texttt{genoma-controlador.json})
-corresponde à \grifo{geração 5377, com \texttt{MelhorFitness} = 136,98}.
-
-\parecerAjuste{No momento desta revisão, o arquivo \texttt{genoma-controlador.json} presente na
-árvore de trabalho corresponde a uma geração/fitness diferentes do citado aqui (alteração local não
-commitada) -- o artefato empírico citado já não corresponde ao estado atual do repositório. Antes
-da entrega final, versione o genoma embutido junto com a versão final do artigo, para que o número
-citado no texto sempre corresponda ao software efetivamente entregue.}
+corresponde à geração 159, com \texttt{MelhorFitness} = 188,47.
 
 \begin{table}[htbp]
   \centering
@@ -425,7 +419,7 @@ citado no texto sempre corresponda ao software efetivamente entregue.}
     (122,81 a 155,47) \\
     Taxa de cobertura dos alvos & não medida diretamente -- $\approx$ 70\% dos alvos
     permanentemente abaixo do limiar & 100\% (5/5 amostras pós-correção) \\
-    Genoma embutido no executável & -- & geração 5377, fitness 136,98 \\
+    Genoma embutido no executável & -- & geração 159, fitness 188,47 \\
     \hline
   \end{tabular}
 \end{table}
@@ -439,11 +433,6 @@ estimativa com medição.}
 
 \subsubsection{Módulo de detecção de alvos}
 
-% CONFIRMAR: arranjo físico dos sensores (dois HC-SR04 de costas em mastro movido por motor de
-% passo 28BYJ-48, oscilação de 180° para cobertura de 360°). A documentação atual do repositório
-% (Docs/Projeto/ETAPA2_VISAO_COMPUTACIONAL.md e
-% Docs/Documentos_Entregaveis/Diagrama_Eletrico.md) descreve outro arranjo e
-% precisa ser atualizada.
 O módulo de detecção utiliza dois sensores ultrassônicos HC-SR04 instalados de costas um para o
 outro no topo de um mastro, na torre central. O mastro é movido por um motor de passo 28BYJ-48 que
 oscila 180°, de modo que, em conjunto, os dois sensores cobrem uma varredura de 360°. Cada sensor
@@ -471,27 +460,28 @@ sensor ou de cabo produzem degradação graciosa, e não interrupção da aplica
 
 \subsubsection{Projeto elétrico e estrutural}
 
-% CONFIRMAR: todo o conteúdo desta subseção foi informado pelo autor e ainda não consta da
-% documentação técnica do repositório. O Diagrama_Eletrico.md atual descreve um arranjo diferente
-% (um HC-SR04, um servo SG90, quatro LEDs, alimentação pela USB) e não menciona 74HC595, ULN2003,
-% fonte de 5 V/15 A, rolamento 51108, cubo duplo-D nem as dimensões citadas.
-% CONFIRMAR: número de câmeras por torre e onde cada câmera é montada.
-O projeto elétrico é baseado em um \grifo{Arduino Uno}, plataforma disponível no simulador Tinkercad usado
-para simular o circuito. Os sinais dos motores de passo são gerados por \grifo{registradores de
-deslocamento 74HC595 em cascata}, e os motores 28BYJ-48 são acionados por \grifo{drivers ULN2003},
-alimentados por uma \grifo{fonte de 5 V/15 A}. Cada uma das quatro torres armadas possui dois motores
-28BYJ-48 (movimentos de pan e tilt), um laser de baixa potência e um LED de cor própria; o
-acionamento é exclusivamente demonstrativo. Na torre central, o mastro dos sensores não é acoplado
+O projeto elétrico é baseado em um Arduino MEGA 2560 (ATmega2560, lógica 5V) -- substituiu um Arduino
+Uno considerado em versão anterior do projeto, cujos ${\sim}20$ pinos não comportam os 13 motores de
+passo da topologia atual. A varredura da torre central é feita por um motor de passo 28BYJ-48
+acionado por um driver ULN2003; os outros nove eixos de mira (oito das quatro câmeras, em pan e
+tilt, e quatro das torres armadas, só em pan) usam motores de passo NEMA17 com drivers
+A4988/DRV8825, com um pino de habilitação (\textit{enable}) compartilhado entre os doze drivers.
+Cada uma das quatro torres armadas possui, portanto, um único motor de pan (modelo 2D, sem tilt na
+torre) e um laser de baixa potência como acionamento demonstrativo, sem indicador luminoso dedicado
+-- a torre selecionada e o evento de disparo são sinalizados apenas via protocolo serial (mensagens
+\texttt{ACK}/\texttt{STATUS}), não por LED. A alimentação dos doze drivers A4988/DRV8825 e do
+ULN2003 (tensão e distribuição de terra) ainda não está especificada no firmware e permanece como
+item a confirmar na montagem física. Na torre central, o mastro dos sensores não é acoplado
 diretamente ao eixo do motor: ele assenta em um disco que gira sobre um rolamento axial 51108,
 acionado pelo motor por um cubo duplo-D. A passagem dos fios fica próxima ao eixo central, com folga
 de cabo em vez de anel coletor (\textit{slip ring}), já que o giro é limitado a 180°. A torre
 central é cerca de 5 cm mais alta que as torres armadas (cerca de 137,5 mm de altura). As peças
 estruturais são impressas em 3D, em formato de torre, com suporte para rolamento axial na base --
 o que permite a rotação da estrutura --, comum às cinco torres. As torres armadas têm, além disso,
-suportes próprios para os motores e para as câmeras, que cumprem o papel dos "canhões" de
-acionamento demonstrativo; a torre central tem suporte próprio para os sensores ultrassônicos no
-topo do mastro. Todas essas peças, assim como o restante do projeto, existem até o momento apenas
-em projeto digital (modelagem 3D e simulação elétrica), sem montagem física realizada.
+suportes próprios para o motor de pan e para as câmeras; a torre central tem suporte próprio para os
+sensores ultrassônicos no topo do mastro. Todas essas peças, assim como o restante do projeto,
+existem até o momento apenas em projeto digital (modelagem 3D e simulação elétrica), sem montagem
+física realizada.
 
 \parecerGrave{PROBLEMA CRÍTICO (ver Seção C.2 do parecer). O conteúdo grifado acima (Arduino Uno,
 74HC595, ULN2003, fonte 5V/15A, rolamento 51108) é apresentado como fato assentado, sem qualquer
@@ -605,15 +595,17 @@ e câmeras reais, nunca calibrados com dados de campo?}
 A rede neural, por sua vez, não decide essas regras de segurança nem a cascata de camadas -- ela
 decide apenas a escolha fina \textit{dentro} do espaço já validado pela heurística. É uma rede
 \textit{feedforward} totalmente conectada, implementada do zero (sem biblioteca de aprendizado de
-máquina), com arquitetura de 6 entradas, uma camada oculta de 8 neurônios e 2 saídas, com ativação
-tanh em todas as camadas. As seis entradas -- todas normalizadas no intervalo $[0,1]$ ou
+máquina), com arquitetura de 7 entradas, uma camada oculta de 8 neurônios e 2 saídas, com ativação
+tanh em todas as camadas. As sete entradas -- todas normalizadas no intervalo $[0,1]$ ou
 equivalente -- são a distância normalizada ao alvo, dois indicadores binários de quadrante (mesmo
-quadrante e quadrante adjacente), o ângulo de mira normalizado, a velocidade normalizada do alvo e o
+quadrante e quadrante adjacente), o ângulo de mira normalizado, a velocidade normalizada do alvo, o
+tempo normalizado em que o alvo está detectado sem ter sido abatido (sinal acrescentado para dar à
+rede contexto sobre hesitação própria) e o
 próprio fator da camada heurística vigente, usado como sinal de contexto. As duas saídas são um
 ajuste de pontuação, somado à pontuação heurística da candidata, e um valor de confiança de
-disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 74 parâmetros, no
+disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 82 parâmetros, no
 total, para essa arquitetura -- não são ajustados por retropropagação, mas evoluídos por um
-algoritmo genético: cada genoma é um vetor plano desses 74 números, a população evolui por seleção
+algoritmo genético: cada genoma é um vetor plano desses 82 números, a população evolui por seleção
 por torneio, \textit{crossover} uniforme, mutação gaussiana e elitismo, e o genoma final é
 embutido na aplicação como um vetor de pesos fixo, sem qualquer etapa de treinamento em tempo de
 execução.
@@ -692,7 +684,7 @@ real do repositório.}
 Para justificar tecnicamente a escolha dos hiperparâmetros do algoritmo genético com dados reais de
 treinamento, em vez de apenas por convenção, foi conduzido um experimento controlado com as seis
 combinações do produto cartesiano entre três tamanhos de população (30, 60 e 120 indivíduos) e duas
-arquiteturas de rede (4 e 16 neurônios na camada oculta, mantendo fixas as 6 entradas e as 2 saídas
+arquiteturas de rede (4 e 16 neurônios na camada oculta, mantendo fixas as 7 entradas e as 2 saídas
 descritas na Seção~\ref{sec:controlador-hibrido-inicio}). Cada uma das seis combinações foi treinada
 isoladamente por exatamente 300 gerações, com a mesma função de fitness, os mesmos cenários táticos
 obrigatórios (\texttt{CatalogoCenarios.TodosComScript}) e a mesma taxa de mutação (0,08) do
@@ -750,6 +742,22 @@ ambiente. O texto grifado acima não menciona essa característica do desenho ex
 Correção sugerida: acrescentar um parágrafo reconhecendo que parte da avaliação é determinística
 por configuração do experimento, e que isso é uma explicação alternativa plausível -- talvez mais
 provável -- para a convergência exata observada.}
+
+Essa leitura em termos de ótimo local precisa, porém, de uma ressalva importante sobre o próprio
+desenho do experimento: parte da avaliação de fitness em cada geração é determinística por
+configuração, não apenas por convergência das seis populações. As seeds usadas para gerar os
+episódios de avaliação dependem só do número da geração (\texttt{geracaoAtual * 1000 + i}), e não
+da combinação de população/arquitetura sendo testada; além disso, a maioria dos episódios de cada
+avaliação usa cenários roteirizados de seed fixa (\texttt{CatalogoCenarios.TodosComScript}),
+idênticos entre as seis execuções a cada geração. Isso significa que, se duas combinações
+convergirem para a mesma estratégia de decisão, elas tendem a produzir trajetórias
+bit-a-bit idênticas nos componentes determinísticos do ambiente de avaliação -- uma explicação
+mecânica, derivada diretamente do desenho experimental, ao menos tão plausível quanto a
+convergência para o mesmo ótimo local acessível para explicar por que exatamente 49,81 de fitness
+se repete em cinco das seis combinações. As duas explicações não são mutuamente exclusivas: é
+plausível que as cinco combinações estejam, de fato, perto do mesmo ótimo local -- o que tornaria o
+determinismo das seeds compatível, e não concorrente, com esse platô -- mas o desenho atual do
+experimento não permite distinguir entre as duas hipóteses.
 
 Duas ressalvas são necessárias para a correta leitura deste experimento, na mesma linha das já
 apontadas na Seção~\ref{sec:procedimentos-metodologicos} para o treinamento do controlador em geral.
