@@ -4,6 +4,26 @@ Funcionalidade: checklist de revisão acadêmica do artigo do TCC (`Artigo.tex`,
 
 Checklist de revisão acadêmica do `Artigo.tex`. Status real de aplicação no documento, não intenção.
 
+## Pendente — titulação do orientador (rodapé da capa)
+
+Trecho grifado em amarelo no rodapé do orientador que eu tinha deixado de processar na revisão de
+30/10 (estava numa NOTA DE RODAPÉ do docx, não no corpo do texto -- meu script de extração só
+percorria o corpo). Restaurado o destaque em `Artigo.tex` e pesquisado:
+
+- Busca web encontrou um agregador de currículo Lattes (Escavador, fonte secundária, não
+  institucional) indicando: bacharelado em Ciência da Computação pela UFES (1999) e
+  especialização (lato sensu) em Gestão de Projetos pela própria UCL (2008-2009) -- **nenhuma
+  menção a mestrado**.
+- Não achei página institucional da UCL nem o Lattes oficial do orientador para confirmar com
+  fonte primária, como pedido.
+- [ ] **pendente** — Autor confirmar com o próprio orientador (ou achar o Lattes/página
+  institucional oficial): (a) o bacharelado em Ciência da Computação pela UFES está correto? (b)
+  ele tem mestrado de fato, ou o rodapé "Mestre em xxx pela xxx" (hoje um placeholder não
+  preenchido) deveria ser trocado para "especialista" -- o que a busca sugere, mas não confirma
+  com fonte institucional.
+- Destaque amarelo mantido em `Artigo.tex` em ambas as partes (mestrado E o parênteses de
+  especialista/bacharel) até confirmação.
+
 ## Desenvolvimento físico do projeto
 
 - [x] **concluída** — Redação da descrição do desenvolvimento físico (estrutura em formato de torre, impressão 3D)
