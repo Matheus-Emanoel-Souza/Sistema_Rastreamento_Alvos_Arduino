@@ -14,6 +14,39 @@
 {BAEK, I. et al. \emph{CurbScan: Curb Detection and Tracking Using Multi-Sensor
   Fusion}. 2020.}
 
+\bibitem[Colas, Sigaud e Oudeyer 2018]{colas2018howmanyseeds}
+\abntrefinfo{Colas, Sigaud e Oudeyer}{COLAS; SIGAUD; OUDEYER}{2018}
+{COLAS, C.; SIGAUD, O.; OUDEYER, P.-Y. \emph{How Many Random Seeds? Statistical
+  Power Analysis in Deep Reinforcement Learning Experiments}. 2018.}
+
+\bibitem[Derrac et al. 2011]{derrac2011nonparametric}
+\abntrefinfo{Derrac et al.}{DERRAC et al.}{2011}
+{DERRAC, J. et al. A practical tutorial on the use of nonparametric statistical
+  tests as a methodology for comparing evolutionary and swarm intelligence
+  algorithms.
+\emph{Swarm and Evolutionary Computation}, v.~1, n.~1, p. 3--18, 2011.}
+
+\bibitem[Gonzalez e Woods 2018]{gonzalez2018dip}
+\abntrefinfo{Gonzalez e Woods}{GONZALEZ; WOODS}{2018}
+{GONZALEZ, R.~C.; WOODS, R.~E. \emph{Digital Image Processing}. 4. ed. New
+  York: Pearson, 2018.}
+
+\bibitem[Henderson et al. 2018]{henderson2018drlthatmatters}
+\abntrefinfo{Henderson et al.}{HENDERSON et al.}{2018}
+{HENDERSON, P. et al. Deep reinforcement learning that matters. In:
+  \emph{Proceedings of the 32nd AAAI Conference on Artificial Intelligence}.
+  [S.l.: s.n.], 2018. p. 3207--3214.}
+
+\bibitem[Hooker 1995]{hooker1995testing}
+\abntrefinfo{Hooker}{HOOKER}{1995}
+{HOOKER, J.~N. Testing heuristics: We have it all wrong.
+\emph{Journal of Heuristics}, v.~1, n.~1, p. 33--42, 1995.}
+
+\bibitem[Hu 1962]{hu1962moments}
+\abntrefinfo{Hu}{HU}{1962}
+{HU, M.-K. Visual pattern recognition by moment invariants.
+\emph{IRE Transactions on Information Theory}, v.~8, n.~2, p. 179--187, 1962.}
+
 \bibitem[Huang e Onta{\~n}{\'o}n 2020]{huang2020actionmasking}
 \abntrefinfo{Huang e Onta{\~n}{\'o}n}{HUANG; ONTA{\~N}{\'O}N}{2020}
 {HUANG, S.; ONTA{\~N}{\'O}N, S. \emph{A Closer Look at Invalid Action Masking
@@ -37,10 +70,33 @@
   Evaluation and Weapon Assignment Algorithm, Asset-based Dynamic Weapon
   Scheduling using Artificial Intelligence Techniques}. 2009.}
 
+\bibitem[Risi e Togelius 2017]{risi2017neuroevogames}
+\abntrefinfo{Risi e Togelius}{RISI; TOGELIUS}{2017}
+{RISI, S.; TOGELIUS, J. Neuroevolution in games: state of the art and open
+  challenges.
+\emph{IEEE Transactions on Computational Intelligence and AI in Games}, v.~9,
+  n.~1, p. 25--41, 2017.}
+
+\bibitem[Salimans et al. 2017]{salimans2017es}
+\abntrefinfo{Salimans et al.}{SALIMANS et al.}{2017}
+{SALIMANS, T. et al. \emph{Evolution Strategies as a Scalable Alternative to
+  Reinforcement Learning}. 2017.}
+
 \bibitem[Such et al. 2017]{such2017deepneuroevolution}
 \abntrefinfo{Such et al.}{SUCH et al.}{2017}
 {SUCH, F.~P. et al. \emph{Deep Neuroevolution: Genetic Algorithms Are a
   Competitive Alternative for Training Deep Neural Networks for Reinforcement
   Learning}. 2017.}
+
+\bibitem[Swain e Ballard 1991]{swain1991colorindexing}
+\abntrefinfo{Swain e Ballard}{SWAIN; BALLARD}{1991}
+{SWAIN, M.~J.; BALLARD, D.~H. Color indexing.
+\emph{International Journal of Computer Vision}, v.~7, n.~1, p. 11--32, 1991.}
+
+\bibitem[{Ultralytics} 2025]{ultralytics_yolo26}
+\abntrefinfo{{Ultralytics}}{{Ultralytics}}{2025}
+{{Ultralytics}. \emph{{YOLO26}: Model Documentation}. 2025.
+  \url{https://docs.ultralytics.com/models/yolo26/}.
+Acesso em: 28 out. 2026.}
 
 \end{thebibliography}
