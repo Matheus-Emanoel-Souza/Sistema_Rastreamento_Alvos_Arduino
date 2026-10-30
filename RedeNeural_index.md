@@ -16,6 +16,6 @@ decisão com confiança de identificação.
 - [[ApoioDeApresentacao]] — detalhamento de apoio à defesa do TCC: tipos de mutação em algoritmos
   genéticos e por que a gaussiana foi escolhida; biblioteca de neuroevolução em avaliação.
 
-Ver também: [[Estrutura_index]] (arquitetura de software onde este controlador se encaixa,
-protocolo serial que leva a decisão até o Arduino) e [[Artigo_index]] (decisões pendentes sobre
-mudanças nesta lógica, registradas em `Melhoria_de_artigo`).
+Ver também: [[Arquitetura_index]] (onde este controlador se encaixa na arquitetura de software),
+[[Estrutura_index]] (protocolo serial que leva a decisão até o Arduino) e [[Artigo_index]]
+(decisões pendentes sobre mudanças nesta lógica, registradas em `Melhoria_de_artigo`).
