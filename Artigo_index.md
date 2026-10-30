@@ -36,7 +36,8 @@ como **inferência** nos respectivos arquivos.
 
 1. Leitura da estrutura completa de diretórios do repositório.
 2. Leitura de [[ARQUITETURA]], [[MODELO_DADOS]], [[COMUNICACAO_ARDUINO]], [[CONTEXTO_PROJETO]] e
-   [[DOCUMENTACAO_TECNICA]] (documentação técnica já mantida pelo autor do projeto).
+   [[DOCUMENTACAO_TECNICA]] (documentação técnica já mantida pelo autor do projeto — ver
+   [[Arquitetura_index]] e [[Estrutura_index]]).
 3. Leitura direta do código-fonte: arquivos em `Models/`, interfaces de `Services/` e
    `Repositories/`, `appsettings.json`, firmware do Arduino e ViewModels relevantes.
 4. Cruzamento entre código e documentação para montar diagramas, requisitos e matriz de
@@ -66,8 +67,9 @@ como **inferência** nos respectivos arquivos.
 - **2026-10-30**: revisão do autor sobre `artigo_revisado.docx` (remoção da seção "Projeto
   elétrico e estrutural", da zona morta e do tempo mínimo de mira do corpo do artigo; proposta de
   cooperação entre torres/câmeras registrada como trabalho futuro) e reorganização do vault em
-  índices temáticos (`index.md` + `RedeNeural_index`/`Artigo_index`/`Estrutura_index`/
-  `Projeto_index`) — ver [[Melhoria_de_artigo]] e [[LOG_SOLICITACOES]].
+  índices temáticos (`index.md` + `RedeNeural_index`/`Arquitetura_index`/`Estrutura_index`/
+  `Artigo_index`/`Projeto_index`) — ver [[Melhoria_de_artigo]] e [[LOG_SOLICITACOES]].
 
 Ver também: [[RedeNeural_index]] (lógica do controlador descrita no artigo),
-[[Estrutura_index]] (versão técnica detalhada do modelo de dados e da arquitetura).
+[[Arquitetura_index]] (versão técnica detalhada do modelo de dados e da arquitetura),
+[[Estrutura_index]] (pinagem e protocolo do hardware real).

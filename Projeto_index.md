@@ -15,4 +15,4 @@ Acompanhamento do trabalho em si, não os entregáveis acadêmicos (ver [[Artigo
 - [[LOG_SOLICITACOES]] — histórico cronológico das solicitações feitas ao assistente.
 - [[PROXIMAS_MODIFICACOES]] — pendências, decisões e referências rápidas para sessões futuras.
 
-Ver também: [[Estrutura_index]] (documentação técnica resultante destas etapas).
+Ver também: [[Arquitetura_index]] (documentação técnica resultante destas etapas).
