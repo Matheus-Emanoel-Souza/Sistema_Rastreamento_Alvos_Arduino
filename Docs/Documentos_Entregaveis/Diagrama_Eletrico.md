@@ -23,10 +23,8 @@
 | Sensor ultrassônico HC-SR04 | 2 | Medem distância na posição angular atual, montados **opostos a 180° no mesmo eixo** de varredura — juntos cobrem os 360° a cada ciclo ida-e-volta | Lógica 5V — compatível direto com o MEGA, sem divisor de tensão. SENSOR=2 sempre reporta ângulo = ângulo do motor + 180° (mod 360) |
 | Motor de passo NEMA17 + driver A4988/DRV8825 | 8 | Mira (pan + tilt) das 4 câmeras CAM1-CAM4 — 2 eixos por câmera, para centralizar o alvo detectado pela visão computacional do PC | STEP+DIR por eixo; enable compartilhado com os motores de torre |
 | Motor de passo NEMA17 + driver A4988/DRV8825 | 4 | Mira (pan apenas, modelo 2D) das torres de decisão Q1-Q4 | STEP+DIR por eixo; gira a torre selecionada na direção do alvo (ver `TowerSelectionService`, lado PC) |
-| LED + resistor 220Ω (torre) | 4 | Indicador de torre selecionada (1 por quadrante Q1-Q4) | Ver `enum Quadrant` em `src/RadarTorres.App/Models/SystemState.cs` |
-| LED + resistor 220Ω (disparo) | 1 | Indicador dedicado ao evento de disparo (Requisito 3) | Só acende por `FIRE` explícito do PC, com `COLOR;STATE=VERMELHO` e alvo estável — nunca automático por centralização momentânea |
 
-Total de eixos controlados (não bloqueante, via AccelStepper): **13** (1 varredura + 8 mira de câmeras + 4 mira de torres).
+Total de eixos controlados (não bloqueante, via AccelStepper): **13** (1 varredura + 8 mira de câmeras + 4 mira de torres). Sem indicador luminoso dedicado: torre selecionada e evento de disparo são só registrados via protocolo serial (ACK/STATUS).
 
 ## 2. Pinagem (confirmada no firmware — `RadarTorres_Firmware.ino`, bloco "PINAGEM (MEGA 2560)")
 
@@ -48,17 +46,7 @@ Total de eixos controlados (não bloqueante, via AccelStepper): **13** (1 varred
 | US2 — Trig | D28 |
 | US2 — Echo | D29 |
 
-### 2.3 LEDs
-
-| Sinal | Pino MEGA 2560 |
-|---|---|
-| LED Torre Q1 | D30 |
-| LED Torre Q2 | D31 |
-| LED Torre Q3 | D32 |
-| LED Torre Q4 | D33 |
-| LED Disparo | D34 |
-
-### 2.4 Motores de mira das câmeras (NEMA17 + A4988/DRV8825, 8 eixos)
+### 2.3 Motores de mira das câmeras (NEMA17 + A4988/DRV8825, 8 eixos)
 
 Enable compartilhado entre os 8 drivers de câmera **e** os 4 drivers de torre: **D52** (ativo em LOW).
 
@@ -73,7 +61,7 @@ Enable compartilhado entre os 8 drivers de câmera **e** os 4 drivers de torre: 
 | CAM4 — Pan | D48 | D49 |
 | CAM4 — Tilt | D50 | D51 |
 
-### 2.5 Motores de mira das torres (NEMA17 + A4988/DRV8825, 4 eixos — só pan)
+### 2.4 Motores de mira das torres (NEMA17 + A4988/DRV8825, 4 eixos — só pan)
 
 | Eixo | STEP | DIR |
 |---|---|---|
@@ -98,7 +86,6 @@ flowchart TB
         direction TB
         SWEEP_PINS["D22-D25\n(varredura 28BYJ-48)"]
         US_PINS["D26-D29\n(US1/US2 Trig+Echo)"]
-        LED_PINS["D30-D34\n(LED Q1-Q4 + Disparo)"]
         CAM_PINS["D36-D51\n(8 eixos STEP+DIR\npan/tilt CAM1-CAM4)"]
         TORRE_PINS["D2-D9\n(4 eixos STEP+DIR\npan Torre Q1-Q4)"]
         ENABLE_PIN["D52\n(ENABLE comum\ndrivers A4988/DRV8825)"]
@@ -109,12 +96,6 @@ flowchart TB
     SWEEP -. "mesmo eixo, oposto 180°" .-> US2["HC-SR04 #2"]
     US_PINS --> US1
     US_PINS --> US2
-
-    LED_PINS --> LEDQ1["LED Torre Q1"]
-    LED_PINS --> LEDQ2["LED Torre Q2"]
-    LED_PINS --> LEDQ3["LED Torre Q3"]
-    LED_PINS --> LEDQ4["LED Torre Q4"]
-    LED_PINS --> LEDFIRE["LED Disparo"]
 
     CAM_PINS --> CAMS["8x NEMA17 + A4988/DRV8825\n(pan+tilt CAM1-CAM4)"]
     TORRE_PINS --> TORRES["4x NEMA17 + A4988/DRV8825\n(pan Torre Q1-Q4)"]
@@ -129,7 +110,7 @@ flowchart TB
 
 Legenda: azul = sinal/dados digital. Blocos em amarelo (motores NEMA17 e sensores US1/US2) têm
 alimentação (VMOT dos drivers, VCC dos HC-SR04) **não detalhada no firmware** — ver nota na seção
-2.5. Fonte PlantUML: [`Diagrama_Eletrico_RadarTorres.puml`](Diagrama_Eletrico/Diagrama_Eletrico_RadarTorres.puml),
+2.4. Fonte PlantUML: [`Diagrama_Eletrico_RadarTorres.puml`](Diagrama_Eletrico/Diagrama_Eletrico_RadarTorres.puml),
 já regenerada (2026-10-27) para esta topologia.
 
 ## 4. Protocolo serial — mensagens novas (ver `Docs/Tecnica/COMUNICACAO_ARDUINO.md` para o protocolo base)
@@ -144,13 +125,13 @@ terminador `\n`):
 | PC → Arduino | `CAM;ID=<1-4>;X=<px>;Y=<px>;Z=<cm>` | Deslocamento do alvo (X: +direita, Y: +abaixo) e distância estimada para a câmera CAM`<ID>` |
 | PC → Arduino | `CALIB;CAM=<1-4>;PASSOS_POR_PX_PAN=<float>;PASSOS_POR_PX_TILT=<float>` | Ajusta em runtime a calibração pixel→passo de uma câmera |
 | PC → Arduino | `AIM;TOWER=<1-4>;ANGLE=<0.0-360.0>` | Gira o eixo pan da torre indicada (convenção de bússola, 0°=Norte, sentido horário) |
-| PC → Arduino | `FIRE;TOWER=<id>;TARGET=<id>` (reaproveitada) | Aciona LED_DISPARO — só tem efeito com `COLOR;STATE=VERMELHO` e alvo estável |
-| PC → Arduino | `GENOMA;RESET` / `GENOMA;INDICE=<0-73>;VALOR=<float>` / `GENOMA;COMMIT` | Carrega os 74 pesos/viés da rede neural embutida (mesma ordem de `RedeNeural.cs`, lado PC) |
-| PC → Arduino | `REDE;ENTRADAS=<d>;<mesmo_quad>;<quad_adj>;<angulo>;<vel>;<fator_camada>` | Pede o cálculo da rede embutida para 6 entradas |
+| PC → Arduino | `FIRE;TOWER=<id>;TARGET=<id>` (reaproveitada) | Sinaliza o evento de disparo (sem LED) — só aceito com `COLOR;STATE=VERMELHO` e alvo estável |
+| PC → Arduino | `GENOMA;RESET` / `GENOMA;INDICE=<0-81>;VALOR=<float>` / `GENOMA;COMMIT` | Carrega os 82 pesos/viés da rede neural embutida (mesma ordem de `RedeNeural.cs`, lado PC) |
+| PC → Arduino | `REDE;ENTRADAS=<d>;<mesmo_quad>;<quad_adj>;<angulo>;<vel>;<tempo_deteccao>;<fator_camada>` | Pede o cálculo da rede embutida para 7 entradas |
 | Arduino → PC | `STATUS;REDE_AJUSTE=<float>;REDE_CONFIANCA=<float>` | Resposta a `REDE;ENTRADAS` — **somente diagnóstico**, nunca aciona atuador algum (invariante de segurança explícita no firmware) |
 
-A máquina de estados (VERDE/AMARELO/VERMELHO) e a rede neural embutida (6 entradas → 8 ocultos → 2
-saídas, 74 genes, ativação tanh) espelham, respectivamente, o `Requisito 4` e
+A máquina de estados (VERDE/AMARELO/VERMELHO) e a rede neural embutida (7 entradas → 8 ocultos → 2
+saídas, 82 genes, ativação tanh) espelham, respectivamente, o `Requisito 4` e
 `src/RadarTorres.App/NeuralEvolution/RedeNeural.cs` do lado PC — ver
 `Docs/Documentos_Entregaveis/Como_a_IA_funciona_no_RadarTorres.md` para o funcionamento da
 rede.
@@ -172,9 +153,8 @@ rede.
 - **Calibração pixel→passo das câmeras**: valores iniciais (`camPassosPorPixelPan/Tilt = 2.0`) são
   placeholder — devem ser medidos na prática e podem ser ajustados em runtime via `CALIB` sem
   regravar o firmware.
-- **LED de disparo**: tratado como evento, não estado contínuo — acende por `FIRE` explícito só em
-  `COLOR;STATE=VERMELHO` com alvo estável, e apaga automaticamente após `LED_DISPARO_DURACAO_MS`
-  (400 ms), sem precisar de segundo comando do PC.
+- **Disparo sem LED**: sem indicador luminoso dedicado — `FIRE` só é aceito (ACK/`STATUS;DISPARO=OK`)
+  em `COLOR;STATE=VERMELHO` com alvo estável; fora disso, recusado por `ERROR`.
 
 ## Ver também
 
