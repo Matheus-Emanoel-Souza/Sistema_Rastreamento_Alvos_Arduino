@@ -584,17 +584,12 @@
                            Canvas.Left="245" Canvas.Top="14" FontSize="9" Foreground="{DynamicResource Text.Secondary}"
                            FontFamily="{DynamicResource Font.Mono}" IsHitTestVisible="False"/>
 
-                <!-- Círculo interno: alcance de engajamento a partir da base — soma a distância da base até
-                     a torre mais afastada com o alcance de mira de cada torre (ver
-                     AlcanceEngajamentoTotalMetros), para o círculo bater com a ponta real dos
-                     cones de visão (que partem já deslocados da origem, não do centro do mundo). -->
-                <Ellipse Width="{Binding DiametroEngajamentoPx}" Height="{Binding DiametroEngajamentoPx}"
-                         Canvas.Left="{Binding OffsetEngajamentoPx}" Canvas.Top="{Binding OffsetEngajamentoPx}"
-                         Stroke="#F59E0B" StrokeThickness="1.5" StrokeDashArray="3,3" Opacity="0.7"
-                         ToolTip="Alcance de engajamento a partir da base — limite até onde as torres conseguem mirar"/>
-                <TextBlock Text="{Binding AlcanceEngajamentoTotalMetros, StringFormat={}{0:0.#} m · alcance de mira}"
-                           Canvas.Left="245" Canvas.Top="{Binding OffsetEngajamentoPx}" FontSize="9" Foreground="#F59E0B"
-                           FontFamily="{DynamicResource Font.Mono}" IsHitTestVisible="False"/>
+                <!-- O arco de alcance de mira a partir da base foi removido daqui: ele cobria boa
+                     parte do mundo e atrapalhava a leitura dos cones, das linhas de mira e dos
+                     alvos. O alcance em si continua inalterado na simulação — é o raio dos cones
+                     de visão desenhados abaixo (ConstruirSetorDeVisao) e o
+                     DistanciaEngajamentoMetros que o controlador usa; o que saiu foi apenas o
+                     círculo tracejado que o repetia centrado na origem. -->
 
                 <!-- Campos de visão (cone) de cada torre/canhão — ver ConstruirSetorDeVisao -->
                 <ItemsControl ItemsSource="{Binding CamposDeVisaoVisuais}">
@@ -727,22 +722,38 @@
                     </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <!-- Contorno branco marca o alvo alto o bastante para ser visto por
-                                 TODAS as torres (eixo Z ligado): a altura muda o comportamento da
-                                 simulação, então precisa ser percebida sem ter de ler o número. -->
-                            <Ellipse Width="{Binding Tamanho}" Height="{Binding Tamanho}" Fill="{Binding Cor}">
-                                <Ellipse.Style>
-                                    <Style TargetType="Ellipse">
-                                        <Setter Property="StrokeThickness" Value="0"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Destacado}" Value="True">
-                                                <Setter Property="Stroke" Value="#FFFFFF"/>
-                                                <Setter Property="StrokeThickness" Value="1.5"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Ellipse.Style>
-                            </Ellipse>
+                            <!-- Alvo + etiqueta com a posição atual em metros. A etiqueta fica à
+                                 direita do ponto e na mesma cor dele, que é o que permite associar
+                                 cada par de coordenadas ao seu alvo quando há vários próximos.
+                                 IsHitTestVisible=False para o texto não capturar o mouse por cima
+                                 da simulação. Contorno branco marca o alvo alto o bastante para ser
+                                 visto por TODAS as torres (eixo Z ligado): a altura muda o
+                                 comportamento da simulação, então precisa ser percebida sem ter de
+                                 ler o número. -->
+                            <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <Ellipse Width="{Binding Tamanho}" Height="{Binding Tamanho}" Fill="{Binding Cor}"
+                                         HorizontalAlignment="Left" VerticalAlignment="Top">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="StrokeThickness" Value="0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Destacado}" Value="True">
+                                                    <Setter Property="Stroke" Value="#FFFFFF"/>
+                                                    <Setter Property="StrokeThickness" Value="1.5"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="{Binding Coordenadas}" Foreground="{Binding Cor}"
+                                           FontSize="8.5" FontFamily="{DynamicResource Font.Mono}"
+                                           HorizontalAlignment="Left" VerticalAlignment="Top"
+                                           IsHitTestVisible="False" Opacity="0.95">
+                                    <TextBlock.RenderTransform>
+                                        <TranslateTransform X="13" Y="-1"/>
+                                    </TextBlock.RenderTransform>
+                                </TextBlock>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -758,8 +769,8 @@
                     <Run Text="● " Foreground="#60A5FA"/><Run Text="Alvo  "/>
                     <Run Text="● " Foreground="#2563EB"/><Run Text="Torre de vigilância central (farol decorativo)"/>
                     <LineBreak/>
-                    <Run Text="⊙ " Foreground="{DynamicResource Text.Secondary}"/><Run Text="Círculo externo = onde os alvos nascem   "/>
-                    <Run Text="⊙ " Foreground="#F59E0B"/><Run Text="Círculo interno (tracejado) = alcance de mira das torres"/>
+                    <Run Text="⊙ " Foreground="{DynamicResource Text.Secondary}"/><Run Text="Círculo tracejado = onde os alvos nascem   "/>
+                    <Run Text="#id x ; y " FontFamily="{DynamicResource Font.Mono}" Foreground="#F87171"/><Run Text="= identificação e posição atual do alvo, em metros"/>
                 </TextBlock>
             </StackPanel>
         </Border>
@@ -808,12 +819,19 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-                <Border x:Name="RedeNeuralViewport" ClipToBounds="True" Width="620" Height="320"
+                <!-- O Canvas tem o tamanho que a topologia atual exige (ver
+                     CalcularLayoutDoDiagrama): a quantidade de neurônios ocultos é resultado da
+                     evolução e muda a cada geração, então um Canvas fixo cortava a rede assim que
+                     ela crescia. A rolagem cobre o que não couber na janela, e o zoom usa
+                     LayoutTransform — e não RenderTransform — para que ampliar também aumente a
+                     área rolável, em vez de empurrar metade do diagrama para fora do recorte. -->
+                <Border x:Name="RedeNeuralViewport" ClipToBounds="True" Width="620" Height="360"
                         PreviewMouseWheel="RedeNeuralViewport_PreviewMouseWheel" Background="Transparent">
-                    <Canvas Width="620" Height="320" RenderTransformOrigin="0.5,0.5">
-                        <Canvas.RenderTransform>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <Canvas Width="{Binding DiagramaLarguraPx}" Height="{Binding DiagramaAlturaPx}">
+                        <Canvas.LayoutTransform>
                             <ScaleTransform x:Name="ZoomRedeNeuralTransform" ScaleX="1" ScaleY="1"/>
-                        </Canvas.RenderTransform>
+                        </Canvas.LayoutTransform>
 
                         <ItemsControl ItemsSource="{Binding ConexoesVisuais}">
                             <ItemsControl.ItemsPanel>
@@ -840,12 +858,15 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+                                        <!-- Centralizado pelo próprio diâmetro (OffsetCentro), não
+                                             por um deslocamento fixo: os círculos têm tamanhos
+                                             diferentes conforme o tipo de neurônio. -->
                                         <Ellipse Width="{Binding Raio}" Height="{Binding Raio}" Fill="{Binding Cor}"
                                                  Stroke="{DynamicResource Border.Control}" StrokeThickness="1.5"
                                                  ToolTip="{Binding Rotulo}" Cursor="Hand"
                                                  HorizontalAlignment="Left" VerticalAlignment="Top">
                                             <Ellipse.RenderTransform>
-                                                <TranslateTransform X="-7" Y="-7"/>
+                                                <TranslateTransform X="{Binding OffsetCentro}" Y="{Binding OffsetCentro}"/>
                                             </Ellipse.RenderTransform>
                                         </Ellipse>
                                         <!-- Rótulo permanente de entrada/saída — vazio nos ocultos, que não têm texto fixo (ver RotuloCurto). -->
@@ -861,6 +882,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Canvas>
+                    </ScrollViewer>
                 </Border>
             </StackPanel>
         </Border>

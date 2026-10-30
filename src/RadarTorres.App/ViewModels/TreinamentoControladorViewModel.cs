@@ -87,12 +87,17 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly Stopwatch _cronometroDiagrama = Stopwatch.StartNew();
 
     /// <summary>
-    /// Posição vertical já atribuída a cada neurônio oculto, por id de nó. Mantida entre gerações
-    /// para que um oculto que continua existindo não mude de lugar no diagrama só porque outro
-    /// nasceu ou morreu — sem isso os nós "saltavam" a cada remontagem e ficava impossível
-    /// acompanhar visualmente o crescimento da rede.
+    /// Ordem já atribuída a cada neurônio oculto, por id de nó. Mantida entre gerações para que um
+    /// oculto que continua existindo não mude de lugar no diagrama só porque outro nasceu ou
+    /// morreu — sem isso os nós "saltavam" a cada remontagem e ficava impossível acompanhar
+    /// visualmente o crescimento da rede.
     /// </summary>
-    private readonly Dictionary<int, double> _yDoOcultoPorId = new();
+    /// <remarks>
+    /// Guarda a ORDEM, e não a coordenada: os ocultos passaram a ser distribuídos em várias
+    /// colunas conforme a rede cresce (ver <see cref="CalcularLayoutDoDiagrama"/>), e nesse layout
+    /// a posição vertical sozinha não identifica mais o lugar de um nó.
+    /// </remarks>
+    private readonly Dictionary<int, int> _ordemDoOcultoPorId = new();
 
     /// <summary>Ocultos e conexões do diagrama anterior — o que não está aqui é NOVO e recebe destaque na geração em que surge.</summary>
     private readonly HashSet<int> _ocultosDaRemontagemAnterior = new();
@@ -795,7 +800,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _geracoesNestaSessao = 0;
         _cronometroSessao.Reset();
 
-        _yDoOcultoPorId.Clear();
+        _ordemDoOcultoPorId.Clear();
         _ocultosDaRemontagemAnterior.Clear();
         _conexoesDaRemontagemAnterior.Clear();
 
@@ -1505,9 +1510,43 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     // ---------------------------------------------------------------- Diagrama da rede neural
 
-    private const double DiagramaLargura = 620.0;
-    private const double DiagramaAltura = 280.0;
     private const double DiagramaMargemHorizontal = 60.0;
+
+    /// <summary>Folga no topo e na base do diagrama, para o primeiro e o último neurônio de uma coluna não encostarem na borda.</summary>
+    private const double DiagramaMargemVertical = 26.0;
+
+    /// <summary>
+    /// Espaço vertical mínimo por neurônio de ENTRADA/SAÍDA. Maior que o diâmetro deles (32px)
+    /// porque entradas e saídas carregam rótulo fixo logo abaixo do círculo.
+    /// </summary>
+    private const double DiagramaEspacoPorEntradaSaida = 46.0;
+
+    /// <summary>Espaço vertical mínimo por neurônio OCULTO — só o diâmetro (26px) mais uma folga, já que ocultos não têm rótulo permanente.</summary>
+    private const double DiagramaEspacoPorOculto = 32.0;
+
+    /// <summary>Distância horizontal entre colunas consecutivas do diagrama (entrada, ocultas, saída).</summary>
+    private const double DiagramaEspacoEntreColunas = 150.0;
+
+    /// <summary>
+    /// Altura a partir da qual os ocultos passam a ser distribuídos em MAIS DE UMA coluna em vez
+    /// de continuar esticando o diagrama para baixo. Sem esse teto, uma rede com dezenas de
+    /// ocultos viraria uma tira vertical altíssima — rolável, mas ilegível.
+    /// </summary>
+    private const double DiagramaAlturaMaximaDeUmaColuna = 640.0;
+
+    private const double DiagramaLarguraMinima = 620.0;
+    private const double DiagramaAlturaMinima = 300.0;
+
+    private double _diagramaLarguraPx = DiagramaLarguraMinima;
+    /// <summary>
+    /// Largura do Canvas do diagrama, em pixels. Cresce com o número de COLUNAS de neurônios
+    /// ocultos — antes era fixa em 620, o que espremia tudo num espaço que não cabia.
+    /// </summary>
+    public double DiagramaLarguraPx { get => _diagramaLarguraPx; private set => SetProperty(ref _diagramaLarguraPx, value); }
+
+    private double _diagramaAlturaPx = DiagramaAlturaMinima;
+    /// <summary>Altura do Canvas do diagrama, em pixels — dimensionada pela coluna mais populosa (entradas, ocultos ou saídas).</summary>
+    public double DiagramaAlturaPx { get => _diagramaAlturaPx; private set => SetProperty(ref _diagramaAlturaPx, value); }
 
     /// <summary>
     /// Cenário de referência usado para "ligar" a rede e mostrar as saídas no diagrama — mesmo
@@ -1518,6 +1557,58 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// </summary>
     private static readonly double[] EntradaDeReferenciaParaDiagrama = [0.5, 1.0, 0.0, 0.5, 0.5, 0.0, 1.0];
 
+    /// <summary>Dimensões calculadas do diagrama para uma topologia específica — ver <see cref="CalcularLayoutDoDiagrama"/>.</summary>
+    /// <param name="ColunasOcultas">Em quantas colunas os neurônios ocultos foram distribuídos (0 quando a rede não tem nenhum).</param>
+    /// <param name="PorColunaOculta">Quantos ocultos cabem em cada coluna.</param>
+    internal readonly record struct LayoutDiagrama(double Largura, double Altura, int ColunasOcultas, int PorColunaOculta);
+
+    /// <summary>
+    /// Dimensiona o diagrama para a topologia atual: altura pela coluna mais populosa e largura
+    /// pelo número de colunas de ocultos.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// O diagrama tinha tamanho fixo (620x280) e uma única coluna de ocultos, herdados da rede
+    /// 7-8-2 de topologia constante do método anterior. Com NEAT a quantidade de ocultos é
+    /// resultado da evolução e cresce ao longo do treinamento: a partir de cerca de dez neurônios
+    /// o espaçamento ficava menor que o próprio diâmetro deles, e os nós passavam a se sobrepor e
+    /// a sair da área visível.
+    /// </para>
+    /// <para>
+    /// Acima de <see cref="DiagramaAlturaMaximaDeUmaColuna"/> os ocultos passam a ocupar mais de
+    /// uma coluna, em vez de o diagrama continuar esticando para baixo: uma tira vertical de
+    /// centenas de neurônios é rolável, mas não deixa a arquitetura ser compreendida de relance,
+    /// que é justamente o que o card existe para permitir.
+    /// </para>
+    /// </remarks>
+    internal static LayoutDiagrama CalcularLayoutDoDiagrama(int totalEntradas, int totalSaidas, int totalOcultos)
+    {
+        double alturaUtilMaxima = Math.Max(DiagramaEspacoPorOculto, DiagramaAlturaMaximaDeUmaColuna - (2 * DiagramaMargemVertical));
+        int maximoPorColuna = Math.Max(1, (int)(alturaUtilMaxima / DiagramaEspacoPorOculto));
+
+        int colunasOcultas = totalOcultos == 0 ? 0 : (int)Math.Ceiling(totalOcultos / (double)maximoPorColuna);
+        // Distribui igualmente entre as colunas em vez de encher uma e deixar a última com um ou
+        // dois nós soltos.
+        int porColuna = colunasOcultas == 0 ? 0 : (int)Math.Ceiling(totalOcultos / (double)colunasOcultas);
+
+        double alturaNecessaria = Math.Max(
+            Math.Max(totalEntradas * DiagramaEspacoPorEntradaSaida, totalSaidas * DiagramaEspacoPorEntradaSaida),
+            porColuna * DiagramaEspacoPorOculto);
+
+        double altura = Math.Max(DiagramaAlturaMinima, alturaNecessaria + (2 * DiagramaMargemVertical));
+
+        // Uma coluna de entrada + as de ocultos + uma de saída, com o espaçamento entre elas.
+        double largura = Math.Max(
+            DiagramaLarguraMinima,
+            (2 * DiagramaMargemHorizontal) + ((colunasOcultas + 1) * DiagramaEspacoEntreColunas));
+
+        return new LayoutDiagrama(largura, altura, colunasOcultas, porColuna);
+    }
+
+    /// <summary>Distribui <paramref name="total"/> neurônios uniformemente na vertical, centralizados na altura disponível.</summary>
+    internal static double PosicaoVerticalNaColuna(int indice, int total, double altura) =>
+        total <= 0 ? altura / 2.0 : altura * (indice + 1) / (total + 1);
+
     /// <summary>Esvazia o diagrama — usado em "Iniciar"/"Resetar", quando ainda não existe campeão nenhum para desenhar.</summary>
     private void LimparDiagramaRedeNeural()
     {
@@ -1525,6 +1616,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         {
             NeuroniosVisuais.Clear();
             ConexoesVisuais.Clear();
+            DiagramaLarguraPx = DiagramaLarguraMinima;
+            DiagramaAlturaPx = DiagramaAlturaMinima;
         });
     }
 
@@ -1595,29 +1688,37 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             }
         }
 
-        // Ordenar por posição já ocupada antes de por id: assim os ocultos que sobreviveram
-        // mantêm a ordem vertical de antes, e os novos entram nos espaços restantes em vez de
-        // empurrar todos os outros para baixo.
+        // Ordenar pela posição que o nó já ocupava antes de cair no id: assim os ocultos que
+        // sobreviveram mantêm a ordem de antes, e os novos entram nos espaços restantes em vez de
+        // empurrar todos os outros.
         idsOcultos.Sort((a, b) =>
         {
-            double ya = _yDoOcultoPorId.TryGetValue(a, out double va) ? va : double.MaxValue;
-            double yb = _yDoOcultoPorId.TryGetValue(b, out double vb) ? vb : double.MaxValue;
-            int comparacao = ya.CompareTo(yb);
+            int ordemA = _ordemDoOcultoPorId.TryGetValue(a, out int va) ? va : int.MaxValue;
+            int ordemB = _ordemDoOcultoPorId.TryGetValue(b, out int vb) ? vb : int.MaxValue;
+            int comparacao = ordemA.CompareTo(ordemB);
             return comparacao != 0 ? comparacao : a.CompareTo(b);
         });
+
+        // Dimensiona o diagrama ANTES de posicionar: a quantidade de ocultos é resultado da
+        // evolução e muda a cada geração, então largura, altura e número de colunas não podem
+        // mais ser constantes — era exatamente isso que fazia os ocultos se sobreporem e saírem
+        // da área visível quando a rede crescia.
+        LayoutDiagrama layout = CalcularLayoutDoDiagrama(totalEntradas, modelo.OutputCount, idsOcultos.Count);
+
+        DiagramaLarguraPx = layout.Largura;
+        DiagramaAlturaPx = layout.Altura;
 
         var posicoes = new Dictionary<int, (double X, double Y)>();
         var novosNeuronios = new List<NeuronioVisualTreinamento>();
 
         double xEntrada = DiagramaMargemHorizontal;
-        double xOculto = DiagramaLargura / 2.0;
-        double xSaida = DiagramaLargura - DiagramaMargemHorizontal;
+        double xSaida = layout.Largura - DiagramaMargemHorizontal;
 
         // Entradas. O índice 0 é o bias — ele existe de verdade na rede e é desenhado como tal,
         // em vez de escondido: faz parte da topologia que a evolução pode (ou não) usar.
         for (int i = 0; i < totalEntradas; i++)
         {
-            double y = DiagramaAltura * (i + 1) / (totalEntradas + 1);
+            double y = PosicaoVerticalNaColuna(i, totalEntradas, layout.Altura);
             posicoes[i] = (xEntrada, y);
 
             bool ehBias = i == 0;
@@ -1637,15 +1738,26 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             });
         }
 
-        // Ocultos — quantos e quais são resultado da evolução, não configuração.
-        var novosYPorOculto = new Dictionary<int, double>(idsOcultos.Count);
+        // Ocultos — quantos e quais são resultado da evolução, não configuração. Distribuídos em
+        // colunas (ver CalcularLayoutDoDiagrama): com uma coluna só, qualquer rede um pouco maior
+        // empilhava neurônios a poucos pixels um do outro.
+        var novaOrdemDosOcultos = new Dictionary<int, int>(idsOcultos.Count);
 
         for (int i = 0; i < idsOcultos.Count; i++)
         {
             int idOculto = idsOcultos[i];
-            double y = DiagramaAltura * (i + 1) / (idsOcultos.Count + 1);
+            int coluna = layout.PorColunaOculta > 0 ? i / layout.PorColunaOculta : 0;
+            int indiceNaColuna = layout.PorColunaOculta > 0 ? i % layout.PorColunaOculta : i;
+
+            // Quantos nós esta coluna realmente tem — a última pode ficar incompleta, e usar o
+            // total da coluna cheia deixaria os poucos nós dela desalinhados para cima.
+            int nestaColuna = Math.Min(layout.PorColunaOculta, idsOcultos.Count - (coluna * layout.PorColunaOculta));
+
+            double xOculto = xEntrada + ((xSaida - xEntrada) * (coluna + 1) / (layout.ColunasOcultas + 1));
+            double y = PosicaoVerticalNaColuna(indiceNaColuna, nestaColuna, layout.Altura);
+
             posicoes[idOculto] = (xOculto, y);
-            novosYPorOculto[idOculto] = y;
+            novaOrdemDosOcultos[idOculto] = i;
 
             bool recemSurgido = _ocultosDaRemontagemAnterior.Count > 0 && !_ocultosDaRemontagemAnterior.Contains(idOculto);
             string detalheAtivacao = ativacoes is not null && ativacoes.TryGetValue(idOculto, out double ativacaoOculto)
@@ -1675,7 +1787,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         // Saídas.
         for (int i = 0; i < modelo.OutputCount; i++)
         {
-            double y = DiagramaAltura * (i + 1) / (modelo.OutputCount + 1);
+            double y = PosicaoVerticalNaColuna(i, modelo.OutputCount, layout.Altura);
             posicoes[primeiroIdSaida + i] = (xSaida, y);
 
             double ativacao = i < saidas.Length ? saidas[i] : 0.0;
@@ -1719,8 +1831,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             });
         }
 
-        _yDoOcultoPorId.Clear();
-        foreach ((int id, double y) in novosYPorOculto) _yDoOcultoPorId[id] = y;
+        _ordemDoOcultoPorId.Clear();
+        foreach ((int id, int ordem) in novaOrdemDosOcultos) _ordemDoOcultoPorId[id] = ordem;
 
         _ocultosDaRemontagemAnterior.Clear();
         foreach (int id in idsOcultos) _ocultosDaRemontagemAnterior.Add(id);
@@ -1910,33 +2022,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Alcance de engajamento (m) — limite até onde as torres conseguem mirar/disparar, a partir de cada torre (mesmo raio do cone, ver <see cref="ConstruirSetorDeVisao"/>).</summary>
     public double DistanciaEngajamentoMetros => _ambiente.Parametros.DistanciaEngajamentoMetros;
 
-    /// <summary>
-    /// Alcance de engajamento "a partir da base" (m) — raio do círculo interno do Canvas,
-    /// centralizado na origem do mundo. Soma a distância da base até a torre mais afastada com
-    /// <see cref="DistanciaEngajamentoMetros"/> para o círculo refletir até onde as torres
-    /// realmente alcançam a partir de SUAS posições (não da origem): sem essa soma, um círculo
-    /// de raio = só <see cref="DistanciaEngajamentoMetros"/> fica bem menor do que a ponta dos
-    /// cones de visão de cada torre (que começam já deslocados da origem), dando a falsa
-    /// impressão de alcance menor do que o real.
-    /// </summary>
-    public double AlcanceEngajamentoTotalMetros => DistanciaBaseAteTorreMaisLongeMetros + DistanciaEngajamentoMetros;
-
-    private double DistanciaBaseAteTorreMaisLongeMetros =>
-        _ambiente.TorresBase.Count == 0 ? 0 : _ambiente.TorresBase.Max(t => Math.Sqrt(t.X * t.X + t.Y * t.Y));
-
-    /// <summary>Diâmetro em pixels do círculo interno (<see cref="AlcanceEngajamentoTotalMetros"/>), já na escala atual do Canvas.</summary>
-    public double DiametroEngajamentoPx => AlcanceEngajamentoTotalMetros * 2 * PixelsPorMetro;
-
-    /// <summary>Deslocamento (Canvas.Left/Top) do círculo interno para ficar centralizado no mundo.</summary>
-    public double OffsetEngajamentoPx => (TamanhoCanvas - DiametroEngajamentoPx) / 2.0;
+    // O arco de alcance de mira centrado na base saiu do Canvas (atrapalhava a leitura dos cones,
+    // das linhas de mira e dos alvos), e com ele saíram as propriedades que existiam só para
+    // desenhá-lo: AlcanceEngajamentoTotalMetros, DiametroEngajamentoPx e OffsetEngajamentoPx.
+    // DistanciaEngajamentoMetros CONTINUA — é o raio real usado pelos cones de visão e pelo
+    // controlador; o que foi removido era a representação redundante dele, não o alcance.
 
     private void NotificarGeometriaDoMundoAlterada()
     {
         OnPropertyChanged(nameof(RaioMundoMetros));
         OnPropertyChanged(nameof(DistanciaEngajamentoMetros));
-        OnPropertyChanged(nameof(AlcanceEngajamentoTotalMetros));
-        OnPropertyChanged(nameof(DiametroEngajamentoPx));
-        OnPropertyChanged(nameof(OffsetEngajamentoPx));
     }
 
     private void DesenharTorresFixas()
@@ -2053,6 +2148,9 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // Alvo alto o bastante para ser visto por todas as torres ganha contorno próprio: a
             // altura muda o comportamento da simulação, então precisa ser visível na tela.
             visual.Destacado = alvo.VisivelPorTodasAsTorres;
+            // Atualizada no mesmo passo da posição (este método roda a cada tique da prévia),
+            // então a etiqueta acompanha o alvo em tempo real em vez de mostrar onde ele estava.
+            visual.Coordenadas = $"#{alvo.Id} {alvo.X:0.0} ; {alvo.Y:0.0}";
         }
     }
 

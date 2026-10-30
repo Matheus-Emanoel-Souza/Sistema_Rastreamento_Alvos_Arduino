@@ -25,6 +25,18 @@ public sealed class PontoVisualTreinamento : ViewModelBase
     /// </summary>
     public bool Destacado { get => _destacado; set => SetProperty(ref _destacado, value); }
 
+    private string _coordenadas = string.Empty;
+    /// <summary>
+    /// Posição atual do alvo em METROS do mundo simulado, já formatada para a etiqueta ao lado
+    /// dele no Canvas — não em pixels de tela, que não significariam nada para quem acompanha a
+    /// simulação. Vazia nas torres, que são fixas e já se identificam pelo tooltip.
+    /// </summary>
+    /// <remarks>
+    /// Traz o identificador do alvo junto das coordenadas porque, com vários alvos próximos, a
+    /// etiqueta sozinha não diria a qual deles pertence.
+    /// </remarks>
+    public string Coordenadas { get => _coordenadas; set => SetProperty(ref _coordenadas, value); }
+
     /// <summary>
     /// Ângulo (bearing, 0°-360°) para onde esta torre está apontando agora — só usado pelo cano
     /// do canhão desenhado no Canvas (ver <see cref="Views.TreinamentoControladorView"/>); gira
