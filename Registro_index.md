@@ -30,10 +30,7 @@ Documentos que registram o estado atual e o que já aconteceu, não planejamento
 
 ## Histórico e gestão do projeto
 
-- [[CONTEXTO_PROJETO]] — resumo do estado atual do projeto (stack, arquitetura).
-- [[ETAPA1_FUNDACAO]] — fundação multiusuário (Etapa 1, parte A), já implementada.
 - [[IDENTIDADE_VISUAL]] — identidade visual adotada (cores, tipografia, ícones).
-- [[INSTALADOR]] — processo de criação do instalador Windows (Setup.exe), já implementado.
 - [[LOG_SOLICITACOES]] — histórico cronológico de todas as solicitações feitas ao assistente.
 
 ## Entregáveis acadêmicos do TCC
@@ -55,7 +52,7 @@ informação foi inventada; pontos não confirmáveis por código ou documentaç
 como **inferência** nos respectivos arquivos.
 
 1. Leitura da estrutura completa de diretórios do repositório.
-2. Leitura de [[ARQUITETURA]], [[MODELO_DADOS]], [[COMUNICACAO_ARDUINO]], [[CONTEXTO_PROJETO]] e
+2. Leitura de [[ARQUITETURA]], [[MODELO_DADOS]], [[COMUNICACAO_ARDUINO]] e
    [[DOCUMENTACAO_TECNICA]] (documentação técnica já mantida pelo autor do projeto).
 3. Leitura direta do código-fonte: arquivos em `Models/`, interfaces de `Services/` e
    `Repositories/`, `appsettings.json`, firmware do Arduino e ViewModels relevantes.
