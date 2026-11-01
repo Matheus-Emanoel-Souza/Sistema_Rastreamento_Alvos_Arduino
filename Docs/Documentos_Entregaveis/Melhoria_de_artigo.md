@@ -4,6 +4,50 @@ Funcionalidade: checklist de revisão acadêmica do artigo do TCC (`Artigo.tex`,
 
 Checklist de revisão acadêmica do `Artigo.tex`. Status real de aplicação no documento, não intenção.
 
+## Restrição de tamanho
+
+- **Limite: 20 páginas.** O artigo (`Artigo.tex`) não deve exceder 20 páginas no PDF compilado.
+  Status em 01/11/2026: ainda acima do limite (a revisão de 30/10 já reduziu de 30 para 27; segue
+  pendente um novo corte estrutural para chegar a 20).
+
+## Objetivo geral e objetivos específicos
+
+Documentados aqui (não como seção formal `\section{Objetivo}` no `Artigo.tex`, por decisão do
+autor) para orientar a revisão e a redação do artigo. Refletem a lógica de **engajamento
+cooperativo multi-torre** (01/11/2026): mais de uma torre pode engajar o mesmo alvo
+simultaneamente — a decisão não é "qual é a torre ideal", e sim "qual combinação de torres está
+apta a responder, com que grau de certeza, e quando autorizar o disparo".
+
+**Objetivo geral:**
+
+Desenvolver um protótipo (RadarTorres) capaz de detectar um alvo em movimento, estimar sua
+posição por sensoriamento ultrassônico e visão computacional, e autorizar automaticamente o
+engajamento cooperativo das torres aptas a responder a esse alvo — elevando a certeza de
+identificação no menor tempo possível até o grau de confiança mínimo necessário —, de forma
+auditável e sem depender de sensores ou atuadores de uso industrial.
+
+**Objetivos específicos:**
+
+1. Combinar sensores ultrassônicos com visão computacional (quatro câmeras) para detectar e
+   classificar o alvo por cor, forma e tamanho, estimando sua posição em coordenadas cartesianas e
+   exibindo-a em tempo real num radar circular.
+2. Determinar, para cada alvo, o conjunto de torres com câmera e linha de tiro válidas — torre do
+   próprio quadrante sempre elegível, torres de quadrante adjacente dentro do alcance de câmera, e
+   reforço adicional para alvos rápidos —, permitindo que mais de uma torre engaje o mesmo alvo
+   simultaneamente.
+3. Implementar um controlador híbrido (heurística determinística + rede neural evoluída por
+   algoritmo genético próprio) que refine, dentro do conjunto de torres elegíveis, a priorização
+   de engajamento e o instante de acionamento — nunca autorizando disparo fora do que a camada
+   heurística de segurança já validou.
+4. Condicionar todo acionamento a um limiar mínimo de certeza de identificação do alvo, válido
+   para qualquer torre do conjunto de engajamento — o disparo só ocorre depois de atingida a
+   confiança necessária, nunca por decisão isolada de uma única torre "ideal".
+5. Treinar esse controlador inteiramente em simulação, via neuroevolução, antes da operação real,
+   incorporando os parâmetros aprendidos de forma fixa à aplicação (sem ajuste em tempo real).
+6. Registrar em auditoria toda ação executada e documentar as limitações da validação atual
+   (realizada inteiramente por simulação de software; estrutura física ainda não montada nem
+   testada).
+
 ## Resolvido — titulação do orientador (rodapé da capa)
 
 Trecho grifado em amarelo no rodapé do orientador que eu tinha deixado de processar na revisão de
@@ -17,9 +61,7 @@ xxx pela xxx" e os destaques amarelos (confirmado, não mais pendente).
 
 ## Desenvolvimento físico do projeto
 
-- [x] **concluída** — Redação da descrição do desenvolvimento físico (estrutura em formato de torre, impressão 3D)
-
-  Texto redigido, pendente de inserção no `Artigo.tex` (seção "Projeto elétrico e estrutural"):
+- [x] **superada** — Redação da descrição do desenvolvimento físico (estrutura em formato de torre, impressão 3D). A seção "Projeto elétrico e estrutural" em que esse texto seria inserido foi removida do `Artigo.tex` na revisão de 30/10 (corte de páginas); o texto abaixo não foi reinserido para não reabrir essa seção e inflar a contagem de páginas de volta. Mantido aqui só como registro histórico.
 
   > A estrutura das torres foi projetada em formato de torre e fabricada por impressão 3D. As torres
   > armadas possuem suportes impressos para os motores e para as câmeras, que funcionam como os
@@ -82,17 +124,24 @@ Neuroevolução (survey gratuito, alternativa ao Stanley et al. 2019 que é pago
 > entrada "2026-10-30 — Revisão do artigo a partir do docx grifado". Esta nota (Apoio) guarda só o
 > que ainda está pendente ou é proposta de trabalho futuro.
 
-## Correção importante: cooperação entre torres já existe parcialmente
+## Resolvido (01/11) — lógica cooperativa multi-torre refletida em todo o texto
 
 Na primeira passada (em `artigo_revisado.tex`), eu tinha avaliado a lógica de seleção de torre só
 por `ControladorHibrido.SelecionarTorre`/`DecidirDisparo` e concluído que o sistema escolhe
 EXATAMENTE uma torre por alvo, sem nenhuma cooperação entre torres. **Isso estava incompleto**:
 `Artigo.tex` já documenta, na seção de regras heurísticas de `TowerSelectionService`, a regra
-"Ajuda de torre adjacente contra alvo rápido (sempre ativa)": alvos com velocidade acima de um
-limiar configurado já recebem, HOJE, além da torre principal, qualquer torre de quadrante
-adjacente a até 2m de distância como reforço de disparo -- um segundo canhão contra o mesmo alvo.
-Ou seja, cooperação entre torres **já existe**, só que condicionada à velocidade do alvo, não a
-todo alvo identificado.
+"Ajuda de torre adjacente contra alvo rápido (sempre ativa)", e o código (`ComputarTorresEngajando`)
+já permite, independentemente da velocidade, que a torre do próprio quadrante E qualquer torre de
+quadrante adjacente dentro do alcance de câmera engajem o mesmo alvo ao mesmo tempo -- a regra de
+velocidade só acrescenta uma torre extra, fora do alcance normal, por cima dessa base. Ou seja,
+cooperação entre torres **já existe** hoje, de forma mais ampla do que a primeira passada havia
+percebido.
+
+Na revisão de 01/11/2026, o resumo, o abstract, a introdução, o parágrafo de TEWA e toda a seção do
+controlador neuroevolutivo (cascata de camadas, regras, saídas da rede, hierarquia heurística↔rede)
+foram reescritos para descrever essa cooperação explicitamente, em vez de "a torre mais adequada"
+no singular -- sem alterar nenhum comportamento de código, só corrigindo a descrição para bater com
+o que `TowerSelectionService`/`FireControlService` já fazem.
 
 **Proposta do autor (registrada, ainda NÃO implementada)**: generalizar esse comportamento -- ao
 identificar QUALQUER alvo (não só os rápidos), todas as câmeras e todas as torres voltam a atenção
@@ -119,14 +168,13 @@ tempo melhora a confiança de identificação) e acelerar o abate.
   reformulei para apontar à Seção de hiperparâmetros como a justificativa real) -- mas o comentário
   original não dizia exatamente o quê revisar, então vale o autor confirmar se a correção aplicada
   é a que ele tinha em mente.
-- **Comentário #5 do docx de referência (fusão ultrassom × câmera)** — pedido original: descrever que
-  a leitura do sensor ultrassônico é cruzada com a distância estimada pela câmera (`CAM;...;Z=...`),
-  tirando uma média, com a leitura mais confiável (sensor para alvo próximo, câmera para alvo distante)
-  prevalecendo em caso de discrepância grande. **Verificado no código: essa fusão não existe hoje** — o
-  campo `DIST` do ultrassom só alimenta a posição no radar; não há nenhum cruzamento com o `Z` da câmera
-  em `SerialProtocolParser`/`SimulationService`/`AlvoVisualService`. Decisão pendente do autor: (a)
-  implementar essa fusão de verdade no software antes de descrevê-la no artigo, ou (b) registrar como
-  proposta de trabalho futuro (como fizemos com a cooperação entre torres), ou (c) descartar a ideia.
+- **Comentário #5 do docx de referência (fusão ultrassom × câmera)** — **Resolvido (01/11):** opção
+  (b) escolhida. `Artigo.tex` (seção "Módulo de visão") registra a ideia -- distância combinada,
+  com peso por sensor variando conforme a distância do alvo (ultrassom prioritário de perto, câmera
+  prioritária de longe) -- como trabalho futuro explícito, não como funcionalidade existente.
+  Verificado no código: essa fusão não existe hoje (o campo `DIST` do ultrassom só alimenta a
+  posição no radar; não há cruzamento com o `Z` da câmera em
+  `SerialProtocolParser`/`SimulationService`/`AlvoVisualService`).
 
 ---
 

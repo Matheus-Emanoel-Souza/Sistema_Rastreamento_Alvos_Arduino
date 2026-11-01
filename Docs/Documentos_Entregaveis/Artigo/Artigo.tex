@@ -83,18 +83,21 @@
 \noindent A construção de protótipos de sensoriamento com hardware acessível é um recurso
 didático relevante em Engenharia da Computação, por permitir explorar de forma prática conceitos
 de aquisição de dados, rastreamento e tomada de decisão automática. Este trabalho apresenta o
-RadarTorres, um protótipo que detecta um alvo em movimento, estima sua posição e decide, entre um
-conjunto de torres candidatas posicionadas ao redor de uma base central, qual delas deve responder
-a esse alvo -- problema central que o trabalho busca resolver: como identificar, localizar e
-atribuir automaticamente a torre mais adequada a cada alvo, de forma auditável e sem depender de
-sensores ou atuadores de uso industrial. O sistema combina dois sensores ultrassônicos (que medem
-a distância pelo eco do ultrassom) com quatro câmeras de 720p, processa quadros de vídeo
-(\textit{frames}) e classifica o alvo por sua cor, formato e tamanho. O protótipo converte as
-leituras de ângulo e distância em posição cartesiana, exibindo-as em tempo real em um radar
-circular, seleciona automaticamente a torre mais adequada para cada alvo e registra em auditoria
-toda ação executada. Essa seleção combina uma heurística determinística, escrita como regras
-explícitas de engenharia, com uma rede neural que aprende, por meio de um algoritmo genético
-próprio, a refinar essa escolha e o instante do acionamento. O treinamento dessa rede ocorre
+RadarTorres, um protótipo que detecta um alvo em movimento, estima sua posição e determina, entre
+as torres posicionadas ao redor de uma base central, qual ou quais delas reúnem condição de
+resposta a esse alvo -- problema central que o trabalho busca resolver: como identificar, localizar
+e autorizar automaticamente o engajamento cooperativo das torres mais adequadas a cada alvo,
+elevando a certeza de identificação no menor tempo possível até a confiança mínima necessária ao
+acionamento, de forma auditável e sem depender de sensores ou atuadores de uso industrial. O
+sistema combina dois sensores ultrassônicos (que medem a distância pelo eco do ultrassom) com
+quatro câmeras de 720p, processa quadros de vídeo (\textit{frames}) e classifica o alvo por sua
+cor, formato e tamanho. O protótipo converte as leituras de ângulo e distância em posição
+cartesiana, exibindo-as em tempo real em um radar circular, autoriza automaticamente o engajamento
+de uma ou mais torres para cada alvo -- de acordo com os recursos de câmera e linha de tiro
+disponíveis -- e registra em auditoria toda ação executada. Essa decisão combina uma heurística
+determinística, escrita como regras explícitas de engenharia, com uma rede neural que aprende, por
+meio de um algoritmo genético próprio, a refinar a priorização entre as torres elegíveis e o
+instante do acionamento, sempre condicionado ao grau de certeza de identificação do alvo. O treinamento dessa rede ocorre
 inteiramente antes da operação do sistema, em um ambiente simulado que executa gerações de
 episódios de teste até evoluir os parâmetros da rede; concluído o treinamento, esses parâmetros
 são incorporados de forma fixa à aplicação, de modo que, durante a execução real, o sistema apenas
@@ -108,17 +111,21 @@ e a tomada de decisão são concentrados em uma aplicação desktop.
 \end{center}
 
 \noindent This work presents RadarTorres, a prototype developed as a Final Course Project in
-Computer Engineering that detects a moving target, estimates its position, and decides, among a
-set of candidate towers placed around a central base, which one should respond to that target --
-the central problem this work addresses: how to automatically identify, localize, and assign the
-most suitable tower to each target, in an auditable way and without relying on industrial-grade
-sensors or actuators. The system combines two ultrasonic sensors (which measure distance by
-ultrasound echo) with four 720p cameras, processes video frames, and classifies the target by
-color, shape, and size. The prototype converts angle and distance readings into Cartesian
-position, displaying them in real time on a circular radar, automatically selects the most
-suitable tower for each target, and logs every executed action for auditing. This selection
-combines a deterministic heuristic, written as explicit engineering rules, with a neural network
-that learns, through a custom genetic algorithm, to refine that choice and the activation timing.
+Computer Engineering that detects a moving target, estimates its position, and determines, among
+the towers placed around a central base, which one or more have standing to respond to that
+target -- the central problem this work addresses: how to automatically identify, localize, and
+authorize the cooperative engagement of the most suitable towers for each target, raising
+identification confidence as quickly as possible up to the minimum level required for activation,
+in an auditable way and without relying on industrial-grade sensors or actuators. The system
+combines two ultrasonic sensors (which measure distance by ultrasound echo) with four 720p
+cameras, processes video frames, and classifies the target by color, shape, and size. The
+prototype converts angle and distance readings into Cartesian position, displaying them in real
+time on a circular radar, automatically authorizes one or more towers to engage each target --
+according to the available camera coverage and line of fire -- and logs every executed action for
+auditing. This decision combines a deterministic heuristic, written as explicit engineering rules,
+with a neural network that learns, through a custom genetic algorithm, to refine the prioritization
+among eligible towers and the activation timing, always conditioned on the target's identification
+confidence.
 Training of this network happens entirely before the system is put into operation, in a simulated
 environment that runs generations of test episodes until the network's parameters evolve; once
 training is complete, these parameters are embedded as fixed values into the application, so
@@ -149,21 +156,27 @@ de forma prática e replicável em laboratório, reproduzindo os princípios de 
 rastreamento e decisão presentes em sistemas mais sofisticados.
 
 O protótipo resultante combina sensores ultrassônicos e câmeras para
-detectar um alvo, estimar sua posição em um radar circular e decidir, entre um conjunto de torres
-candidatas dispostas ao redor de uma base central, qual delas deve responder a esse alvo. Essa
-decisão não é tomada apenas por regras fixas: uma rede neural, evoluída por um algoritmo genético
-próprio, aprende a refinar a escolha da torre e o instante do acionamento, sempre dentro dos
-limites que uma camada de regras explícitas (a heurística) já considera seguros. Esse aprendizado
+detectar um alvo, estimar sua posição em um radar circular e determinar, entre as torres dispostas
+ao redor de uma base central, qual ou quais delas reúnem condição de resposta a esse alvo -- mais
+de uma torre pode engajar o mesmo alvo simultaneamente, quando suas câmeras o enxergam e sua linha
+de tiro está livre. Essa decisão não é tomada apenas por regras fixas: uma rede neural, evoluída
+por um algoritmo genético próprio, aprende a refinar a priorização entre as torres elegíveis e o
+instante do acionamento, sempre dentro dos limites que uma camada de regras explícitas (a
+heurística) já considera seguros -- entre eles, um limiar mínimo de certeza de identificação do
+alvo, abaixo do qual nenhuma torre, isolada ou em conjunto, está autorizada a disparar. Esse aprendizado
 acontece em duas etapas bem separadas: antes da operação do sistema, em um ambiente de treinamento
 simulado, onde a rede evolui ao longo de muitas gerações de episódios de teste; e, depois de
 treinada, apenas na forma de inferência durante a execução real, sem qualquer ajuste adicional de
 seus parâmetros em tempo de operação. Antes de um genoma treinado ser promovido a essa condição de
-uso em produção, ele precisa alcançar um fitness médio comparável ao da heurística pura no mesmo
+uso em produção, ele precisa alcançar um \textit{fitness} médio -- termo da computação evolutiva
+para a nota numérica que mede o quão bem um genoma resolve a tarefa; quanto maior, melhor -- comparável ao da heurística pura no mesmo
 regime de avaliação -- na prática, dentro de poucos pontos percentuais de diferença (o genoma
 atualmente embutido ficou a 4\% da heurística pura, ver Seção~\ref{sec:procedimentos-metodologicos}),
 e não apenas evoluir sem regredir. O problema central que este trabalho busca resolver é,
-portanto, como automatizar essa cadeia -- detectar, localizar e selecionar a torre mais adequada a
-cada alvo -- de forma auditável e replicável em laboratório, sem depender de sensores ou atuadores
+portanto, como automatizar essa cadeia -- detectar, localizar e autorizar o engajamento
+cooperativo das torres mais adequadas a cada alvo, elevando a certeza de identificação no menor
+tempo possível até a confiança necessária ao acionamento -- de forma auditável e replicável em
+laboratório, sem depender de sensores ou atuadores
 de uso industrial.
 
 % ============================================================
@@ -207,11 +220,15 @@ abordagens desse tipo de problema costumam ser classificadas em ameaça por amea
 recursos são atribuídos sequencialmente, e multiameaça, em que o conjunto de ameaças é considerado
 simultaneamente.
 
-O RadarTorres adota uma abordagem simples, por proximidade, aplicada alvo a alvo, com propósito
-exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento real); a
-abordagem multiameaça fica como trabalho futuro.
+O RadarTorres adota uma abordagem alvo a alvo (ameaça por ameaça, na classificação da TEWA), com
+propósito exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento
+real); a atribuição de recursos a cada alvo, porém, não se limita a uma única torre -- todas as
+torres com câmera e linha de tiro válidas para o alvo corrente são elegíveis para engajá-lo ao
+mesmo tempo, e a proximidade entra apenas como critério de priorização entre elas. A abordagem
+multiameaça (otimização simultânea entre vários alvos concorrentes) permanece como trabalho
+futuro.
 
-O refinamento dessa escolha por proximidade -- e o instante de disparo -- é feito por uma pequena
+O refinamento dessa priorização entre as torres elegíveis -- e o instante de disparo -- é feito por uma pequena
 rede neural \textit{feedforward} (sinal que só percorre a rede em um sentido, da entrada à saída,
 sem laços de realimentação) com 7 entradas, 1 camada oculta de 8 neurônios, 2 saídas e ativação
 tanh (função que comprime a soma ponderada de cada neurônio no intervalo $[-1,1]$). Os pesos dessa
@@ -244,9 +261,11 @@ um componente reativo (\textit{shield}) que intercepta a ação escolhida pela p
 substitui quando ela violaria uma propriedade de segurança expressa em lógica temporal -- papel
 equivalente ao do veto heurístico final do RadarTorres sobre o disparo, que nunca é delegado à
 rede. A atribuição de recursos defensivos a ameaças, por sua vez, é tratada na literatura de TEWA
-tanto no caso ameaça por ameaça quanto no caso multiameaça \cite{tewa2009,tewa_multiameaca2009};
-o RadarTorres adota deliberadamente a abordagem mais simples (proximidade, alvo a alvo), com a
-multiameaça permanecendo como trabalho futuro já apontado anteriormente.
+tanto no caso ameaça por ameaça quanto no caso multiameaça \cite{tewa2009,tewa_multiameaca2009} --
+o RadarTorres resolve o primeiro eixo (quais recursos por ameaça) de forma cooperativa, permitindo
+mais de uma torre por alvo, mas continua tratando os alvos individualmente, sem a otimização
+simultânea entre ameaças concorrentes que caracteriza o caso multiameaça, que permanece como
+trabalho futuro.
 
 O impacto do treinamento virtual sobre a execução física do controlador é atenuado por uma decisão
 de projeto central: o mesmo controlador híbrido -- heurística e rede neural combinadas -- que
@@ -474,12 +493,17 @@ referência, a comparação combina um histograma de matiz e saturação com uma
 média, usados como assinatura do objeto; na ausência de foto, o critério recai sobre a fração de
 pixels com a cor cadastrada e sobre a classificação de formato. Quando o detector não propõe nenhuma
 caixa com a cor do perfil, as regiões candidatas passam a ser propostas por segmentação de cor, como
-último recurso na ordenação de candidatos.
+último recurso na ordenação de candidatos. Reconhecer o alvo apenas pelo formato, sem depender da
+cor cadastrada, fica registrado como passo futuro -- útil para perfis em que a cor do objeto varia
+com a iluminação ou não é um atributo discriminante confiável.
 
 O envio das informações resultantes ao Arduino, para guiar o apontamento da torre (movimentos de pan
 e tilt), foi projetado mas ainda não está implementado: o protocolo serial atual não possui comando
 de apontamento, e a fusão entre a posição estimada pela visão e a distância medida pelos sensores
-ultrassônicos permanece como etapa planejada. Como o hardware ainda não foi montado, a validação
+ultrassônicos permanece como etapa planejada -- abordagem prevista: confrontar as duas leituras e
+calcular uma distância combinada, com o peso de cada sensor variando conforme a distância do alvo
+(mais próximo, prioriza a leitura ultrassônica, mais precisa em curto alcance; mais distante,
+prioriza a estimativa da câmera), em vez de uma média fixa entre as duas. Como o hardware ainda não foi montado, a validação
 funcional descrita neste trabalho foi feita por simulação, e nenhum resultado de campo é relatado.
 
 \subsubsection{Fluxo operacional}
@@ -488,9 +512,10 @@ Em operação, o sistema segue estas etapas: (1) o Arduino varre o ambiente com 
 ultrassônicos e envia ângulo e distância à aplicação; (2) a aplicação converte cada leitura em
 posição cartesiana, determina o quadrante, exibe o alvo no radar e registra a detecção; (3) em
 paralelo, as câmeras fornecem quadros de vídeo, e o módulo de visão classifica o alvo por cor,
-formato e tamanho; (4) a aplicação seleciona, entre as torres armadas disponíveis, a mais adequada
-para o alvo, priorizando as do mesmo quadrante e, entre elas, a de menor distância euclidiana (por
-proximidade, alvo a alvo); (5) o comando é enviado ao Arduino, que aciona a torre selecionada;
+formato e tamanho; (4) a aplicação determina, entre as torres armadas disponíveis, quais têm
+câmera e linha de tiro válidas para o alvo -- podendo ser mais de uma simultaneamente -- e
+prioriza entre elas por quadrante e distância euclidiana; (5) o comando é enviado ao Arduino, que
+aciona a(s) torre(s) engajando o alvo;
 (6) o acionamento demonstrativo (laser de baixa potência ou LED) só ocorre respeitando a distância
 mínima de segurança e as demais regras de segurança configuráveis do sistema; (7) toda ação
 executada é registrada em auditoria.
@@ -512,8 +537,9 @@ bloqueado e o motivo é registrado no console de eventos.
 \subsubsection{Controlador neuroevolutivo: heurística e rede neural combinadas}
 \label{sec:controlador-hibrido-inicio}
 
-O passo (4) do fluxo operacional -- escolher, entre as torres armadas disponíveis, a mais adequada
-para cada alvo, e decidir o instante do acionamento -- é resolvido no RadarTorres pela combinação
+O passo (4) do fluxo operacional -- determinar, entre as torres armadas disponíveis, quais estão
+aptas a engajar cada alvo, priorizá-las e decidir o instante do acionamento -- é resolvido no
+RadarTorres pela combinação
 de dois mecanismos de natureza distinta: uma \textbf{heurística} determinística, escrita como regras
 explícitas de engenharia, e uma \textbf{rede neural} \textit{feedforward}, cujo comportamento é
 aprendido por um algoritmo evolutivo próprio, sem biblioteca de aprendizado de máquina. Ambos
@@ -526,20 +552,32 @@ prioridade na seleção da torre: primeiro considera apenas as torres livres do 
 alvo; na ausência de candidata, estende-se às torres de quadrante adjacente cujo quadrante de
 origem não tenha outro alvo concorrente; por fim, na ausência de qualquer uma das duas, recorre a
 qualquer torre livre restante, de modo que nenhum alvo fique sem cobertura. Cada camada carrega um
-fator numérico (1,0; 0,5; ou 0,0) que soma-se diretamente à pontuação da candidata. A heurística
+fator numérico (1,0; 0,5; ou 0,0) que soma-se diretamente à pontuação da candidata. Essa cascata
+define a torre primária de cada alvo -- a referência de mira usada para continuidade e para evitar
+oscilação entre rodadas --, mas não restringe o engajamento a ela: em paralelo, a heurística
+calcula o conjunto completo de torres autorizadas a responder ao mesmo alvo (todas as que o
+enxergam pela própria câmera, mais as de quadrante adjacente dentro do alcance de câmera,
+descontadas as que têm outro canhão na linha de tiro), permitindo que mais de uma torre engaje o
+mesmo alvo ao mesmo tempo -- inclusive uma torre extra de quadrante vizinho é convocada quando o
+alvo está rápido demais para confiar em um único canhão (regra 5, abaixo). Hoje essa convocação
+extra só é condicional (alvo rápido); buscar sistematicamente pelo menos duas câmeras --
+preferencialmente três -- para todo alvo identificado, e não apenas nesse caso específico, fica
+registrado como refinamento futuro dessa regra. A heurística
 também impõe quatro regras de segurança e refinamento, cada uma ativável individualmente no painel de
 Configurações: anti-oscilação, que evita trocar de torre por uma diferença de pontuação dentro de
 uma margem de empate; priorização por urgência, que permite a um alvo muito próximo da base "tomar"
 a torre de um alvo mais distante; balanceamento de carga, que prefere, entre torres empatadas, a
 usada com menor frequência na sessão; e predição de trajetória, que projeta a posição futura do
 alvo para calcular o ângulo de mira com antecedência de poucos décimos de segundo. Por fim, a
-heurística impõe um limite absoluto ao disparo, nunca delegado à rede: um limiar mínimo de certeza
-de identificação do alvo
+heurística impõe um limite absoluto ao disparo, nunca delegado à rede e válido para qualquer torre
+do conjunto de engajamento: um limiar mínimo de certeza de identificação do alvo
 (\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o disparo é recusado independentemente
-de qualquer outra avaliação.
+de qualquer outra avaliação ou de quantas torres estejam engajando.
 
-A rede neural, por sua vez, não decide essas regras de segurança nem a cascata de camadas -- ela
-decide apenas a escolha fina \textit{dentro} do espaço já validado pela heurística. É uma rede
+A rede neural, por sua vez, não decide essas regras de segurança, nem a cascata de camadas, nem o
+conjunto de torres autorizadas a engajar -- ela decide apenas a priorização fina entre as
+candidatas (a torre primária e, havendo mais de uma torre engajando, a ordem entre elas)
+\textit{dentro} do espaço já validado pela heurística. É uma rede
 \textit{feedforward} (sinal que só percorre a rede em um sentido, da entrada à saída, sem laços de
 realimentação) totalmente conectada, implementada do zero (sem biblioteca de aprendizado de
 máquina). \grifo{Ajustar caso a biblioteca de neuroevolução funcione (biblioteca em teste: [NOME DA
@@ -552,7 +590,9 @@ tempo normalizado em que o alvo está sendo detectado sem ter sido abatido (satu
 3~s de observação contínua -- ver Seção~\ref{sec:experimento-hiperparametros}) e o
 próprio fator da camada heurística vigente, usado como sinal de contexto. As duas saídas são um
 ajuste de pontuação, somado à pontuação heurística da candidata, e um valor de confiança de
-disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 82 parâmetros, no
+disparo, cujo sinal positivo contribui para autorizar o acionamento daquela torre especificamente
+-- sem jamais estender essa autorização a torres fora do conjunto de engajamento já calculado pela
+heurística. Os pesos e vieses da rede -- 82 parâmetros, no
 total, para essa arquitetura -- não são ajustados por retropropagação, mas evoluídos por um
 algoritmo genético: cada genoma é um vetor plano desses 82 números, a população evolui por seleção
 por torneio, \textit{crossover} uniforme, mutação gaussiana (perturbação de cada peso por um valor
@@ -595,12 +635,15 @@ foram introduzidos juntos e avaliados nas mesmas onze execuções, de modo que e
 sétima entrada no ambiente antigo (ou vice-versa) fica registrada como trabalho futuro específico.
 
 A combinação entre os dois mecanismos é, portanto, sequencial e hierárquica, nunca uma mistura
-indiferenciada: a heurística primeiro filtra quais torres são elegíveis e calcula as
-\textit{features} de entrada (quadrante, ângulo, fator de camada); a rede neural, em seguida,
-pondera essa pontuação dentro do subconjunto já validado, decidindo qual candidata específica
-vence o empate fino que a heurística, por si só, não resolveria com a mesma sensibilidade; e, por
-fim, a heurística volta a atuar como filtro de segurança sobre a decisão de disparo, vetando
-qualquer autorização da rede que viole a certeza mínima de identificação do alvo. Essa hierarquia
+indiferenciada: a heurística primeiro filtra quais torres são elegíveis -- tanto a torre primária
+de cada alvo quanto, em paralelo, o conjunto completo de torres autorizadas a engajá-lo
+simultaneamente -- e calcula as \textit{features} de entrada (quadrante, ângulo, fator de camada);
+a rede neural, em seguida, pondera essa pontuação dentro do subconjunto já validado, decidindo a
+ordem de prioridade entre as candidatas elegíveis -- nunca reduzindo o engajamento a uma única
+torre quando mais de uma está apta a responder -- naquilo que a heurística, por si só, não
+resolveria com a mesma sensibilidade; e, por fim, a heurística volta a atuar como filtro de
+segurança sobre a decisão de disparo de cada torre engajando, vetando qualquer autorização da rede
+que viole a certeza mínima de identificação do alvo. Essa hierarquia
 tem uma consequência deliberada para o pior caso: uma generalização
 imperfeita da rede nunca produz uma decisão arbitrária, porque toda saída da rede continua restrita
 ao espaço de candidatas e ao conjunto de disparos já pré-aprovados pela heurística -- no limite, o
@@ -881,115 +924,50 @@ Isso aponta para dois trabalhos futuros distintos, não um só: alongar o horizo
 byte) (para a rede falhar com menos frequência nos cenários desfavoráveis), sendo este segundo,
 pelos dados aqui, o fator que mais pesa na média atual.
 
-\paragraph{A variância é da rede, do ambiente, ou da avaliação do algoritmo genético?}
-O teste anterior levanta uma suspeita incômoda: se o teto sobe para 443 mas a média continua baixa,
-o sistema está aprendendo algo consistente ou só tirando sorte? Três medições, nesta ordem, isolam a
-resposta. Primeiro, o desvio padrão de fitness do mesmo genoma de produção foi medido dentro do
-regime NORMAL de 45~s (não o modo sem limite), em 50 episódios independentes: desvio de 63,65 contra
-uma média de 66,69 -- ou seja, a variância já é da mesma ordem de grandeza da própria média mesmo sem
-remover o corte de tempo, o que descarta a hipótese de que ela fosse um artefato só do modo sem
-limite. Segundo, o MESMO genoma foi avaliado em modo \texttt{HeuristicaPura} (rede completamente
-ignorada, ajuste zero, dispara sempre que a heurística permite) nas MESMAS 50 seeds: desvio de 67,36
-e média de \textbf{74,34} -- estatisticamente indistinguível da rede treinada, e com média até
-superior. Isso aponta a variância para o ambiente (que alvos nascem, em que quadrante, em que
-instante), não para a política de decisão -- mesmo uma heurística determinística sofre a mesma
-montanha-russa de sorte, porque um único alvo nascendo no lugar errado no início do episódio já basta
-para invadir uma torre em poucos segundos, antes de qualquer controlador conseguir reagir.
+\paragraph{Diagnóstico: variância do ambiente, não da política -- e uma hesitação no gatilho.}
+Três medições isolam a causa da discrepância entre teto (443) e média (ainda baixa). Primeiro, o
+desvio padrão de fitness do mesmo genoma de produção, no regime normal de 45~s, em 50 episódios
+independentes: 63,65 de desvio contra média de 66,69 -- variância já da mesma ordem da própria
+média, mesmo sem remover o corte de tempo. Segundo, o MESMO genoma avaliado em modo
+\texttt{HeuristicaPura} (rede ignorada, dispara sempre que a heurística permite) nas MESMAS 50
+seeds: desvio 67,36, média \textbf{74,34} -- estatisticamente indistinguível da rede treinada, e com
+média até superior. A variância é, portanto, do ambiente (onde e quando os alvos nascem), não da
+política de decisão: um único alvo nascendo no lugar errado já basta para invadir uma torre antes
+de qualquer controlador reagir. Terceiro, elevar \texttt{EpisodiosPorAvaliacao} de 3 para 12 (reduz
+o ruído de medição do próprio algoritmo genético) e retreinar do zero (1000 gerações, restante
+idêntico) não fechou a diferença: média 65,02 (desvio 60,57) contra os mesmos 74,34 da heurística.
+Repetido com mais três sementes do algoritmo genético (2, 3, 4), o resultado foi sistemático, não
+uma execução sortuda: as quatro ficaram abaixo da heurística -- 65,02, 71,56, 65,09 e 64,18 -- numa
+margem pequena mas consistentemente negativa, apontando para algo estrutural na decisão de
+\textsc{disparo} da rede (não na escolha de torre, já dominada pelo termo heurístico).
 
-A comparação acima, porém, revelou um problema diferente e mais preocupante: a rede treinada estava
-perdendo, em média, para a heurística que ela deveria apenas refinar. A hipótese seguinte foi que
-\texttt{EpisodiosPorAvaliacao} (quantos episódios são sorteados e tirada a média para avaliar CADA
-genoma a cada geração) estivesse baixo demais -- 3, antes deste teste -- para a seleção do algoritmo
-genético distinguir genoma melhor de genoma apenas sortudo, dado que o próprio desvio por episódio já
-é maior que a diferença de qualidade que se quer medir. O valor foi elevado para 12 e um novo genoma
-de produção foi treinado do zero com o restante dos parâmetros idêntico (1000 gerações, população
-60, 8 neurônios ocultos, mutação 0,08, cenários aleatórios). O resultado, infelizmente, não confirma
-essa hipótese: nas mesmas 50 seeds, a rede treinada com 12 episódios por avaliação obteve média
-65,02 (desvio 60,57) contra os mesmos 74,34 (desvio 67,36) da heurística pura -- o GANHO esperado não
-apareceu, e o desvio continua do mesmo tamanho. Elevar o número de episódios por avaliação reduz o
-ruído da MEDIÇÃO de fitness que o algoritmo genético usa para selecionar, mas não resolve se o
-problema estiver em outro lugar -- e os dados aqui sugerem que está: como a seleção de torre já é
-dominada pelo termo heurístico na pontuação combinada (Seção~\ref{sec:controlador-hibrido-inicio}),
-é a decisão de DISPARO (\texttt{confiancaDisparo > 0}, inteiramente da rede em modo híbrido, sem
-veto heurístico de oportunidade) a candidata mais provável a estar aprendendo a hesitar ou recusar
-disparos que a heurística pura, sem essa hesitação, aproveitaria.
+Essa hipótese foi confirmada diretamente: toda vez que o veto de certeza mínima já libera o disparo
+-- o ponto em que a heurística pura dispararia sempre --, o ambiente conta essa "oportunidade" e se
+a rede a recusou. As cinco redes treinadas (produção original e quatro sementes) recusam disparo em
+10,0\%, 34,3\%, 10,1\%, 55,9\% e 51,7\% das oportunidades legítimas, contra 0,0\% da heurística; as
+duas taxas de recusa mais altas (sementes 3 e 4) correspondem também aos piores fitness. A rede
+hesita no gatilho -- resultado negativo honesto, mas um ponto de partida concreto para revisar a
+função de fitness.
 
-Para separar "este genoma específico saiu ruim" de "o método de treino tende a produzir isto", o
-treinamento (1000 gerações, 12 episódios por avaliação, restante idêntico) foi repetido com mais
-três sementes do algoritmo genético (2, 3 e 4), cada uma avaliada nas mesmas 50 seeds de teste contra
-o mesmo controle de heurística pura (74,34 de fitness médio, por não depender de genoma nenhum). O
-resultado é sistemático, não uma execução sortuda ruim: as QUATRO sementes ficaram abaixo da
-heurística pura -- 65,02 (semente 1), 71,56 (semente 2), 65,09 (semente 3) e 64,18 (semente 4) --,
-numa margem pequena mas consistentemente negativa em todas elas. Isso descarta a hipótese de
-infortúnio de uma única execução do algoritmo genético e aponta para algo estrutural no método de
-treino: dado que a seleção de torre já é dominada pelo termo heurístico, é bastante provável que seja
-de fato a decisão de disparo da rede -- isolada, sem veto heurístico de oportunidade -- quem aprende
-um comportamento levemente pior do que simplesmente disparar sempre que permitido.
+\paragraph{Removendo a duração fixa do treino, e corrigindo a função de fitness.}
+Removida a duração de 45~s também do TREINAMENTO (não só da avaliação), um novo genoma treinado do
+zero (1000 gerações, \texttt{SemLimiteDeDuracao}) atingiu pico de 211,98 em treino (contra 193,57) e,
+fora de amostra, fitness MÁXIMO de 245,94 (rede) e 434,72 (heurística pura) -- confirmando que parte
+real do teto vinha da duração fixa. O problema da MÉDIA, porém, permaneceu do mesmo tamanho (69,28,
+ainda abaixo dos 89,69 da heurística, com 35,8\% de recusa) -- mais tempo de episódio não ensinou a
+rede a disparar melhor, só deu mais tempo para acumular pontos quando o episódio é favorável. Os
+dois problemas são independentes: duração fixa limitava o TETO (resolvido removendo o limite);
+hesitação aprendida limita a MÉDIA (aponta para a função de fitness).
 
-\paragraph{Confirmação direta: a rede hesita no gatilho.}
-A hipótese anterior foi medida diretamente, em vez de apenas inferida por eliminação. Toda vez que
-os vetos inegociáveis (zona morta, certeza mínima, tempo mínimo de mira) já liberam o disparo --
-exatamente o ponto em que a heurística pura dispararia sempre, sem exceção -- o ambiente agora conta
-essa "oportunidade de disparo" e se a rede, em modo híbrido, a recusou
-(\texttt{EstadoEpisodio.OportunidadesDeDisparo}/\texttt{DisparosRecusadosPelaRede}, somados ao longo
-de 50 episódios por genoma). O resultado confirma a hipótese sem ambiguidade: as CINCO redes
-treinadas neste trabalho (a de produção original e as quatro sementes da seção anterior) recusam
-disparo numa fração nada desprezível das oportunidades legítimas -- 10,0\%, 34,3\%, 10,1\%, 55,9\% e
-51,7\%, respectivamente --, contra 0,0\% da heurística pura (que, por definição, nunca recusa).
-Quanto maior essa taxa de recusa, pior tende a ser o desempenho relativo à heurística pura: as
-sementes 3 e 4 (55,9\% e 51,7\% de recusa) são também as que ficam mais distantes do controle na
-comparação de fitness da seção anterior. O mecanismo suspeitado está, portanto, confirmado: a rede
-não está aprendendo a escolher melhor QUAL torre age (papel já dominado pela heurística na pontuação
-combinada), mas sim um critério de confiança de disparo pior do que simplesmente "disparar sempre
-que autorizado" -- um resultado negativo honesto, mas instrutivo, sobre os limites desta formulação
-específica do controlador híbrido e um ponto de partida concreto para revisar a função de fitness
-(por exemplo, penalizando explicitamente a recusa de uma oportunidade legítima, não só recompensando
-o abate) como trabalho futuro imediato.
-
-\paragraph{Removendo de vez a duração fixa: o teto é, em parte, do ambiente -- mas não só dele.}
-Como teste final desta investigação, a duração de 45~s do episódio foi removida também do
-TREINAMENTO em si (não só da avaliação pós-treino da Seção anterior): um novo genoma de produção foi
-treinado do zero, 1000 gerações, com \texttt{SemLimiteDeDuracao} ativo durante toda a evolução -- o
-episódio só termina quando um alvo de fato rompe uma torre. O pico de fitness alcançado em
-treinamento subiu para 211,98 (geração 735), contra os 193,57 do treinamento original limitado a
-45~s, e a avaliação fora de amostra (50 seeds novas, também sem limite de duração) chegou a um
-fitness MÁXIMO de 245,94 para a rede e 434,72 para a heurística pura -- muito acima de qualquer teto
-visto anteriormente. Isso confirma, de forma definitiva, que parte real do teto de produção vinha da
-duração fixa do episódio: sem ela, o sistema -- rede ou heurística -- consegue, em episódios
-favoráveis, pontuações 2 a 3 vezes maiores.
-
-Removida essa causa, porém, o segundo problema PERMANECE do mesmo tamanho: o fitness MÉDIO da rede
-treinada sem limite de duração (69,28) continua abaixo da heurística pura no mesmo regime (89,69), e
-a taxa de recusa de disparo desse genoma é 35,8\% -- dentro da mesma faixa (10\% a 56\%) medida nas
-cinco redes treinadas com episódio limitado. Em outras palavras, dar mais tempo de episódio não
-ensinou a rede a disparar melhor; só deu a ela (e à heurística, igualmente) mais tempo para acumular
-pontos quando a sorte do episódio é favorável. Os dois problemas identificados nesta investigação
-são, portanto, independentes: a duração fixa do episódio limitava o TETO alcançável (resolvido
-removendo o limite), e a hesitação aprendida na decisão de disparo limita a MÉDIA alcançável -- este
-segundo problema aponta para a função de fitness, não para o ambiente, e foi atacado diretamente a
-seguir.
-
-\paragraph{Corrigindo a função de fitness: penalizar a recusa em si.}
-Como a função de fitness, até este ponto, só recompensava abate e penalizava fuga/invasão -- nunca
-custando nada à rede simplesmente NÃO disparar numa oportunidade legítima --, foi adicionado um
-termo explícito para isso:
-\texttt{ParametrosTreinamento.PenalidadeRecusaDisparo} subtrai 3,0 pontos de fitness toda vez que
-\texttt{EstadoEpisodio.DisparosRecusadosPelaRede} é incrementado (ver parágrafo anterior), em tempo
-real, durante o próprio episódio de treino -- não é uma penalidade pós-hoc, aplicada só na análise.
-Um genoma de produção foi retreinado do zero com esse termo ativo, mesmo ambiente sem limite de
-duração, mesmas 1000 gerações. O resultado confirma que a hesitação era, de fato, um problema da
-função de fitness, corrigível por ela mesma: a taxa de recusa de disparo caiu de 35,8\% para
-\textbf{0,0\%} -- a rede evoluída passou a se comportar, no gatilho, EXATAMENTE como a heurística
-pura (nunca recusa). O fitness médio, avaliado nas mesmas 50 seeds de teste, subiu de 69,28 para
-86,09 -- a 4\% da heurística pura (89,69), contra os quase 30\% de distância antes da correção -- e
-o fitness máximo (434,59) ficou praticamente empatado com o teto da heurística pura (434,72). A
-rede, porém, não passou a SUPERAR a heurística pura: convergiu para replicá-la na decisão de
-disparo, sem demonstrar ganho próprio nessa decisão específica -- o ganho de qualidade observado
-nesta seção vem inteiramente de eliminar um defeito (a hesitação), não de a rede ter aprendido algo
-que a heurística não sabia. Ainda assim, é o resultado mais consistente da neuroevolução deste
-trabalho: confirma que o fitness, quando mede exatamente o comportamento que se quer corrigir, é
-suficiente para corrigi-lo, sem precisar de nenhuma mudança na arquitetura da rede ou no ambiente de
-treino.
+Adicionado um termo explícito -- \texttt{ParametrosTreinamento.PenalidadeRecusaDisparo}, -3,0 de
+fitness por disparo recusado, em tempo real durante o episódio -- e retreinado do zero (mesmo
+ambiente sem limite, 1000 gerações), a taxa de recusa caiu de 35,8\% para \textbf{0,0\%}: a rede
+passou a se comportar, no gatilho, exatamente como a heurística pura. O fitness médio subiu de 69,28
+para 86,09 (a 4\% da heurística, contra quase 30\% de distância antes), e o máximo (434,59) empatou
+com o teto da heurística (434,72). A rede não passou a SUPERAR a heurística -- convergiu para
+replicá-la na decisão de disparo --, mas é o resultado mais consistente da neuroevolução deste
+trabalho: o fitness, quando mede exatamente o comportamento a corrigir, basta para corrigi-lo, sem
+mudança de arquitetura ou de ambiente.
 
 \paragraph{Terceira comparação: a mesma rede, sem a camada heurística, supera as outras duas.}
 A ablação heurística-\textit{vs}-rede já conduzida neste trabalho (Seção~\ref{sec:experimento-hiperparametros},
@@ -1017,19 +995,17 @@ a heurística filtrar candidatas por quadrante nem impor o tempo mínimo de mira
   \end{tabular}
 \end{table}
 
-A MESMA rede, livre do filtro heurístico de candidatas e do tempo mínimo de mira obrigatório, supera
-tanto o modo híbrido quanto a heurística pura -- 114,12 contra 89,69 e 86,09, respectivamente. A
-explicação mais provável está no próprio tempo mínimo de mira: 0,3~s de espera obrigatória antes de
-qualquer disparo, nesta versão endurecida do ambiente (onde um único alvo não interceptado a tempo
-pode invadir uma torre e encerrar o episódio), é tempo que o modo rede pura não perde -- ela já pode
-disparar no instante em que a certeza mínima é atingida. Esse resultado não implica que a heurística
-deva ser removida de produção: as regras heurísticas (Seção~\ref{sec:regras-heuristicas}) existem
-por segurança e previsibilidade operacional, não só por desempenho de fitness, e o tempo mínimo de
-mira em particular evita disparos por reflexo em identificações ainda instáveis. O achado, em vez
-disso, é um indício concreto de que o CUSTO de segurança desse veto específico é medível e
-relativamente alto neste ambiente -- 24 pontos de fitness médio, cerca de 28\% -- e fica registrado
-como candidato a revisão: talvez o tempo mínimo de mira devesse ser menor, ou condicionado à urgência
-do alvo, em vez de um valor fixo único para qualquer situação.
+A MESMA rede, livre do filtro heurístico de candidatas e de um tempo mínimo de mira obrigatório que
+a arquitetura então impunha, superou tanto o modo híbrido quanto a heurística pura -- 114,12 contra
+89,69 e 86,09, respectivamente. A explicação mais provável esteve no próprio tempo mínimo de mira:
+0,3~s de espera obrigatória antes de qualquer disparo, nesta versão endurecida do ambiente (onde um
+único alvo não interceptado a tempo pode invadir uma torre e encerrar o episódio), era tempo que o
+modo rede pura não perdia -- ela já podia disparar no instante em que a certeza mínima fosse
+atingida. Esse achado -- um custo de segurança medível e relativamente alto, cerca de 28\% de
+fitness médio, para um veto cujo benefício de previsibilidade operacional não era mensurável nos
+mesmos termos -- foi, de fato, a evidência que motivou a remoção do tempo mínimo de mira como veto
+absoluto nesta revisão do projeto (permanece, porém, a certeza mínima de identificação, e a
+heurística continua filtrando candidatas por quadrante antes de a rede decidir).
 
 \subsection{Diagrama de pacotes}
 
@@ -1163,9 +1139,10 @@ físico real.
 Os trabalhos futuros identificados neste artigo são, portanto: montagem e validação do hardware
 físico das cinco torres; implementação do comando de apontamento no protocolo serial e da fusão
 entre a posição estimada pela visão e a distância ultrassônica; calibração dos modelos de certeza e
-de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão da seleção de
-torre para a abordagem multiameaça da literatura de TEWA, hoje deixada de lado em favor da
-abordagem por proximidade; e, caso a capacidade da rede se mostre o fator limitante do controlador
+de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão do tratamento
+de alvos para a abordagem multiameaça da literatura de TEWA (otimização simultânea entre vários
+alvos concorrentes), hoje deixada de lado em favor do tratamento alvo a alvo; e, caso a capacidade
+da rede se mostre o fator limitante do controlador
 em vez dos hiperparâmetros da busca evolutiva, avaliação de uma arquitetura maior à luz dos
 resultados de \citeonline{such2017deepneuroevolution}.
 
