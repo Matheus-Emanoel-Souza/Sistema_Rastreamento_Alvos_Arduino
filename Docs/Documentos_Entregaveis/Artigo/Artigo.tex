@@ -181,8 +181,8 @@ replicável em laboratório, sem depender de sensores ou atuadores de uso indust
 \subsection{Revisão da literatura e fundamentação teórica}
 
 Sistemas de detecção e rastreamento de alvos costumam recorrer a sensores como radar, de custo
-elevado. Como alternativa, sensores acessíveis podem ser combinados de modo que as limitações de
-um sejam compensadas pelas qualidades do outro. Sensores ultrassônicos, como o HC-SR04, medem
+elevado. Como alternativa, sensores de uso convencional/doméstico (acessíveis, de baixo custo)
+podem ser combinados de modo que as limitações de um sejam compensadas pelas qualidades do outro. Sensores ultrassônicos, como o HC-SR04, medem
 distância com boa confiabilidade em curto alcance, mas não distinguem o tipo do obstáculo;
 câmeras, por sua vez, fornecem informação semântica, porém dependem das condições de iluminação e
 exigem maior poder de processamento \cite{majoni2025}. A fusão de sensores (\textit{sensor
@@ -216,10 +216,18 @@ multiameaça (otimização simultânea entre vários alvos concorrentes) permane
 futuro.
 
 O refinamento dessa priorização entre as torres elegíveis -- e o instante de disparo -- é feito por uma pequena
-rede neural \textit{feedforward} (7 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
-tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por um algoritmo genético
-próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), auditável e
-sem dependência de biblioteca de aprendizado de máquina. \citeonline{such2017deepneuroevolution}
+rede neural \textit{feedforward} -- arquitetura em que o sinal percorre as camadas numa única
+direção, da entrada para a saída, sem laços de realimentação -- (7 entradas, 1 camada oculta de 8
+neurônios, 2 saídas, ativação \textit{tanh}, que comprime a soma ponderada de cada neurônio ao
+intervalo $[-1,1]$), cujos pesos não são ajustados por retropropagação, mas evoluídos por um
+algoritmo genético próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana,
+elitismo), auditável e sem dependência de biblioteca de aprendizado de máquina. Um algoritmo
+genético evolui uma população de genomas (aqui, vetores de pesos da rede) ao longo de gerações,
+usando como critério de seleção o \textit{fitness} -- termo da computação evolutiva, originado da
+noção biológica de aptidão, para a nota numérica que mede o quão bem um genoma resolve a tarefa
+proposta: quanto maior o fitness, melhor o desempenho daquele genoma no episódio simulado, e é essa
+nota que decide quais genomas sobrevivem e se reproduzem (ver a função de fitness descrita na
+Seção~\ref{sec:controlador-hibrido-inicio}). \citeonline{such2017deepneuroevolution}
 mostram que algoritmos genéticos são uma alternativa competitiva ao treino por gradiente em tarefas
 de aprendizado por reforço, em redes de porte bem maior do que a aqui empregada (até quatro milhões
 de parâmetros, contra os 82 parâmetros da rede do RadarTorres). Esse resultado sustenta a escolha
@@ -516,7 +524,9 @@ referência, a comparação combina um histograma de matiz e saturação com uma
 média, usados como assinatura do objeto; na ausência de foto, o critério recai sobre a fração de
 pixels com a cor cadastrada e sobre a classificação de formato. Quando o detector não propõe nenhuma
 caixa com a cor do perfil, as regiões candidatas passam a ser propostas por segmentação de cor, como
-último recurso na ordenação de candidatos.
+último recurso na ordenação de candidatos. Reconhecer o alvo apenas pelo formato, sem depender da
+cor cadastrada, fica registrado como passo futuro -- útil para perfis em que a cor do objeto varia
+com a iluminação ou não é um atributo discriminante confiável.
 
 O envio das informações resultantes ao Arduino, para guiar o apontamento da torre (movimentos de pan
 e tilt), foi projetado mas ainda não está implementado: o protocolo serial atual não possui comando
@@ -577,7 +587,10 @@ calcula o conjunto completo de torres autorizadas a responder ao mesmo alvo (tod
 enxergam pela própria câmera, mais as de quadrante adjacente dentro do alcance de câmera,
 descontadas as que têm outro canhão na linha de tiro), permitindo que mais de uma torre engaje o
 mesmo alvo ao mesmo tempo -- inclusive uma torre extra de quadrante vizinho é convocada quando o
-alvo está rápido demais para confiar em um único canhão. A heurística
+alvo está rápido demais para confiar em um único canhão. Hoje essa convocação extra só é
+condicional (alvo rápido); buscar sistematicamente pelo menos duas câmeras -- preferencialmente
+três -- para todo alvo identificado, e não apenas nesse caso específico, fica registrado como
+refinamento futuro dessa regra. A heurística
 também impõe quatro regras de segurança e refinamento, cada uma ativável individualmente no painel de
 Configurações: anti-oscilação, que evita trocar de torre por uma diferença de pontuação dentro de
 uma margem de empate; priorização por urgência, que permite a um alvo muito próximo da base "tomar"
@@ -585,10 +598,11 @@ a torre de um alvo mais distante; balanceamento de carga, que prefere, entre tor
 usada com menor frequência na sessão; e predição de trajetória, que projeta a posição futura do
 alvo para calcular o ângulo de mira com antecedência de poucos décimos de segundo. Por fim, a
 heurística impõe dois limites absolutos ao disparo, nunca delegados à rede e válidos para
-qualquer torre do conjunto de engajamento: um tempo mínimo de mira de 0,3 s e um limiar mínimo de
-certeza de identificação do alvo (\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o
-disparo é recusado independentemente de qualquer outra avaliação ou de quantas torres estejam
-engajando.
+qualquer torre do conjunto de engajamento: um tempo mínimo de mira de 0,3 s -- para evitar disparo
+por reflexo em identificações ainda instáveis, assunto retomado com dados experimentais na
+Seção~\ref{sec:experimento-hiperparametros} -- e um limiar mínimo de certeza de identificação do
+alvo (\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o disparo é recusado
+independentemente de qualquer outra avaliação ou de quantas torres estejam engajando.
 
 A rede neural, por sua vez, não decide essas regras de segurança, nem a cascata de camadas, nem o
 conjunto de torres autorizadas a engajar -- ela decide apenas a priorização fina entre as
@@ -1001,8 +1015,14 @@ de um corte de tempo que, de fato, tira pontuação de episódios bem-sucedidos,
 controlador ainda insuficiente para evitar falhas precoces numa fração considerável dos cenários.
 Isso aponta para dois trabalhos futuros distintos, não um só: alongar o horizonte de treinamento
 (para a rede aprender a explorar episódios longos e bem-sucedidos) e reduzir a variância entre
-seeds (para a rede falhar com menos frequência nos cenários desfavoráveis), sendo este segundo,
-pelos dados aqui, o fator que mais pesa na média atual.
+\textit{seeds} -- termo usado aqui no sentido de valor inicial do gerador de números aleatórios:
+fixar a mesma \textit{seed} reproduz exatamente o mesmo episódio simulado (mesmos instantes e
+posições de nascimento dos alvos), o que permite comparar genomas ou configurações diferentes sob
+condições idênticas, em vez de sorte de execução -- (para a rede falhar com menos frequência nos
+cenários desfavoráveis), sendo este segundo, pelos dados aqui, o fator que mais pesa na média
+atual. Vale distinguir dois usos do termo neste trabalho: a \textit{seed} de um episódio de teste
+(que fixa o cenário avaliado) e a semente do próprio algoritmo genético (que fixa a aleatoriedade
+da evolução em si, usada nas repetições independentes da Seção anterior).
 
 \paragraph{A variância é da rede, do ambiente, ou da avaliação do algoritmo genético?}
 O teste anterior levanta uma suspeita incômoda: se o teto sobe para 443 mas a média continua baixa,
@@ -1322,7 +1342,11 @@ físico real.
 
 Os trabalhos futuros identificados neste artigo são, portanto: montagem e validação do hardware
 físico das cinco torres; implementação do comando de apontamento no protocolo serial e da fusão
-entre a posição estimada pela visão e a distância ultrassônica; calibração dos modelos de certeza e
+entre a posição estimada pela visão e a distância ultrassônica -- abordagem planejada: confrontar
+as duas leituras e calcular uma distância combinada, com o peso de cada sensor variando conforme a
+distância do alvo (mais próximo, prioriza a leitura ultrassônica, mais precisa em curto alcance;
+mais distante, prioriza a estimativa da câmera), em vez de uma média fixa entre as duas; calibração
+dos modelos de certeza e
 de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão do tratamento
 de alvos para a abordagem multiameaça da literatura de TEWA (otimização simultânea entre vários
 alvos concorrentes), hoje deixada de lado em favor do tratamento alvo a alvo; e, caso a capacidade
