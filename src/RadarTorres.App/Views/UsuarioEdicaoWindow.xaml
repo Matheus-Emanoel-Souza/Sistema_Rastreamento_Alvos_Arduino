@@ -1,0 +1,105 @@
+<Window x:Class="RadarTorres.App.Views.UsuarioEdicaoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shared="clr-namespace:RadarTorres.App.Views.Shared"
+        Title="Usuário" Height="600" Width="440"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        ShowInTaskbar="False"
+        Background="{DynamicResource Bg.Window}"
+        Foreground="{DynamicResource Text.Primary}"
+        FontFamily="{DynamicResource Font.Body}">
+    <!--
+        Cadastro e edição de usuário, antes exibido permanentemente num painel de 320px à direita
+        da tabela em UsuariosView (ver histórico do arquivo). Virou modal centralizado para a
+        tabela ocupar a largura inteira e para que os campos só apareçam quando a operação for
+        de fato solicitada.
+
+        O DataContext é a MESMA UsuariosViewModel da tela — nenhum estado é duplicado aqui: os
+        campos continuam ligados a FormNome/FormEmail/... e o botão Salvar continua disparando
+        SalvarCommand, que valida e grava. O fechamento automático em caso de sucesso é feito por
+        JanelaModal.FecharQuando(SucessoFormulario), no code-behind.
+    -->
+    <Window.Resources>
+        <!-- Declarado aqui (e não só em UsuariosView) porque a janela modal é um escopo de
+             recursos próprio: não herda o ResourceDictionary do UserControl que a abriu. -->
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <!-- Título muda conforme a operação: IsNovoUsuario distingue inclusão de edição. -->
+            <TextBlock Style="{StaticResource Modal.Titulo}" Text="Novo usuário"
+                       Visibility="{Binding IsNovoUsuario, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <TextBlock Text="Editar usuário">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Modal.Titulo}">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNovoUsuario}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Style="{StaticResource Modal.Subtitulo}"
+                       Text="Dados da conta. A senha só é definida na criação; para contas existentes use a ação &quot;Redefinir senha&quot;."/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,6,0">
+                <TextBlock Text="Nome" Style="{StaticResource Modal.Rotulo}"/>
+                <TextBox Style="{StaticResource Modal.Campo}" Text="{Binding FormNome, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="E-mail" Style="{StaticResource Modal.Rotulo}"/>
+                <TextBox Style="{StaticResource Modal.Campo}" Text="{Binding FormEmail, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="Idade" Style="{StaticResource Modal.Rotulo}"/>
+                <TextBox Style="{StaticResource Modal.Campo}" Text="{Binding FormIdade, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="Login" Style="{StaticResource Modal.Rotulo}"/>
+                <TextBox Style="{StaticResource Modal.Campo}" Text="{Binding FormLogin, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="Função" Style="{StaticResource Modal.Rotulo}"/>
+                <ComboBox Style="{StaticResource Modal.Combo}" ItemsSource="{Binding PerfisDisponiveis}" SelectedItem="{Binding FormPerfil}"/>
+
+                <CheckBox Content="Ativo" IsChecked="{Binding FormAtivo}" Margin="0,2,0,12"/>
+
+                <!-- Senha só na criação: em edição ela é alterada pela ação dedicada. -->
+                <StackPanel Visibility="{Binding IsNovoUsuario, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="Senha" Style="{StaticResource Modal.Rotulo}"/>
+                    <shared:PasswordRevealBox Password="{Binding FormSenha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Confirmar senha" Style="{StaticResource Modal.Rotulo}"/>
+                    <shared:PasswordRevealBox Password="{Binding FormConfirmarSenha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="{Binding MensagemFormulario}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Modal.Mensagem}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SucessoFormulario}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancelar" Style="{StaticResource Modal.BotaoSecundario}" IsCancel="True"/>
+                <Button Content="Salvar" Style="{StaticResource Modal.BotaoPrimario}"
+                        Command="{Binding SalvarCommand}" IsDefault="True"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

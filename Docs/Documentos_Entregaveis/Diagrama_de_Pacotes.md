@@ -1,3 +1,6 @@
+Funcionalidade: apresenta o diagrama de pacotes/módulos do código-fonte e suas dependências.
+Status: 🚩 alteração_pendente — autor vai alterar este documento.
+
 # Diagrama de Pacotes
 
 > Organização por pastas/namespaces reais do repositório (nenhum pacote foi inventado — cada um

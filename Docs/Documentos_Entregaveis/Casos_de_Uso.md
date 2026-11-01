@@ -1,3 +1,6 @@
+Funcionalidade: lista os casos de uso do RadarTorres (atores, fluxos principais e alternativos) para o entregável acadêmico.
+Status: 🚩 alteração_pendente — autor vai alterar este documento.
+
 # Casos de Uso — RadarTorres
 
 ## 1. Objetivo
@@ -530,4 +533,4 @@ atores que têm.
 
 - [[UML_RadarTorres]] — introdução conceitual ao diagrama de casos de uso (Seção 3.1).
 - [[Matriz_de_Rastreabilidade]] — requisito → implementação, base destes casos de uso.
-- [[Diagrama_de_Pacotes]] — organização interna do código que implementa estes casos de uso.
+- [[Diagrama_de_Pacotes]] — organização interna do código que implementa estes casos de uso.

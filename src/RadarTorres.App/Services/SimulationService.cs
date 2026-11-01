@@ -33,7 +33,7 @@ public sealed class SimulationService : ISimulationService, IDisposable
     private readonly ILoggingService _logger;
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private Timer? _timer;
-    private int _nextId = 1;
+    private int _nextId;
 
     public bool IsRunning { get; private set; }
 
@@ -53,7 +53,7 @@ public sealed class SimulationService : ISimulationService, IDisposable
 
         int count = initialTargetCount ?? AppConfig.Current.SimulationSettings.DefaultTargetCount;
         _simulated.Clear();
-        _nextId = 1;
+        Interlocked.Exchange(ref _nextId, 0);
 
         for (int i = 0; i < count; i++)
         {
@@ -61,17 +61,28 @@ public sealed class SimulationService : ISimulationService, IDisposable
         }
 
         int intervalMs = AppConfig.Current.SimulationSettings.GenerationIntervalMs;
-        _timer = new Timer(_ => Tick(), null, 0, intervalMs);
+        // IsRunning precisa estar ligada ANTES do timer: ele dispara de imediato (dueTime 0) e o
+        // Tick desiste quando a flag está baixa.
         IsRunning = true;
+        _timer = new Timer(_ => Tick(), null, 0, intervalMs);
 
         _logger.Success($"Modo de simulação ativado ({count} alvo(s) fictício(s))");
     }
 
     public void Stop()
     {
+        // IsRunning cai ANTES de descartar o timer: uma execução de Tick já em andamento numa
+        // thread do pool consulta esta flag e desiste, em vez de emitir leituras depois de o
+        // modo de simulação ter sido desligado (alvos "fantasmas" reaparecendo no radar).
+        bool estavaRodando = IsRunning;
+        IsRunning = false;
+
         _timer?.Dispose();
         _timer = null;
-        IsRunning = false;
+
+        if (!estavaRodando) return; // nunca esteve ligado — não há nada a desativar nem a registrar.
+
+        _simulated.Clear();
         _logger.Info("Modo de simulação desativado");
     }
 
@@ -87,7 +98,7 @@ public sealed class SimulationService : ISimulationService, IDisposable
         double maxDistance = _configuracoes.Atual.AlcanceMiraMetros;
         var target = new SimulatedTarget
         {
-            Id = _nextId++,
+            Id = Interlocked.Increment(ref _nextId),
             Angle = Random.Shared.NextDouble() * 360.0,
             Distance = Random.Shared.NextDouble() * maxDistance * 0.8 + 0.5
         };
@@ -104,6 +115,8 @@ public sealed class SimulationService : ISimulationService, IDisposable
 
     private void Tick()
     {
+        if (!IsRunning) return;
+
         double maxDistance = _configuracoes.Atual.AlcanceMiraMetros;
 
         foreach (SimulatedTarget target in _simulated.Values)
@@ -136,5 +149,5 @@ public sealed class SimulationService : ISimulationService, IDisposable
         return normalized < 0 ? normalized + 360.0 : normalized;
     }
 
-    public void Dispose() => _timer?.Dispose();
+    public void Dispose() => Stop();
 }

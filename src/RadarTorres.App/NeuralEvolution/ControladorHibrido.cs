@@ -16,15 +16,15 @@ namespace RadarTorres.App.NeuralEvolution;
 /// </summary>
 public sealed class ControladorHibrido
 {
-    /// <summary>distância normalizada, mesmo quadrante?, quadrante adjacente?, ângulo normalizado, velocidade normalizada, fator da camada heurística.</summary>
-    public const int QuantidadeEntradas = 6;
+    /// <summary>distância normalizada, mesmo quadrante?, quadrante adjacente?, ângulo normalizado, velocidade normalizada, tempo detectado sem abate (normalizado), fator da camada heurística.</summary>
+    public const int QuantidadeEntradas = 7;
 
     /// <summary>ajuste de pontuação da torre candidata, confiança de disparo.</summary>
     public const int QuantidadeSaidas = 2;
 
     public static readonly int[] ArquiteturaPadrao = { QuantidadeEntradas, 8, QuantidadeSaidas };
 
-    /// <summary>Rótulo curto de cada entrada, na mesma ordem de <see cref="ConstruirEntradas(double,double,bool,bool,double,double,double,double)"/> — usado nos nós de entrada do diagrama da rede (ver tela de treinamento).</summary>
+    /// <summary>Rótulo curto de cada entrada, na mesma ordem de <see cref="ConstruirEntradas(double,double,bool,bool,double,double,double,double,double,double)"/> — usado nos nós de entrada do diagrama da rede (ver tela de treinamento).</summary>
     public static readonly string[] RotulosEntradas =
     [
         "Distância até o alvo",
@@ -32,6 +32,7 @@ public sealed class ControladorHibrido
         "Quadrante adjacente",
         "Ângulo de mira",
         "Velocidade do alvo",
+        "Tempo detectado sem abate",
         "Camada heurística"
     ];
 
@@ -42,17 +43,49 @@ public sealed class ControladorHibrido
         "Confiança de disparo"
     ];
 
-    private const double TempoMinimoDeMiraSegundos = 0.3;
+    /// <summary>Tempo mínimo de mira — veto heurístico INEGOCIÁVEL, igual em <see cref="ModoDecisao.Hibrido"/> e <see cref="ModoDecisao.HeuristicaPura"/> (só <see cref="ModoDecisao.RedePura"/> não o aplica). Público para quem mede a decisão de disparo isoladamente (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>) poder excluir este veto compartilhado da contagem de "recusa da rede".</summary>
+    public const double TempoMinimoDeMiraSegundos = 0.3;
 
     private readonly RedeNeural _rede;
     private readonly double _raioMundoMetros;
     private readonly double _velocidadeMaximaAlvoMetrosPorSegundo;
+    private readonly double _tempoDeteccaoRelevanteSegundos;
+    private readonly ModoDecisao _modo;
 
-    public ControladorHibrido(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo)
+    /// <summary>
+    /// Como a decisão é tomada. <see cref="Hibrido"/> é o modo de PRODUÇÃO e o padrão — os
+    /// demais existem só para o estudo comparativo (ablação) descrito no TCC, e nenhum deles é
+    /// usado pelo aplicativo em execução normal.
+    /// </summary>
+    public enum ModoDecisao
+    {
+        /// <summary>Heurística em camadas filtra as candidatas e soma pontuação; a rede ajusta dentro disso (comportamento de produção).</summary>
+        Hibrido,
+
+        /// <summary>
+        /// Rede pura: a heurística NÃO influencia nada aqui dentro — todas as torres livres são
+        /// candidatas (sem filtro de quadrante próprio/adjacente), a pontuação é só a saída da
+        /// rede (sem o termo <c>(1-distância)+fatorCamada</c>) e o tempo mínimo de mira não é
+        /// imposto. Observação metodológica: os vetos de segurança de
+        /// <see cref="AmbienteTreinamento.DecidirDisparos"/> (zona morta e certeza mínima)
+        /// continuam valendo em qualquer modo — são requisito do sistema físico, não heurística
+        /// de seleção, e removê-los mudaria a tarefa avaliada, não o controlador.
+        /// </summary>
+        RedePura,
+
+        /// <summary>Heurística pura: a rede é ignorada (ajuste 0, disparo sempre que a heurística permite) — baseline inferior do estudo.</summary>
+        HeuristicaPura
+    }
+
+    public ModoDecisao Modo => _modo;
+
+    public ControladorHibrido(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo, ModoDecisao modo = ModoDecisao.Hibrido, double tempoDeteccaoRelevanteSegundos = 3.0)
     {
         _rede = rede;
         _raioMundoMetros = raioMundoMetros;
         _velocidadeMaximaAlvoMetrosPorSegundo = velocidadeMaximaAlvoMetrosPorSegundo;
+        _tempoDeteccaoRelevanteSegundos = tempoDeteccaoRelevanteSegundos;
+        _modo = modo;
     }
 
     /// <summary>
@@ -66,6 +99,25 @@ public sealed class ControladorHibrido
     {
         List<TorreTreinamento> livres = torres.Where(t => t.Livre).ToList();
         if (livres.Count == 0) return null;
+
+        if (_modo == ModoDecisao.RedePura)
+        {
+            // Nenhuma camada heurística: todas as livres concorrem e só a rede decide. fatorCamada
+            // entra na entrada da rede como 0 constante para não reintroduzir a informação de
+            // camada por via indireta.
+            TorreTreinamento? melhorRede = null;
+            double melhorSaida = double.NegativeInfinity;
+            foreach (TorreTreinamento torre in livres)
+            {
+                double saida = _rede.Ativar(ConstruirEntradas(alvo, torre, fatorCamada: 0.0))[0];
+                if (saida > melhorSaida)
+                {
+                    melhorSaida = saida;
+                    melhorRede = torre;
+                }
+            }
+            return melhorRede;
+        }
 
         HashSet<Models.Quadrant> quadrantesComOutrosAlvos = outrosAlvosAtivos
             .Where(a => a.Id != alvo.Id)
@@ -96,7 +148,9 @@ public sealed class ControladorHibrido
         foreach (TorreTreinamento torre in candidatas)
         {
             double[] entradas = ConstruirEntradas(alvo, torre, fatorCamada);
-            double pontuacaoFinal = Pontuar(_rede, entradas, fatorCamada);
+            double pontuacaoFinal = _modo == ModoDecisao.HeuristicaPura
+                ? (1.0 - entradas[0]) + fatorCamada
+                : Pontuar(_rede, entradas, fatorCamada);
 
             if (pontuacaoFinal > melhorPontuacao)
             {
@@ -118,7 +172,15 @@ public sealed class ControladorHibrido
     /// </summary>
     public bool DecidirDisparo(AlvoTreinamento alvo, TorreTreinamento torre)
     {
+        if (_modo == ModoDecisao.RedePura)
+        {
+            // Sem o tempo mínimo de mira (regra heurística) e sem fatorCamada: só a rede.
+            return _rede.Ativar(ConstruirEntradas(alvo, torre, fatorCamada: 0.0))[1] > 0;
+        }
+
         if (alvo.TempoDesdeSelecao < TempoMinimoDeMiraSegundos) return false;
+
+        if (_modo == ModoDecisao.HeuristicaPura) return true;
 
         double[] entradas = ConstruirEntradas(alvo, torre, fatorCamada: 1.0);
         double confiancaDisparo = _rede.Ativar(entradas)[1];
@@ -133,7 +195,7 @@ public sealed class ControladorHibrido
         bool mesmoQuadrante = torre.QuadrantePreferido == alvo.Quadrante;
         bool quadranteAdjacente = QuadrantHelper.AreAdjacent(torre.QuadrantePreferido, alvo.Quadrante);
 
-        return ConstruirEntradas(distancia, _raioMundoMetros, mesmoQuadrante, quadranteAdjacente, anguloGraus, alvo.VelocidadeMetrosPorSegundo, _velocidadeMaximaAlvoMetrosPorSegundo, fatorCamada);
+        return ConstruirEntradas(distancia, _raioMundoMetros, mesmoQuadrante, quadranteAdjacente, anguloGraus, alvo.VelocidadeMetrosPorSegundo, _velocidadeMaximaAlvoMetrosPorSegundo, alvo.TempoDeVidaSegundos, _tempoDeteccaoRelevanteSegundos, fatorCamada);
     }
 
     /// <summary>
@@ -152,11 +214,16 @@ public sealed class ControladorHibrido
         double anguloGraus,
         double velocidadeMetrosPorSegundo,
         double velocidadeMaximaMetrosPorSegundo,
+        double tempoDeteccaoSegundos,
+        double tempoDeteccaoRelevanteSegundos,
         double fatorCamada)
     {
         double distanciaNormalizada = Math.Clamp(distanciaMetros / raioMundoMetros, 0, 1);
         double anguloNormalizado = anguloGraus / 360.0;
         double velocidadeNormalizada = Math.Clamp(velocidadeMetrosPorSegundo / velocidadeMaximaMetrosPorSegundo, 0, 1);
+        double tempoDeteccaoNormalizado = tempoDeteccaoRelevanteSegundos > 0
+            ? Math.Clamp(tempoDeteccaoSegundos / tempoDeteccaoRelevanteSegundos, 0, 1)
+            : 0.0;
 
         return
         [
@@ -165,6 +232,7 @@ public sealed class ControladorHibrido
             quadranteAdjacente ? 1.0 : 0.0,
             anguloNormalizado,
             velocidadeNormalizada,
+            tempoDeteccaoNormalizado,
             fatorCamada
         ];
     }

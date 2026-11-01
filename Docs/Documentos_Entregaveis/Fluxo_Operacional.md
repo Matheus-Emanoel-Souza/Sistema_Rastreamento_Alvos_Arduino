@@ -1,3 +1,5 @@
+Funcionalidade: descreve o fluxo operacional do sistema, da leitura dos sensores à ação da torre.
+
 # Fluxo Operacional
 
 Fluxograma do ciclo completo de operação do RadarTorres, do início da varredura até o registro
@@ -48,4 +50,4 @@ flowchart TD
 - [[Diagrama_de_Implantacao]] — topologia física PC ↔ Arduino.
 - [[ALGORITMO_SELECAO_TORRE]] — critério de seleção de torre em detalhe.
 - [[CONTROLADOR_NEUROEVOLUTIVO]] — controlador híbrido que decide dentro da etapa de seleção.
-- [[Índice]] (raiz do vault), [[Indice_Documentos_Entregaveis|Documentos Entregáveis]].
+- [[Registro_index|Registro]].

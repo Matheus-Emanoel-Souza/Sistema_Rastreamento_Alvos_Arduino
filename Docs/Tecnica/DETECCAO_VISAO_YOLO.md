@@ -1,3 +1,5 @@
+Funcionalidade: documenta o módulo de detecção por visão computacional baseado em YOLO (modelo, versão, motivo da escolha).
+
 # Detecção por Visão Computacional (YOLO) no RadarTorres
 
 > Explica o papel real do modelo YOLO dentro do pipeline do RadarTorres: o que ele faz, o que

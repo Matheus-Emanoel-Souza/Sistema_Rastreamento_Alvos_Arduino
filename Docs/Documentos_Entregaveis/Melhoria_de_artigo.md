@@ -1,6 +1,19 @@
+Funcionalidade: checklist de revisão acadêmica do artigo do TCC (`Artigo.tex`, fonte canônica) e registro de decisões pendentes levantadas nas rodadas de revisão.
+
 # Melhorias do Artigo — RadarTorres
 
 Checklist de revisão acadêmica do `Artigo.tex`. Status real de aplicação no documento, não intenção.
+
+## Resolvido — titulação do orientador (rodapé da capa)
+
+Trecho grifado em amarelo no rodapé do orientador que eu tinha deixado de processar na revisão de
+30/10 (estava numa NOTA DE RODAPÉ do docx, não no corpo do texto -- meu script de extração só
+percorria o corpo). Pesquisa web (agregador de Lattes, fonte secundária) sugeriu bacharelado em
+Ciência da Computação pela UFES (1999) e especialização em Gestão de Projetos pela UCL, sem
+mestrado. **Autor confirmou diretamente** (30/10/2026) que a informação está correta. Rodapé em
+`Artigo.tex` atualizado para "Professor especialista, bacharel em Ciência da Computação pela
+Universidade Federal do Espírito Santo (UFES)" -- sem mestrado, removido o placeholder "Mestre em
+xxx pela xxx" e os destaques amarelos (confirmado, não mais pendente).
 
 ## Desenvolvimento físico do projeto
 
@@ -63,6 +76,57 @@ Neuroevolução (survey gratuito, alternativa ao Stanley et al. 2019 que é pago
 ## Caso de estudo — bug da certeza estática
 
 - [ ] **pendente** — Promover o episódio do bug de certeza estática (`Artigo.tex:238-244`) de parágrafo metodológico para um mini-caso de estudo com dado antes/depois (ver item de gráfico de fitness acima) — é a contribuição mais original do artigo e está subexplorada.
+
+> O registro do que já foi aplicado na revisão de 30/10/2026 (remoção de seção obsoleta, zona
+> morta, tempo mínimo de mira, correção de número de genoma, etc.) está em [[LOG_SOLICITACOES]],
+> entrada "2026-10-30 — Revisão do artigo a partir do docx grifado". Esta nota (Apoio) guarda só o
+> que ainda está pendente ou é proposta de trabalho futuro.
+
+## Correção importante: cooperação entre torres já existe parcialmente
+
+Na primeira passada (em `artigo_revisado.tex`), eu tinha avaliado a lógica de seleção de torre só
+por `ControladorHibrido.SelecionarTorre`/`DecidirDisparo` e concluído que o sistema escolhe
+EXATAMENTE uma torre por alvo, sem nenhuma cooperação entre torres. **Isso estava incompleto**:
+`Artigo.tex` já documenta, na seção de regras heurísticas de `TowerSelectionService`, a regra
+"Ajuda de torre adjacente contra alvo rápido (sempre ativa)": alvos com velocidade acima de um
+limiar configurado já recebem, HOJE, além da torre principal, qualquer torre de quadrante
+adjacente a até 2m de distância como reforço de disparo -- um segundo canhão contra o mesmo alvo.
+Ou seja, cooperação entre torres **já existe**, só que condicionada à velocidade do alvo, não a
+todo alvo identificado.
+
+**Proposta do autor (registrada, ainda NÃO implementada)**: generalizar esse comportamento -- ao
+identificar QUALQUER alvo (não só os rápidos), todas as câmeras e todas as torres voltam a atenção
+para ele simultaneamente, objetivo de reconhecer mais rápido (mais câmeras observando ao mesmo
+tempo melhora a confiança de identificação) e acelerar o abate.
+
+- [ ] **pendente** — Decidir se a generalização estende a regra 5 existente (remover a condição de
+  velocidade) ou se é uma lógica nova e mais ampla (toda câmera olha pra todo alvo identificado,
+  não só torres adjacentes a até 2m) -- escopo diferente de esforço de implementação.
+- [ ] **pendente** — Projetar o impacto em `Torre.Livre`/`Target.EngagingTowers` e no cálculo de
+  `outrosAlvosAtivos`/`quadrantesComOutrosAlvos` usado na filtragem por quadrante, hoje desenhado
+  para 1 torre "principal" por alvo mesmo com reforço.
+- [ ] **pendente** — Re-treinar a rede neural com a nova lógica, se ela mudar o que conta como
+  "candidata" nas 7 entradas atuais.
+- [ ] **pendente** — Atualizar o artigo (texto completo da seção, não só o destaque já inserido) e
+  `Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md` quando a implementação acontecer.
+
+**Decisões pendentes após revisão no dia 30/10/2026 às 13:51.**
+
+- **Comentário #3 do docx de referência ("Revisar trecho")** — ancorado logo após "... até quatro
+  milhões de parâmetros, contra os 82 parâmetros da rede do RadarTorres)." (parágrafo sobre
+  `such2017deepneuroevolution`, Seção 2.2/Revisão da literatura). Já apliquei uma correção
+  razoável (a citação sustenta "GA é competitivo", não sustenta "não vale aumentar camadas aqui";
+  reformulei para apontar à Seção de hiperparâmetros como a justificativa real) -- mas o comentário
+  original não dizia exatamente o quê revisar, então vale o autor confirmar se a correção aplicada
+  é a que ele tinha em mente.
+- **Comentário #5 do docx de referência (fusão ultrassom × câmera)** — pedido original: descrever que
+  a leitura do sensor ultrassônico é cruzada com a distância estimada pela câmera (`CAM;...;Z=...`),
+  tirando uma média, com a leitura mais confiável (sensor para alvo próximo, câmera para alvo distante)
+  prevalecendo em caso de discrepância grande. **Verificado no código: essa fusão não existe hoje** — o
+  campo `DIST` do ultrassom só alimenta a posição no radar; não há nenhum cruzamento com o `Z` da câmera
+  em `SerialProtocolParser`/`SimulationService`/`AlvoVisualService`. Decisão pendente do autor: (a)
+  implementar essa fusão de verdade no software antes de descrevê-la no artigo, ou (b) registrar como
+  proposta de trabalho futuro (como fizemos com a cooperação entre torres), ou (c) descartar a ideia.
 
 ---
 

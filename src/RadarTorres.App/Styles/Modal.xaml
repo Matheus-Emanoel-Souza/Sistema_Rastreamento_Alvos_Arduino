@@ -1,0 +1,83 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Estilos compartilhados das janelas modais de formulário (diretriz geral de UX do projeto:
+        tabela/conteúdo ocupa a tela inteira, ações ficam no canto superior direito e abrem um
+        modal centralizado com apenas os campos daquela operação).
+
+        São só estilos nomeados — nenhum controle novo — para que qualquer tela possa adotar o
+        padrão sem herdar comportamento. As cores vêm sempre de DynamicResource do tema (Dark.xaml
+        / Light.xaml), nunca fixas, para o modal acompanhar a troca de tema em runtime.
+
+        Usado por UsuarioEdicaoWindow e RedefinirSenhaWindow; ver também
+        Views/Shared/JanelaModal.cs, que centraliza a abertura (Owner + ShowDialog).
+    -->
+
+    <Style x:Key="Modal.Titulo" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="Margin" Value="0,0,0,2"/>
+    </Style>
+
+    <Style x:Key="Modal.Subtitulo" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,0,0,14"/>
+    </Style>
+
+    <Style x:Key="Modal.Rotulo" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+        <Setter Property="Margin" Value="0,0,0,3"/>
+    </Style>
+
+    <Style x:Key="Modal.Campo" TargetType="TextBox">
+        <Setter Property="Padding" Value="6,5"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+        <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
+    </Style>
+
+    <Style x:Key="Modal.Combo" TargetType="ComboBox">
+        <Setter Property="Padding" Value="6,5"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+
+    <!-- Ação que confirma a operação (Salvar, Redefinir). Uma por modal. -->
+    <Style x:Key="Modal.BotaoPrimario" TargetType="Button">
+        <Setter Property="Padding" Value="14,7"/>
+        <Setter Property="MinWidth" Value="110"/>
+        <Setter Property="Background" Value="{DynamicResource Accent.Fill}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <!-- Ação que descarta/fecha (Cancelar). Visualmente neutra para não competir com a primária. -->
+    <Style x:Key="Modal.BotaoSecundario" TargetType="Button">
+        <Setter Property="Padding" Value="14,7"/>
+        <Setter Property="MinWidth" Value="110"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="Background" Value="{DynamicResource Border.Control}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <!--
+        Mensagem de validação/resultado. Vermelha por padrão e verde (cor de acento) quando a
+        operação deu certo — o gatilho espera uma propriedade booleana no DataContext, informada
+        caso a caso pelo modal (SucessoFormulario, SucessoRedefinir...), por isso o Binding do
+        DataTrigger fica na janela e não aqui.
+    -->
+    <Style x:Key="Modal.Mensagem" TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,2,0,12"/>
+        <Setter Property="Foreground" Value="{DynamicResource Danger.Fill}"/>
+    </Style>
+
+</ResourceDictionary>

@@ -13,9 +13,56 @@ public sealed record ParametrosTreinamento
     public double DuracaoEpisodioSegundos { get; init; } = 45.0;
     public double IntervaloSpawnMinSegundos { get; init; } = 1.5;
     public double IntervaloSpawnMaxSegundos { get; init; } = 4.0;
-    public int MaxAlvosSimultaneos { get; init; } = 5;
+
+    /// <summary>Intervalo mínimo de nascimento no FIM do episódio — <see cref="IntervaloSpawnMinSegundos"/> é o do início; a interpolação linear entre os dois ao longo de <see cref="DuracaoEpisodioSegundos"/> é a escalada de dificuldade (mais alvos quanto mais o episódio avança), ver <see cref="AmbienteTreinamento"/>.</summary>
+    public double IntervaloSpawnMinFinalSegundos { get; init; } = 0.6;
+
+    /// <summary>Intervalo máximo de nascimento no FIM do episódio — ver <see cref="IntervaloSpawnMinFinalSegundos"/>.</summary>
+    public double IntervaloSpawnMaxFinalSegundos { get; init; } = 1.8;
+
+    /// <summary>Teto de alvos ATIVOS simultaneamente no MESMO quadrante — não é mais um teto global: quadrantes diferentes podem estar cada um no próprio limite ao mesmo tempo, forçando o controlador a lidar com concentração local em vez de só a contagem total.</summary>
+    public int MaxAlvosPorQuadrante { get; init; } = 5;
+
     public double RecompensaAbate { get; init; } = 10.0;
     public double PenalidadeEscape { get; init; } = 8.0;
+
+    /// <summary>Normaliza a entrada "tempo detectado sem abate" da rede (<see cref="ControladorHibrido.ConstruirEntradas(double,double,bool,bool,double,double,double,double,double,double)"/>) — satura em 1,0 a partir deste tempo de observação contínua.</summary>
+    public double TempoDeteccaoRelevanteSegundos { get; init; } = 3.0;
+
+    /// <summary>Distância (m) de uma torre abaixo da qual um alvo ainda ativo é considerado ter rompido a defesa — distinto de <see cref="DistanciaPerdaPontoMetros"/> (que é em torno da base, só penaliza) ou de <see cref="PenalidadeEscape"/> (fuga pela base): romper uma torre encerra o episódio imediatamente.</summary>
+    public double DistanciaInvasaoTorreMetros { get; init; } = 1.0;
+
+    /// <summary>Penalidade de fitness aplicada quando um alvo rompe uma torre (ver <see cref="DistanciaInvasaoTorreMetros"/>) — maior que <see cref="PenalidadeEscape"/> porque, além da penalidade, o episódio é interrompido e perde toda pontuação futura possível.</summary>
+    public double PenalidadeInvasaoTorre { get; init; } = 16.0;
+
+    /// <summary>Fator que converte o desvio padrão (segundos) do tempo comprometido entre as torres, ao fim do episódio, em penalidade de fitness — incentiva distribuir alvos entre torres em vez de sobrecarregar sempre a mesma (gestão de recursos), ver <see cref="TorreTreinamento.TempoComprometidoSegundos"/>.</summary>
+    public double PenalidadeDesequilibrioTorresPorSegundo { get; init; } = 0.5;
+
+    /// <summary>
+    /// Penalidade de fitness aplicada toda vez que a rede RECUSA uma oportunidade de disparo
+    /// legítima — os vetos inegociáveis (zona morta, certeza mínima, tempo mínimo de mira) já
+    /// liberaram, e ainda assim <see cref="ControladorHibrido.DecidirDisparo"/> devolve falso (ver
+    /// <see cref="EstadoEpisodio.DisparosRecusadosPelaRede"/>). Adicionada depois de medir que as
+    /// redes treinadas sem este termo recusavam entre 10% e 56% dessas oportunidades e, por isso,
+    /// perdiam em fitness médio para a heurística pura (que nunca recusa) — o fitness antes só
+    /// recompensava abate e penalizava fuga/invasão, sem custo explícito para a HESITAÇÃO em si.
+    /// </summary>
+    public double PenalidadeRecusaDisparo { get; init; } = 3.0;
+
+    /// <summary>
+    /// Quando <c>true</c>, o episódio IGNORA <see cref="DuracaoEpisodioSegundos"/> como fim normal
+    /// — só termina por invasão de torre (<see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>)
+    /// ou ao atingir <see cref="DuracaoMaximaSegurancaSegundos"/> (salvaguarda contra um genoma tão
+    /// bom que nunca seria invadido). <see cref="DuracaoEpisodioSegundos"/> continua sendo usado
+    /// como referência da escalada de dificuldade (ver <see cref="AmbienteTreinamento.ProximoIntervaloSpawn"/>) —
+    /// só o corte por tempo decorrido é desligado. Existe para testar a hipótese de que o teto de
+    /// fitness observado vem do episódio ser curto demais (poucos alvos nascem), não da qualidade
+    /// do controlador.
+    /// </summary>
+    public bool SemLimiteDeDuracao { get; init; } = false;
+
+    /// <summary>Salvaguarda contra loop efetivamente infinito quando <see cref="SemLimiteDeDuracao"/> está ativo — nenhum episódio passa disto, mesmo que nenhum alvo jamais invada uma torre.</summary>
+    public double DuracaoMaximaSegurancaSegundos { get; init; } = 1800.0;
 
     /// <summary>Piso absoluto do limiar de certeza — mesma regra do sistema real (ver <see cref="Configuration.ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual"/>).</summary>
     public const double LimiarConfiancaMinimaFracao = 0.40;
@@ -50,5 +97,12 @@ public sealed record ParametrosTreinamento
     /// genomas — a seleção por torneio e até o elitismo passam a escolher baseado em sorte, não
     /// em mérito, o que parece (e na prática é) estagnação da evolução.
     /// </summary>
-    public int EpisodiosPorAvaliacao { get; init; } = 3;
+    /// <remarks>
+    /// Elevado de 3 para 12 depois de medir, com <c>sobrevivencia --semlimite=nao</c>, que o
+    /// desvio padrão de fitness de um único genoma (treinado ou heurística pura, tanto faz) é da
+    /// mesma ordem de grandeza da própria média (~65 de desvio numa média ~70) sob o ambiente
+    /// endurecido (invasão de torre acaba o episódio de uma vez) — com 3 episódios por avaliação
+    /// essa amostra é ruído demais para a seleção distinguir genoma melhor de genoma sortudo.
+    /// </remarks>
+    public int EpisodiosPorAvaliacao { get; init; } = 12;
 }

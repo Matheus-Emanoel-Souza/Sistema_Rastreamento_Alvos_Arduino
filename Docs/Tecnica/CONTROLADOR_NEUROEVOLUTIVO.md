@@ -1,3 +1,5 @@
+Funcionalidade: documenta o controlador híbrido heurística+rede neural evoluída (arquitetura, treino, parâmetros).
+
 # Controlador Neuroevolutivo (Heurística + Rede Neural)
 
 Documentação técnica do controlador híbrido que combina a heurística em camadas de seleção de
@@ -225,7 +227,5 @@ primeira).
 
 - [[ALGORITMO_SELECAO_TORRE]] — heurística em camadas que o controlador híbrido refina; seção 4
   descreve onde a rede neural entra no fluxo de seleção.
-- [[MODELO_DADOS]] — schema completo das três tabelas de treinamento e das demais tabelas do
-  sistema.
 - [[ARQUITETURA]] — camadas do sistema e onde `TowerSelectionService`/`ControladorTreinadoProvider` se encaixam.
 - [[COMUNICACAO_ARDUINO]] — protocolo `GENOMA;*`/`REDE;ENTRADAS=` usado para auditoria/diagnóstico do genoma embutido no firmware.

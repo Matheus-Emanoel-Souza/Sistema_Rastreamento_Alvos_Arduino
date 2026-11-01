@@ -1,3 +1,5 @@
+Funcionalidade: documenta a arquitetura técnica do sistema (camadas, serviços, fluxo de dados).
+
 # Arquitetura do Sistema
 
 ## 1. Visão geral em camadas
