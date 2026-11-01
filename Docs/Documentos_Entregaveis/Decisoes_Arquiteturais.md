@@ -1,3 +1,5 @@
+Funcionalidade: registra as decisões arquiteturais tomadas no projeto e as restrições que as motivaram.
+
 # Decisões e Restrições Arquiteturais
 
 Escolhas internas de **como** o sistema foi construído — não são requisitos do produto (o

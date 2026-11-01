@@ -1,3 +1,5 @@
+Funcionalidade: apresenta o diagrama de implantação (como os componentes de hardware e software são distribuídos em execução).
+
 # Diagrama de Implantação
 
 > Base desta análise: `installer/RadarTorres.iss` (instalador), `src/RadarTorres.App/App.xaml.cs`

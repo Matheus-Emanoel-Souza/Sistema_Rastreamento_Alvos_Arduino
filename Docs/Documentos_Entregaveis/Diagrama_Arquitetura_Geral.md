@@ -1,3 +1,5 @@
+Funcionalidade: apresenta o diagrama de arquitetura geral do sistema (camadas, componentes e integrações).
+
 # Diagrama de Arquitetura Geral
 
 Diagrama visual (`.drawio`) da arquitetura de implantação completa do RadarTorres — PC +
@@ -31,5 +33,4 @@ atualização diferentes — se houver divergência entre eles (ex.: contagem de
 [[Diagrama_Eletrico]] é a fonte mais recente, por ter sido revisado diretamente contra o
 firmware real em 2026-10-26.
 
-Ver também: [[Índice]] (raiz do vault), [[Indice_Documentos_Entregaveis|Documentos
-Entregáveis]].
+Ver também: [[Registro_index|Registro]].

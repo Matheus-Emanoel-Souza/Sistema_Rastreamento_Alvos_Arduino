@@ -1,3 +1,5 @@
+Funcionalidade: define a identidade visual (cores, estilo) usada na interface do RadarTorres.
+
 # Identidade visual
 
 Referência viva da identidade visual do RadarTorres (tokens de cor, tipografia, ícones) —
@@ -96,4 +98,3 @@ rótulo "N · 0°" foi só reposicionado, não movido para fora do círculo.
 ## Ver também
 
 - [[LOG_SOLICITACOES]] — pedido original completo e decisões tomadas durante a implementação.
-- [[ETAPA1_FUNDACAO]] — onde `ThemeService`/`ILocalizationService` foram introduzidos.

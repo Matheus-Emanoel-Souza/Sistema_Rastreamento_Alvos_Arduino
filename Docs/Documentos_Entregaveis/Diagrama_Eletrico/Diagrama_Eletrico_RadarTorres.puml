@@ -12,13 +12,13 @@
 '   - Detecção de distância: 2x sensor ultrassônico HC-SR04, opostos 180° no eixo de varredura
 '   - Mira das câmeras: 8x motor NEMA17 + driver A4988/DRV8825 (pan+tilt, CAM1-CAM4)
 '   - Mira das torres: 4x motor NEMA17 + driver A4988/DRV8825 (pan, Q1-Q4)
-'   - Indicação: 4x LED de torre (Q1-Q4) + 1x LED de disparo
+'   - Sem indicador luminoso dedicado: torre selecionada e disparo só via protocolo serial
 '
 ' Este diagrama é funcional (mostra QUAIS sinais ligam a QUAIS pinos), não um esquemático
 ' elétrico completo com footprints/trilhas — para a montagem física, usar ferramenta dedicada
 ' (Fritzing/KiCad).
 '
-' A CONFIRMAR (não declarado no firmware, ver Diagrama_Eletrico.md Seção 2.5/5): alimentação
+' A CONFIRMAR (não declarado no firmware, ver Diagrama_Eletrico.md Seção 2.4/5): alimentação
 ' VMOT externa dos 12 drivers A4988/DRV8825, fiação física VCC/GND dos 2 HC-SR04, jumpers de
 ' microstepping.
 
@@ -44,7 +44,6 @@ node "PC (RadarTorres.App)" as PC
 rectangle "Arduino MEGA 2560" as MEGA {
   rectangle "D22-D25" as P_SWEEP
   rectangle "D26-D29" as P_US
-  rectangle "D30-D34" as P_LED
   rectangle "D36-D51" as P_CAM
   rectangle "D2-D9" as P_TORRE
   rectangle "D52\n(ENABLE)" as P_EN
@@ -53,12 +52,6 @@ rectangle "Arduino MEGA 2560" as MEGA {
 rectangle "Motor 28BYJ-48 + ULN2003\n(varredura central 0°-180°)" as SWEEP
 rectangle "HC-SR04 #1" as US1 <<todo>>
 rectangle "HC-SR04 #2\n(oposto 180°)" as US2 <<todo>>
-
-rectangle "LED Torre Q1" as LED1
-rectangle "LED Torre Q2" as LED2
-rectangle "LED Torre Q3" as LED3
-rectangle "LED Torre Q4" as LED4
-rectangle "LED Disparo" as LEDFIRE
 
 rectangle "8x NEMA17 + A4988/DRV8825\n(pan+tilt CAM1-CAM4)" as CAMS <<todo>>
 rectangle "4x NEMA17 + A4988/DRV8825\n(pan Torre Q1-Q4)" as TORRES <<todo>>
@@ -70,12 +63,6 @@ SWEEP .down. US1 : mesmo eixo
 SWEEP .down. US2 : mesmo eixo,\noposto 180°
 P_US -down-> US1 #0000AA : Trig/Echo
 P_US -down-> US2 #0000AA : Trig/Echo
-
-P_LED -down-> LED1 #0000AA
-P_LED -down-> LED2 #0000AA
-P_LED -down-> LED3 #0000AA
-P_LED -down-> LED4 #0000AA
-P_LED -down-> LEDFIRE #0000AA
 
 P_CAM -down-> CAMS #0000AA : 8x STEP+DIR
 P_TORRE -down-> TORRES #0000AA : 4x STEP+DIR
@@ -89,18 +76,11 @@ note right of SWEEP
   MEGA via USB.
 end note
 
-note bottom of LED4
-  4 LEDs = 1 por torre/quadrante (Q1-Q4), conforme
-  enum Quadrant em src/RadarTorres.App/Models/SystemState.cs.
-  LED Disparo é evento (FIRE explícito), não estado
-  contínuo — ver Diagrama_Eletrico.md Seção 5.
-end note
-
 note bottom of CAMS
   Blocos em amarelo: alimentação (VMOT dos drivers,
   VCC dos HC-SR04) não declarada no firmware — a
   confirmar na montagem física (ver Diagrama_Eletrico.md
-  Seção 2.5).
+  Seção 2.4).
 end note
 
 legend right

@@ -1,3 +1,5 @@
+Funcionalidade: inventaria funções e classes do código organizadas por fluxo do sistema.
+
 # Inventário de funções e classes por fluxo
 
 Mapa de navegação do código — **não substitui** `ARQUITETURA.md`, `ALGORITMO_SELECAO_TORRE.md`,
