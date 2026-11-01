@@ -2,9 +2,53 @@
 
 Checklist de revisão acadêmica do `Artigo.tex`. Status real de aplicação no documento, não intenção.
 
+## Restrição de tamanho
+
+- **Limite: 20 páginas.** O artigo (`Artigo.tex`) não deve exceder 20 páginas no PDF compilado.
+  Hoje está acima disso (ver nota de compilação mais recente); reduzir é parte do trabalho de
+  revisão, não só adicionar conteúdo.
+
+## Objetivo geral e objetivos específicos
+
+Documentados aqui (não como seção formal `\section{Objetivo}` no `Artigo.tex`, por decisão do
+autor) para orientar a revisão e a redação do artigo. Refletem a lógica de **engajamento
+cooperativo multi-torre** (2026-11-01): mais de uma torre pode acompanhar/engajar o mesmo alvo
+simultaneamente — a decisão não é mais "qual é a torre ideal", e sim "qual combinação de torres
+está apta a responder, com que grau de certeza, e quando autorizar o disparo".
+
+**Objetivo geral:**
+
+Desenvolver um protótipo (RadarTorres) capaz de detectar um alvo em movimento, estimar sua
+posição por sensoriamento ultrassônico e visão computacional, e autorizar automaticamente o
+engajamento cooperativo das torres aptas a responder a esse alvo — elevando a certeza de
+identificação no menor tempo possível até o grau de confiança mínimo necessário —, de forma
+auditável e sem depender de sensores ou atuadores de uso industrial.
+
+**Objetivos específicos:**
+
+1. Combinar sensores ultrassônicos com visão computacional (quatro câmeras) para detectar e
+   classificar o alvo por cor, forma e tamanho, estimando sua posição em coordenadas cartesianas e
+   exibindo-a em tempo real num radar circular.
+2. Determinar, para cada alvo, o conjunto de torres com câmera e linha de tiro válidas — torre do
+   próprio quadrante sempre elegível, torres de quadrante adjacente dentro do alcance de câmera, e
+   reforço adicional para alvos rápidos —, permitindo que mais de uma torre engaje o mesmo alvo
+   simultaneamente.
+3. Implementar um controlador híbrido (heurística determinística + rede neural evoluída por
+   algoritmo genético próprio) que refine, dentro do conjunto de torres elegíveis, a priorização
+   de engajamento e o instante de acionamento — nunca autorizando disparo fora do que a camada
+   heurística de segurança já validou.
+4. Condicionar todo acionamento a um limiar mínimo de certeza de identificação do alvo, válido
+   para qualquer torre do conjunto de engajamento — o disparo só ocorre depois de atingida a
+   confiança necessária, nunca por decisão isolada de uma única torre "ideal".
+5. Treinar esse controlador inteiramente em simulação, via neuroevolução, antes da operação real,
+   incorporando os parâmetros aprendidos de forma fixa à aplicação (sem ajuste em tempo real).
+6. Registrar em auditoria toda ação executada e documentar as limitações da validação atual
+   (realizada inteiramente por simulação de software; estrutura física ainda não montada nem
+   testada).
+
 ## Desenvolvimento físico do projeto
 
-- [x] **concluída** — Redação da descrição do desenvolvimento físico (estrutura em formato de torre, impressão 3D)
+
 
   Texto redigido, pendente de inserção no `Artigo.tex` (seção "Projeto elétrico e estrutural"):
 

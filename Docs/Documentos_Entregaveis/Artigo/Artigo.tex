@@ -79,18 +79,21 @@
 \noindent A construção de protótipos de sensoriamento com hardware acessível é um recurso
 didático relevante em Engenharia da Computação, por permitir explorar de forma prática conceitos
 de aquisição de dados, rastreamento e tomada de decisão automática. Este trabalho apresenta o
-RadarTorres, um protótipo que detecta um alvo em movimento, estima sua posição e decide, entre um
-conjunto de torres candidatas posicionadas ao redor de uma base central, qual delas deve responder
-a esse alvo -- problema central que o trabalho busca resolver: como identificar, localizar e
-atribuir automaticamente a torre mais adequada a cada alvo, de forma auditável e sem depender de
-sensores ou atuadores de uso industrial. O sistema combina dois sensores ultrassônicos (que medem
-a distância pelo eco do ultrassom) com quatro câmeras de 720p, processa quadros de vídeo
-(\textit{frames}) e classifica o alvo por sua cor, formato e tamanho. O protótipo converte as
-leituras de ângulo e distância em posição cartesiana, exibindo-as em tempo real em um radar
-circular, seleciona automaticamente a torre mais adequada para cada alvo e registra em auditoria
-toda ação executada. Essa seleção combina uma heurística determinística, escrita como regras
-explícitas de engenharia, com uma rede neural que aprende, por meio de um algoritmo genético
-próprio, a refinar essa escolha e o instante do acionamento. O treinamento dessa rede ocorre
+RadarTorres, um protótipo que detecta um alvo em movimento, estima sua posição e determina, entre
+as torres posicionadas ao redor de uma base central, qual ou quais delas reúnem condição de
+resposta a esse alvo -- problema central que o trabalho busca resolver: como identificar, localizar
+e autorizar automaticamente o engajamento cooperativo das torres mais adequadas a cada alvo,
+elevando a certeza de identificação no menor tempo possível até a confiança mínima necessária ao
+acionamento, de forma auditável e sem depender de sensores ou atuadores de uso industrial. O
+sistema combina dois sensores ultrassônicos (que medem a distância pelo eco do ultrassom) com
+quatro câmeras de 720p, processa quadros de vídeo (\textit{frames}) e classifica o alvo por sua
+cor, formato e tamanho. O protótipo converte as leituras de ângulo e distância em posição
+cartesiana, exibindo-as em tempo real em um radar circular, autoriza automaticamente o engajamento
+de uma ou mais torres para cada alvo -- de acordo com os recursos de câmera e linha de tiro
+disponíveis -- e registra em auditoria toda ação executada. Essa decisão combina uma heurística
+determinística, escrita como regras explícitas de engenharia, com uma rede neural que aprende, por
+meio de um algoritmo genético próprio, a refinar a priorização entre as torres elegíveis e o
+instante do acionamento, sempre condicionado ao grau de certeza de identificação do alvo. O treinamento dessa rede ocorre
 inteiramente antes da operação do sistema, em um ambiente simulado que executa gerações de
 episódios de teste até evoluir os parâmetros da rede; concluído o treinamento, esses parâmetros
 são incorporados de forma fixa à aplicação, de modo que, durante a execução real, o sistema apenas
@@ -108,17 +111,21 @@ estrutura física ainda não foi montada nem testada.
 \end{center}
 
 \noindent This work presents RadarTorres, a prototype developed as a Final Course Project in
-Computer Engineering that detects a moving target, estimates its position, and decides, among a
-set of candidate towers placed around a central base, which one should respond to that target --
-the central problem this work addresses: how to automatically identify, localize, and assign the
-most suitable tower to each target, in an auditable way and without relying on industrial-grade
-sensors or actuators. The system combines two ultrasonic sensors (which measure distance by
-ultrasound echo) with four 720p cameras, processes video frames, and classifies the target by
-color, shape, and size. The prototype converts angle and distance readings into Cartesian
-position, displaying them in real time on a circular radar, automatically selects the most
-suitable tower for each target, and logs every executed action for auditing. This selection
-combines a deterministic heuristic, written as explicit engineering rules, with a neural network
-that learns, through a custom genetic algorithm, to refine that choice and the activation timing.
+Computer Engineering that detects a moving target, estimates its position, and determines, among
+the towers placed around a central base, which one or more have standing to respond to that
+target -- the central problem this work addresses: how to automatically identify, localize, and
+authorize the cooperative engagement of the most suitable towers for each target, raising
+identification confidence as quickly as possible up to the minimum level required for activation,
+in an auditable way and without relying on industrial-grade sensors or actuators. The system
+combines two ultrasonic sensors (which measure distance by ultrasound echo) with four 720p
+cameras, processes video frames, and classifies the target by color, shape, and size. The
+prototype converts angle and distance readings into Cartesian position, displaying them in real
+time on a circular radar, automatically authorizes one or more towers to engage each target --
+according to the available camera coverage and line of fire -- and logs every executed action for
+auditing. This decision combines a deterministic heuristic, written as explicit engineering rules,
+with a neural network that learns, through a custom genetic algorithm, to refine the prioritization
+among eligible towers and the activation timing, always conditioned on the target's identification
+confidence.
 Training of this network happens entirely before the system is put into operation, in a simulated
 environment that runs generations of test episodes until the network's parameters evolve; once
 training is complete, these parameters are embedded as fixed values into the application, so
@@ -149,18 +156,22 @@ de forma prática e replicável em laboratório, reproduzindo os princípios de 
 rastreamento e decisão presentes em sistemas mais sofisticados.
 
 O protótipo resultante, denominado RadarTorres, combina sensores ultrassônicos e câmeras para
-detectar um alvo, estimar sua posição em um radar circular e decidir, entre um conjunto de torres
-candidatas dispostas ao redor de uma base central, qual delas deve responder a esse alvo. Essa
-decisão não é tomada apenas por regras fixas: uma rede neural, evoluída por um algoritmo genético
-próprio, aprende a refinar a escolha da torre e o instante do acionamento, sempre dentro dos
-limites que uma camada de regras explícitas (a heurística) já considera seguros. Esse aprendizado
-acontece em duas etapas bem separadas: antes da operação do sistema, em um ambiente de treinamento
-simulado, onde a rede evolui ao longo de muitas gerações de episódios de teste; e, depois de
-treinada, apenas na forma de inferência durante a execução real, sem qualquer ajuste adicional de
-seus parâmetros em tempo de operação. O problema central que este trabalho busca resolver é,
-portanto, como automatizar essa cadeia -- detectar, localizar e selecionar a torre mais adequada a
-cada alvo -- de forma auditável e replicável em laboratório, sem depender de sensores ou atuadores
-de uso industrial.
+detectar um alvo, estimar sua posição em um radar circular e determinar, entre as torres dispostas
+ao redor de uma base central, qual ou quais delas reúnem condição de resposta a esse alvo -- mais
+de uma torre pode engajar o mesmo alvo simultaneamente, quando suas câmeras o enxergam e sua linha
+de tiro está livre. Essa decisão não é tomada apenas por regras fixas: uma rede neural, evoluída
+por um algoritmo genético próprio, aprende a refinar a priorização entre as torres elegíveis e o
+instante do acionamento, sempre dentro dos limites que uma camada de regras explícitas (a
+heurística) já considera seguros -- entre eles, um limiar mínimo de certeza de identificação do
+alvo, abaixo do qual nenhuma torre, isolada ou em conjunto, está autorizada a disparar. Esse
+aprendizado acontece em duas etapas bem separadas: antes da operação do sistema, em um ambiente de
+treinamento simulado, onde a rede evolui ao longo de muitas gerações de episódios de teste; e,
+depois de treinada, apenas na forma de inferência durante a execução real, sem qualquer ajuste
+adicional de seus parâmetros em tempo de operação. O problema central que este trabalho busca
+resolver é, portanto, como automatizar essa cadeia -- detectar, localizar e autorizar o
+engajamento cooperativo das torres mais adequadas a cada alvo, elevando a certeza de identificação
+no menor tempo possível até a confiança necessária ao acionamento -- de forma auditável e
+replicável em laboratório, sem depender de sensores ou atuadores de uso industrial.
 
 % ============================================================
 % 2 DESENVOLVIMENTO
@@ -196,11 +207,15 @@ abordagens desse tipo de problema costumam ser classificadas em ameaça por amea
 recursos são atribuídos sequencialmente, e multiameaça, em que o conjunto de ameaças é considerado
 simultaneamente.
 
-O RadarTorres adota uma abordagem simples, por proximidade, aplicada alvo a alvo, com propósito
-exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento real); a
-abordagem multiameaça fica como trabalho futuro.
+O RadarTorres adota uma abordagem alvo a alvo (ameaça por ameaça, na classificação da TEWA), com
+propósito exclusivamente demonstrativo (laser de baixa potência, LED ou simulação, sem armamento
+real); a atribuição de recursos a cada alvo, porém, não se limita a uma única torre -- todas as
+torres com câmera e linha de tiro válidas para o alvo corrente são elegíveis para engajá-lo ao
+mesmo tempo, e a proximidade entra apenas como critério de priorização entre elas. A abordagem
+multiameaça (otimização simultânea entre vários alvos concorrentes) permanece como trabalho
+futuro.
 
-O refinamento dessa escolha por proximidade -- e o instante de disparo -- é feito por uma pequena
+O refinamento dessa priorização entre as torres elegíveis -- e o instante de disparo -- é feito por uma pequena
 rede neural \textit{feedforward} (7 entradas, 1 camada oculta de 8 neurônios, 2 saídas, ativação
 tanh), cujos pesos não são ajustados por retropropagação, mas evoluídos por um algoritmo genético
 próprio (seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), auditável e
@@ -228,9 +243,11 @@ um componente reativo (\textit{shield}) que intercepta a ação escolhida pela p
 substitui quando ela violaria uma propriedade de segurança expressa em lógica temporal -- papel
 equivalente ao do veto heurístico final do RadarTorres sobre o disparo, que nunca é delegado à
 rede. A atribuição de recursos defensivos a ameaças, por sua vez, é tratada na literatura de TEWA
-tanto no caso ameaça por ameaça quanto no caso multiameaça \cite{tewa2009,tewa_multiameaca2009};
-o RadarTorres adota deliberadamente a abordagem mais simples (proximidade, alvo a alvo), com a
-multiameaça permanecendo como trabalho futuro já apontado anteriormente.
+tanto no caso ameaça por ameaça quanto no caso multiameaça \cite{tewa2009,tewa_multiameaca2009} --
+o RadarTorres resolve o primeiro eixo (quais recursos por ameaça) de forma cooperativa, permitindo
+mais de uma torre por alvo, mas continua tratando os alvos individualmente, sem a otimização
+simultânea entre ameaças concorrentes que caracteriza o caso multiameaça, que permanece como
+trabalho futuro.
 
 O impacto do treinamento virtual sobre a execução física do controlador é atenuado por uma decisão
 de projeto central: o mesmo controlador híbrido -- heurística e rede neural combinadas -- que
@@ -513,9 +530,10 @@ Em operação, o sistema segue estas etapas: (1) o Arduino varre o ambiente com 
 ultrassônicos e envia ângulo e distância à aplicação; (2) a aplicação converte cada leitura em
 posição cartesiana, determina o quadrante, exibe o alvo no radar e registra a detecção; (3) em
 paralelo, as câmeras fornecem quadros de vídeo, e o módulo de visão classifica o alvo por cor,
-formato e tamanho; (4) a aplicação seleciona, entre as torres armadas disponíveis, a mais adequada
-para o alvo, priorizando as do mesmo quadrante e, entre elas, a de menor distância euclidiana (por
-proximidade, alvo a alvo); (5) o comando é enviado ao Arduino, que aciona a torre selecionada;
+formato e tamanho; (4) a aplicação determina, entre as torres armadas disponíveis, quais têm
+câmera e linha de tiro válidas para o alvo -- podendo ser mais de uma simultaneamente -- e
+prioriza entre elas por quadrante e distância euclidiana; (5) o comando é enviado ao Arduino, que
+aciona a(s) torre(s) engajando o alvo;
 (6) o acionamento demonstrativo (laser de baixa potência ou LED) só ocorre respeitando a distância
 mínima de segurança e as demais regras de segurança configuráveis do sistema; (7) toda ação
 executada é registrada em auditoria.
@@ -537,8 +555,9 @@ bloqueado e o motivo é registrado no console de eventos.
 \subsubsection{Controlador neuroevolutivo: heurística e rede neural combinadas}
 \label{sec:controlador-hibrido-inicio}
 
-O passo (4) do fluxo operacional -- escolher, entre as torres armadas disponíveis, a mais adequada
-para cada alvo, e decidir o instante do acionamento -- é resolvido no RadarTorres pela combinação
+O passo (4) do fluxo operacional -- determinar, entre as torres armadas disponíveis, quais estão
+aptas a engajar cada alvo, priorizá-las e decidir o instante do acionamento -- é resolvido no
+RadarTorres pela combinação
 de dois mecanismos de natureza distinta: uma \textbf{heurística} determinística, escrita como regras
 explícitas de engenharia, e uma \textbf{rede neural} \textit{feedforward}, cujo comportamento é
 aprendido por um algoritmo evolutivo próprio, sem biblioteca de aprendizado de máquina. Ambos
@@ -551,21 +570,30 @@ prioridade na seleção da torre: primeiro considera apenas as torres livres do 
 alvo; na ausência de candidata, estende-se às torres de quadrante adjacente cujo quadrante de
 origem não tenha outro alvo concorrente; por fim, na ausência de qualquer uma das duas, recorre a
 qualquer torre livre restante, de modo que nenhum alvo fique sem cobertura. Cada camada carrega um
-fator numérico (1,0; 0,5; ou 0,0) que soma-se diretamente à pontuação da candidata. A heurística
-também impõe cinco regras de segurança e refinamento, cada uma ativável individualmente no painel de
+fator numérico (1,0; 0,5; ou 0,0) que soma-se diretamente à pontuação da candidata. Essa cascata
+define a torre primária de cada alvo -- a referência de mira usada para continuidade e para evitar
+oscilação entre rodadas --, mas não restringe o engajamento a ela: em paralelo, a heurística
+calcula o conjunto completo de torres autorizadas a responder ao mesmo alvo (todas as que o
+enxergam pela própria câmera, mais as de quadrante adjacente dentro do alcance de câmera,
+descontadas as que têm outro canhão na linha de tiro), permitindo que mais de uma torre engaje o
+mesmo alvo ao mesmo tempo -- inclusive uma torre extra de quadrante vizinho é convocada quando o
+alvo está rápido demais para confiar em um único canhão. A heurística
+também impõe quatro regras de segurança e refinamento, cada uma ativável individualmente no painel de
 Configurações: anti-oscilação, que evita trocar de torre por uma diferença de pontuação dentro de
 uma margem de empate; priorização por urgência, que permite a um alvo muito próximo da base "tomar"
-a torre de um alvo mais distante; corredor de tiro, que descarta candidatas cuja linha de disparo
-atravesse uma zona morta ativa; balanceamento de carga, que prefere, entre torres empatadas, a
+a torre de um alvo mais distante; balanceamento de carga, que prefere, entre torres empatadas, a
 usada com menor frequência na sessão; e predição de trajetória, que projeta a posição futura do
 alvo para calcular o ângulo de mira com antecedência de poucos décimos de segundo. Por fim, a
-heurística impõe dois limites absolutos ao disparo, nunca delegados à rede: um tempo mínimo de mira
-de 0,3 s e um limiar mínimo de certeza de identificação do alvo
-(\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o disparo é recusado independentemente
-de qualquer outra avaliação.
+heurística impõe dois limites absolutos ao disparo, nunca delegados à rede e válidos para
+qualquer torre do conjunto de engajamento: um tempo mínimo de mira de 0,3 s e um limiar mínimo de
+certeza de identificação do alvo (\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o
+disparo é recusado independentemente de qualquer outra avaliação ou de quantas torres estejam
+engajando.
 
-A rede neural, por sua vez, não decide essas regras de segurança nem a cascata de camadas -- ela
-decide apenas a escolha fina \textit{dentro} do espaço já validado pela heurística. É uma rede
+A rede neural, por sua vez, não decide essas regras de segurança, nem a cascata de camadas, nem o
+conjunto de torres autorizadas a engajar -- ela decide apenas a priorização fina entre as
+candidatas (a torre primária e, havendo mais de uma torre engajando, a ordem entre elas)
+\textit{dentro} do espaço já validado pela heurística. É uma rede
 \textit{feedforward} totalmente conectada, implementada do zero (sem biblioteca de aprendizado de
 máquina), com arquitetura de 7 entradas, uma camada oculta de 8 neurônios e 2 saídas, com ativação
 tanh em todas as camadas. As sete entradas -- todas normalizadas no intervalo $[0,1]$ ou
@@ -575,7 +603,9 @@ tempo normalizado em que o alvo está sendo detectado sem ter sido abatido (satu
 3~s de observação contínua -- ver Seção~\ref{sec:experimento-hiperparametros}) e o
 próprio fator da camada heurística vigente, usado como sinal de contexto. As duas saídas são um
 ajuste de pontuação, somado à pontuação heurística da candidata, e um valor de confiança de
-disparo, cujo sinal positivo autoriza o acionamento. Os pesos e vieses da rede -- 82 parâmetros, no
+disparo, cujo sinal positivo contribui para autorizar o acionamento daquela torre especificamente
+-- sem jamais estender essa autorização a torres fora do conjunto de engajamento já calculado pela
+heurística. Os pesos e vieses da rede -- 82 parâmetros, no
 total, para essa arquitetura -- não são ajustados por retropropagação, mas evoluídos por um
 algoritmo genético: cada genoma é um vetor plano desses 82 números, a população evolui por seleção
 por torneio, \textit{crossover} uniforme, mutação gaussiana e elitismo, e o genoma final é
@@ -652,13 +682,16 @@ heurística-\textit{vs}-rede já conduzida (Seção~\ref{sec:experimento-hiperpa
 também da repetição com múltiplas sementes já apontada como limitação geral.
 
 A combinação entre os dois mecanismos é, portanto, sequencial e hierárquica, nunca uma mistura
-indiferenciada: a heurística primeiro filtra quais torres são elegíveis e calcula as
-\textit{features} de entrada (quadrante, ângulo, fator de camada); a rede neural, em seguida,
-pondera essa pontuação dentro do subconjunto já validado, decidindo qual candidata específica
-vence o empate fino que a heurística, por si só, não resolveria com a mesma sensibilidade; e, por
-fim, a heurística volta a atuar como filtro de segurança sobre a decisão de disparo, vetando
-qualquer autorização da rede que viole o tempo mínimo de mira, a certeza mínima ou uma zona morta
-ativa. Essa hierarquia tem uma consequência deliberada para o pior caso: uma generalização
+indiferenciada: a heurística primeiro filtra quais torres são elegíveis -- tanto a torre primária
+de cada alvo quanto, em paralelo, o conjunto completo de torres autorizadas a engajá-lo
+simultaneamente -- e calcula as \textit{features} de entrada (quadrante, ângulo, fator de camada);
+a rede neural, em seguida, pondera essa pontuação dentro do subconjunto já validado, decidindo a
+ordem de prioridade entre as candidatas elegíveis -- nunca reduzindo o engajamento a uma única
+torre quando mais de uma está apta a responder -- naquilo que a heurística, por si só, não
+resolveria com a mesma sensibilidade; e, por fim, a heurística volta a atuar como filtro de
+segurança sobre a decisão de disparo de cada torre engajando, vetando qualquer autorização da rede
+que viole o tempo mínimo de mira ou a certeza mínima. Essa hierarquia tem uma consequência
+deliberada para o pior caso: uma generalização
 imperfeita da rede nunca produz uma decisão arbitrária, porque toda saída da rede continua restrita
 ao espaço de candidatas e ao conjunto de disparos já pré-aprovados pela heurística -- no limite, o
 sistema regride ao comportamento puramente heurístico, nunca a um erro fora de controle.
@@ -670,8 +703,8 @@ nascendo na borda de um mundo circular e avançando em direção à base. O fitn
 recompensas por abate (maiores quanto mais longe da base o alvo é interceptado) e penalidades por
 alvo que escapa ou cruza um ponto de perda sem decisão, de modo que o genoma é pressionado a
 aprender a operar bem \textit{dentro} das restrições que a heurística já impõe, e não a contorná-las
--- não há genoma "vencedor" que dispare fora da zona morta ou abaixo da certeza mínima, porque essas
-decisões nunca chegam a ser avaliadas como tal pelo ambiente de treino.
+-- não há genoma "vencedor" que dispare abaixo da certeza mínima, porque essa
+decisão nunca chega a ser avaliada como tal pelo ambiente de treino.
 
 O ambiente de treino foi posteriormente endurecido em quatro pontos, para aproximar melhor a
 simulação de um cenário de saturação real. Primeiro, o teto de alvos simultâneos deixou de ser
@@ -767,11 +800,6 @@ cascata de camadas, nesta ordem lógica:
   torre de outro alvo que esteja claramente mais longe (distância do outro maior que a do urgente
   mais 1~m E fora da própria zona de urgência) -- o alvo que perdeu a torre não fica descoberto para
   sempre, só procura outra candidata na próxima leitura.
-  \item \textbf{Corredor de tiro.} Antes de pontuar, descarta candidatas cuja linha reta até o alvo
-  atravesse uma zona morta ativa (12 pontos amostrados ao longo do segmento, excluindo as pontas) --
-  mas nunca deixa um alvo sem NENHUMA candidata só por isso: se todas as candidatas da camada
-  tiverem corredor bloqueado, a restrição é relaxada e a torre menos ideal ainda é escolhida, melhor
-  arriscar do que abandonar a cobertura.
   \item \textbf{Balanceamento de carga.} Entre as candidatas praticamente empatadas com a vencedora
   (mesma margem da regra 1), prefere a torre usada com MENOS frequência nesta sessão -- contador
   reiniciado a cada execução do aplicativo, de propósito: é um critério de desempate do momento, não
@@ -785,7 +813,7 @@ cascata de camadas, nesta ordem lógica:
   torre de quadrante adjacente a até 2~m de distância do alvo -- mesmo fora do alcance normal de
   câmera -- como reforço de disparo. Um segundo canhão reduz a chance de o alvo escapar de um tiro
   único, já que a probabilidade de erro cresce com a velocidade
-  (\texttt{Helpers.CalculadoraErroDisparo}). É a única das seis regras sem interruptor na tela de
+  (\texttt{Helpers.CalculadoraErroDisparo}). É a única das cinco regras sem interruptor na tela de
   Configurações; só o limiar de velocidade que a aciona é ajustável.
 \end{enumerate}
 Uma regra adicional, implícita e sempre ativa, nunca listada entre as seis acima porque não é uma
@@ -803,15 +831,14 @@ mudar entre a seleção e o disparo):
   disparo).
   \item O sistema precisa estar no modo operacional \texttt{Disparar} -- qualquer outro modo
   bloqueia incondicionalmente.
-  \item O alvo não pode estar dentro de uma zona morta ativa no instante do disparo -- mesmo que a
-  zona tenha sido criada/ativada DEPOIS de a torre já ter sido selecionada para aquele alvo.
   \item A certeza de identificação do alvo (percentual de confiança acumulado pela câmera) precisa
   ser maior ou igual ao limiar mínimo configurado (\texttt{LimiarConfiancaDisparoPercentual}) --
   nunca abaixo do piso absoluto do sistema.
   \item A torre específica que está tentando disparar precisa constar na lista de torres
   efetivamente engajando aquele alvo (\texttt{Target.EngagingTowers}) -- a mesma lista calculada
-  pela regra 6 e pela restrição de corredor de tiro; uma torre pode ter sido selecionada como
-  "principal" e ainda assim não ter linha de tiro livre neste instante.
+  pela regra 5 (ajuda de torre adjacente) e pela restrição implícita de bloqueio físico entre
+  torres; uma torre pode ter sido selecionada como "principal" e ainda assim não ter linha de tiro
+  livre neste instante.
 \end{enumerate}
 Vencidos os cinco critérios, o disparo em si -- acertar ou errar o alvo -- continua sendo
 probabilístico e cresce com a velocidade do alvo (mesma fórmula usada para calibrar o ambiente de
@@ -821,7 +848,7 @@ Duas regras adicionais do controlador híbrido valem apenas durante a simulaçã
 produção, porque em produção o INSTANTE do disparo é sempre decidido manualmente por um operador, e
 não pelo controlador: um tempo mínimo de mira de 0,3~s desde que a torre foi comprometida com o alvo
 (a rede não pode autorizar disparo antes disso, mesmo que queira) e o mesmo limiar mínimo de certeza
-da regra 4 acima, aplicado contra a certeza simulada do alvo em vez da real. Ambas existem só para a
+da regra 3 acima, aplicado contra a certeza simulada do alvo em vez da real. Ambas existem só para a
 avaliação de fitness do algoritmo genético corresponder ao que o sistema real, de fato, permite --
 nenhuma delas é uma regra "a mais" que o sistema real desconheça.
 
@@ -932,7 +959,8 @@ invasão antecipada em qual geração é, em si, estocástico -- uma fonte de ru
 ambiente anterior, sem fim antecipado, não tinha.
 
 \paragraph{Conclusão e escolha dos hiperparâmetros.}
-A conclusão para o RadarTorres permanece de custo-benefício, agora ainda mais categórica: com todas
+A conclusão para o RadarTorres é sobre desempenho computacional -- custo-benefício de tempo de
+treinamento, não sobre a qualidade do controlador resultante -- e permanece, agora ainda mais categórica: com todas
 as onze configurações atingindo o mesmo teto de fitness na mesma geração, não há absolutamente
 nenhuma evidência -- nem mesmo a variação de 3\% observada antes do endurecimento do ambiente -- que
 justifique o gasto adicional de uma população maior ou de uma camada oculta maior. A configuração de
@@ -1023,7 +1051,7 @@ um comportamento levemente pior do que simplesmente disparar sempre que permitid
 
 \paragraph{Confirmação direta: a rede hesita no gatilho.}
 A hipótese anterior foi medida diretamente, em vez de apenas inferida por eliminação. Toda vez que
-os vetos inegociáveis (zona morta, certeza mínima, tempo mínimo de mira) já liberam o disparo --
+os vetos inegociáveis (certeza mínima, tempo mínimo de mira) já liberam o disparo --
 exatamente o ponto em que a heurística pura dispararia sempre, sem exceção -- o ambiente agora conta
 essa "oportunidade de disparo" e se a rede, em modo híbrido, a recusou
 (\texttt{EstadoEpisodio.OportunidadesDeDisparo}/\texttt{DisparosRecusadosPelaRede}, somados ao longo
@@ -1295,9 +1323,10 @@ físico real.
 Os trabalhos futuros identificados neste artigo são, portanto: montagem e validação do hardware
 físico das cinco torres; implementação do comando de apontamento no protocolo serial e da fusão
 entre a posição estimada pela visão e a distância ultrassônica; calibração dos modelos de certeza e
-de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão da seleção de
-torre para a abordagem multiameaça da literatura de TEWA, hoje deixada de lado em favor da
-abordagem por proximidade; e, caso a capacidade da rede se mostre o fator limitante do controlador
+de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão do tratamento
+de alvos para a abordagem multiameaça da literatura de TEWA (otimização simultânea entre vários
+alvos concorrentes), hoje deixada de lado em favor do tratamento alvo a alvo; e, caso a capacidade
+da rede se mostre o fator limitante do controlador
 em vez dos hiperparâmetros da busca evolutiva, avaliação de uma arquitetura maior à luz dos
 resultados de \citeonline{such2017deepneuroevolution}.
 
