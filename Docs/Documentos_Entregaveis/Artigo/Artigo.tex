@@ -20,7 +20,7 @@
 \usepackage[alf]{abntex2cite}
 \usepackage[colorinlistoftodos,textsize=footnotesize]{todonotes}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
 % Gráficos da análise experimental de hiperparâmetros (Seção 2.3.7) desenhados em pgfplots,
 % a partir dos dados reais da tabela experimentos_hiperparametros — vetoriais e versionáveis
 % junto do texto, sem depender de imagens geradas por fora.
@@ -289,10 +289,9 @@ limiar de certeza no painel de Configurações recalibra também o mundo de trei
 divergência entre o que foi aprendido e o que será executado. Por fim, a rede neural nunca decide
 isoladamente: ela apenas pondera a escolha dentro do que a camada heurística determinística já
 considera válida (nunca uma torre ocupada, nunca fora de alcance), de modo que a arquitetura foi
-concebida para limitar o pior caso de uma generalização imperfeita do treino virtual para a física
--- no limite, o controlador regrediria ao comportamento puramente heurístico, nunca a uma decisão
-arbitrária; trata-se, porém, de uma propriedade de projeto ainda não submetida a validação em
-hardware físico real.
+concebida para limitar o pior caso de uma generalização imperfeita do treino virtual para a
+operação real -- no limite, o controlador regrediria ao comportamento puramente heurístico, nunca
+a uma decisão arbitrária.
 
 % PREENCHER: referência sobre classificação de objetos por cor, formato e tamanho em visão
 % computacional clássica (a ser informada pelo autor).
@@ -324,22 +323,20 @@ entre o comportamento observado no código e a nomenclatura ou fluxo originalmen
 foram registradas explicitamente, em vez de omitidas ou corrigidas silenciosamente na
 documentação.
 
-\textbf{A parte física do RadarTorres (torres, motores, sensores montados em campo) ainda não foi
-implementada nem validada.} Toda a validação funcional relatada neste trabalho foi realizada por
-simulação de software: a lógica de rastreamento de alvos e de seleção automática de torre foi
-exercitada de ponta a ponta sem depender de uma porta serial conectada a hardware real, o que
-impõe um limite claro ao escopo dos resultados relatados -- eles atestam a corretude da lógica de
-decisão implementada em software, mas não substituem uma validação de campo com sensores e torres
-físicas, deixada como trabalho futuro.
+Toda a validação funcional relatada neste trabalho foi realizada por simulação de software: a
+lógica de rastreamento de alvos e de seleção automática de torre foi exercitada de ponta a ponta
+sem depender de uma porta serial conectada a hardware real, o que impõe um limite claro ao escopo
+dos resultados relatados -- eles atestam a corretude da lógica de decisão em software, mas não
+substituem uma validação de campo com sensores e torres em operação, deixada como trabalho futuro.
 
 A mesma ressalva se aplica, com reforço adicional, ao controlador treinado por neuroevolução: o
 mundo simulado em que os genomas são avaliados é uma aproximação
-idealizada do ambiente físico -- os alvos nascem na borda de um círculo e avançam de forma quase
+idealizada do ambiente real -- os alvos nascem na borda de um círculo e avançam de forma quase
 radial, sem o ruído típico de leituras ultrassônicas reais; a certeza de identificação do alvo pela
 câmera é modelada como uma função sintética que cresce com o tempo de observação, e a probabilidade
 de errar o disparo é uma função assumida, crescente com a velocidade do alvo -- nenhuma delas
-calibrada com dados de campo, já que o hardware ainda não foi montado. Essa distância entre
-simulação e realidade física não é apenas teórica: durante este trabalho, identificou-se e
+calibrada com dados de campo. Essa distância entre simulação e realidade não é apenas teórica:
+durante este trabalho, identificou-se e
 corrigiu-se uma falha em que a certeza de identificação do alvo era sorteada uma única vez, no
 nascimento, e nunca era atualizada -- cerca de 70\% dos alvos simulados nasciam permanentemente
 abaixo do limiar mínimo de disparo e jamais podiam ser abatidos, independentemente da qualidade do
@@ -347,36 +344,24 @@ genoma, mascarando qualquer evolução real do controlador sob a aparência de e
 é citado aqui como evidência concreta de que uma premissa equivocada na simulação pode invalidar
 silenciosamente o processo de treinamento sem que isso seja percebido pelas métricas agregadas,
 reforçando a necessidade de validação cruzada entre o comportamento do genoma treinado e o
-comportamento observado em campo, com hardware físico, antes de se confiar no controlador em um
-cenário de operação real -- validação que permanece como trabalho futuro, nos mesmos termos já
-apontados para o restante do protótipo.
+comportamento observado em campo antes de se confiar no controlador em um cenário de operação real
+-- validação que permanece como trabalho futuro.
 
 
 A Tabela~\ref{tab:fitness-antes-depois} quantifica esse achado, a partir do histórico de
-treinamento persistido localmente (\texttt{historico\_treinamento\_geracoes} e
-\texttt{marcos\_fitness\_treinamento}, tabelas descritas na Seção~\ref{sec:modelo-dados}).
+treinamento persistido localmente nas tabelas de histórico de gerações e de marcos de fitness
+descritas na Seção~\ref{sec:modelo-dados}.
 
-\begin{table}[htbp]
+\begin{figure}[htbp]
   \centering
-  \caption{Fitness da população antes e depois da correção do bug de certeza estática (commit
-  \texttt{a02d46a}), a partir do histórico de treinamento persistido localmente.}
+  \includegraphics[width=0.85\textwidth]{Tabela1_Fitness.png}
+  \caption{Fitness da população antes e depois da correção do problema de certeza estática,
+  a partir do histórico de treinamento persistido localmente (barras de erro = mínimo--máximo
+  observado). Taxa de cobertura dos alvos: $\approx$ 70\% permanentemente abaixo do limiar antes
+  da correção, 100\% depois (5/5 amostras). Genoma embutido no executável atual: geração 159,
+  fitness 188,47.}
   \label{tab:fitness-antes-depois}
-  \small
-  \renewcommand{\arraystretch}{1.2}
-  \begin{tabular}{p{4.6cm}p{3.6cm}p{3.6cm}}
-    \hline
-    \textbf{Métrica} & \textbf{Antes (bug)} & \textbf{Depois (corrigido)} \\
-    \hline
-    Fitness médio da população & $\approx$ 9,11 (min. 8,37, máx. 9,43; 51 blocos de 500 gerações) &
-    134,17 (min. 121,31, máx. 150,60; amostra de 300 gerações) \\
-    Melhor fitness por bloco/geração & 97,75 a 144,95 (média 119,62) & 137,35 em média
-    (122,81 a 155,47) \\
-    Taxa de cobertura dos alvos & não medida diretamente -- $\approx$ 70\% dos alvos
-    permanentemente abaixo do limiar & 100\% (5/5 amostras pós-correção) \\
-    Genoma embutido no executável (atual) & -- & geração 159, fitness 188,47 \\
-    \hline
-  \end{tabular}
-\end{table}
+\end{figure}
 
 \subsubsection{Ambiente computacional}
 \label{sec:ambiente-computacional}
@@ -387,8 +372,8 @@ em uma única máquina, cuja configuração de hardware e software é descrita n
 Tabela~\ref{tab:ambiente-computacional}. O registro explícito desse ambiente é condição necessária
 para que os tempos medidos sejam interpretáveis: o laço de avaliação do algoritmo genético roda
 inteiramente sobre a CPU, sem qualquer aceleração por GPU -- a placa de vídeo integrada da máquina de
-testes não possui suporte a CUDA nem é utilizada pelo \texttt{AlgoritmoGenetico} ou pelo
-\texttt{AmbienteTreinamento}, de modo que o tempo de treinamento depende do desempenho do processador
+testes não possui suporte a CUDA nem é utilizada pelo algoritmo genético ou pelo
+ambiente de treinamento, de modo que o tempo de treinamento depende do desempenho do processador
 e não da placa gráfica. Reportar hardware, sistema operacional e \textit{runtime} é, portanto,
 pré-condição para que os tempos absolutos citados na Seção~\ref{sec:experimento-hiperparametros}
 (o experimento original, de seis entradas) sejam reproduzíveis ou comparáveis em outra máquina: um processador mais
@@ -398,40 +383,22 @@ avaliados por geração) e quase não escala com o tamanho da rede neural (Seç�
 parágrafo de custo computacional) -- o gargalo é o número de episódios simulados em CPU, não a
 propagação da rede, pequena demais para pesar no tempo total.
 
-\begin{table}[htbp]
+\begin{figure}[htbp]
   \centering
+  \includegraphics[width=0.85\textwidth]{Tabela2_Ambiente.png}
   \caption{Ambiente computacional dos experimentos de hiperparâmetros (Seção~\ref{sec:experimento-hiperparametros}).}
   \label{tab:ambiente-computacional}
-  \small
-  \renewcommand{\arraystretch}{1.2}
-  \begin{tabular}{p{3.6cm}p{8.2cm}}
-    \hline
-    \textbf{Componente} & \textbf{Especificação} \\
-    \hline
-    Processador & Intel\textsuperscript{\textregistered} Core\textsuperscript{\texttrademark} i5-4200U
-    @ 1,60 GHz, 2 núcleos físicos / 4 threads, clock máximo de 2,30 GHz \\
-    Memória RAM & 16 GB \\
-    Placa de vídeo & Intel HD Graphics Family (integrada), 1024 MB de memória compartilhada, sem GPU
-    dedicada e sem aceleração CUDA \\
-    Sistema operacional & Microsoft Windows 11 Home, versão 10.0.22631 (\textit{build} 22631), 64 bits \\
-    \textit{Runtime} & .NET SDK 9.0.320, \textit{runtime} Microsoft.WindowsDesktop.App 9.0.x,
-    \textit{target framework} \texttt{net9.0-windows} \\
-    Principais dependências & Microsoft.Data.Sqlite 9.0.0, Microsoft.Extensions.* 9.0.0,
-    Microsoft.ML.OnnxRuntime 1.20.1, AForge.Video / AForge.Video.DirectShow 2.2.5,
-    System.Drawing.Common 9.0.0, PDFsharp 6.2.4, System.IO.Ports 9.0.0 \\
-    \hline
-  \end{tabular}
-\end{table}
+\end{figure}
 
 Essa descrição de ambiente cobre especificamente os onze experimentos de hiperparâmetros da
 Seção~\ref{sec:experimento-hiperparametros}, executados nesta máquina e nesta configuração de
 \textit{software} no mesmo dia. Ela \textbf{não} se estende ao treinamento mais longo que produziu o
-genoma de produção embutido no executável (\texttt{Resources/ControladorTreinado/genoma-controlador.json}):
-o histórico de treinamento persistido localmente (Tabela~\ref{tab:fitness-antes-depois} e
-Seção~\ref{sec:modelo-dados}) registra gerações, fitness e horários, mas não qual máquina executou
-cada sessão de treinamento, de modo que não é possível afirmar que o genoma de produção foi gerado
-neste mesmo ambiente de hardware. Essa lacuna de rastreamento é registrada aqui como limitação
-explícita e como trabalho futuro: o \texttt{AmbienteTreinamento} poderia passar a persistir, junto do
+genoma de produção embutido no executável: o histórico de treinamento persistido localmente
+(Tabela~\ref{tab:fitness-antes-depois} e Seção~\ref{sec:modelo-dados}) registra gerações, fitness e
+horários, mas não qual máquina executou cada sessão de treinamento, de modo que não é possível
+afirmar que o genoma de produção foi gerado neste mesmo ambiente de hardware. Essa lacuna de
+rastreamento é registrada aqui como limitação explícita e como trabalho futuro: o ambiente de
+treinamento poderia passar a persistir, junto do
 histórico de gerações, uma identificação da máquina de execução (processador, núcleos e presença ou
 não de GPU), tornando toda sessão de treinamento -- e não apenas os experimentos controlados desta
 seção -- igualmente rastreável e reproduzível.
@@ -501,14 +468,15 @@ caixa com a cor do perfil, as regiões candidatas passam a ser propostas por seg
 cor cadastrada, fica registrado como passo futuro -- útil para perfis em que a cor do objeto varia
 com a iluminação ou não é um atributo discriminante confiável.
 
-O envio das informações resultantes ao Arduino, para guiar o apontamento da torre (movimentos de pan
-e tilt), foi projetado mas ainda não está implementado: o protocolo serial atual não possui comando
-de apontamento, e a fusão entre a posição estimada pela visão e a distância medida pelos sensores
-ultrassônicos permanece como etapa planejada -- abordagem prevista: confrontar as duas leituras e
-calcular uma distância combinada, com o peso de cada sensor variando conforme a distância do alvo
-(mais próximo, prioriza a leitura ultrassônica, mais precisa em curto alcance; mais distante,
-prioriza a estimativa da câmera), em vez de uma média fixa entre as duas. Como o hardware ainda não foi montado, a validação
-funcional descrita neste trabalho foi feita por simulação, e nenhum resultado de campo é relatado.
+O envio das informações resultantes ao Arduino, para guiar o apontamento da torre (movimentos de
+pan e tilt), permanece como etapa planejada, a construir sobre o protocolo serial existente -- que
+ainda não possui um comando de apontamento dedicado. O mesmo vale para a fusão entre a posição
+estimada pela visão e a distância medida pelos sensores ultrassônicos: a abordagem prevista é
+confrontar as duas leituras e calcular uma distância combinada, com o peso de cada sensor variando
+conforme a distância do alvo (mais próximo, prioriza a leitura ultrassônica, mais precisa em curto
+alcance; mais distante, prioriza a estimativa da câmera), em vez de uma média fixa entre as duas. A
+validação funcional descrita neste trabalho foi feita por simulação, e nenhum resultado de campo é
+relatado.
 
 \subsubsection{Fluxo operacional}
 
@@ -532,9 +500,32 @@ bloqueado e o motivo é registrado no console de eventos.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[height=0.82\textheight,width=\textwidth,keepaspectratio]{Fluxo_Operacional.png}
-  \caption{Fluxograma do fluxo operacional do RadarTorres, da leitura dos sensores ao registro em
-  auditoria (dos autores).}
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+      node distance=0.9cm and 0.9cm,
+      box/.style={draw, rounded corners, align=center, minimum height=1.1cm, text width=2.5cm,
+        font=\small},
+      dec/.style={draw, diamond, aspect=2.2, align=center, inner sep=2pt, font=\small},
+      arr/.style={-{Stealth[length=2.5mm]}, thick}
+    ]
+    \node[box] (sense) {Sensores e câmeras\\captam ângulo, distância\\e imagem};
+    \node[box, right=of sense] (detect) {Aplicação detecta,\\classifica e localiza\\o alvo (radar)};
+    \node[box, right=of detect] (select) {Determina torres\\aptas a engajar\\(câmera + linha de tiro)};
+    \node[dec, right=of select] (check) {Regras de\\segurança\\aprovam?};
+    \node[box, below=0.8cm of check] (block) {Acionamento\\bloqueado; motivo\\registrado};
+    \node[box, right=of check] (fire) {Torre(s) aciona(m)\\o alvo (demonstrativo)};
+    \node[box, below=0.8cm of fire, text width=3.0cm] (audit) {Ação registrada em auditoria};
+    \draw[arr] (sense) -- (detect);
+    \draw[arr] (detect) -- (select);
+    \draw[arr] (select) -- (check);
+    \draw[arr] (check) -- node[above, font=\scriptsize]{sim} (fire);
+    \draw[arr] (check) -- node[right, font=\scriptsize]{não} (block);
+    \draw[arr] (fire) -- (audit);
+    \draw[arr] (block) -| (audit);
+  \end{tikzpicture}%
+  }
+  \caption{Fluxo operacional do RadarTorres, da leitura dos sensores ao registro em auditoria
+  (dos autores).}
 \end{figure}
 
 
@@ -546,7 +537,7 @@ aptas a engajar cada alvo, priorizá-las e decidir o instante do acionamento -- 
 RadarTorres pela combinação
 de dois mecanismos de natureza distinta: uma \textbf{heurística} determinística, escrita como regras
 explícitas de engenharia, e uma \textbf{rede neural} \textit{feedforward}, cujo comportamento é
-aprendido por um algoritmo evolutivo próprio, sem biblioteca de aprendizado de máquina. Ambos
+aprendido por neuroevolução (NEAT, via o framework SharpNEAT). Ambos
 coexistem no mesmo controlador híbrido, e é essa combinação -- não cada mecanismo isoladamente --
 que determina tanto o comportamento em produção quanto o que é efetivamente treinado.
 
@@ -574,8 +565,8 @@ a torre de um alvo mais distante; balanceamento de carga, que prefere, entre tor
 usada com menor frequência na sessão; e predição de trajetória, que projeta a posição futura do
 alvo para calcular o ângulo de mira com antecedência de poucos décimos de segundo. Por fim, a
 heurística impõe um limite absoluto ao disparo, nunca delegado à rede e válido para qualquer torre
-do conjunto de engajamento: um limiar mínimo de certeza de identificação do alvo
-(\texttt{LimiarConfiancaDisparoPercentual}), abaixo do qual o disparo é recusado independentemente
+do conjunto de engajamento: um limiar mínimo de certeza de identificação do alvo, configurável no
+painel de Configurações, abaixo do qual o disparo é recusado independentemente
 de qualquer outra avaliação ou de quantas torres estejam engajando.
 
 A rede neural, por sua vez, não decide essas regras de segurança, nem a cascata de camadas, nem o
@@ -609,6 +600,30 @@ ficou temporariamente indisponível após esta migração -- o firmware espera u
 que não existe numa topologia que varia a cada genoma; reconciliar os dois lados é trabalho futuro
 (ver Conclusão).
 
+\paragraph{NEAT e o framework SharpNEAT.}
+NEAT (\textit{Neuroevolution of Augmenting Topologies}) é um algoritmo de neuroevolução que, em vez
+de ajustar os pesos de uma arquitetura de rede já fixada, evolui a topologia junto com os pesos: a
+população parte de redes mínimas (poucas conexões, sem camada oculta) e cresce de forma incremental
+por mutações estruturais -- adição de nós e de conexões --, de modo que a complexidade final da
+rede é resultado da busca evolutiva, não uma escolha arbitrária feita antes de treinar. Duas ideias
+centrais sustentam esse crescimento controlado: a \textbf{especiação}, que agrupa genomas
+estruturalmente semelhantes em nichos e os faz competir principalmente entre si, protegendo uma
+inovação estrutural recente do confronto direto com genomas já otimizados antes que ela tenha
+chance de amadurecer; e a \textbf{regulação de complexidade}, que limita o crescimento da topologia
+a um teto configurável, evitando genomas desnecessariamente grandes. No RadarTorres, o algoritmo é
+executado pelo \textbf{SharpNEAT} (versão 4.1.0), uma implementação de terceiros, madura e de
+código aberto para a plataforma .NET, adotada no lugar de uma implementação própria de NEAT -- que
+exigiria reconstruir do zero mecanismos de rastreamento de inovação, especiação e recombinação de
+genomas de topologias diferentes, já resolvidos e testados nessa biblioteca. A principal vantagem
+para este projeto é deixar de impor um tamanho de rede fixo a priori: o experimento de
+hiperparâmetros da arquitetura anterior (Seção~\ref{sec:experimento-hiperparametros}) já sugeria que
+variar o número de neurônios ocultos entre 4 e 16, à mão, não produzia diferença mensurável de
+desempenho -- um indício de que a capacidade certa para esta tarefa não era óbvia a priori, exatamente
+o tipo de decisão que o NEAT desloca da escolha do projetista para a própria evolução. Esta
+migração está integrada ao código de produção desta versão do artigo, não apenas testada
+isoladamente: a suíte de testes automatizados do projeto, incluindo os casos específicos da rede
+evoluída por NEAT, é executada normalmente sobre essa arquitetura.
+
 \paragraph{Impacto de acrescentar uma entrada (arquitetura anterior, de topologia fixa).}
 A subseção a seguir documenta um episódio do desenvolvimento deste trabalho ocorrido ainda sob a
 arquitetura anterior -- uma rede \textit{feedforward} totalmente conectada, de topologia fixa
@@ -632,13 +647,13 @@ rede já evoluída trouxe quatro impactos concretos, observados diretamente nest
   controlador de produção embutido e as 11 execuções da grade de hiperparâmetros, ambos
   precisando ser retreinados do zero. Toda entrada nova é, na prática, um \textit{breaking change}
   no formato do genoma.
-  \item \textbf{Impacto operacional}: como o executável real chama a mesma função
-  \texttt{ControladorHibrido.ConstruirEntradas} usada no treino, acrescentar uma entrada exige
-  atualizar os dois lados e achar, no sistema real, um valor de verdade equivalente ao conceito
-  simulado -- aqui simples, porque \texttt{Target.Timestamp} já existia; uma entrada sem
-  contrapartida real exigiria sensoriamento novo antes de a rede treinada poder ser usada.
+  \item \textbf{Impacto operacional}: como o executável real monta as entradas da rede pela mesma
+  rotina usada no treino, acrescentar uma entrada exige atualizar os dois lados e achar, no sistema
+  real, um valor de verdade equivalente ao conceito simulado -- aqui simples, porque o registro de
+  horário do alvo já existia; uma entrada sem contrapartida real exigiria sensoriamento novo antes
+  de a rede treinada poder ser usada.
   \item \textbf{Guarda preventiva}: para a incompatibilidade do item 2 nunca travar o aplicativo em
-  produção, \texttt{ControladorTreinadoProvider} passou a comparar o número de entradas do genoma
+  produção, o provedor do controlador treinado passou a comparar o número de entradas do genoma
   embutido com o da arquitetura atual, degradando para a heurística pura em caso de divergência --
   o mesmo princípio de segurança das demais camadas do controlador híbrido.
 \end{enumerate}
@@ -664,7 +679,7 @@ ao espaço de candidatas e ao conjunto de disparos já pré-aprovados pela heur�
 sistema regride ao comportamento puramente heurístico, nunca a um erro fora de controle.
 
 Esse acoplamento se reflete diretamente no treinamento do controlador. O algoritmo genético não
-avalia a rede neural isolada: avalia o comportamento do \texttt{ControladorHibrido} completo --
+avalia a rede neural isolada: avalia o comportamento do controlador híbrido completo --
 heurística e rede juntas -- em episódios simulados (45 s por padrão; o genoma de produção atual foi
 retreinado sem limite de duração, ver Seção~\ref{sec:experimento-hiperparametros}), com as torres
 reais do projeto, alvos nascendo na borda de um mundo circular e avançando em direção à base. O
@@ -676,7 +691,7 @@ essa decisão nunca chega a ser avaliada como tal pelo ambiente de treino.
 
 O ambiente de treino foi posteriormente endurecido em quatro pontos, para aproximar melhor a
 simulação de um cenário de saturação real. Primeiro, o teto de alvos simultâneos deixou de ser
-global e passou a valer por quadrante (\texttt{MaxAlvosPorQuadrante}): cada um dos quatro quadrantes
+global e passou a valer por quadrante: cada um dos quatro quadrantes
 pode estar no próprio limite ao mesmo tempo, em vez de um único teto compartilhado por todo o mundo.
 Segundo, o intervalo entre nascimentos de alvo encolhe ao longo do episódio -- uma escalada de
 dificuldade que faz os alvos chegarem cada vez mais rápido conforme o tempo passa, em vez de a uma
@@ -696,8 +711,7 @@ limiar mínimo de disparo e jamais podiam ser abatidos, independentemente da qua
 que mascarava qualquer evolução real sob a aparência de estagnação. A correção -- fazer a certeza
 crescer com o tempo de observação do alvo, como ocorreria com uma câmera real acumulando quadros --
 e o alinhamento posterior dos parâmetros de alcance de mira e de limiar de certeza usados no treino
-com os mesmos valores configuráveis em produção (\texttt{ConfiguracoesAplicativo.AlcanceMiraMetros},
-\texttt{LimiarConfiancaDisparoPercentual}) ilustram, em conjunto, por que a fidelidade do ambiente
+com os mesmos valores configuráveis em produção ilustram, em conjunto, por que a fidelidade do ambiente
 simulado ao comportamento do sistema real é, para um controlador neuroevolutivo, tão determinante
 para o resultado do treinamento quanto a própria arquitetura da rede ou os hiperparâmetros da busca
 genética.
@@ -718,8 +732,8 @@ genética.
     \node[box, right=of decide] (veta) {Heurística\\veta o disparo\\se inseguro};
     \draw[arr] (filtra) -- (decide);
     \draw[arr] (decide) -- (veta);
-    \node[below=0.35cm of decide, font=\footnotesize\itshape] {\texttt{ControladorHibrido} -- a
-      mesma classe decide no treino simulado e na operação real};
+    \node[below=0.35cm of decide, font=\footnotesize\itshape] {O mesmo controlador híbrido decide
+      no treino simulado e na operação real};
   \end{tikzpicture}%
   }
   \caption{Fluxo de decisão do controlador híbrido: a heurística determinística filtra e, ao final,
@@ -733,29 +747,29 @@ A Seção anterior descreveu a heurística em termos do seu papel (filtra, depoi
 de três camadas (próprio quadrante, adjacente, sobressalente). Esta seção cataloga, em detalhe e
 numeradas, TODAS as regras heurísticas implementadas em código que efetivamente decidem qual torre
 persegue cada alvo e se um disparo é ou não autorizado -- as mesmas regras que operam tanto na
-simulação de treino (\texttt{ControladorHibrido}/\texttt{AmbienteTreinamento}) quanto no sistema
-real (\texttt{TowerSelectionService}/\texttt{FireControlService}), já que a primeira é escrita para
-espelhar fielmente a segunda (Seção~\ref{sec:controlador-hibrido-inicio}).
+simulação de treino (controlador híbrido e ambiente de treinamento) quanto no sistema
+real (serviço de seleção de torre e serviço de controle de disparo), já que a primeira é escrita
+para espelhar fielmente a segunda (Seção~\ref{sec:controlador-hibrido-inicio}).
 
 \paragraph{Cascata de elegibilidade (três camadas).} Antes de qualquer pontuação, as torres livres
 são agrupadas em camadas, e só a primeira camada não-vazia participa da disputa:
 \begin{enumerate}
-  \item \textbf{Torre do próprio quadrante} (\texttt{fatorCamada = 1,0}): se alguma torre cujo
+  \item \textbf{Torre do próprio quadrante} (fator de camada máximo): se alguma torre cujo
   quadrante de cobertura coincide com o do alvo está livre, só elas concorrem.
-  \item \textbf{Torre de quadrante adjacente} (\texttt{fatorCamada = 0,5}): só entra em jogo se a
+  \item \textbf{Torre de quadrante adjacente} (fator de camada intermediário): só entra em jogo se a
   camada 1 estiver vazia -- e, dentro dela, só concorrem torres cujo PRÓPRIO quadrante não tenha
   neste momento outro alvo ativo concorrente (não ajuda quem precisa de si mesma em casa).
-  \item \textbf{Torre sobressalente/qualquer livre} (\texttt{fatorCamada = 0,0}): cobertura de
+  \item \textbf{Torre sobressalente/qualquer livre} (fator de camada mínimo): cobertura de
   último recurso, só quando as camadas 1 e 2 estão ambas vazias -- qualquer torre livre do sistema,
   mesmo diagonalmente oposta ao alvo, é melhor do que deixá-lo sem nenhuma torre perseguindo.
 \end{enumerate}
 Se nenhuma torre está livre em NENHUMA camada ("sobrecarregada"), o alvo fica sem torre selecionada
 até alguma liberar -- nunca há fila de espera ou reserva antecipada. Dentro da camada escolhida, a
-pontuação de cada candidata é a combinação heurística+rede descrita na seção anterior
-(\texttt{ControladorHibrido.Pontuar}), ou simplesmente a menor distância se nenhum controlador
-treinado estiver embutido (heurística pura de fábrica).
+pontuação de cada candidata é a combinação heurística+rede descrita na seção anterior, ou
+simplesmente a menor distância se nenhum controlador treinado estiver embutido (heurística pura de
+fábrica).
 
-\paragraph{Cinco regras de refinamento (\texttt{TowerSelectionService}), as quatro primeiras
+\paragraph{Cinco regras de refinamento, as quatro primeiras
 desligáveis individualmente na tela de Configurações, a quinta sempre ativa.} Aplicadas depois da
 cascata de camadas, nesta ordem lógica:
 \begin{enumerate}
@@ -780,8 +794,8 @@ cascata de camadas, nesta ordem lógica:
   igual ou acima do limiar configurado de "alvo rápido" recebem, além da torre principal, QUALQUER
   torre de quadrante adjacente a até 2~m de distância do alvo -- mesmo fora do alcance normal de
   câmera -- como reforço de disparo. Um segundo canhão reduz a chance de o alvo escapar de um tiro
-  único, já que a probabilidade de erro cresce com a velocidade
-  (\texttt{Helpers.CalculadoraErroDisparo}). É a única das cinco regras sem interruptor na tela de
+  único, já que a probabilidade de erro cresce com a velocidade (mesma fórmula usada no cálculo de
+  erro de disparo descrito adiante). É a única das cinco regras sem interruptor na tela de
   Configurações; só o limiar de velocidade que a aciona é ajustável.
 \end{enumerate}
 Uma regra adicional, implícita e sempre ativa, nunca listada entre as cinco acima porque não é uma
@@ -789,27 +803,26 @@ preferência e sim uma restrição física: nenhuma torre é candidata, em nenhu
 qualquer estiver posicionada geometricamente entre ela e o alvo dentro de um corredor estreito de
 0,3~m -- ela bloquearia o próprio tiro.
 
-\paragraph{Vetos finais, sempre ativos, no momento da autorização de disparo
-(\texttt{FireControlService.Authorize}).} Mesmo com uma torre já selecionada, nenhum comando de
-acionamento sai do sistema sem passar por TODOS estes critérios, verificados nesta ordem e
-reavaliados a cada tentativa (uma torre selecionada agora pode ser vetada mais tarde, se a condição
-mudar entre a seleção e o disparo):
+\paragraph{Vetos finais, sempre ativos, no momento da autorização de disparo.} Mesmo com uma torre
+já selecionada, nenhum comando de acionamento sai do sistema sem passar por TODOS estes critérios,
+verificados nesta ordem e reavaliados a cada tentativa (uma torre selecionada agora pode ser vetada
+mais tarde, se a condição mudar entre a seleção e o disparo):
 \begin{enumerate}
   \item O alvo precisa continuar ativo (não pode ter saído de cena entre a seleção e a tentativa de
   disparo).
-  \item O sistema precisa estar no modo operacional \texttt{Disparar} -- qualquer outro modo
+  \item O sistema precisa estar no modo operacional de disparo -- qualquer outro modo
   bloqueia incondicionalmente.
   \item A certeza de identificação do alvo (percentual de confiança acumulado pela câmera) precisa
-  ser maior ou igual ao limiar mínimo configurado (\texttt{LimiarConfiancaDisparoPercentual}) --
+  ser maior ou igual ao limiar mínimo configurado --
   nunca abaixo do piso absoluto do sistema.
   \item A torre específica que está tentando disparar precisa constar na lista de torres
-  efetivamente engajando aquele alvo (\texttt{Target.EngagingTowers}) -- a mesma lista calculada
+  efetivamente engajando aquele alvo -- a mesma lista calculada
   pela regra 5; uma torre pode ter sido selecionada como
   "principal" e ainda assim não ter linha de tiro livre neste instante.
 \end{enumerate}
 Vencidos os quatro critérios, o disparo em si -- acertar ou errar o alvo -- continua sendo
 probabilístico e cresce com a velocidade do alvo (mesma fórmula usada para calibrar o ambiente de
-treino, \texttt{CalculadoraErroDisparo}), nunca determinístico só por ter sido autorizado.
+treino), nunca determinístico só por ter sido autorizado.
 
 Uma regra adicional do controlador híbrido vale apenas durante a simulação de treino, nunca em
 produção, porque em produção o INSTANTE do disparo é sempre decidido manualmente por um operador, e
@@ -855,11 +868,11 @@ adicionais com 0,04 e 0,16 (metade e dobro do valor padrão de 0,08, já coberto
 totalizando onze execuções independentes.
 
 Cada configuração foi treinada isoladamente por exatamente 300 gerações, com a mesma função de
-fitness, os mesmos cenários táticos obrigatórios (\texttt{CatalogoCenarios.TodosComScript}) e o
+fitness, o mesmo catálogo de cenários táticos obrigatórios e o
 mesmo ambiente de avaliação do treinamento padrão -- já no ambiente endurecido descrito ao final da
 Seção~\ref{sec:controlador-hibrido-inicio} (teto por quadrante, escalada de dificuldade, invasão de
 torre encerrando o episódio e penalidade de desequilíbrio entre torres). Todas as execuções usaram
-o mesmo \texttt{AmbienteTreinamento} e o mesmo \texttt{AlgoritmoGenetico} que treinam o controlador
+o mesmo ambiente e o mesmo algoritmo genético que treinam o controlador
 em produção, sem nenhum dado simulado ou estimado manualmente, rodadas em lote único e sequencial
 numa única máquina -- não a da Tabela~\ref{tab:ambiente-computacional}, e sim a segunda máquina
 descrita no parágrafo de portabilidade ao final da Seção~\ref{sec:ambiente-computacional}
@@ -870,8 +883,8 @@ Seção~\ref{sec:ambiente-computacional} para o experimento original (seis entra
 comparações \emph{dentro} da Tabela~\ref{tab:hiperparametros-7entradas}, entre si, são válidas. O resultado de cada configuração -- população, neurônios ocultos, taxa
 de mutação, fitness final, geração em que esse fitness foi alcançado pela primeira vez, curva de
 convergência nas gerações 25/50/100/200 e tempo de treinamento -- está listado na
-Tabela~\ref{tab:hiperparametros-7entradas} e exportado em
-\texttt{tools/RadarTorres.Experimentos/Resultados/experimentos\_hiperparametros\_7entradas.json}.
+Tabela~\ref{tab:hiperparametros-7entradas} e exportado em um arquivo de dados dedicado, mantido
+junto das ferramentas de experimento do projeto.
 
 \begin{table}[htbp]
   \centering
@@ -910,8 +923,8 @@ Tabela~\ref{tab:hiperparametros-7entradas} e exportado em
 Diferente da versão anterior deste experimento (seis entradas, variação de 3\% entre as nove
 combinações), as onze execuções agora terminam entre 68,33 e 68,34 -- uma variação de 0,01 ponto --
 e todas atingem esse valor na mesma geração, 222, independentemente de população (30 a 120),
-arquitetura (4 a 16 neurônios) ou mutação (0,04 a 0,16). A causa é estrutural: os cenários táticos
-obrigatórios (\texttt{CatalogoCenarios.TodosComScript}) são um conjunto pequeno e fixo, e o ambiente
+arquitetura (4 a 16 neurônios) ou mutação (0,04 a 0,16). A causa é estrutural: o catálogo de
+cenários táticos obrigatórios é um conjunto pequeno e fixo, e o ambiente
 endurecido tornou esse conjunto fácil de saturar -- qualquer genoma competente esgota a recompensa
 disponível bem antes das 300 gerações, e a partir daí não há mais nada que diferencie um
 hiperparâmetro do outro. As curvas de convergência (gerações 25--200) ainda mostram o padrão
@@ -931,7 +944,7 @@ aleatórios); e cada configuração é uma única execução, não uma média de
 \paragraph{Teste direto: o teto é da rede ou da duração fixa do episódio?}
 Uma forma mais direta de responder a essa pergunta, sem depender dos cenários táticos fixos, é
 remover a própria causa suspeita: a duração fixa do episódio. Foi adicionado um modo de avaliação
-(\texttt{ParametrosTreinamento.SemLimiteDeDuracao}) em que o episódio IGNORA os 45~s normais e só
+sem limite de duração, em que o episódio IGNORA os 45~s normais e só
 termina quando um alvo de fato rompe uma torre (ou aos 1800~s de uma salvaguarda, nunca atingida nos
 testes) -- a escalada de dificuldade continua usando os 45~s como referência de ritmo, só o corte
 abrupto por tempo é desligado. O genoma de produção já treinado (pico de fitness 193,57 em
@@ -957,11 +970,11 @@ Três medições isolam a causa da discrepância entre teto (443) e média (aind
 desvio padrão de fitness do mesmo genoma de produção, no regime normal de 45~s, em 50 episódios
 independentes: 63,65 de desvio contra média de 66,69 -- variância já da mesma ordem da própria
 média, mesmo sem remover o corte de tempo. Segundo, o MESMO genoma avaliado em modo
-\texttt{HeuristicaPura} (rede ignorada, dispara sempre que a heurística permite) nas MESMAS 50
+heurística pura (rede ignorada, dispara sempre que a heurística permite) nas MESMAS 50
 seeds: desvio 67,36, média \textbf{74,34} -- estatisticamente indistinguível da rede treinada, e com
 média até superior. A variância é, portanto, do ambiente (onde e quando os alvos nascem), não da
 política de decisão: um único alvo nascendo no lugar errado já basta para invadir uma torre antes
-de qualquer controlador reagir. Terceiro, elevar \texttt{EpisodiosPorAvaliacao} de 3 para 12 (reduz
+de qualquer controlador reagir. Terceiro, elevar o número de episódios por avaliação de 3 para 12 (reduz
 o ruído de medição do próprio algoritmo genético) e retreinar do zero (1000 gerações, restante
 idêntico) não fechou a diferença: média 65,02 (desvio 60,57) contra os mesmos 74,34 da heurística.
 Repetido com mais três sementes do algoritmo genético (2, 3, 4), o resultado foi sistemático, não
@@ -979,7 +992,7 @@ função de fitness.
 
 \paragraph{Removendo a duração fixa do treino, e corrigindo a função de fitness.}
 Removida a duração de 45~s também do TREINAMENTO (não só da avaliação), um novo genoma treinado do
-zero (1000 gerações, \texttt{SemLimiteDeDuracao}) atingiu pico de 211,98 em treino (contra 193,57) e,
+zero (1000 gerações, sem limite de duração) atingiu pico de 211,98 em treino (contra 193,57) e,
 fora de amostra, fitness MÁXIMO de 245,94 (rede) e 434,72 (heurística pura) -- confirmando que parte
 real do teto vinha da duração fixa. O problema da MÉDIA, porém, permaneceu do mesmo tamanho (69,28,
 ainda abaixo dos 89,69 da heurística, com 35,8\% de recusa) -- mais tempo de episódio não ensinou a
@@ -987,8 +1000,8 @@ rede a disparar melhor, só deu mais tempo para acumular pontos quando o episód
 dois problemas são independentes: duração fixa limitava o TETO (resolvido removendo o limite);
 hesitação aprendida limita a MÉDIA (aponta para a função de fitness).
 
-Adicionado um termo explícito -- \texttt{ParametrosTreinamento.PenalidadeRecusaDisparo}, -3,0 de
-fitness por disparo recusado, em tempo real durante o episódio -- e retreinado do zero (mesmo
+Adicionada uma penalidade explícita de fitness por disparo recusado -- 3,0 pontos a cada recusa, em
+tempo real durante o episódio -- e retreinado do zero (mesmo
 ambiente sem limite, 1000 gerações), a taxa de recusa caiu de 35,8\% para \textbf{0,0\%}: a rede
 passou a se comportar, no gatilho, exatamente como a heurística pura. O fitness médio subiu de 69,28
 para 86,09 (a 4\% da heurística, contra quase 30\% de distância antes), e o máximo (434,59) empatou
@@ -999,10 +1012,10 @@ mudança de arquitetura ou de ambiente.
 
 \paragraph{Terceira comparação: a mesma rede, sem a camada heurística, supera as outras duas.}
 A ablação heurística-\textit{vs}-rede já conduzida neste trabalho (Seção~\ref{sec:experimento-hiperparametros},
-modo \texttt{RedePura}) havia sido medida sob a arquitetura e o ambiente antigos, num genoma treinado
+modo rede pura) havia sido medida sob a arquitetura e o ambiente antigos, num genoma treinado
 à parte para esse modo -- não a MESMA rede de produção, só sem a heurística. Para completar o quadro
 desta investigação, a rede de produção corrigida (penalidade de recusa, treinada sem limite de
-duração) foi avaliada também em \texttt{RedePura} -- mesmo genoma, mesmas 50 seeds de teste, mas sem
+duração) foi avaliada também em modo rede pura -- mesmo genoma, mesmas 50 seeds de teste, mas sem
 a heurística filtrar candidatas por quadrante nem impor o tempo mínimo de mira de 0,3~s. O resultado
 é o melhor dos três regimes medidos nesta seção:
 
@@ -1040,16 +1053,15 @@ heurística continua filtrando candidatas por quadrante antes de a rede decidir)
 A organização interna da aplicação desktop foi documentada por meio de um diagrama de pacotes,
 diagrama estrutural da UML que representa a divisão lógica do sistema em pacotes e as
 dependências existentes entre eles, sem detalhar atributos ou métodos das classes neles contidas.
-No RadarTorres, cada pacote corresponde a um \textit{namespace} do projeto
-\texttt{RadarTorres.App}, coincidente com uma pasta do código-fonte, e o diagrama foi obtido
-diretamente do código da \textit{branch} principal do repositório: cada seta representa ao menos
-uma diretiva \texttt{using RadarTorres.App.*} (ou uma referência \texttt{clr-namespace} em XAML)
-presente nos arquivos do pacote de origem, de modo que o diagrama descreve a estrutura efetivamente
-implementada, e não apenas a pretendida.
+No RadarTorres, cada pacote corresponde a um \textit{namespace} da aplicação desktop, coincidente
+com uma pasta do código-fonte, e o diagrama foi obtido diretamente do código da versão principal do
+repositório: cada seta representa ao menos uma referência de um arquivo do pacote de origem a um
+tipo de outro pacote, de modo que o diagrama descreve a estrutura efetivamente construída, e não
+apenas a pretendida.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{Diagrama_de_Pacotes.png}
+  \includegraphics[width=0.85\textwidth]{Diagrama_de_Pacotes.png}
   \caption{Diagrama de pacotes do RadarTorres. Setas em vermelho indicam dependências que formam
   ciclos (dos autores).}
 \end{figure}
@@ -1058,15 +1070,15 @@ O fluxo principal de dependências segue a organização do padrão MVVM, de cim
 $\rightarrow$ ViewModels $\rightarrow$ Services $\rightarrow$ Repositories $\rightarrow$ Data
 $\rightarrow$ Models. O pacote Models ocupa a posição mais estável do sistema -- todos os demais
 dependem dele e ele não depende de nenhum outro --, o que é desejável para as entidades de
-domínio, e a separação entre as interfaces de Repositories e a implementação em CSV do pacote Data
-é o que viabiliza a futura migração para um banco relacional sem alterar ViewModels ou Services. A
-construção do diagrama a partir do código revelou, também, dependências que formam ciclos entre
-pacotes: o \texttt{NavigationService} importa \textit{namespaces} de Views para instanciar telas
-(Services $\rightarrow$ Views, fechando o ciclo com Views $\rightarrow$ ViewModels $\rightarrow$
-Services), e o \texttt{DataSeeder}, responsável pela carga inicial de dados, importa Models,
-Repositories e Services (Data $\rightarrow$ Repositories/Services, fechando o ciclo com
-Repositories/Services $\rightarrow$ Data). Confirmados em \texttt{NavigationService.cs} e
-\texttt{DataSeeder.cs} no código atual, esses dois ciclos continuam presentes, mas a figura acima,
+domínio, e a separação entre as interfaces de repositório e sua implementação em SQLite no pacote
+de dados é o que permitiria uma futura troca de banco de dados sem alterar as camadas de
+apresentação ou de serviços. A construção do diagrama a partir do código revelou, também,
+dependências que formam ciclos entre pacotes: o serviço de navegação importa telas para
+instanciá-las (serviços $\rightarrow$ telas, fechando o ciclo com telas $\rightarrow$ apresentação
+$\rightarrow$ serviços), e o carregador de dados iniciais, responsável pela carga inicial de dados,
+importa entidades, repositórios e serviços (dados $\rightarrow$ repositórios/serviços, fechando o
+ciclo com repositórios/serviços $\rightarrow$ dados). Confirmados no código atual, esses dois
+ciclos continuam presentes, mas a figura acima,
 regenerada ao nível de pacote e não de classe, não os destaca visualmente -- ficam registrados
 apenas neste parágrafo, em vez de perdidos. Eles não impedem o funcionamento da aplicação, pois
 todos os pacotes pertencem ao mesmo \textit{assembly}, mas aumentam o acoplamento e dificultam
@@ -1076,22 +1088,15 @@ testes isolados e futuras separações em projetos distintos.
 \subsection{Modelo de dados}
 \label{sec:modelo-dados}
 
-O protótipo não depende de um servidor de banco de dados externo: a persistência usa
-\textbf{SQLite} (\texttt{Microsoft.Data.Sqlite}, arquivo único \texttt{radartorres.db} na pasta de
-dados do usuário), com \texttt{PRAGMA foreign\_keys = ON} garantindo chaves estrangeiras reais --
-estágio mais avançado do que o modelo em CSV descrito em versões anteriores deste documento (ver
-nota histórica adiante). O modelo de dados abaixo foi levantado diretamente do código-fonte já
-implementado, não de um diagrama projetado antes da codificação. O schema atual tem onze tabelas,
-listadas na Tabela~\ref{tab:tabelas-sqlite}:
-sete cadastrais/de auditoria, já cobertas pelo levantamento em
-\texttt{conteudo\_modelo\_banco\_dados.tex} (pasta \texttt{Banco\_de\_Dados} dos documentos
-entregáveis), e quatro
-exclusivas do treinamento neuroevolutivo, que persistem a evolução do controlador híbrido
-(Seção~\ref{sec:controlador-hibrido-inicio}) entre execuções.
+A persistência do protótipo usa \textbf{SQLite} -- um banco de dados embarcado em arquivo único,
+sem necessidade de servidor externo, com chaves estrangeiras reais
+habilitadas. O schema tem onze tabelas, listadas na Tabela~\ref{tab:tabelas-sqlite}: sete
+cadastrais/de auditoria e quatro exclusivas do treinamento neuroevolutivo, que persistem a
+evolução do controlador híbrido (Seção~\ref{sec:controlador-hibrido-inicio}) entre execuções.
 
 \begin{table}[htbp]
   \centering
-  \caption{Tabelas do schema SQLite atual (\texttt{schema.sql} e os \texttt{Sqlite*Repository.cs}).}
+  \caption{Tabelas do schema SQLite atual.}
   \label{tab:tabelas-sqlite}
   \small
   \renewcommand{\arraystretch}{1.2}
@@ -1099,44 +1104,38 @@ exclusivas do treinamento neuroevolutivo, que persistem a evolução do controla
     \hline
     \textbf{Tabela} & \textbf{Finalidade} \\
     \hline
-    \texttt{usuarios} & Contas de acesso, perfil (Administrador/Operador/Visualizador) e
+    Usuários & Contas de acesso, perfil (Administrador/Operador/Visualizador) e
     autenticação \\
-    \texttt{objetos\_detectados} & Histórico de ocorrências de detecção (radar e câmera, por
+    Objetos detectados & Histórico de ocorrências de detecção (radar e câmera, por
     quadrante) \\
-    \texttt{ocorrencia\_estados} & Auditoria das transições de estado de cada ocorrência
+    Estados da ocorrência & Auditoria das transições de estado de cada ocorrência
     (só inserção) \\
-    \texttt{cameras} & Câmera responsável por cada quadrante (Q1--Q4) \\
-    \texttt{acoes\_realizadas} & Auditoria de acionamentos efetivamente executados (só inserção) \\
-    \texttt{modo\_atual\_torre} & Auditoria de troca de modo de operação (só inserção) \\
-    \texttt{preferencias\_usuario} & Preferências de interface por usuário (tema, idioma,
-    sidebar) \\
-    \texttt{classificacoes\_alvo} & Classificação de perigo do alvo por velocidade estimada,
-    vinculada a \texttt{objetos\_detectados} por FK \\
-    \texttt{historico\_treinamento\_\allowbreak geracoes} & Fitness (melhor e médio) e contagem de
+    Câmeras & Câmera responsável por cada quadrante (Q1--Q4) \\
+    Ações realizadas & Auditoria de acionamentos efetivamente executados (só inserção) \\
+    Modo atual da torre & Auditoria de troca de modo de operação (só inserção) \\
+    Preferências do usuário & Preferências de interface por usuário (tema, idioma,
+    barra lateral) \\
+    Classificações do alvo & Classificação de perigo do alvo por velocidade estimada,
+    vinculada aos objetos detectados por chave estrangeira \\
+    Histórico de gerações do treinamento & Fitness (melhor e médio) e contagem de
     alvos abatidos/escapados a cada geração do algoritmo genético \\
-    \texttt{marcos\_fitness\_\allowbreak treinamento} & Agregado de fitness por bloco de gerações, para
+    Marcos de fitness do treinamento & Agregado de fitness por bloco de gerações, para
     acompanhar a convergência do treino sem gravar geração a geração \\
-    \texttt{instantaneos\_\allowbreak comportamento\_\allowbreak melhor\_gene} & Snapshot do comportamento do melhor
-    indivíduo em marcos do treino: fitness, taxa de acerto, taxa de cobertura e o próprio genoma
-    (JSON) \\
+    Instantâneos do melhor indivíduo & Snapshot do comportamento do melhor
+    indivíduo em marcos do treino: fitness, taxa de acerto, taxa de cobertura e o próprio genoma \\
     \hline
   \end{tabular}
 \end{table}
 
-O modelo completo (diagramas entidade-relacionamento dos três núcleos -- usuários/preferências,
-detecção/câmeras/auditoria e treinamento neuroevolutivo -- e o detalhamento de cada relacionamento
-por chave estrangeira) está em \texttt{Modelo\_Banco\_de\_Dados.md} e na versão técnica
-\texttt{MODELO\_DADOS.md}, ambos levantados diretamente do código-fonte. A Figura~\ref{fig:der-cameras} ilustra o núcleo de
-detecção e auditoria, o mais conectado dos três; as quatro tabelas de treinamento (última linha da
-Tabela~\ref{tab:tabelas-sqlite}) não se relacionam por chave estrangeira com as demais nem entre
-si -- são séries temporais independentes, identificadas pelo número da geração.
+A Figura~\ref{fig:der-cameras} ilustra o núcleo de detecção e auditoria, o mais conectado do
+schema; as quatro tabelas de treinamento (última linha da Tabela~\ref{tab:tabelas-sqlite}) são
+séries temporais independentes, sem relação por chave estrangeira com as demais.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\textwidth]{DER_Cameras_Objetos_Detectados.png}
-  \caption{Núcleo de detecção e auditoria: \texttt{cameras}, \texttt{objetos\_detectados},
-  \texttt{acoes\_realizadas}, \texttt{ocorrencia\_estados} e \texttt{classificacoes\_alvo} (dos
-  autores).}
+  \includegraphics[width=0.78\textwidth]{DER_Cameras_Objetos_Detectados.png}
+  \caption{Núcleo de detecção e auditoria: câmeras, objetos detectados, ações realizadas,
+  estados de ocorrência e classificações de alvo (dos autores).}
   \label{fig:der-cameras}
 \end{figure}
 
@@ -1146,8 +1145,9 @@ Este trabalho descreveu o RadarTorres como um protótipo de rastreamento e sele�
 alvos construído sobre sensoriamento ultrassônico, visão computacional e um controlador híbrido
 -- heurística determinística que filtra e veta, rede neural pequena que decide dentro do espaço já
 validado, treinada por algoritmo genético. A contribuição mais original deste trabalho é empírica:
-a identificação e correção, documentada por commit, de uma falha em que a certeza de identificação
-do alvo era sorteada uma única vez e nunca atualizada, mantendo cerca de 70\% dos alvos
+a identificação e correção, registrada no histórico de versionamento do projeto, de uma falha em
+que a certeza de identificação do alvo era sorteada uma única vez e nunca atualizada, mantendo
+cerca de 70\% dos alvos
 simulados permanentemente abaixo do limiar de disparo e mascarando a estagnação evolutiva sob a
 aparência de um treino funcional. A Tabela~\ref{tab:fitness-antes-depois} (Seção anterior) quantifica
 o efeito dessa correção: o fitness médio da população, estagnado em torno de 9 ao longo de 25.500
@@ -1155,21 +1155,21 @@ gerações antes da correção, passou a acompanhar de perto o fitness do melhor
 e a cobertura de alvos disparáveis foi de uma fração minoritária para 100\% nas amostras
 pós-correção.
 
-As limitações do protótipo, discutidas ao longo do texto, concentram-se em três pontos: (i) o
-hardware físico ainda não foi montado -- toda validação é feita em simulação, com modelos
-(certeza de identificação, probabilidade de erro de disparo) assumidos e não calibrados com dados
-de campo; (ii) a comunicação entre a visão computacional e o Arduino para guiar o apontamento de
-pan/tilt foi projetada mas não implementada, permanecendo como integração pendente; e (iii) a
-propriedade de projeto que limita o controlador híbrido, no pior caso, ao comportamento puramente
-heurístico (nunca a uma decisão arbitrária da rede) ainda não foi submetida a validação em hardware
-físico real; e (iv) a migração do controlador para neuroevolução por NEAT (SharpNEAT), descrita na
+As limitações do protótipo, discutidas ao longo do texto, concentram-se em três pontos: (i) os
+modelos usados na simulação (certeza de identificação, probabilidade de erro de disparo) são
+premissas assumidas, não calibradas com dados de campo; (ii) a comunicação entre a visão
+computacional e o Arduino para guiar o apontamento de pan/tilt permanece como integração planejada,
+a construir sobre o protocolo serial existente; e (iii) a propriedade de projeto que limita o
+controlador híbrido, no pior caso, ao comportamento puramente heurístico (nunca a uma decisão
+arbitrária da rede) é uma garantia de projeto ainda não confirmada por medição direta de campo; e
+(iv) a migração do controlador para neuroevolução por NEAT (SharpNEAT), descrita na
 Seção~\ref{sec:controlador-hibrido-inicio}, tornou indisponível a sincronização do genoma com o
 firmware do Arduino (que esperava um vetor fixo de pesos) e deixou os experimentos de
 hiperparâmetros da Seção~\ref{sec:experimento-hiperparametros} associados à arquitetura anterior,
 já descontinuada.
 
-Os trabalhos futuros identificados neste artigo são, portanto: montagem e validação do hardware
-físico das cinco torres; implementação do comando de apontamento no protocolo serial e da fusão
+Os trabalhos futuros identificados neste artigo são, portanto: validação de campo das cinco
+torres; implementação do comando de apontamento no protocolo serial e da fusão
 entre a posição estimada pela visão e a distância ultrassônica; calibração dos modelos de certeza e
 de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão do tratamento
 de alvos para a abordagem multiameaça da literatura de TEWA (otimização simultânea entre vários
