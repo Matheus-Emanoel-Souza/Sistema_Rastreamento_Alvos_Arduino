@@ -25,11 +25,7 @@ public sealed class EixoZTests
     /// faz o controlador híbrido se comportar como a heurística pura na seleção de torre, isolando
     /// a regra de visibilidade de qualquer influência de pesos evoluídos.
     /// </summary>
-    private static RedeNeural RedeZerada() =>
-        new(ControladorHibrido.ArquiteturaPadrao, new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)]);
-
-    /// <summary>Genoma nulo, para as chamadas que recebem o vetor em vez da rede já montada.</summary>
-    private static double[] GenomaNulo() => new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+    private static RedeNeat RedeZerada() => RedesDeTeste.Zerada();
 
     /// <summary>Quatro torres, uma por quadrante — mesmo layout padrão que o ambiente usa sem appsettings.</summary>
     private static readonly List<TowerDefinition> QuatroTorres =
@@ -217,7 +213,7 @@ public sealed class EixoZTests
                 },
                 QuatroTorres);
 
-            return ambiente.ExecutarEpisodioRapido(GenomaNulo(), seed: 42).FitnessTotal;
+            return ambiente.ExecutarEpisodioRapido(RedeZerada(), seed: 42).FitnessTotal;
         }
 
         Assert.Equal(Rodar(2.0, 0.5), Rodar(50.0, 0.01), precision: 9);

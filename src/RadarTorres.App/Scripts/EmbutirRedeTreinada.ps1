@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Copia a rede mais recentemente exportada da tela "Treinamento do Controlador" para dentro
     do projeto, para ser embutida no executável como o controlador de fábrica.
