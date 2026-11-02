@@ -96,8 +96,9 @@ cartesiana, exibindo-as em tempo real em um radar circular, autoriza automaticam
 de uma ou mais torres para cada alvo -- de acordo com os recursos de câmera e linha de tiro
 disponíveis -- e registra em auditoria toda ação executada. Essa decisão combina uma heurística
 determinística, escrita como regras explícitas de engenharia, com uma rede neural que aprende, por
-meio de um algoritmo genético próprio, a refinar a priorização entre as torres elegíveis e o
-instante do acionamento, sempre condicionado ao grau de certeza de identificação do alvo. O treinamento dessa rede ocorre
+meio de neuroevolução (NEAT, via o framework SharpNEAT), a refinar a priorização entre as torres
+elegíveis e o instante do acionamento, sempre condicionado ao grau de certeza de identificação do
+alvo. O treinamento dessa rede ocorre
 inteiramente antes da operação do sistema, em um ambiente simulado que executa gerações de
 episódios de teste até evoluir os parâmetros da rede; concluído o treinamento, esses parâmetros
 são incorporados de forma fixa à aplicação, de modo que, durante a execução real, o sistema apenas
@@ -123,9 +124,9 @@ prototype converts angle and distance readings into Cartesian position, displayi
 time on a circular radar, automatically authorizes one or more towers to engage each target --
 according to the available camera coverage and line of fire -- and logs every executed action for
 auditing. This decision combines a deterministic heuristic, written as explicit engineering rules,
-with a neural network that learns, through a custom genetic algorithm, to refine the prioritization
-among eligible towers and the activation timing, always conditioned on the target's identification
-confidence.
+with a neural network that learns, through neuroevolution (NEAT, via the SharpNEAT framework), to
+refine the prioritization among eligible towers and the activation timing, always conditioned on
+the target's identification confidence.
 Training of this network happens entirely before the system is put into operation, in a simulated
 environment that runs generations of test episodes until the network's parameters evolve; once
 training is complete, these parameters are embedded as fixed values into the application, so
@@ -160,8 +161,8 @@ detectar um alvo, estimar sua posição em um radar circular e determinar, entre
 ao redor de uma base central, qual ou quais delas reúnem condição de resposta a esse alvo -- mais
 de uma torre pode engajar o mesmo alvo simultaneamente, quando suas câmeras o enxergam e sua linha
 de tiro está livre. Essa decisão não é tomada apenas por regras fixas: uma rede neural, evoluída
-por um algoritmo genético próprio, aprende a refinar a priorização entre as torres elegíveis e o
-instante do acionamento, sempre dentro dos limites que uma camada de regras explícitas (a
+por neuroevolução (NEAT, via o framework SharpNEAT), aprende a refinar a priorização entre as
+torres elegíveis e o instante do acionamento, sempre dentro dos limites que uma camada de regras explícitas (a
 heurística) já considera seguros -- entre eles, um limiar mínimo de certeza de identificação do
 alvo, abaixo do qual nenhuma torre, isolada ou em conjunto, está autorizada a disparar. Esse aprendizado
 acontece em duas etapas bem separadas: antes da operação do sistema, em um ambiente de treinamento
@@ -230,18 +231,21 @@ futuro.
 
 O refinamento dessa priorização entre as torres elegíveis -- e o instante de disparo -- é feito por uma pequena
 rede neural \textit{feedforward} (sinal que só percorre a rede em um sentido, da entrada à saída,
-sem laços de realimentação) com 7 entradas, 1 camada oculta de 8 neurônios, 2 saídas e ativação
-tanh (função que comprime a soma ponderada de cada neurônio no intervalo $[-1,1]$). Os pesos dessa
-rede não são ajustados por retropropagação (o método usual de treino por gradiente em redes
-neurais), mas evoluídos por um algoritmo genético próprio (seleção por torneio, \textit{crossover}
-uniforme, mutação gaussiana, elitismo), auditável e sem dependência de biblioteca de aprendizado de
-máquina. \citeonline{such2017deepneuroevolution} mostram que algoritmos genéticos são uma
+sem laços de realimentação) com 7 entradas, 2 saídas e ativação tanh (função que comprime a soma
+ponderada de cada neurônio no intervalo $[-1,1]$); a topologia da camada oculta não é fixa -- ela
+é parte do que evolui. Os pesos e a estrutura dessa rede não são ajustados por retropropagação (o
+método usual de treino por gradiente em redes neurais), mas evoluídos pelo algoritmo NEAT
+(\textit{Neuroevolution of Augmenting Topologies}), via o framework de terceiros SharpNEAT 4.1.0 --
+especiação, mutação estrutural (adição e remoção de nós e conexões) e regulação de complexidade,
+em vez de um algoritmo genético de topologia fixa escrito do zero, como em versões anteriores
+deste projeto. \citeonline{such2017deepneuroevolution} mostram que algoritmos genéticos são uma
 alternativa competitiva ao treino por gradiente em tarefas de aprendizado por reforço, em redes de
-porte bem maior do que a aqui empregada (até quatro milhões de parâmetros, contra os 82 parâmetros
-da rede do RadarTorres). Esse resultado sustenta a escolha do algoritmo genético como método de
-treinamento viável para o RadarTorres, mas, por tratar de uma escala de rede muito maior, não
-sustenta por si só a conclusão de que aumentar o número de camadas ou neurônios aqui seria
-desnecessário; essa decisão, em vez disso, é justificada diretamente pelo experimento de
+porte bem maior do que a aqui empregada (até quatro milhões de parâmetros, uma escala muito maior
+do que o genoma evoluído para o RadarTorres, cujo número de conexões varia de indivíduo a
+indivíduo em vez de ser fixo). Esse resultado sustenta a escolha da neuroevolução como método de
+treinamento viável para o RadarTorres, mas, por tratar de uma escala de rede muito maior e de uma
+arquitetura de topologia fixa, não sustenta por si só conclusões sobre o teto de complexidade
+adequado aqui; essa decisão, em vez disso, é justificada diretamente pelo experimento de
 hiperparâmetros da Seção~\ref{sec:experimento-hiperparametros}. Por ora, a estratégia adotada para
 ampliar o desempenho do controlador prioriza o ajuste dos hiperparâmetros da busca evolutiva
 (tamanho de população, paralelização da avaliação de fitness, enriquecimento do sinal de
@@ -579,35 +583,45 @@ conjunto de torres autorizadas a engajar -- ela decide apenas a priorização fi
 candidatas (a torre primária e, havendo mais de uma torre engajando, a ordem entre elas)
 \textit{dentro} do espaço já validado pela heurística. É uma rede
 \textit{feedforward} (sinal que só percorre a rede em um sentido, da entrada à saída, sem laços de
-realimentação) totalmente conectada, implementada do zero (sem biblioteca de aprendizado de
-máquina). \grifo{Ajustar caso a biblioteca de neuroevolução funcione (biblioteca em teste: [NOME DA
-BIBLIOTECA -- confirmar]).} A rede tem arquitetura de 7 entradas, uma camada oculta de 8 neurônios
-e 2 saídas, com ativação tanh (função que comprime a soma ponderada de cada neurônio no intervalo
-$[-1,1]$) em todas as camadas. As sete entradas -- todas normalizadas no intervalo $[0,1]$ ou
-equivalente -- são a distância normalizada ao alvo, dois indicadores binários de quadrante (mesmo
-quadrante e quadrante adjacente), o ângulo de mira normalizado, a velocidade normalizada do alvo, o
-tempo normalizado em que o alvo está sendo detectado sem ter sido abatido (satura em 1,0 a partir de
-3~s de observação contínua -- ver Seção~\ref{sec:experimento-hiperparametros}) e o
-próprio fator da camada heurística vigente, usado como sinal de contexto. As duas saídas são um
-ajuste de pontuação, somado à pontuação heurística da candidata, e um valor de confiança de
-disparo, cujo sinal positivo contribui para autorizar o acionamento daquela torre especificamente
--- sem jamais estender essa autorização a torres fora do conjunto de engajamento já calculado pela
-heurística. Os pesos e vieses da rede -- 82 parâmetros, no
-total, para essa arquitetura -- não são ajustados por retropropagação, mas evoluídos por um
-algoritmo genético: cada genoma é um vetor plano desses 82 números, a população evolui por seleção
-por torneio, \textit{crossover} uniforme, mutação gaussiana (perturbação de cada peso por um valor
-aleatório de distribuição normal, preferida a outras formas de mutação por manter a maioria das
-alterações pequenas e permitir ajuste fino sem descartar o que o genoma já aprendeu --
-detalhamento comparativo com outros tipos de mutação em \texttt{ApoioDeApresentacao.md}) e
-elitismo, e o genoma final é embutido na aplicação como um vetor de pesos fixo, sem qualquer etapa
-de treinamento em tempo de execução.
+realimentação), cuja topologia oculta não é fixa: ela evolui junto com os pesos pelo algoritmo NEAT
+(\textit{Neuroevolution of Augmenting Topologies}), via o framework de terceiros SharpNEAT 4.1.0 --
+substituindo a versão anterior deste projeto, uma rede de topologia fixa evoluída por um algoritmo
+genético escrito do zero. A rede tem 7 entradas e 2 saídas, com ativação tanh (função que comprime
+a soma ponderada de cada neurônio no intervalo $[-1,1]$) em todos os nós; o número de nós ocultos e
+de conexões varia de genoma para genoma, em vez de ser um valor fixo escolhido a priori. As sete
+entradas -- todas normalizadas no intervalo $[0,1]$ ou equivalente -- são a distância normalizada
+ao alvo, dois indicadores binários de quadrante (mesmo quadrante e quadrante adjacente), o ângulo
+de mira normalizado, a velocidade normalizada do alvo, o tempo normalizado em que o alvo está
+sendo detectado sem ter sido abatido (satura em 1,0 a partir de 3~s de observação contínua -- ver
+Seção~\ref{sec:experimento-hiperparametros}) e o próprio fator da camada heurística vigente, usado
+como sinal de contexto. As duas saídas são um ajuste de pontuação, somado à pontuação heurística
+da candidata, e um valor de confiança de disparo, cujo sinal positivo contribui para autorizar o
+acionamento daquela torre especificamente -- sem jamais estender essa autorização a torres fora do
+conjunto de engajamento já calculado pela heurística. Os pesos e a topologia da rede não são
+ajustados por retropropagação, mas evoluídos pelo NEAT: a população evolui por especiação (genomas
+estruturalmente semelhantes competem entre si, não contra toda a população, o que protege
+inovações estruturais recentes), mutação estrutural (adição e remoção de nós e conexões, além da
+perturbação de pesos já existentes) e regulação de complexidade (limita o crescimento da topologia
+a um teto configurável), e o genoma campeão final é embutido na aplicação, sem qualquer etapa de
+treinamento em tempo de execução. Diferente da arquitetura fixa anterior, cujo vetor de pesos era
+compatível com o firmware do Arduino, a sincronização do genoma evoluído com o firmware físico
+ficou temporariamente indisponível após esta migração -- o firmware espera um vetor fixo de pesos,
+que não existe numa topologia que varia a cada genoma; reconciliar os dois lados é trabalho futuro
+(ver Conclusão).
 
-\paragraph{Impacto de acrescentar uma entrada.}
-A sétima entrada (tempo detectado sem abate) foi incluída depois do projeto original (seis
-entradas) para dar à rede um sinal que faltava: por quanto tempo um alvo específico já vem sendo
-observado sem ter sido abatido, para priorizar alvos "esquecidos" em vez de tratar todos como
-igualmente urgentes. Mudar a contagem de entradas de uma rede já evoluída trouxe quatro impactos
-concretos, observados diretamente neste trabalho:
+\paragraph{Impacto de acrescentar uma entrada (arquitetura anterior, de topologia fixa).}
+A subseção a seguir documenta um episódio do desenvolvimento deste trabalho ocorrido ainda sob a
+arquitetura anterior -- uma rede \textit{feedforward} totalmente conectada, de topologia fixa
+(1 camada oculta de 8 neurônios), evoluída por um algoritmo genético escrito do zero (seleção por
+torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo), sem dependência de biblioteca
+de aprendizado de máquina. Essa arquitetura foi posteriormente substituída pelo NEAT/SharpNEAT
+descrito acima; o episódio permanece registrado porque a lição metodológica que ele ilustra --
+como uma entrada nova quebra a compatibilidade do genoma -- continua válida, mesmo que o formato
+específico do genoma tenha mudado desde então. A sétima entrada (tempo detectado sem abate) foi
+incluída depois do projeto original (seis entradas) para dar à rede um sinal que faltava: por
+quanto tempo um alvo específico já vem sendo observado sem ter sido abatido, para priorizar alvos
+"esquecidos" em vez de tratar todos como igualmente urgentes. Mudar a contagem de entradas de uma
+rede já evoluída trouxe quatro impactos concretos, observados diretamente neste trabalho:
 
 \begin{enumerate}
   \item \textbf{Tamanho da rede}: de 74 para 82 parâmetros (+8 pesos, um por neurônio da camada
@@ -806,6 +820,20 @@ não é uma regra "a mais" que o sistema real desconheça.
 
 \subsubsection{Análise experimental de hiperparâmetros}
 \label{sec:experimento-hiperparametros}
+
+\textbf{Nota sobre a arquitetura avaliada nesta seção.} Todos os experimentos a seguir -- a grade
+de hiperparâmetros, o diagnóstico de variância e a correção da função de fitness -- foram
+conduzidos sob a arquitetura anterior deste projeto: uma rede \textit{feedforward} de topologia
+fixa (1 camada oculta de 8 neurônios, 82 parâmetros), evoluída por um algoritmo genético próprio
+(seleção por torneio, \textit{crossover} uniforme, mutação gaussiana, elitismo). O projeto migrou
+posteriormente para o NEAT via o framework SharpNEAT (Seção~\ref{sec:controlador-hibrido-inicio}),
+que evolui topologia além de pesos. Os achados qualitativos abaixo -- a necessidade de penalizar
+explicitamente a recusa de disparo, a importância de remover a duração fixa do episódio, a
+indistinguibilidade estatística entre os modos de decisão em alta variância -- são lições de
+engenharia sobre a função de fitness e o ambiente de treino, não sobre a arquitetura específica da
+rede, e permanecem relevantes; os números absolutos de fitness, porém, descrevem genomas da
+arquitetura anterior, já descontinuada, e não foram reproduzidos para o controlador NEAT atual --
+repetir esta mesma bateria sob a nova arquitetura é trabalho futuro explícito.
 
 \textit{Fitness}, termo-padrão da literatura de algoritmos genéticos (de onde o RadarTorres o
 herda), é a nota numérica que mede o quão bem um genoma específico (um vetor de pesos da rede) se
@@ -1134,16 +1162,23 @@ de campo; (ii) a comunicação entre a visão computacional e o Arduino para gui
 pan/tilt foi projetada mas não implementada, permanecendo como integração pendente; e (iii) a
 propriedade de projeto que limita o controlador híbrido, no pior caso, ao comportamento puramente
 heurístico (nunca a uma decisão arbitrária da rede) ainda não foi submetida a validação em hardware
-físico real.
+físico real; e (iv) a migração do controlador para neuroevolução por NEAT (SharpNEAT), descrita na
+Seção~\ref{sec:controlador-hibrido-inicio}, tornou indisponível a sincronização do genoma com o
+firmware do Arduino (que esperava um vetor fixo de pesos) e deixou os experimentos de
+hiperparâmetros da Seção~\ref{sec:experimento-hiperparametros} associados à arquitetura anterior,
+já descontinuada.
 
 Os trabalhos futuros identificados neste artigo são, portanto: montagem e validação do hardware
 físico das cinco torres; implementação do comando de apontamento no protocolo serial e da fusão
 entre a posição estimada pela visão e a distância ultrassônica; calibração dos modelos de certeza e
 de erro de disparo com dados de campo, substituindo as premissas simuladas; extensão do tratamento
 de alvos para a abordagem multiameaça da literatura de TEWA (otimização simultânea entre vários
-alvos concorrentes), hoje deixada de lado em favor do tratamento alvo a alvo; e, caso a capacidade
-da rede se mostre o fator limitante do controlador
-em vez dos hiperparâmetros da busca evolutiva, avaliação de uma arquitetura maior à luz dos
+alvos concorrentes), hoje deixada de lado em favor do tratamento alvo a alvo; repetição da bateria
+de experimentos de hiperparâmetros sob a arquitetura NEAT atual, já que os números reportados na
+Seção~\ref{sec:experimento-hiperparametros} pertencem à arquitetura de topologia fixa anterior;
+reconciliação do formato do genoma evoluído com o firmware do Arduino, hoje incompatível após a
+migração para NEAT; e, caso a capacidade da rede se mostre o fator limitante do controlador em vez
+dos hiperparâmetros da busca evolutiva, avaliação de um teto de complexidade maior à luz dos
 resultados de \citeonline{such2017deepneuroevolution}.
 
 % ============================================================
