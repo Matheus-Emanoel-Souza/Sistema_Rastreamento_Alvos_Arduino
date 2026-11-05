@@ -87,8 +87,47 @@
                        Text="Preferências salvas neste computador. Idioma e tema valem imediatamente; o tamanho da janela é aplicado na próxima vez que o aplicativo abrir."/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
-            <StackPanel>
+        <!-- Navegação por categorias: substitui a página vertical única por uma lista de
+             categorias à esquerda + o conteúdo da categoria selecionada à direita. Puramente
+             estado de UI (qual painel está visível agora) — por isso vive no code-behind
+             (ConfiguracoesView.xaml.cs), mesmo princípio já usado para posição/tamanho de
+             elementos visuais em outras telas (ver Decisoes_Arquiteturais DA-UX). Nenhuma
+             propriedade/comando da ViewModel foi renomeado ou removido: cada categoria só
+             agrupa os MESMOS cards que já existiam na página única. -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ListBox x:Name="ListaCategorias" Grid.Column="0" Margin="0,0,12,0"
+                     Background="{DynamicResource Bg.Card}" BorderBrush="{DynamicResource Border.Control}" BorderThickness="1"
+                     SelectionChanged="ListaCategorias_SelectionChanged">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="12,10"/>
+                        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource Selection.Subtle}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBoxItem Content="Geral" IsSelected="True"/>
+                <ListBoxItem Content="Aparência e idioma"/>
+                <ListBoxItem Content="Câmera e detecção"/>
+                <ListBoxItem Content="Controlador"/>
+                <ListBoxItem Content="Diagnóstico"/>
+                <ListBoxItem Content="Dados e segurança"/>
+            </ListBox>
+
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+            <Grid>
+
+            <!-- ======================= CATEGORIA: GERAL ======================= -->
+            <StackPanel x:Name="PainelGeral">
 
                 <!-- ============================ JANELA ============================ -->
                 <Border Style="{StaticResource SectionCard}">
@@ -124,8 +163,10 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+            </StackPanel>
 
-                <!-- ========================== APARÊNCIA =========================== -->
+            <!-- ==================== CATEGORIA: APARÊNCIA E IDIOMA ==================== -->
+            <StackPanel x:Name="PainelAparencia" Visibility="Collapsed">
                 <Border Style="{StaticResource SectionCard}">
                     <StackPanel>
                         <TextBlock Text="Aparência e idioma" Style="{StaticResource SectionTitle}"/>
@@ -141,8 +182,10 @@
                                    Text="Sistema: acompanha o tema claro/escuro configurado no Windows."/>
                     </StackPanel>
                 </Border>
+            </StackPanel>
 
-                <!-- ======================= DETECÇÃO / CÂMERA ====================== -->
+            <!-- ==================== CATEGORIA: CÂMERA E DETECÇÃO ==================== -->
+            <StackPanel x:Name="PainelCamera" Visibility="Collapsed">
                 <Border Style="{StaticResource SectionCard}">
                     <StackPanel>
                         <TextBlock Text="Câmera e detecção" Style="{StaticResource SectionTitle}"/>
@@ -161,6 +204,14 @@
                                   Content="Emitir alerta sonoro ao identificar um alvo"/>
                     </StackPanel>
                 </Border>
+            </StackPanel>
+
+            <!-- ========================= CATEGORIA: CONTROLADOR ========================= -->
+            <!-- Heurísticas de seleção de torre, alcance de mira, ajuda entre torres e limiar
+                 de disparo — tudo que é parâmetro OPERACIONAL do controlador (distinto dos
+                 parâmetros de EXPERIMENTO de treinamento, que ficam na janela "Configurar
+                 experimento" da tela de Treinamento do Controlador). -->
+            <StackPanel x:Name="PainelControlador" Visibility="Collapsed">
 
                 <!-- =============== HEURÍSTICAS DO CONTROLADOR ================ -->
                 <!-- Cada regra refina a escolha de torre feita por TowerSelectionService, além
@@ -257,6 +308,10 @@
                                    Text="Fora de zona morta e com o sistema em modo Disparar, a distância até o alvo não impede mais o acionamento — só a certeza da câmera de que é mesmo um alvo decide. Nunca pode ser ajustada abaixo de 40%."/>
                     </StackPanel>
                 </Border>
+            </StackPanel>
+
+            <!-- ========================= CATEGORIA: DIAGNÓSTICO ========================= -->
+            <StackPanel x:Name="PainelDiagnostico" Visibility="Collapsed">
 
                 <!-- ========================= DIAGNÓSTICO ========================== -->
                 <Border Style="{StaticResource SectionCard}">
@@ -276,6 +331,10 @@
                                  FontSize="10" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
+            </StackPanel>
+
+            <!-- ========================= CATEGORIA: DADOS E SEGURANÇA ========================= -->
+            <StackPanel x:Name="PainelDados" Visibility="Collapsed">
 
                 <!-- ===================== TREINAMENTO DA IA ======================= -->
                 <Border Style="{StaticResource SectionCard}">
@@ -308,9 +367,11 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
-
             </StackPanel>
-        </ScrollViewer>
+
+            </Grid>
+            </ScrollViewer>
+        </Grid>
 
         <!-- ============================== AÇÕES ============================== -->
         <StackPanel Grid.Row="2" Margin="0,12,0,0">

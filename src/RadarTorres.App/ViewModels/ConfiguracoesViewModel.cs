@@ -431,6 +431,13 @@ public sealed class ConfiguracoesViewModel : ViewModelBase
 
     private void RestaurarPadroes()
     {
+        bool confirmado = System.Windows.MessageBox.Show(
+            "Isso vai substituir todas as preferências desta tela pelos valores padrão de fábrica — janela, idioma, tema, câmera, heurísticas do controlador, alcance de mira, disparo e diagnóstico. Nada é gravado em disco ainda: clique em \"Salvar\" depois para confirmar, ou \"Cancelar\" para voltar ao que já estava salvo. Continuar?",
+            "Restaurar padrões",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning) == System.Windows.MessageBoxResult.Yes;
+        if (!confirmado) return;
+
         _edicao = ConfiguracoesAplicativo.Padrao();
         _tamanhoSelecionado = null;
 

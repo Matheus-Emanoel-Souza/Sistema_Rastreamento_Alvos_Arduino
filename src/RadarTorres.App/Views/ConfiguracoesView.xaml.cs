@@ -72,4 +72,23 @@ public partial class ConfiguracoesView : UserControl
             MessageBoxButton.OK,
             _termosViewModel.StatusSucesso ? MessageBoxImage.Information : MessageBoxImage.Error);
     }
+
+    /// <summary>
+    /// Mostra só o painel da categoria selecionada na lista à esquerda, pelo nome do
+    /// <see cref="ListBoxItem"/> clicado — puro estado de apresentação (qual painel está
+    /// visível), sem nenhuma propriedade nova na ViewModel. Os seis painéis
+    /// (<c>PainelGeral</c>, <c>PainelAparencia</c>, <c>PainelCamera</c>, <c>PainelControlador</c>,
+    /// <c>PainelDiagnostico</c>, <c>PainelDados</c>) são nomeados na mesma ordem dos itens da
+    /// lista.
+    /// </summary>
+    private void ListaCategorias_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var paineis = new[] { PainelGeral, PainelAparencia, PainelCamera, PainelControlador, PainelDiagnostico, PainelDados };
+        int selecionado = ListaCategorias.SelectedIndex;
+
+        for (int i = 0; i < paineis.Length; i++)
+        {
+            paineis[i].Visibility = i == selecionado ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
 }
