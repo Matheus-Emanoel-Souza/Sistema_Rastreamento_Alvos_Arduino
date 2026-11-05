@@ -1,4 +1,4 @@
-<UserControl x:Class="RadarTorres.App.Views.EstatisticasTreinamentoView"
+﻿<UserControl x:Class="RadarTorres.App.Views.EstatisticasTreinamentoView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{DynamicResource Bg.Window}"
@@ -116,7 +116,7 @@
                 <DataGrid ItemsSource="{Binding Linhas}" Style="{StaticResource TabelaExperimento}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="População" Binding="{Binding TamanhoPopulacao}" Width="Auto" MinWidth="80"/>
-                        <DataGridTextColumn Header="Neurônios" Binding="{Binding NeuroniosOcultos}" Width="Auto" MinWidth="80"/>
+                        <DataGridTextColumn Header="Teto compl." Binding="{Binding NeuroniosOcultos}" Width="Auto" MinWidth="80"/>
                         <DataGridTextColumn Header="Mutação" Binding="{Binding TaxaMutacaoTexto}" Width="Auto" MinWidth="80"/>
                         <DataGridTextColumn Header="Gerações" Binding="{Binding GeracoesTexto}" Width="Auto" MinWidth="75"/>
                         <DataGridTextColumn Header="Fitness final" Binding="{Binding FitnessFinalTexto}" Width="Auto" MinWidth="95"/>
@@ -146,7 +146,7 @@
                     <TextBlock Text="ESTATÍSTICAS DE TREINAMENTO" FontSize="20" FontWeight="Bold"
                                Foreground="{DynamicResource Text.Primary}"/>
                     <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="Análise experimental de hiperparâmetros (camada oculta e tamanho da população) e evolução do fitness médio a cada 500 gerações de neuroevolução — visão de longo prazo, sem o ruído geração a geração. Tela exclusiva do perfil Administrador."/>
+                               Text="Análise experimental de hiperparâmetros (teto de complexidade e tamanho da população) e evolução do fitness médio a cada 500 gerações de neuroevolução — visão de longo prazo, sem o ruído geração a geração. Tela exclusiva do perfil Administrador."/>
                 </StackPanel>
                 <Button Content="Atualizar" Command="{Binding AtualizarCommand}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
             </Grid>
@@ -158,7 +158,7 @@
                 <!--
                     ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS (pedida no parecer do artigo).
                     Duas tabelas no MESMO painel, cada configuração em uma linha: a primeira varia
-                    só a quantidade de neurônios da camada oculta, a segunda varia só o tamanho da
+                    só o teto de complexidade da rede, a segunda varia só o tamanho da
                     população. Cada uma é subdividida por valor travado — a série de referência
                     (baseline) e as séries adicionais que já existem no banco por terem sido
                     treinadas antes, para nenhum treinamento ser desperdiçado. Separar as séries é
@@ -175,7 +175,7 @@
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,10" TextWrapping="Wrap">
                             <Run Text="Um hiperparâmetro por vez, todo o resto idêntico:"/>
                             <Run Text="{Binding GeracoesPorExperimento, Mode=OneWay}" FontWeight="SemiBold"/>
-                            <Run Text="gerações por configuração, mesma função de fitness, mesmos cenários táticos e mesma taxa de mutação. Os dados abaixo são de execuções reais — nenhum valor é estimado."/>
+                            <Run Text="gerações por configuração, mesma função de fitness, mesmos cenários táticos e mesma probabilidade de mutação estrutural. Os dados abaixo são de execuções reais — nenhum valor é estimado. Execuções anteriores a outubro de 2026 usaram o algoritmo genético de topologia fixa e não são comparáveis linha a linha com as atuais (ver a coluna METODO no banco)."/>
                         </TextBlock>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
@@ -197,21 +197,21 @@
                              hiperparâmetros estão travados, então não é preciso reordenar as
                              colunas por tabela. -->
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2"
-                                   Text="EXPERIMENTO 1 — NEURÔNIOS NA CAMADA OCULTA (4 / 8 / 16)"/>
+                                   Text="EXPERIMENTO 1 — TETO DE COMPLEXIDADE, EM CONEXÕES (30 / 60 / 120)"/>
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
-                                   Text="Cada tabela abaixo trava a população e a taxa de mutação e varia só a camada oculta."/>
+                                   Text="Cada tabela abaixo trava a população e a mutação estrutural e varia só o teto de complexidade."/>
                         <ItemsControl ItemsSource="{Binding SeriesCamadaOculta}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
 
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
                                    Text="EXPERIMENTO 2 — TAMANHO DA POPULAÇÃO (30 / 60 / 120)"/>
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
-                                   Text="Cada tabela abaixo trava a camada oculta e a taxa de mutação e varia só a população."/>
+                                   Text="Cada tabela abaixo trava o teto de complexidade e a mutação estrutural e varia só a população."/>
                         <ItemsControl ItemsSource="{Binding SeriesPopulacao}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
 
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
                                    Text="EXPERIMENTO 3 — TAXA DE MUTAÇÃO (0,04 / 0,08 / 0,16)"/>
                         <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
-                                   Text="Cada tabela abaixo trava a população e a camada oculta e varia só a probabilidade de mutação por gene. A coluna &quot;Ger. do pico&quot; é a resposta para &quot;evoluem mais rápido?&quot;: é a primeira geração em que o fitness final foi atingido."/>
+                                   Text="Cada tabela abaixo trava a população e o teto de complexidade e varia só a probabilidade de mutação estrutural (acrescentar um neurônio). A coluna &quot;Ger. do pico&quot; é a resposta para &quot;evoluem mais rápido?&quot;: é a primeira geração em que o fitness final foi atingido."/>
                         <ItemsControl ItemsSource="{Binding SeriesTaxaMutacao}" ItemTemplate="{StaticResource SerieTemplate}"/>
                     </StackPanel>
                 </Border>

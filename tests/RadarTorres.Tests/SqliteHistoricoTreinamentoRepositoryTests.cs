@@ -77,4 +77,39 @@ public sealed class SqliteHistoricoTreinamentoRepositoryTests : IDisposable
 
         Assert.Equal([1, 2, 3], [historico[0].Geracao, historico[1].Geracao, historico[2].Geracao]);
     }
+
+    /// <summary>
+    /// Complexidade e nº de espécies são as duas colunas que passaram a existir com o NEAT (com a
+    /// topologia fixa anterior não havia nada a registrar). Se não voltarem da consulta, a coluna
+    /// correspondente do histórico na tela fica vazia e o dado morre na gravação.
+    /// </summary>
+    [Fact]
+    public void Registrar_PreservaComplexidadeEQuantidadeDeEspecies()
+    {
+        HistoricoGeracaoTreinamento registro = Registro(7);
+        registro.ComplexidadeMelhor = 23.0;
+        registro.QuantidadeEspecies = 6;
+
+        _repositorio.Registrar(registro);
+        var historico = _repositorio.ObterUltimos();
+
+        Assert.Equal(23.0, historico[^1].ComplexidadeMelhor);
+        Assert.Equal(6, historico[^1].QuantidadeEspecies);
+    }
+
+    /// <summary>
+    /// Gerações gravadas pelo algoritmo genético anterior não têm essas métricas — e <c>null</c> é
+    /// a representação correta disso, não zero: zero conexões ou zero espécies seria um dado falso
+    /// (e apareceria como tal no gráfico e na tabela).
+    /// </summary>
+    [Fact]
+    public void Registrar_SemAsMetricasDoNeat_PreservaNuloEmVezDeZero()
+    {
+        _repositorio.Registrar(Registro(3));
+
+        var historico = _repositorio.ObterUltimos();
+
+        Assert.Null(historico[^1].ComplexidadeMelhor);
+        Assert.Null(historico[^1].QuantidadeEspecies);
+    }
 }

@@ -26,13 +26,17 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         {
             insert.CommandText =
                 "INSERT INTO historico_treinamento_geracoes " +
-                "(GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, DH_REGISTRO) " +
-                "VALUES ($geracao, $melhorFitness, $fitnessMedio, $alvosAbatidos, $alvosEscapados, $dh)";
+                "(GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, " +
+                "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO) " +
+                "VALUES ($geracao, $melhorFitness, $fitnessMedio, $alvosAbatidos, $alvosEscapados, " +
+                "$complexidade, $especies, $dh)";
             insert.Parameters.AddWithValue("$geracao", registro.Geracao);
             insert.Parameters.AddWithValue("$melhorFitness", registro.MelhorFitness);
             insert.Parameters.AddWithValue("$fitnessMedio", registro.FitnessMedio);
             insert.Parameters.AddWithValue("$alvosAbatidos", registro.AlvosAbatidos);
             insert.Parameters.AddWithValue("$alvosEscapados", registro.AlvosEscapados);
+            insert.Parameters.AddWithValue("$complexidade", (object?)registro.ComplexidadeMelhor ?? DBNull.Value);
+            insert.Parameters.AddWithValue("$especies", (object?)registro.QuantidadeEspecies ?? DBNull.Value);
             insert.Parameters.AddWithValue("$dh", registro.DataHora.ToString("O", CultureInfo.InvariantCulture));
             insert.ExecuteNonQuery();
         }
@@ -53,7 +57,8 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         var resultado = new List<HistoricoGeracaoTreinamento>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT ID, GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, DH_REGISTRO " +
+            "SELECT ID, GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, " +
+            "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO " +
             "FROM historico_treinamento_geracoes ORDER BY ID DESC LIMIT $quantidade";
         command.Parameters.AddWithValue("$quantidade", quantidade);
 
@@ -68,7 +73,9 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
                 FitnessMedio = reader.GetDouble(3),
                 AlvosAbatidos = reader.GetInt32(4),
                 AlvosEscapados = reader.GetInt32(5),
-                DataHora = DateTime.Parse(reader.GetString(6), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                ComplexidadeMelhor = reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                QuantidadeEspecies = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                DataHora = DateTime.Parse(reader.GetString(8), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
             });
         }
 
@@ -103,6 +110,12 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
             "ALVOS_ESCAPADOS INTEGER NOT NULL, " +
             "DH_REGISTRO TEXT NOT NULL)";
         command.ExecuteNonQuery();
+
+        // Migração aditiva (bancos criados antes da troca do algoritmo genético pelo NEAT não têm
+        // estas duas): complexidade e nº de espécies só passam a existir com uma topologia que
+        // evolui. NULL nas linhas antigas é informação correta — ali a métrica não existia.
+        SqliteSchema.EnsureColumn(connection, "historico_treinamento_geracoes", "COMPLEXIDADE_MELHOR", "REAL NULL");
+        SqliteSchema.EnsureColumn(connection, "historico_treinamento_geracoes", "QUANTIDADE_ESPECIES", "INTEGER NULL");
 
         using SqliteCommand indice = connection.CreateCommand();
         indice.CommandText = "CREATE INDEX IF NOT EXISTS idx_historico_treinamento_geracao ON historico_treinamento_geracoes (GERACAO)";

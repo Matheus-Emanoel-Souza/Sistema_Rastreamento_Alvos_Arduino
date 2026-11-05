@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Microsoft.Data.Sqlite;
@@ -27,6 +27,7 @@ public sealed class SqliteExperimentoHiperparametrosRepository : IExperimentoHip
         ("FITNESS_G50", "REAL"),
         ("FITNESS_G100", "REAL"),
         ("FITNESS_G200", "REAL"),
+        ("METODO", "TEXT"),
     ];
 
     public void Registrar(ExperimentoHiperparametros experimento)
@@ -38,9 +39,9 @@ public sealed class SqliteExperimentoHiperparametrosRepository : IExperimentoHip
         insert.CommandText =
             "INSERT INTO experimentos_hiperparametros " +
             "(TAMANHO_POPULACAO, GERACOES, NEURONIOS_OCULTOS, FITNESS_FINAL, TEMPO_SEGUNDOS, TAXA_MUTACAO, " +
-            " GERACAO_DO_PICO, FITNESS_G25, FITNESS_G50, FITNESS_G100, FITNESS_G200, DH_REGISTRO) " +
+            " GERACAO_DO_PICO, FITNESS_G25, FITNESS_G50, FITNESS_G100, FITNESS_G200, METODO, DH_REGISTRO) " +
             "VALUES ($populacao, $geracoes, $neuronios, $fitness, $tempo, $mutacao, " +
-            " $pico, $g25, $g50, $g100, $g200, $dh)";
+            " $pico, $g25, $g50, $g100, $g200, $metodo, $dh)";
         insert.Parameters.AddWithValue("$populacao", experimento.TamanhoPopulacao);
         insert.Parameters.AddWithValue("$geracoes", experimento.Geracoes);
         insert.Parameters.AddWithValue("$neuronios", experimento.NeuroniosOcultos);
@@ -52,6 +53,7 @@ public sealed class SqliteExperimentoHiperparametrosRepository : IExperimentoHip
         insert.Parameters.AddWithValue("$g50", (object?)experimento.FitnessGeracao50 ?? DBNull.Value);
         insert.Parameters.AddWithValue("$g100", (object?)experimento.FitnessGeracao100 ?? DBNull.Value);
         insert.Parameters.AddWithValue("$g200", (object?)experimento.FitnessGeracao200 ?? DBNull.Value);
+        insert.Parameters.AddWithValue("$metodo", (object?)experimento.Metodo ?? DBNull.Value);
         insert.Parameters.AddWithValue("$dh", experimento.DataHora.ToString("O", CultureInfo.InvariantCulture));
         insert.ExecuteNonQuery();
     }
@@ -65,7 +67,7 @@ public sealed class SqliteExperimentoHiperparametrosRepository : IExperimentoHip
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "SELECT ID, TAMANHO_POPULACAO, GERACOES, NEURONIOS_OCULTOS, FITNESS_FINAL, TEMPO_SEGUNDOS, " +
-            "       TAXA_MUTACAO, GERACAO_DO_PICO, FITNESS_G25, FITNESS_G50, FITNESS_G100, FITNESS_G200, DH_REGISTRO " +
+            "       TAXA_MUTACAO, GERACAO_DO_PICO, FITNESS_G25, FITNESS_G50, FITNESS_G100, FITNESS_G200, METODO, DH_REGISTRO " +
             "FROM experimentos_hiperparametros ORDER BY ID ASC";
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -85,7 +87,8 @@ public sealed class SqliteExperimentoHiperparametrosRepository : IExperimentoHip
                 FitnessGeracao50 = reader.IsDBNull(9) ? null : reader.GetDouble(9),
                 FitnessGeracao100 = reader.IsDBNull(10) ? null : reader.GetDouble(10),
                 FitnessGeracao200 = reader.IsDBNull(11) ? null : reader.GetDouble(11),
-                DataHora = DateTime.Parse(reader.GetString(12), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                Metodo = reader.IsDBNull(12) ? null : reader.GetString(12),
+                DataHora = DateTime.Parse(reader.GetString(13), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
             });
         }
 

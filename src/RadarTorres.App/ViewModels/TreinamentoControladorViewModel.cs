@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -15,11 +16,14 @@ using RadarTorres.App.Models;
 using RadarTorres.App.NeuralEvolution;
 using RadarTorres.App.Repositories;
 using RadarTorres.App.Services;
+using SharpNeat.IO.Models;
+using SharpNeat.Neat.Genome;
+using SharpNeat.Neat.Genome.IO;
 
 namespace RadarTorres.App.ViewModels;
 
 /// <summary>
-/// ViewModel da tela "Treinamento do Controlador": comanda o <see cref="AlgoritmoGenetico"/>
+/// ViewModel da tela "Treinamento do Controlador": comanda o <see cref="TreinadorNeat"/>
 /// em segundo plano (gerações o mais rápido possível, sem travar a UI) enquanto anima no Canvas
 /// 2D, em tempo real, o melhor genoma encontrado até agora — são dois laços independentes sobre
 /// o mesmo <see cref="AmbienteTreinamento"/>: um rápido (fitness) e um visual (prévia).
@@ -27,6 +31,15 @@ namespace RadarTorres.App.ViewModels;
 public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 {
     private const double JanelaFlashDisparoSegundos = 0.3;
+
+    /// <summary>
+    /// Passo da prévia visual, em segundos — vale ao mesmo tempo como intervalo do relógio e como
+    /// <c>dt</c> entregue à simulação. Serem o mesmo número é o que faz a prévia correr em TEMPO
+    /// NORMAL (um segundo simulado por segundo real), condição do experimento de integração com o
+    /// sistema físico: nenhuma aceleração artificial entre o que se vê e o que seria enviado ao
+    /// hardware.
+    /// </summary>
+    private const double IntervaloPreviaSegundos = 0.05;
 
     /// <summary>Abertura angular do campo de visão de cada torre/canhão — fixa, voltada para fora da base (ver DesenharTorresFixas).</summary>
     public const double AnguloCampoDeVisaoGraus = 90.0;
@@ -46,9 +59,49 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly IHistoricoTreinamentoRepository _historicoRepository;
     private readonly IMarcoFitnessTreinamentoRepository _marcoFitnessRepository;
     private readonly IInstantaneoComportamentoRepository _instantaneoRepository;
+    private readonly ITelemetriaSimulacaoService _telemetria;
+    private readonly IEventoTreinamentoRepository _eventoRepository;
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly DispatcherTimer _timerPreview;
-    private readonly Random _randomGenomaInicial = new();
+
+    /// <summary>
+    /// Atualiza só os indicadores que mudam com a passagem do tempo (tempo decorrido, gerações
+    /// por minuto). Separado de <see cref="_timerPreview"/> porque a prévia pode estar parada
+    /// (episódio único já terminado) enquanto o treinamento continua rodando atrás — nesse caso o
+    /// relógio da tela não pode congelar junto.
+    /// </summary>
+    private readonly DispatcherTimer _timerEstado;
+
+    /// <summary>Mede o tempo de parede da sessão de treinamento, base de "tempo decorrido" e "gerações/min".</summary>
+    private readonly Stopwatch _cronometroSessao = new();
+
+    /// <summary>
+    /// Intervalo mínimo entre duas remontagens do diagrama/regras. As gerações rodam o mais rápido
+    /// possível e cada remontagem converte o genoma, propaga a rede, extrai regras e troca dezenas
+    /// de itens em coleções ligadas à tela: fazer isso a cada geração inunda o dispatcher e trava
+    /// a interface. O campeão exibido passa a ser o da última geração dentro da janela — nenhum
+    /// número é alterado, só a frequência do redesenho.
+    /// </summary>
+    private static readonly TimeSpan IntervaloMinimoRemontagemDiagrama = TimeSpan.FromMilliseconds(700);
+
+    private readonly Stopwatch _cronometroDiagrama = Stopwatch.StartNew();
+
+    /// <summary>
+    /// Ordem já atribuída a cada neurônio oculto, por id de nó. Mantida entre gerações para que um
+    /// oculto que continua existindo não mude de lugar no diagrama só porque outro nasceu ou
+    /// morreu — sem isso os nós "saltavam" a cada remontagem e ficava impossível acompanhar
+    /// visualmente o crescimento da rede.
+    /// </summary>
+    /// <remarks>
+    /// Guarda a ORDEM, e não a coordenada: os ocultos passaram a ser distribuídos em várias
+    /// colunas conforme a rede cresce (ver <see cref="CalcularLayoutDoDiagrama"/>), e nesse layout
+    /// a posição vertical sozinha não identifica mais o lugar de um nó.
+    /// </remarks>
+    private readonly Dictionary<int, int> _ordemDoOcultoPorId = new();
+
+    /// <summary>Ocultos e conexões do diagrama anterior — o que não está aqui é NOVO e recebe destaque na geração em que surge.</summary>
+    private readonly HashSet<int> _ocultosDaRemontagemAnterior = new();
+    private readonly HashSet<(int Origem, int Destino)> _conexoesDaRemontagemAnterior = new();
 
     // Acumulador do bloco de 500 gerações em andamento — zerado a cada marco registrado (ver
     // RegistrarMarcoFitnessSeCompletouBloco) e também em Iniciar/Resetar, para não misturar
@@ -58,11 +111,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private int _contagemGeracoesNoBloco;
 
     private AmbienteTreinamento _ambiente;
-    private AlgoritmoGenetico? _algoritmoGenetico;
+    private TreinadorNeat? _treinador;
     private CancellationTokenSource? _cts;
     private Task? _tarefaTreinamento;
 
-    private double[] _melhorGenomaAtual = [];
+    /// <summary>Genoma campeão da última geração — um GRAFO do SharpNEAT, não mais um vetor de pesos.</summary>
+    private NeatGenome<double>? _melhorGenomaAtual;
+
+    /// <summary>A rede já decodificada a partir de <see cref="_melhorGenomaAtual"/> — é o que a prévia anima e o que o diagrama/extrator de regras analisam.</summary>
+    private RedeNeat? _melhorRedeAtual;
     private EstadoEpisodio? _episodioPreview;
 
     /// <summary>Quando falso, a prévia roda exatamente um episódio e para — ver <see cref="RodarEpisodioUnico"/>.</summary>
@@ -79,8 +136,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     public ObservableCollection<NeuronioVisualTreinamento> NeuroniosVisuais { get; } = new();
     public ObservableCollection<ConexaoVisualTreinamento> ConexoesVisuais { get; } = new();
 
-    /// <summary>Mesma ordem de iteração de <see cref="RedeNeural"/> (camada → entrada → saída) — alinha cada <see cref="ConexaoVisualTreinamento"/> com o peso correspondente na hora de atualizar.</summary>
-    private readonly List<(int Camada, int Entrada, int Saida)> _chavesDasConexoes = new();
+    /// <summary>
+    /// Série de gerações desta SESSÃO de treinamento — é o que o gráfico de evolução desenha.
+    /// Distinta de <see cref="HistoricoRecente"/>, que vem do banco e traz as últimas 300 gerações
+    /// de qualquer execução: alimentar o gráfico com ela fazia a curva começar com dados de treinos
+    /// anteriores e dar um degrau artificial a cada "Iniciar".
+    /// </summary>
+    public ObservableCollection<HistoricoGeracaoTreinamento> HistoricoDaSessao { get; } = new();
+
+    /// <summary>Espécies da geração mais recente (ver <see cref="LinhaEspecieTreinamento"/>).</summary>
+    public ObservableCollection<LinhaEspecieTreinamento> Especies { get; } = new();
+
+    /// <summary>Acontecimentos da execução, do mais recente para o mais antigo (ver <see cref="EventoTreinamento"/>).</summary>
+    public ObservableCollection<EventoTreinamento> EventosExecucao { get; } = new();
+
+    /// <summary>Configuração efetivamente em uso na execução em andamento (ver <see cref="AtualizarParametrosEmUso"/>).</summary>
+    public ObservableCollection<ParametroEmUso> ParametrosEmUso { get; } = new();
 
     public RelayCommand IniciarCommand { get; }
     public RelayCommand PararCommand { get; }
@@ -118,33 +189,62 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         IHistoricoTreinamentoRepository historicoRepository,
         IMarcoFitnessTreinamentoRepository marcoFitnessRepository,
         IInstantaneoComportamentoRepository instantaneoRepository,
+        ITelemetriaSimulacaoService telemetria,
+        IEventoTreinamentoRepository eventoRepository,
         IConfiguracoesAplicativoRepository configuracoes)
     {
         _logger = logger;
         _historicoRepository = historicoRepository;
         _marcoFitnessRepository = marcoFitnessRepository;
         _instantaneoRepository = instantaneoRepository;
+        _telemetria = telemetria;
+        _eventoRepository = eventoRepository;
         _configuracoes = configuracoes;
-        _ambiente = new AmbienteTreinamento(ParametrosAtuais, arquitetura: ArquiteturaSelecionada);
+        _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         DesenharTorresFixas();
-        ConstruirDiagramaRedeNeural();
+        LimparDiagramaRedeNeural();
         _cenarioOpcaoSelecionada = CenariosDisponiveis[0];
 
         IniciarCommand = new RelayCommand(Iniciar, () => !EmExecucao);
         PararCommand = new RelayCommand(Parar, () => EmExecucao);
         RodarEpisodioUnicoCommand = new RelayCommand(RodarEpisodioUnico, () => !EmExecucao);
         SimularCenarioCommand = new RelayCommand(SimularCenarioSelecionado, () => !EmExecucao);
-        ExportarMelhorGenomaCommand = new RelayCommand(ExportarMelhorGenoma, () => _melhorGenomaAtual.Length > 0);
+        ExportarMelhorGenomaCommand = new RelayCommand(ExportarMelhorGenoma, () => _melhorGenomaAtual is not null);
         ResetarCommand = new RelayCommand(Resetar);
         AdicionarSpawnPersonalizadoCommand = new RelayCommand(() => SpawnsPersonalizados.Add(
             new SpawnPersonalizadoEditavel { Nome = $"Alvo {SpawnsPersonalizados.Count + 1}" }));
         RemoverSpawnPersonalizadoCommand = new RelayCommand(RemoverSpawnPersonalizado);
         SimularCenarioPersonalizadoCommand = new RelayCommand(SimularCenarioPersonalizado, () => !EmExecucao);
 
-        _timerPreview = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _timerPreview = new DispatcherTimer { Interval = TimeSpan.FromSeconds(IntervaloPreviaSegundos) };
         _timerPreview.Tick += (_, _) => AvancarPreview();
 
+        _timerEstado = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _timerEstado.Tick += (_, _) => TempoDecorrido = _cronometroSessao.Elapsed;
+
+        AtualizarParametrosEmUso(ParametrosAtuais, treinador: null);
         CarregarHistorico();
+        CarregarEventos();
+    }
+
+    /// <summary>
+    /// Traz do banco o histórico de execução das sessões anteriores — é o que permite abrir a tela
+    /// no dia seguinte e descobrir por que o treinamento da madrugada parou.
+    /// </summary>
+    private void CarregarEventos()
+    {
+        try
+        {
+            EventosExecucao.Clear();
+            foreach (EventoTreinamento evento in _eventoRepository.ObterUltimos(LimiteEventosExecucao))
+            {
+                EventosExecucao.Add(evento);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível carregar o histórico de execução do treinamento: {ex.Message}");
+        }
     }
 
     private void CarregarHistorico()
@@ -172,7 +272,19 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _tamanhoPopulacao, value);
     }
 
-    private double _taxaMutacao = 0.08;
+    /// <summary>
+    /// Probabilidade de mutação ESTRUTURAL (acrescentar neurônio) — ver
+    /// <see cref="ParametrosTreinamento.ProbabilidadeAdicionarNo"/>.
+    /// </summary>
+    /// <remarks>
+    /// O padrão é o mesmo baseline do plano experimental da tela "Estatísticas de Treinamento"
+    /// (<see cref="Services.ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline"/>), para um
+    /// treinamento manual aqui nascer comparável com os resultados registrados lá — mesma razão de
+    /// <see cref="NeuroniosOcultosDisponiveis"/>. Herdava 0,08 da antiga taxa de mutação POR GENE
+    /// do algoritmo genético, que é outra grandeza: 8% de chance de ganhar um neurônio a cada
+    /// descendente infla a topologia muito acima do que o plano experimental mede.
+    /// </remarks>
+    private double _taxaMutacao = Services.ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline;
     public double TaxaMutacao
     {
         get => _taxaMutacao;
@@ -186,19 +298,51 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _maxAlvosPorQuadrante, value);
     }
 
-    /// <summary>Opções de quantidade de neurônios na camada oculta disponíveis na tela — os mesmos três valores do plano experimental da tela "Estatísticas de Treinamento" (ver ConfiguracaoExperimento.NeuroniosDaSerie), para um treinamento manual aqui ser comparável com os resultados registrados lá.</summary>
-    public IReadOnlyList<int> NeuroniosOcultosDisponiveis { get; } = [4, 8, 16];
+    private bool _eixoZHabilitado;
+    /// <summary>
+    /// Liga a terceira dimensão na simulação — ver <see cref="ParametrosTreinamento.EixoZHabilitado"/>.
+    /// Como os demais parâmetros do ambiente, vale a partir do próximo "Iniciar"/"Resetar" ou da
+    /// próxima simulação avulsa: um episódio já em curso não muda de dimensão no meio.
+    /// </summary>
+    public bool EixoZHabilitado
+    {
+        get => _eixoZHabilitado;
+        set
+        {
+            if (SetProperty(ref _eixoZHabilitado, value)) OnPropertyChanged(nameof(DescricaoEixoZ));
+        }
+    }
 
-    private int _neuroniosOcultosSelecionado = ControladorHibrido.ArquiteturaPadrao[1];
-    /// <summary>Quantidade de neurônios da camada oculta usada pelo PRÓXIMO "Iniciar"/"Resetar" — não afeta um treinamento já em andamento (mesmo princípio de <see cref="TamanhoPopulacao"/>).</summary>
+    /// <summary>Explica, em uma linha, o que o estado atual do controle significa para a simulação.</summary>
+    public string DescricaoEixoZ => EixoZHabilitado
+        ? $"Alvos nascem com altura entre 0 e {AlturaMaximaAlvoMetros:0.#} m; acima de {AlturaVisivelPorTodasAsTorresMetros:0.#} m todas as torres passam a enxergá-los."
+        : "Simulação bidimensional: todos os alvos no solo (Z = 0) e cobertura apenas por quadrante.";
+
+    /// <summary>Altura máxima sorteada para um alvo com o eixo Z ligado — exposta para a tela e para a descrição acima.</summary>
+    public double AlturaMaximaAlvoMetros => _ambiente.Parametros.AlturaMaximaAlvoMetros;
+
+    /// <summary>Altura a partir da qual todas as torres enxergam o alvo.</summary>
+    public double AlturaVisivelPorTodasAsTorresMetros => _ambiente.Parametros.AlturaVisivelPorTodasAsTorresMetros;
+
+    /// <summary>
+    /// Tetos de complexidade (em número de conexões) disponíveis na tela — os mesmos três
+    /// valores do plano experimental da tela "Estatísticas de Treinamento" (ver
+    /// ConfiguracaoExperimento.TetosComplexidadeDaSerie), para um treinamento manual aqui ser
+    /// comparável com os resultados registrados lá.
+    /// </summary>
+    /// <remarks>
+    /// Substitui a antiga lista de "neurônios na camada oculta": com NEAT não se escolhe quantos
+    /// neurônios a rede tem — escolhe-se até onde ela pode crescer.
+    /// </remarks>
+    public IReadOnlyList<int> NeuroniosOcultosDisponiveis { get; } = [30, 60, 120];
+
+    private int _neuroniosOcultosSelecionado = 60;
+    /// <summary>Teto de complexidade usado pelo PRÓXIMO "Iniciar"/"Resetar" — não afeta um treinamento já em andamento (mesmo princípio de <see cref="TamanhoPopulacao"/>).</summary>
     public int NeuroniosOcultosSelecionado
     {
         get => _neuroniosOcultosSelecionado;
         set => SetProperty(ref _neuroniosOcultosSelecionado, value);
     }
-
-    /// <summary>Arquitetura completa (entradas → oculta → saídas) a partir de <see cref="NeuroniosOcultosSelecionado"/> — mesma ordem de <see cref="ControladorHibrido.ArquiteturaPadrao"/>, só com a camada oculta parametrizada.</summary>
-    private int[] ArquiteturaSelecionada => [ControladorHibrido.QuantidadeEntradas, _neuroniosOcultosSelecionado, ControladorHibrido.QuantidadeSaidas];
 
     /// <summary>
     /// Lidos de <see cref="ConfiguracoesAplicativo"/> (tela "Configurações") a cada chamada —
@@ -214,8 +358,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private ParametrosTreinamento ParametrosAtuais => new()
     {
         TamanhoPopulacao = Math.Max(4, _tamanhoPopulacao),
-        TaxaMutacao = Math.Clamp(_taxaMutacao, 0.0, 1.0),
+        ProbabilidadeAdicionarNo = Math.Clamp(_taxaMutacao, 0.0, 1.0),
+        TetoComplexidade = Math.Max(4, _neuroniosOcultosSelecionado),
         MaxAlvosPorQuadrante = Math.Max(1, _maxAlvosPorQuadrante),
+        EixoZHabilitado = _eixoZHabilitado,
         DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
         LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0,
         VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo
@@ -246,12 +392,52 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _emExecucao, value))
             {
                 RelayCommand.RaiseCanExecuteChangedForAll();
+                OnPropertyChanged(nameof(EstadoTexto));
+                OnPropertyChanged(nameof(EstadoCor));
             }
         }
     }
 
+    /// <summary>
+    /// Ligado quando o laço de treinamento morre por exceção. Antes disso não existir, uma falha
+    /// na thread de fundo deixava <see cref="EmExecucao"/> em <c>true</c> para sempre: a tela
+    /// seguia anunciando "rodando" com os números congelados e sem nenhuma mensagem de erro.
+    /// </summary>
+    private bool _falhou;
+    public bool Falhou
+    {
+        get => _falhou;
+        private set
+        {
+            if (SetProperty(ref _falhou, value))
+            {
+                OnPropertyChanged(nameof(EstadoTexto));
+                OnPropertyChanged(nameof(EstadoCor));
+            }
+        }
+    }
+
+    /// <summary>Estado em uma palavra, para o selo no topo da tela.</summary>
+    public string EstadoTexto => Falhou ? "FALHOU" : EmExecucao ? "TREINANDO" : GeracaoAtual > 0 ? "PARADO" : "PRONTO";
+
+    public string EstadoCor => Falhou ? "#F87171" : EmExecucao ? "#4ADE80" : "#94A3B8";
+
     private int _geracaoAtual;
-    public int GeracaoAtual { get => _geracaoAtual; private set => SetProperty(ref _geracaoAtual, value); }
+    public int GeracaoAtual
+    {
+        get => _geracaoAtual;
+        private set
+        {
+            if (SetProperty(ref _geracaoAtual, value))
+            {
+                OnPropertyChanged(nameof(EstadoTexto));
+                OnPropertyChanged(nameof(ProgressoFracao));
+                OnPropertyChanged(nameof(ProgressoTexto));
+                OnPropertyChanged(nameof(ProgressoNoBlocoFracao));
+                OnPropertyChanged(nameof(ProgressoNoBlocoTexto));
+            }
+        }
+    }
 
     private double _melhorFitness;
     public double MelhorFitness { get => _melhorFitness; private set => SetProperty(ref _melhorFitness, value); }
@@ -259,43 +445,295 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private double _fitnessMedio;
     public double FitnessMedio { get => _fitnessMedio; private set => SetProperty(ref _fitnessMedio, value); }
 
+    // ------------------------------------------------- Melhor resultado acumulado da sessão
+
+    private double _melhorFitnessDaSessao;
+    /// <summary>Pico de fitness alcançado desde o início desta sessão — distinto de <see cref="MelhorFitness"/>, que é o campeão da geração mais recente e pode regredir quando as seeds mudam.</summary>
+    public double MelhorFitnessDaSessao { get => _melhorFitnessDaSessao; private set => SetProperty(ref _melhorFitnessDaSessao, value); }
+
+    private int _geracaoDoMelhorFitness;
+    public int GeracaoDoMelhorFitness { get => _geracaoDoMelhorFitness; private set => SetProperty(ref _geracaoDoMelhorFitness, value); }
+
+    /// <summary>Quantas gerações entram na média móvel e na comparação "antes × agora" do fitness.</summary>
+    public const int JanelaIndicadoresAprendizado = 50;
+
+    private double _fitnessMediaMovel;
+    /// <summary>Média do melhor fitness nas últimas <see cref="JanelaIndicadoresAprendizado"/> gerações — alisa o ruído de seed para mostrar a tendência, não o sobe-e-desce geração a geração.</summary>
+    public double FitnessMediaMovel { get => _fitnessMediaMovel; private set => SetProperty(ref _fitnessMediaMovel, value); }
+
+    private double? _variacaoNaJanela;
+    /// <summary>
+    /// Diferença entre a média móvel atual e a de <see cref="JanelaIndicadoresAprendizado"/>
+    /// gerações atrás. Positiva = aprendendo; perto de zero = estabilizou; negativa = regredindo.
+    /// <c>null</c> enquanto não houver gerações suficientes para a comparação existir.
+    /// </summary>
+    public double? VariacaoNaJanela
+    {
+        get => _variacaoNaJanela;
+        private set
+        {
+            if (SetProperty(ref _variacaoNaJanela, value)) OnPropertyChanged(nameof(DiagnosticoAprendizado));
+        }
+    }
+
+    private int _geracoesSemCampeaoNovo;
+    /// <summary>
+    /// Gerações desde que o campeão atual nasceu (<c>BirthGeneration</c> do genoma). É estagnação
+    /// MEDIDA: nenhum indivíduo novo conseguiu superá-lo nesse intervalo.
+    /// </summary>
+    public int GeracoesSemCampeaoNovo
+    {
+        get => _geracoesSemCampeaoNovo;
+        private set
+        {
+            if (SetProperty(ref _geracoesSemCampeaoNovo, value)) OnPropertyChanged(nameof(DiagnosticoAprendizado));
+        }
+    }
+
+    /// <summary>
+    /// Leitura em uma frase dos dois indicadores acima — serve para quem olha a tela não precisar
+    /// interpretar os números sozinho. Deriva só de valores medidos; não há nenhum limiar de
+    /// "qualidade" embutido além do tempo de estagnação.
+    /// </summary>
+    public string DiagnosticoAprendizado
+    {
+        get
+        {
+            if (VariacaoNaJanela is not { } variacao) return $"Coletando as primeiras {JanelaIndicadoresAprendizado} gerações…";
+
+            string tendencia = variacao switch
+            {
+                > 1.0 => $"Evoluindo (+{variacao:0.0} em {JanelaIndicadoresAprendizado} gerações)",
+                < -1.0 => $"Regredindo ({variacao:0.0} em {JanelaIndicadoresAprendizado} gerações)",
+                _ => $"Estável ({variacao:+0.0;-0.0;0.0} em {JanelaIndicadoresAprendizado} gerações)"
+            };
+
+            return GeracoesSemCampeaoNovo >= JanelaIndicadoresAprendizado
+                ? $"{tendencia} · campeão sem ser superado há {GeracoesSemCampeaoNovo} gerações"
+                : tendencia;
+        }
+    }
+
+    // ------------------------------------------------- Complexidade e fase da evolução
+
+    private double _complexidadeMelhor;
+    /// <summary>Conexões do campeão. Com NEAT isso cresce ao longo da evolução — no método anterior a topologia era fixa e esse número nunca mudava.</summary>
+    public double ComplexidadeMelhor { get => _complexidadeMelhor; private set => SetProperty(ref _complexidadeMelhor, value); }
+
+    private double _complexidadeMedia;
+    public double ComplexidadeMedia { get => _complexidadeMedia; private set => SetProperty(ref _complexidadeMedia, value); }
+
+    private double _complexidadeMaxima;
+    public double ComplexidadeMaxima { get => _complexidadeMaxima; private set => SetProperty(ref _complexidadeMaxima, value); }
+
+    private int _tetoComplexidadeEmUso;
+    /// <summary>Teto em vigor na execução atual — é a referência que dá sentido às três medidas acima.</summary>
+    public int TetoComplexidadeEmUso { get => _tetoComplexidadeEmUso; private set => SetProperty(ref _tetoComplexidadeEmUso, value); }
+
+    private bool _simplificando;
+    /// <summary>Fase da regulação de complexidade do NEAT — ver <see cref="FaseTexto"/>.</summary>
+    public bool Simplificando
+    {
+        get => _simplificando;
+        private set
+        {
+            if (SetProperty(ref _simplificando, value))
+            {
+                OnPropertyChanged(nameof(FaseTexto));
+                OnPropertyChanged(nameof(FaseCor));
+            }
+        }
+    }
+
+    /// <summary>
+    /// A "etapa" em que o treinamento está, no único sentido que o NEAT tem: enquanto a
+    /// complexidade média está abaixo do teto a evolução COMPLEXIFICA (pode acrescentar neurônios
+    /// e conexões); ao passar do teto ela SIMPLIFICA, enxugando a rede até voltar a caber.
+    /// </summary>
+    public string FaseTexto => Simplificando ? "SIMPLIFICANDO" : "COMPLEXIFICANDO";
+
+    public string FaseCor => Simplificando ? "#FBBF24" : "#60A5FA";
+
+    private int _quantidadeEspecies;
+    public int QuantidadeEspecies { get => _quantidadeEspecies; private set => SetProperty(ref _quantidadeEspecies, value); }
+
+    // ------------------------------------------------- Vazão e progresso
+
+    private long _totalAvaliacoes;
+    /// <summary>Indivíduos avaliados desde o início da execução. Cada avaliação roda <see cref="ParametrosTreinamento.EpisodiosPorAvaliacao"/> episódios completos, então este número cresce bem mais rápido que a geração.</summary>
+    public long TotalAvaliacoes { get => _totalAvaliacoes; private set => SetProperty(ref _totalAvaliacoes, value); }
+
+    private double _avaliacoesPorSegundo;
+    public double AvaliacoesPorSegundo { get => _avaliacoesPorSegundo; private set => SetProperty(ref _avaliacoesPorSegundo, value); }
+
+    private TimeSpan _tempoDecorrido;
+    public TimeSpan TempoDecorrido
+    {
+        get => _tempoDecorrido;
+        private set
+        {
+            if (SetProperty(ref _tempoDecorrido, value))
+            {
+                OnPropertyChanged(nameof(TempoDecorridoTexto));
+                OnPropertyChanged(nameof(GeracoesPorMinuto));
+            }
+        }
+    }
+
+    public string TempoDecorridoTexto => TempoDecorrido.ToString(TempoDecorrido.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
+
+    /// <summary>Gerações por minuto medidas no relógio de parede — complementa <see cref="AvaliacoesPorSegundo"/>, que é a vazão interna do framework.</summary>
+    public double GeracoesPorMinuto =>
+        TempoDecorrido.TotalMinutes > 0 ? _geracoesNestaSessao / TempoDecorrido.TotalMinutes : 0.0;
+
+    private int _geracoesNestaSessao;
+
+    private int _metaGeracoes;
+    /// <summary>
+    /// Meta de gerações desta execução, ou 0 para "sem meta". Existe porque o NEAT aqui não tem
+    /// condição de parada própria (ver <see cref="EsquemaAvaliacaoAmbiente.TestForStopCondition"/>):
+    /// sem um alvo declarado não existe "percentual concluído" honesto. Com meta definida, o
+    /// treinamento para sozinho ao alcançá-la.
+    /// </summary>
+    public int MetaGeracoes
+    {
+        get => _metaGeracoes;
+        set
+        {
+            if (SetProperty(ref _metaGeracoes, value))
+            {
+                OnPropertyChanged(nameof(TemMeta));
+                OnPropertyChanged(nameof(ProgressoFracao));
+                OnPropertyChanged(nameof(ProgressoTexto));
+            }
+        }
+    }
+
+    public bool TemMeta => _metaGeracoes > 0;
+
+    /// <summary>Progresso até <see cref="MetaGeracoes"/>, de 0 a 1 — 0 quando não há meta.</summary>
+    public double ProgressoFracao => TemMeta ? Math.Clamp(GeracaoAtual / (double)_metaGeracoes, 0.0, 1.0) : 0.0;
+
+    public string ProgressoTexto => TemMeta
+        ? $"{ProgressoFracao:P0} — geração {GeracaoAtual:N0} de {_metaGeracoes:N0}"
+        : $"Sem meta definida — geração {GeracaoAtual:N0}";
+
+    /// <summary>Avanço dentro do bloco de <see cref="TamanhoBlocoMarco"/> gerações que será gravado como marco — sempre disponível, mesmo sem meta.</summary>
+    public double ProgressoNoBlocoFracao => (GeracaoAtual % TamanhoBlocoMarco) / (double)TamanhoBlocoMarco;
+
+    public string ProgressoNoBlocoTexto =>
+        $"{GeracaoAtual % TamanhoBlocoMarco} de {TamanhoBlocoMarco} gerações até o próximo marco gravado";
+
+    // ------------------------------------------------- Arquitetura do campeão (resultado da evolução, não configuração)
+
+    private int _ocultosDoCampeao;
+    /// <summary>Neurônios ocultos do campeão. Com NEAT é RESULTADO da evolução — era fixo em 8 no algoritmo anterior.</summary>
+    public int OcultosDoCampeao { get => _ocultosDoCampeao; private set => SetProperty(ref _ocultosDoCampeao, value); }
+
+    private int _conexoesDiretasEntradaSaida;
+    /// <summary>Conexões que pulam direto de uma entrada para uma saída, sem passar por oculto nenhum — impossíveis na rede em camadas anterior, comuns no NEAT.</summary>
+    public int ConexoesDiretasEntradaSaida { get => _conexoesDiretasEntradaSaida; private set => SetProperty(ref _conexoesDiretasEntradaSaida, value); }
+
+    private int _idDoCampeao;
+    public int IdDoCampeao { get => _idDoCampeao; private set => SetProperty(ref _idDoCampeao, value); }
+
+    private int _geracaoDeNascimentoDoCampeao;
+    public int GeracaoDeNascimentoDoCampeao { get => _geracaoDeNascimentoDoCampeao; private set => SetProperty(ref _geracaoDeNascimentoDoCampeao, value); }
+
+    /// <summary>Entradas reais da rede (sem o nó de bias) — ver <see cref="ControladorHibrido.QuantidadeEntradas"/>.</summary>
+    public int EntradasDaRede => ControladorHibrido.QuantidadeEntradas;
+
+    public int SaidasDaRede => ControladorHibrido.QuantidadeSaidas;
+
+    public string FuncaoAtivacaoTexto => TreinadorNeat.FuncaoAtivacao.ToString();
+
+    public string TopologiaTexto => TreinadorNeat.Aciclica ? "Acíclica (sem memória entre ativações)" : "Cíclica";
+
+    private bool _ativacoesOcultasDisponiveis;
+    /// <summary>
+    /// Se o diagrama está conseguindo mostrar a ativação real dos neurônios ocultos (ver
+    /// <see cref="AtivacoesRedeNeat"/>). Quando falso, os ocultos aparecem em cor neutra e a
+    /// legenda avisa o motivo — em vez de exibir uma cor que não corresponde a valor nenhum.
+    /// </summary>
+    public bool AtivacoesOcultasDisponiveis { get => _ativacoesOcultasDisponiveis; private set => SetProperty(ref _ativacoesOcultasDisponiveis, value); }
+
+    // ------------------------------------------------- Comportamento do campeão (episódio de verificação de cada geração)
+
+    private int _alvosAbatidos;
+    public int AlvosAbatidos { get => _alvosAbatidos; private set => SetProperty(ref _alvosAbatidos, value); }
+
+    private int _alvosEscapados;
+    public int AlvosEscapados { get => _alvosEscapados; private set => SetProperty(ref _alvosEscapados, value); }
+
+    private int _alvosNascidos;
+    public int AlvosNascidos { get => _alvosNascidos; private set => SetProperty(ref _alvosNascidos, value); }
+
+    private int _tirosErrados;
+    public int TirosErrados { get => _tirosErrados; private set => SetProperty(ref _tirosErrados, value); }
+
+    private double? _taxaDeAcerto;
+    /// <summary>Abates sobre tentativas de disparo — <c>null</c> quando o campeão não disparou nenhuma vez no episódio.</summary>
+    public double? TaxaDeAcerto { get => _taxaDeAcerto; private set => SetProperty(ref _taxaDeAcerto, value); }
+
+    private double? _taxaDeCobertura;
+    /// <summary>Abates sobre alvos que apareceram — mede quanto da ameaça o controlador deu conta, não só a precisão do tiro.</summary>
+    public double? TaxaDeCobertura { get => _taxaDeCobertura; private set => SetProperty(ref _taxaDeCobertura, value); }
+
+    private int _oportunidadesDeDisparo;
+    public int OportunidadesDeDisparo { get => _oportunidadesDeDisparo; private set => SetProperty(ref _oportunidadesDeDisparo, value); }
+
+    private int _disparosRecusadosPelaRede;
+    public int DisparosRecusadosPelaRede { get => _disparosRecusadosPelaRede; private set => SetProperty(ref _disparosRecusadosPelaRede, value); }
+
+    private double? _taxaDeRecusa;
+    /// <summary>
+    /// Fração das oportunidades legítimas que a rede recusou — a heurística pura recusaria zero.
+    /// É a medida direta da hesitação que motivou <see cref="ParametrosTreinamento.PenalidadeRecusaDisparo"/>,
+    /// e até agora só aparecia no instantâneo gravado a cada 1.000 gerações.
+    /// </summary>
+    public double? TaxaDeRecusa { get => _taxaDeRecusa; private set => SetProperty(ref _taxaDeRecusa, value); }
+
     // ---------------------------------------------------------------- Comandos
 
     private void Iniciar()
     {
         if (EmExecucao) return;
 
-        int[] arquitetura = ArquiteturaSelecionada;
-        _ambiente = new AmbienteTreinamento(ParametrosAtuais, arquitetura: arquitetura);
+        ParametrosTreinamento parametros = ParametrosAtuais;
+        _ambiente = new AmbienteTreinamento(parametros);
         DesenharTorresFixas();
-        ConstruirDiagramaRedeNeural();
-        // Elitismo proporcional (10% da população, no mínimo 2): com população menor, elitismo
-        // fixo em 3 vira uma fração grande demais da população (perde diversidade) ou pequena
-        // demais (perde estabilidade) dependendo do tamanho escolhido na tela — proporcional
-        // mantém a mesma garantia de não regressão em qualquer tamanho de população.
-        int elitismoProporcional = Math.Max(2, ParametrosAtuais.TamanhoPopulacao / 10);
-        _algoritmoGenetico = new AlgoritmoGenetico(
-            tamanhoGenoma: RedeNeural.TamanhoGenoma(arquitetura),
-            tamanhoPopulacao: ParametrosAtuais.TamanhoPopulacao,
-            taxaMutacao: ParametrosAtuais.TaxaMutacao,
-            elitismo: elitismoProporcional);
+        LimparDiagramaRedeNeural();
+        _treinador = new TreinadorNeat(
+            _ambiente,
+            tamanhoPopulacao: parametros.TamanhoPopulacao,
+            quantidadeEspecies: parametros.QuantidadeEspecies,
+            tetoComplexidade: parametros.TetoComplexidade,
+            probabilidadeAdicionarNo: parametros.ProbabilidadeAdicionarNo);
 
-        GeracaoAtual = 0;
-        MelhorFitness = 0;
-        FitnessMedio = 0;
-        _somaFitnessMedioBloco = 0;
-        _melhorFitnessBloco = 0;
-        _contagemGeracoesNoBloco = 0;
-        _melhorGenomaAtual = [];
+        ZerarIndicadoresDaSessao();
+        _melhorGenomaAtual = null;
+        _melhorRedeAtual = null;
         _episodioPreview = null;
         AlvosVisuais.Clear();
         MirasVisuais.Clear();
         RegrasAprendidas.Clear();
 
+        TetoComplexidadeEmUso = parametros.TetoComplexidade;
+        AtualizarParametrosEmUso(parametros, _treinador);
+
+        RegistrarEvento(
+            MetaGeracoes > 0
+                ? $"Treinamento iniciado — população {parametros.TamanhoPopulacao}, {parametros.QuantidadeEspecies} espécies, teto de {parametros.TetoComplexidade} conexões, meta de {MetaGeracoes:N0} gerações."
+                : $"Treinamento iniciado — população {parametros.TamanhoPopulacao}, {parametros.QuantidadeEspecies} espécies, teto de {parametros.TetoComplexidade} conexões, sem meta de gerações.",
+            geracao: null,
+            TipoEventoTreinamento.Informacao);
+
         _previewContinuo = true;
         _cts = new CancellationTokenSource();
+        _cronometroSessao.Restart();
         _tarefaTreinamento = Task.Run(() => LacoDeTreinamento(_cts.Token));
         _timerPreview.Start();
+        _timerEstado.Start();
         EmExecucao = true;
     }
 
@@ -305,7 +743,69 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         _cts?.Cancel();
         _timerPreview.Stop();
+        _timerEstado.Stop();
+        _cronometroSessao.Stop();
+        TempoDecorrido = _cronometroSessao.Elapsed;
         EmExecucao = false;
+
+        RegistrarEvento(
+            $"Treinamento parado pelo usuário após {_geracoesNestaSessao:N0} gerações em {TempoDecorridoTexto}.",
+            GeracaoAtual,
+            TipoEventoTreinamento.Informacao);
+    }
+
+    /// <summary>
+    /// Zera tudo que é medido POR SESSÃO — contadores, série do gráfico, espécies e indicadores de
+    /// aprendizado. Chamado em "Iniciar" e "Resetar" para que nenhum número da execução anterior
+    /// sobreviva misturado ao da nova (era exatamente o que acontecia com o gráfico, alimentado
+    /// pelo histórico persistido do banco).
+    /// </summary>
+    private void ZerarIndicadoresDaSessao()
+    {
+        GeracaoAtual = 0;
+        MelhorFitness = 0;
+        FitnessMedio = 0;
+        MelhorFitnessDaSessao = 0;
+        GeracaoDoMelhorFitness = 0;
+        FitnessMediaMovel = 0;
+        VariacaoNaJanela = null;
+        GeracoesSemCampeaoNovo = 0;
+        ComplexidadeMelhor = 0;
+        ComplexidadeMedia = 0;
+        ComplexidadeMaxima = 0;
+        QuantidadeEspecies = 0;
+        Simplificando = false;
+        TotalAvaliacoes = 0;
+        AvaliacoesPorSegundo = 0;
+        TempoDecorrido = TimeSpan.Zero;
+        OcultosDoCampeao = 0;
+        ConexoesDiretasEntradaSaida = 0;
+        IdDoCampeao = 0;
+        GeracaoDeNascimentoDoCampeao = 0;
+        AtivacoesOcultasDisponiveis = false;
+        AlvosAbatidos = 0;
+        AlvosEscapados = 0;
+        AlvosNascidos = 0;
+        TirosErrados = 0;
+        TaxaDeAcerto = null;
+        TaxaDeCobertura = null;
+        OportunidadesDeDisparo = 0;
+        DisparosRecusadosPelaRede = 0;
+        TaxaDeRecusa = null;
+        Falhou = false;
+
+        _somaFitnessMedioBloco = 0;
+        _melhorFitnessBloco = 0;
+        _contagemGeracoesNoBloco = 0;
+        _geracoesNestaSessao = 0;
+        _cronometroSessao.Reset();
+
+        _ordemDoOcultoPorId.Clear();
+        _ocultosDaRemontagemAnterior.Clear();
+        _conexoesDaRemontagemAnterior.Clear();
+
+        HistoricoDaSessao.Clear();
+        Especies.Clear();
     }
 
     /// <summary>
@@ -318,23 +818,28 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         _cts?.Cancel();
         _timerPreview.Stop();
+        _timerEstado.Stop();
         EmExecucao = false;
 
-        _ambiente = new AmbienteTreinamento(ParametrosAtuais, arquitetura: ArquiteturaSelecionada);
-        _algoritmoGenetico = null;
-        _melhorGenomaAtual = [];
+        ParametrosTreinamento parametros = ParametrosAtuais;
+        _ambiente = new AmbienteTreinamento(parametros);
+        _treinador = null;
+        _melhorGenomaAtual = null;
+        _melhorRedeAtual = null;
         _episodioPreview = null;
         _previewContinuo = true;
 
-        GeracaoAtual = 0;
-        MelhorFitness = 0;
-        FitnessMedio = 0;
-        _somaFitnessMedioBloco = 0;
-        _melhorFitnessBloco = 0;
-        _contagemGeracoesNoBloco = 0;
+        ZerarIndicadoresDaSessao();
+        TetoComplexidadeEmUso = parametros.TetoComplexidade;
+        AtualizarParametrosEmUso(parametros, treinador: null);
+
+        // O histórico de execução NÃO é apagado aqui, pelo mesmo princípio já aplicado ao
+        // histórico por geração: "Resetar" reinicia a sessão na tela, não apaga dados gravados.
+        // Apagar de vez é ação explícita da tela Configurações → Resetar treinamento da IA.
+        RegistrarEvento("Treinamento reiniciado — geração, fitness e genoma voltaram ao zero.", geracao: null, TipoEventoTreinamento.Informacao);
 
         DesenharTorresFixas();
-        ConstruirDiagramaRedeNeural();
+        LimparDiagramaRedeNeural();
         AlvosVisuais.Clear();
         MirasVisuais.Clear();
         RegrasAprendidas.Clear();
@@ -352,12 +857,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         if (EmExecucao) return;
 
-        if (_melhorGenomaAtual.Length == 0)
-        {
-            _melhorGenomaAtual = GerarGenomaAleatorio();
-            AtualizarRegras(_melhorGenomaAtual);
-            AtualizarDiagramaRedeNeural(_melhorGenomaAtual);
-        }
+        if (!GarantirRedeParaPrevia()) return;
 
         _previewContinuo = false;
         _episodioPreview = _ambiente.NovoEpisodio();
@@ -376,12 +876,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         if (EmExecucao) return;
 
-        if (_melhorGenomaAtual.Length == 0)
-        {
-            _melhorGenomaAtual = GerarGenomaAleatorio();
-            AtualizarRegras(_melhorGenomaAtual);
-            AtualizarDiagramaRedeNeural(_melhorGenomaAtual);
-        }
+        if (!GarantirRedeParaPrevia()) return;
 
         _previewContinuo = false;
         _episodioPreview = _ambiente.NovoEpisodio(cenario: CenarioOpcaoSelecionada.Tipo);
@@ -425,16 +920,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                     VelocidadeMetrosPorSegundo: Math.Max(0, linha.VelocidadeMetrosPorSegundo),
                     CertezaBase: 0.5,
                     TaxaCrescimentoCertezaPorSegundo: 0.15,
-                    FracaoRaioNascimento: fracaoRaio);
+                    FracaoRaioNascimento: fracaoRaio,
+                    AlturaMetros: Math.Clamp(linha.AlturaMetros, 0.0, _ambiente.Parametros.AlturaMaximaAlvoMetros));
             })
             .ToList();
 
-        if (_melhorGenomaAtual.Length == 0)
-        {
-            _melhorGenomaAtual = GerarGenomaAleatorio();
-            AtualizarRegras(_melhorGenomaAtual);
-            AtualizarDiagramaRedeNeural(_melhorGenomaAtual);
-        }
+        if (!GarantirRedeParaPrevia()) return;
 
         _previewContinuo = false;
         _episodioPreview = _ambiente.NovoEpisodioComSpawnsPersonalizados(spawns);
@@ -445,48 +936,161 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         CenarioPersonalizadoIniciado?.Invoke(this, EventArgs.Empty);
     }
 
-    private double[] GerarGenomaAleatorio()
+    /// <summary>
+    /// Garante que há uma rede para a prévia animar. Antes bastava sortear um vetor de pesos da
+    /// arquitetura fixa; com NEAT um genoma só existe dentro de uma população (ele carrega ids
+    /// de inovação, espécie e histórico), então a única forma honesta de obter um é pedir ao
+    /// próprio framework: rodamos UMA geração, que cria e avalia a população inicial.
+    /// </summary>
+    /// <returns><c>false</c> (com status na tela) se não foi possível — nesse caso não há o que animar.</returns>
+    private bool GarantirRedeParaPrevia()
     {
-        int tamanho = RedeNeural.TamanhoGenoma(_ambiente.Arquitetura);
-        var genoma = new double[tamanho];
-        for (int i = 0; i < tamanho; i++) genoma[i] = (_randomGenomaInicial.NextDouble() * 2.0) - 1.0;
-        return genoma;
+        if (_melhorRedeAtual is not null) return true;
+
+        try
+        {
+            _treinador ??= new TreinadorNeat(
+                _ambiente,
+                tamanhoPopulacao: ParametrosAtuais.TamanhoPopulacao,
+                quantidadeEspecies: ParametrosAtuais.QuantidadeEspecies,
+                tetoComplexidade: ParametrosAtuais.TetoComplexidade,
+                probabilidadeAdicionarNo: ParametrosAtuais.ProbabilidadeAdicionarNo);
+
+            int[] seeds = Enumerable.Range(0, Math.Max(1, _ambiente.Parametros.EpisodiosPorAvaliacao)).ToArray();
+            ResultadoGeracao inicial = _treinador.EvoluirGeracao(seeds, CatalogoCenarios.TodosComScript);
+
+            AdotarCampeao(inicial.MelhorGenoma);
+
+            RunOnUi(() =>
+            {
+                GeracaoAtual = inicial.Geracao;
+                MelhorFitness = inicial.MelhorFitness;
+                FitnessMedio = inicial.FitnessMedio;
+                ComplexidadeMelhor = inicial.ComplexidadeMelhor;
+                ComplexidadeMedia = inicial.ComplexidadeMedia;
+                ComplexidadeMaxima = inicial.ComplexidadeMaxima;
+                QuantidadeEspecies = inicial.QuantidadeEspecies;
+                Simplificando = inicial.Simplificando;
+                OcultosDoCampeao = inicial.NeuroniosOcultosDoCampeao;
+                IdDoCampeao = inicial.MelhorGenoma.Id;
+                GeracaoDeNascimentoDoCampeao = inicial.GeracaoDeNascimentoDoCampeao;
+                TetoComplexidadeEmUso = _ambiente.Parametros.TetoComplexidade;
+                AtualizarEspecies(inicial);
+                AtualizarParametrosEmUso(_ambiente.Parametros, _treinador);
+            });
+
+            RegistrarEvento(
+                "População inicial criada para a prévia — uma geração foi avaliada para obter um campeão (um genoma NEAT só existe dentro de uma população).",
+                inicial.Geracao,
+                TipoEventoTreinamento.Informacao);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível criar a população inicial para a prévia: {ex.Message}");
+            MostrarStatus($"Não foi possível criar a população inicial: {ex.Message}", sucesso: false);
+            RegistrarEvento($"Não foi possível criar a população inicial: {ex.Message}", geracao: null, TipoEventoTreinamento.Falha);
+            return false;
+        }
     }
 
+    /// <summary>
+    /// Guarda o campeão da geração e decodifica a rede. O diagrama e as regras só são refeitos
+    /// quando <paramref name="remontarDiagrama"/> permite (ver
+    /// <see cref="IntervaloMinimoRemontagemDiagrama"/>) — a decodificação em si é barata e precisa
+    /// acontecer sempre, porque a prévia animada e a exportação usam esta rede.
+    /// </summary>
+    private void AdotarCampeao(NeatGenome<double> genoma, bool remontarDiagrama = true)
+    {
+        _melhorGenomaAtual = genoma;
+        _melhorRedeAtual = _treinador!.Decodificar(genoma);
+
+        if (!remontarDiagrama) return;
+
+        AtualizarRegras(_melhorRedeAtual);
+        RemontarDiagramaRedeNeural(genoma, _melhorRedeAtual);
+    }
+
+    /// <summary>Consome a janela do <i>throttle</i> do diagrama: devolve <c>true</c> (e reinicia a contagem) só quando já passou tempo suficiente desde a última remontagem.</summary>
+    private bool PodeRemontarDiagrama()
+    {
+        if (_cronometroDiagrama.Elapsed < IntervaloMinimoRemontagemDiagrama) return false;
+
+        _cronometroDiagrama.Restart();
+        return true;
+    }
+
+    /// <summary>
+    /// Grava o campeão atual no formato <c>.net</c> do próprio SharpNEAT (lista de conexões +
+    /// funções de ativação) — e não mais num JSON com arquitetura + vetor de pesos, que não
+    /// representa uma topologia evoluída. É este arquivo que o target MSBuild
+    /// <c>EmbutirRedeTreinada</c> procura para embutir no executável (ver
+    /// <see cref="Services.ControladorTreinadoProvider"/>).
+    /// </summary>
     private void ExportarMelhorGenoma()
     {
-        if (_melhorGenomaAtual.Length == 0) return;
+        if (_melhorGenomaAtual is null) return;
 
         try
         {
             AppDataPaths.EnsureTreinamentoFolderExists();
-            string caminho = Path.Combine(AppDataPaths.TreinamentoFolder, $"genoma-geracao-{GeracaoAtual}.json");
+            string caminho = Path.Combine(AppDataPaths.TreinamentoFolder, $"rede-geracao-{GeracaoAtual}.net");
 
-            var payload = new
-            {
-                Arquitetura = _ambiente.Arquitetura,
-                Genoma = _melhorGenomaAtual,
-                Geracao = GeracaoAtual,
-                MelhorFitness,
-                ExportadoEm = DateTime.Now
-            };
+            NeatGenomeSaver.Save(_melhorGenomaAtual, caminho);
 
-            File.WriteAllText(caminho, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
-            _logger.Success($"Genoma exportado: {caminho}");
-            MostrarStatus($"Genoma exportado com sucesso! ({Path.GetFileName(caminho)})", sucesso: true);
+            _logger.Success($"Rede exportada: {caminho}");
+            MostrarStatus($"Rede exportada com sucesso! ({Path.GetFileName(caminho)})", sucesso: true);
+            RegistrarEvento(
+                $"Rede exportada ({Path.GetFileName(caminho)}) — {ComplexidadeMelhor:0} conexões, {OcultosDoCampeao} ocultos, fitness {MelhorFitness:0.0}.",
+                GeracaoAtual,
+                TipoEventoTreinamento.Informacao);
         }
         catch (Exception ex)
         {
-            _logger.Error($"Não foi possível exportar o genoma: {ex.Message}");
-            MostrarStatus($"Não foi possível exportar o genoma: {ex.Message}", sucesso: false);
+            _logger.Error($"Não foi possível exportar a rede: {ex.Message}");
+            MostrarStatus($"Não foi possível exportar a rede: {ex.Message}", sucesso: false);
+            RegistrarEvento($"Não foi possível exportar a rede: {ex.Message}", GeracaoAtual, TipoEventoTreinamento.Falha);
         }
     }
 
     // ---------------------------------------------------------------- Laço de treinamento (thread de fundo)
 
+    /// <summary>
+    /// Envelope do laço: qualquer exceção aqui matava a thread de fundo em silêncio, deixando a
+    /// tela anunciando "treinando" com os números congelados. Agora a falha é registrada no
+    /// histórico de execução, aparece no selo de estado e libera os botões.
+    /// </summary>
     private void LacoDeTreinamento(CancellationToken token)
     {
-        AlgoritmoGenetico algoritmo = _algoritmoGenetico!;
+        try
+        {
+            Evoluir(token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Parada pedida pelo usuário — nada a relatar.
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"O treinamento foi interrompido por um erro: {ex}");
+
+            RunOnUi(() =>
+            {
+                Falhou = true;
+                EmExecucao = false;
+                _timerPreview.Stop();
+                _timerEstado.Stop();
+                _cronometroSessao.Stop();
+                MostrarStatus($"O treinamento parou por um erro: {ex.Message}", sucesso: false);
+                RegistrarEvento($"Treinamento interrompido por erro: {ex.Message}", GeracaoAtual, TipoEventoTreinamento.Falha);
+            });
+        }
+    }
+
+    private void Evoluir(CancellationToken token)
+    {
+        TreinadorNeat algoritmo = _treinador!;
 
         while (!token.IsCancellationRequested)
         {
@@ -504,28 +1108,239 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // Além dos cenários aleatórios acima, toda geração também avalia TODOS os casos
             // táticos mapeados (ver CatalogoCenarios) — a IA não pode ignorar um caso difícil só
             // porque o sorteio raramente o produz.
-            ResultadoGeracao resultado = algoritmo.EvoluirGeracao(
-                genoma => _ambiente.AvaliarFitness(genoma, seedsDaGeracao, CatalogoCenarios.TodosComScript));
+            ResultadoGeracao resultado = algoritmo.EvoluirGeracao(seedsDaGeracao, CatalogoCenarios.TodosComScript);
 
-            _melhorGenomaAtual = resultado.MelhorGenoma;
+            // O diagrama e as regras são custosos de remontar e só valem por geração exibida —
+            // ver IntervaloMinimoRemontagemDiagrama. O campeão em si é sempre adotado, porque a
+            // prévia animada e a exportação dependem dele.
+            AdotarCampeao(resultado.MelhorGenoma, remontarDiagrama: PodeRemontarDiagrama());
 
             // Reavalia o melhor genoma uma vez mais só para capturar como ele se comportou
-            // (abatidos/escapados) — o fitness em si já saiu de dentro do algoritmo genético,
-            // mas esses dois números não são devolvidos por ele.
-            EpisodioResultado comportamento = _ambiente.ExecutarEpisodioRapido(resultado.MelhorGenoma, seed: resultado.Geracao);
+            // (abatidos/escapados/recusas) — o fitness em si já saiu de dentro da evolução, mas
+            // esses números não são devolvidos por ela.
+            EpisodioResultado comportamento = _ambiente.ExecutarEpisodioRapido(_melhorRedeAtual!, seed: resultado.Geracao);
             RegistrarHistorico(resultado, comportamento);
             RegistrarMarcoFitnessSeCompletouBloco(resultado);
             RegistrarInstantaneoDeComportamentoSeCompletouBloco(resultado, comportamento);
-            AtualizarRegras(resultado.MelhorGenoma);
-            AtualizarDiagramaRedeNeural(resultado.MelhorGenoma);
 
-            RunOnUi(() =>
+            RunOnUi(() => AplicarResultadoNaTela(resultado, comportamento));
+
+            if (MetaGeracoes > 0 && resultado.Geracao >= MetaGeracoes)
             {
-                GeracaoAtual = resultado.Geracao;
-                MelhorFitness = resultado.MelhorFitness;
-                FitnessMedio = resultado.FitnessMedio;
-            });
+                RunOnUi(() => ConcluirPorMeta(resultado.Geracao));
+                return;
+            }
         }
+    }
+
+    /// <summary>Publica na tela tudo o que a geração produziu — roda na thread de UI.</summary>
+    private void AplicarResultadoNaTela(ResultadoGeracao resultado, EpisodioResultado comportamento)
+    {
+        bool fasesTrocaram = Simplificando != resultado.Simplificando;
+
+        GeracaoAtual = resultado.Geracao;
+        MelhorFitness = resultado.MelhorFitness;
+        FitnessMedio = resultado.FitnessMedio;
+        ComplexidadeMelhor = resultado.ComplexidadeMelhor;
+        ComplexidadeMedia = resultado.ComplexidadeMedia;
+        ComplexidadeMaxima = resultado.ComplexidadeMaxima;
+        QuantidadeEspecies = resultado.QuantidadeEspecies;
+        Simplificando = resultado.Simplificando;
+        TotalAvaliacoes = resultado.TotalAvaliacoes;
+        AvaliacoesPorSegundo = resultado.AvaliacoesPorSegundo;
+        OcultosDoCampeao = resultado.NeuroniosOcultosDoCampeao;
+        IdDoCampeao = resultado.MelhorGenoma.Id;
+        GeracaoDeNascimentoDoCampeao = resultado.GeracaoDeNascimentoDoCampeao;
+        GeracoesSemCampeaoNovo = resultado.GeracoesSemCampeaoNovo;
+
+        AlvosAbatidos = comportamento.AlvosAbatidos;
+        AlvosEscapados = comportamento.AlvosEscapados;
+        AlvosNascidos = comportamento.AlvosNascidos;
+        TirosErrados = comportamento.TirosErrados;
+        OportunidadesDeDisparo = comportamento.OportunidadesDeDisparo;
+        DisparosRecusadosPelaRede = comportamento.DisparosRecusadosPelaRede;
+
+        int tentativas = comportamento.AlvosAbatidos + comportamento.TirosErrados;
+        TaxaDeAcerto = tentativas > 0 ? comportamento.AlvosAbatidos / (double)tentativas : null;
+
+        int apareceram = comportamento.AlvosAbatidos + comportamento.AlvosEscapados;
+        TaxaDeCobertura = apareceram > 0 ? comportamento.AlvosAbatidos / (double)apareceram : null;
+
+        TaxaDeRecusa = comportamento.OportunidadesDeDisparo > 0
+            ? comportamento.DisparosRecusadosPelaRede / (double)comportamento.OportunidadesDeDisparo
+            : null;
+
+        _geracoesNestaSessao++;
+        TempoDecorrido = _cronometroSessao.Elapsed;
+
+        AtualizarEspecies(resultado);
+        AtualizarIndicadoresDeAprendizado(resultado);
+
+        if (fasesTrocaram)
+        {
+            RegistrarEvento(
+                resultado.Simplificando
+                    ? $"A evolução passou a SIMPLIFICAR — a complexidade média ({resultado.ComplexidadeMedia:0.0} conexões) ultrapassou o teto de {TetoComplexidadeEmUso}."
+                    : "A evolução voltou a COMPLEXIFICAR — a rede pode ganhar neurônios e conexões novamente.",
+                resultado.Geracao,
+                TipoEventoTreinamento.Atencao);
+        }
+    }
+
+    /// <summary>Para o treinamento por ter alcançado <see cref="MetaGeracoes"/> — roda na thread de UI.</summary>
+    private void ConcluirPorMeta(int geracao)
+    {
+        _cts?.Cancel();
+        _timerEstado.Stop();
+        _cronometroSessao.Stop();
+        TempoDecorrido = _cronometroSessao.Elapsed;
+        EmExecucao = false;
+
+        MostrarStatus($"Meta alcançada: {geracao:N0} gerações. Melhor fitness da sessão: {MelhorFitnessDaSessao:0.0}.", sucesso: true);
+        RegistrarEvento(
+            $"Meta de {MetaGeracoes:N0} gerações alcançada em {TempoDecorridoTexto} — melhor fitness da sessão {MelhorFitnessDaSessao:0.0} (geração {GeracaoDoMelhorFitness:N0}).",
+            geracao,
+            TipoEventoTreinamento.Avanco);
+    }
+
+    /// <summary>
+    /// Atualiza melhor da sessão, média móvel e variação na janela a partir da série desta sessão
+    /// (<see cref="HistoricoDaSessao"/>, alimentada em <see cref="RegistrarHistorico"/>). Roda na
+    /// thread de UI.
+    /// </summary>
+    private void AtualizarIndicadoresDeAprendizado(ResultadoGeracao resultado)
+    {
+        if (GeracaoDoMelhorFitness == 0 || resultado.MelhorFitness > MelhorFitnessDaSessao)
+        {
+            MelhorFitnessDaSessao = resultado.MelhorFitness;
+            GeracaoDoMelhorFitness = resultado.Geracao;
+
+            // Só vira evento depois da primeira geração DESTA sessão: o "recorde" inicial é apenas
+            // o ponto de partida, não um avanço, e anunciá-lo encheria o histórico de ruído.
+            // Contado pela sessão, não pelo número da geração, porque a numeração do framework
+            // começa em 0 (ver TreinadorNeat.EvoluirGeracao).
+            if (_geracoesNestaSessao > 1)
+            {
+                RegistrarEvento($"Novo melhor fitness da sessão: {resultado.MelhorFitness:0.0}.", resultado.Geracao, TipoEventoTreinamento.Avanco);
+            }
+        }
+
+        int total = HistoricoDaSessao.Count;
+        if (total == 0) return;
+
+        int tamanhoJanela = Math.Min(JanelaIndicadoresAprendizado, total);
+        double somaRecente = 0;
+        for (int i = total - tamanhoJanela; i < total; i++) somaRecente += HistoricoDaSessao[i].MelhorFitness;
+        double mediaRecente = somaRecente / tamanhoJanela;
+        FitnessMediaMovel = mediaRecente;
+
+        // A comparação só existe quando há duas janelas inteiras para comparar — com menos que
+        // isso, qualquer número seria média de amostras de tamanhos diferentes.
+        if (total < JanelaIndicadoresAprendizado * 2)
+        {
+            VariacaoNaJanela = null;
+            return;
+        }
+
+        double somaAnterior = 0;
+        int inicioAnterior = total - (JanelaIndicadoresAprendizado * 2);
+        for (int i = inicioAnterior; i < inicioAnterior + JanelaIndicadoresAprendizado; i++) somaAnterior += HistoricoDaSessao[i].MelhorFitness;
+
+        VariacaoNaJanela = mediaRecente - (somaAnterior / JanelaIndicadoresAprendizado);
+    }
+
+    /// <summary>Largura máxima, em pixels, da barra de tamanho de espécie no card (ver <see cref="LinhaEspecieTreinamento"/>).</summary>
+    private const double LarguraMaximaBarraEspeciePx = 150.0;
+
+    /// <summary>Republica as espécies da geração. Roda na thread de UI.</summary>
+    private void AtualizarEspecies(ResultadoGeracao resultado)
+    {
+        Especies.Clear();
+        if (resultado.Especies is null) return;
+
+        int maiorTamanho = 0;
+        foreach (ResumoEspecie especie in resultado.Especies) maiorTamanho = Math.Max(maiorTamanho, especie.Tamanho);
+
+        foreach (ResumoEspecie especie in resultado.Especies)
+        {
+            Especies.Add(LinhaEspecieTreinamento.De(especie, maiorTamanho, LarguraMaximaBarraEspeciePx));
+        }
+    }
+
+    /// <summary>Limite de linhas guardadas no histórico de execução — o suficiente para rolar e entender a sessão sem crescer sem limite numa execução de horas.</summary>
+    private const int LimiteEventosExecucao = 200;
+
+    /// <summary>
+    /// Grava o evento (ver <see cref="IEventoTreinamentoRepository"/>) e o acrescenta ao topo do
+    /// histórico de execução na tela.
+    /// </summary>
+    /// <remarks>
+    /// A linha aparece na tela mesmo que a gravação falhe: o acontecimento é real, e esconder um
+    /// erro de persistência justamente na hora de relatar um problema seria o pior momento
+    /// possível para a tela ficar em silêncio. A falha de gravação em si vai para o
+    /// <see cref="ILoggingService"/> — e não vira outro evento, para um banco indisponível não
+    /// gerar uma cascata de eventos sobre não conseguir gravar eventos.
+    /// </remarks>
+    private void RegistrarEvento(string mensagem, int? geracao, TipoEventoTreinamento tipo)
+    {
+        var evento = new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo };
+
+        try
+        {
+            _eventoRepository.Registrar(evento);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Não foi possível gravar o evento de treinamento: {ex.Message}");
+        }
+
+        RunOnUi(() =>
+        {
+            EventosExecucao.Insert(0, evento);
+            while (EventosExecucao.Count > LimiteEventosExecucao) EventosExecucao.RemoveAt(EventosExecucao.Count - 1);
+        });
+    }
+
+    /// <summary>
+    /// Monta o card "parâmetros em uso". <paramref name="treinador"/> é <c>null</c> antes do
+    /// primeiro "Iniciar" — nesse caso elitismo e paralelismo mostram o padrão que SERÁ aplicado,
+    /// não um valor em vigor.
+    /// </summary>
+    private void AtualizarParametrosEmUso(ParametrosTreinamento parametros, TreinadorNeat? treinador)
+    {
+        ParametrosEmUso.Clear();
+
+        void Adicionar(string nome, string valor, string explicacao) =>
+            ParametrosEmUso.Add(new ParametroEmUso(nome, valor, explicacao));
+
+        Adicionar("População", parametros.TamanhoPopulacao.ToString("N0"),
+            "Indivíduos avaliados por geração.");
+        Adicionar("Espécies", parametros.QuantidadeEspecies.ToString("N0"),
+            "Em quantas espécies a população é dividida. Protege uma topologia recém-criada de competir de igual para igual com redes já otimizadas.");
+        Adicionar("Teto de complexidade", $"{parametros.TetoComplexidade:N0} conexões",
+            "Acima deste número de conexões a evolução passa a simplificar em vez de crescer.");
+        Adicionar("Mutação estrutural", parametros.ProbabilidadeAdicionarNo.ToString("P1"),
+            "Probabilidade de um descendente ganhar um neurônio novo. Com NEAT, mutação de peso e mutação de estrutura são eventos distintos — este é o segundo.");
+        Adicionar("Episódios por avaliação", parametros.EpisodiosPorAvaliacao.ToString("N0"),
+            "Quantos episódios independentes são rodados e cuja média vira o fitness de um indivíduo. Reduz o ruído de sorteio do ambiente.");
+        Adicionar("Casos táticos fixos", CatalogoCenarios.TodosComScript.Count.ToString("N0"),
+            "Cenários roteirizados avaliados em TODA geração, além dos episódios sorteados.");
+        Adicionar("Elitismo", (treinador?.ProporcaoElitismo ?? 0.05).ToString("P0"),
+            "Fração dos melhores de cada espécie preservada sem alteração de uma geração para a outra.");
+        Adicionar("Paralelismo", treinador is null or { GrauParalelismo: -1 } ? "todos os núcleos" : treinador.GrauParalelismo.ToString("N0"),
+            "Quantos indivíduos são avaliados ao mesmo tempo.");
+        Adicionar("Rede", $"{ControladorHibrido.QuantidadeEntradas} entradas + bias → {ControladorHibrido.QuantidadeSaidas} saídas",
+            "Entradas e saídas são fixas (é o contrato com o controlador); tudo entre elas é evoluído.");
+        Adicionar("Ativação", $"{TreinadorNeat.FuncaoAtivacao} · {(TreinadorNeat.Aciclica ? "acíclica" : "cíclica")}",
+            "TanH mantém as saídas entre -1 e 1, a faixa que o controlador híbrido assume. Acíclica = sem memória entre ativações.");
+        Adicionar("Máx. alvos por quadrante", parametros.MaxAlvosPorQuadrante.ToString("N0"),
+            "Teto de alvos ativos simultâneos no mesmo quadrante.");
+        Adicionar("Alcance de mira", $"{parametros.DistanciaEngajamentoMetros:0.##} m",
+            "Vem de Configurações → Radar e mira. Vale a partir do próximo Iniciar/Resetar.");
+        Adicionar("Certeza mínima", parametros.LimiarConfiancaDisparoFracao.ToString("P0"),
+            "Vem de Configurações → Disparo. Veto inegociável: abaixo disso nenhum disparo é autorizado, decida a rede o que decidir.");
+        Adicionar("Duração do episódio", parametros.SemLimiteDeDuracao ? "sem limite" : $"{parametros.DuracaoEpisodioSegundos:0.#} s",
+            "Tempo simulado de cada episódio de avaliação.");
     }
 
     /// <summary>
@@ -534,7 +1349,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <see cref="IMarcoFitnessTreinamentoRepository"/> com a média do bloco — não da geração
     /// mais recente só, para o painel de longo prazo mostrar a tendência, não ruído geração a
     /// geração. Acumulador em memória (zera a cada marco e também em Iniciar/Resetar): assim
-    /// como <see cref="AlgoritmoGenetico.GeracaoAtual"/>, não sobrevive a um reinício do
+    /// como <see cref="TreinadorNeat.GeracaoAtual"/>, não sobrevive a um reinício do
     /// aplicativo no meio de um bloco — mesma limitação já aceita pelo histórico de 300 linhas.
     /// </summary>
     private void RegistrarMarcoFitnessSeCompletouBloco(ResultadoGeracao resultado)
@@ -543,7 +1358,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _melhorFitnessBloco = Math.Max(_melhorFitnessBloco, resultado.MelhorFitness);
         _contagemGeracoesNoBloco++;
 
-        if (resultado.Geracao % TamanhoBlocoMarco != 0) return;
+        // Geração 0 é a população INICIAL (ver TreinadorNeat.EvoluirGeracao) e também satisfaz
+        // "múltiplo de 500" — sem esta guarda, todo "Iniciar" gravava na hora um marco de um
+        // bloco de uma única geração, poluindo o painel de longo prazo com um ponto que não
+        // representa 500 gerações de nada.
+        if (resultado.Geracao <= 0 || resultado.Geracao % TamanhoBlocoMarco != 0) return;
 
         var marco = new MarcoFitnessTreinamento
         {
@@ -557,10 +1376,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         {
             _marcoFitnessRepository.Registrar(marco);
             _logger.Success($"Marco de treinamento registrado: geração {marco.GeracaoMarco}, fitness médio do bloco {marco.FitnessMedioDoBloco:0.0}.");
+            RegistrarEvento(
+                $"Marco gravado — fitness médio do bloco {marco.FitnessMedioDoBloco:0.0}, melhor do bloco {marco.MelhorFitnessDoBloco:0.0}.",
+                marco.GeracaoMarco,
+                TipoEventoTreinamento.Informacao);
         }
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível registrar o marco de fitness da geração {marco.GeracaoMarco}: {ex.Message}");
+            RegistrarEvento($"Não foi possível gravar o marco de fitness: {ex.Message}", marco.GeracaoMarco, TipoEventoTreinamento.Falha);
         }
 
         _somaFitnessMedioBloco = 0;
@@ -578,7 +1402,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// </summary>
     private void RegistrarInstantaneoDeComportamentoSeCompletouBloco(ResultadoGeracao resultado, EpisodioResultado comportamento)
     {
-        if (resultado.Geracao % TamanhoBlocoInstantaneo != 0) return;
+        // Mesma guarda do marco: a geração 0 (população inicial) é múltipla de qualquer bloco.
+        if (resultado.Geracao <= 0 || resultado.Geracao % TamanhoBlocoInstantaneo != 0) return;
 
         int tentativasDeDisparo = comportamento.AlvosAbatidos + comportamento.TirosErrados;
         int alvosQueApareceram = comportamento.AlvosAbatidos + comportamento.AlvosEscapados;
@@ -592,7 +1417,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             TirosErrados = comportamento.TirosErrados,
             TaxaDeAcerto = tentativasDeDisparo > 0 ? (double)comportamento.AlvosAbatidos / tentativasDeDisparo : null,
             TaxaDeCobertura = alvosQueApareceram > 0 ? (double)comportamento.AlvosAbatidos / alvosQueApareceram : null,
-            GenomaJson = JsonSerializer.Serialize(resultado.MelhorGenoma),
+            // O grafo NEAT não é serializável como objeto simples (carrega ids de inovação e
+            // referências à população); o formato .net do framework é a representação canônica
+            // da rede, então é ele que guardamos — em texto, na mesma coluna.
+            GenomaJson = SerializarRede(resultado.MelhorGenoma),
             DataHora = DateTime.Now
         };
 
@@ -602,10 +1430,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             _logger.Success(
                 $"Instantâneo de comportamento registrado: geração {instantaneo.GeracaoMarco}, " +
                 $"acerto {instantaneo.TaxaDeAcerto:P0}, cobertura {instantaneo.TaxaDeCobertura:P0}.");
+            RegistrarEvento(
+                $"Instantâneo de comportamento gravado — acerto {instantaneo.TaxaDeAcerto:P0}, cobertura {instantaneo.TaxaDeCobertura:P0}.",
+                instantaneo.GeracaoMarco,
+                TipoEventoTreinamento.Informacao);
         }
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível registrar o instantâneo de comportamento da geração {instantaneo.GeracaoMarco}: {ex.Message}");
+            RegistrarEvento($"Não foi possível gravar o instantâneo de comportamento: {ex.Message}", instantaneo.GeracaoMarco, TipoEventoTreinamento.Falha);
         }
     }
 
@@ -618,8 +1451,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             FitnessMedio = resultado.FitnessMedio,
             AlvosAbatidos = comportamento.AlvosAbatidos,
             AlvosEscapados = comportamento.AlvosEscapados,
+            ComplexidadeMelhor = resultado.ComplexidadeMelhor,
+            QuantidadeEspecies = resultado.QuantidadeEspecies,
             DataHora = DateTime.Now
         };
+
+        bool gravou = true;
 
         try
         {
@@ -628,19 +1465,40 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             _logger.Error($"Não foi possível registrar o histórico de treinamento: {ex.Message}");
-            return;
+            gravou = false;
         }
 
+        // A série da sessão (que alimenta o gráfico e os indicadores de aprendizado) é atualizada
+        // mesmo que a gravação no banco falhe: o número foi medido de verdade, e perder o gráfico
+        // inteiro por causa de um erro de persistência seria esconder informação válida.
         RunOnUi(() =>
         {
+            HistoricoDaSessao.Add(registro);
+            while (HistoricoDaSessao.Count > LimiteSerieDaSessao) HistoricoDaSessao.RemoveAt(0);
+
+            if (!gravou) return;
+
             HistoricoRecente.Add(registro);
             while (HistoricoRecente.Count > 300) HistoricoRecente.RemoveAt(0);
         });
     }
 
-    private void AtualizarRegras(double[] genoma)
+    /// <summary>
+    /// Gerações mantidas na série do gráfico. Igual ao limite do histórico persistido (300) por
+    /// coerência: as duas visões mostram a mesma janela de tempo, uma por sessão e outra do banco.
+    /// </summary>
+    private const int LimiteSerieDaSessao = 300;
+
+    /// <summary>Serializa a rede no formato <c>.net</c> do SharpNEAT, em memória — ver <see cref="RegistrarInstantaneoDeComportamentoSeCompletouBloco"/>.</summary>
+    private static string SerializarRede(NeatGenome<double> genoma)
     {
-        var rede = new RedeNeural(_ambiente.Arquitetura, genoma);
+        using var buffer = new MemoryStream();
+        NeatGenomeSaver.Save(genoma, buffer);
+        return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
+    }
+
+    private void AtualizarRegras(RedeNeat rede)
+    {
         RegrasExtraidas regras = ExtratorDeRegras.Extrair(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
 
         RunOnUi(() =>
@@ -652,121 +1510,348 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     // ---------------------------------------------------------------- Diagrama da rede neural
 
-    private const double DiagramaLargura = 620.0;
-    private const double DiagramaAltura = 280.0;
     private const double DiagramaMargemHorizontal = 60.0;
 
-    /// <summary>
-    /// Cenário de referência usado para "ligar" a rede e mostrar as ativações no diagrama —
-    /// mesmo ponto típico (torre do próprio quadrante, alvo a meia distância, velocidade média)
-    /// usado por <see cref="ExtratorDeRegras"/>. É fixo de propósito: assim o que muda no
-    /// diagrama geração a geração são os PESOS evoluindo, não ruído de um cenário diferente a
-    /// cada atualização.
-    /// </summary>
-    private static readonly double[] EntradaDeReferenciaParaDiagrama = [0.5, 1.0, 0.0, 0.5, 0.5, 1.0];
+    /// <summary>Folga no topo e na base do diagrama, para o primeiro e o último neurônio de uma coluna não encostarem na borda.</summary>
+    private const double DiagramaMargemVertical = 26.0;
 
     /// <summary>
-    /// Monta os nós e conexões do diagrama a partir da arquitetura ATUAL de <see cref="_ambiente"/>
-    /// — chamado de novo em "Iniciar"/"Resetar" porque, com <see cref="NeuroniosOcultosSelecionado"/>,
-    /// a quantidade de neurônios da camada oculta pode mudar entre uma sessão de treinamento e a
-    /// seguinte (antes, a arquitetura nunca mudava, então bastava montar uma única vez).
+    /// Espaço vertical mínimo por neurônio de ENTRADA/SAÍDA. Maior que o diâmetro deles (32px)
+    /// porque entradas e saídas carregam rótulo fixo logo abaixo do círculo.
     /// </summary>
-    private void ConstruirDiagramaRedeNeural()
+    private const double DiagramaEspacoPorEntradaSaida = 46.0;
+
+    /// <summary>Espaço vertical mínimo por neurônio OCULTO — só o diâmetro (26px) mais uma folga, já que ocultos não têm rótulo permanente.</summary>
+    private const double DiagramaEspacoPorOculto = 32.0;
+
+    /// <summary>Distância horizontal entre colunas consecutivas do diagrama (entrada, ocultas, saída).</summary>
+    private const double DiagramaEspacoEntreColunas = 150.0;
+
+    /// <summary>
+    /// Altura a partir da qual os ocultos passam a ser distribuídos em MAIS DE UMA coluna em vez
+    /// de continuar esticando o diagrama para baixo. Sem esse teto, uma rede com dezenas de
+    /// ocultos viraria uma tira vertical altíssima — rolável, mas ilegível.
+    /// </summary>
+    private const double DiagramaAlturaMaximaDeUmaColuna = 640.0;
+
+    private const double DiagramaLarguraMinima = 620.0;
+    private const double DiagramaAlturaMinima = 300.0;
+
+    private double _diagramaLarguraPx = DiagramaLarguraMinima;
+    /// <summary>
+    /// Largura do Canvas do diagrama, em pixels. Cresce com o número de COLUNAS de neurônios
+    /// ocultos — antes era fixa em 620, o que espremia tudo num espaço que não cabia.
+    /// </summary>
+    public double DiagramaLarguraPx { get => _diagramaLarguraPx; private set => SetProperty(ref _diagramaLarguraPx, value); }
+
+    private double _diagramaAlturaPx = DiagramaAlturaMinima;
+    /// <summary>Altura do Canvas do diagrama, em pixels — dimensionada pela coluna mais populosa (entradas, ocultos ou saídas).</summary>
+    public double DiagramaAlturaPx { get => _diagramaAlturaPx; private set => SetProperty(ref _diagramaAlturaPx, value); }
+
+    /// <summary>
+    /// Cenário de referência usado para "ligar" a rede e mostrar as saídas no diagrama — mesmo
+    /// ponto típico (torre do próprio quadrante, alvo a meia distância, velocidade média) usado
+    /// por <see cref="ExtratorDeRegras"/>. É fixo de propósito: assim o que muda no diagrama
+    /// geração a geração é a REDE evoluindo, não ruído de um cenário diferente a cada
+    /// atualização.
+    /// </summary>
+    private static readonly double[] EntradaDeReferenciaParaDiagrama = [0.5, 1.0, 0.0, 0.5, 0.5, 0.0, 1.0];
+
+    /// <summary>Dimensões calculadas do diagrama para uma topologia específica — ver <see cref="CalcularLayoutDoDiagrama"/>.</summary>
+    /// <param name="ColunasOcultas">Em quantas colunas os neurônios ocultos foram distribuídos (0 quando a rede não tem nenhum).</param>
+    /// <param name="PorColunaOculta">Quantos ocultos cabem em cada coluna.</param>
+    internal readonly record struct LayoutDiagrama(double Largura, double Altura, int ColunasOcultas, int PorColunaOculta);
+
+    /// <summary>
+    /// Dimensiona o diagrama para a topologia atual: altura pela coluna mais populosa e largura
+    /// pelo número de colunas de ocultos.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// O diagrama tinha tamanho fixo (620x280) e uma única coluna de ocultos, herdados da rede
+    /// 7-8-2 de topologia constante do método anterior. Com NEAT a quantidade de ocultos é
+    /// resultado da evolução e cresce ao longo do treinamento: a partir de cerca de dez neurônios
+    /// o espaçamento ficava menor que o próprio diâmetro deles, e os nós passavam a se sobrepor e
+    /// a sair da área visível.
+    /// </para>
+    /// <para>
+    /// Acima de <see cref="DiagramaAlturaMaximaDeUmaColuna"/> os ocultos passam a ocupar mais de
+    /// uma coluna, em vez de o diagrama continuar esticando para baixo: uma tira vertical de
+    /// centenas de neurônios é rolável, mas não deixa a arquitetura ser compreendida de relance,
+    /// que é justamente o que o card existe para permitir.
+    /// </para>
+    /// </remarks>
+    internal static LayoutDiagrama CalcularLayoutDoDiagrama(int totalEntradas, int totalSaidas, int totalOcultos)
     {
-        NeuroniosVisuais.Clear();
-        ConexoesVisuais.Clear();
-        _chavesDasConexoes.Clear();
+        double alturaUtilMaxima = Math.Max(DiagramaEspacoPorOculto, DiagramaAlturaMaximaDeUmaColuna - (2 * DiagramaMargemVertical));
+        int maximoPorColuna = Math.Max(1, (int)(alturaUtilMaxima / DiagramaEspacoPorOculto));
 
-        int[] camadas = _ambiente.Arquitetura;
-        var posicoes = new Dictionary<(int Camada, int Indice), (double X, double Y)>();
+        int colunasOcultas = totalOcultos == 0 ? 0 : (int)Math.Ceiling(totalOcultos / (double)maximoPorColuna);
+        // Distribui igualmente entre as colunas em vez de encher uma e deixar a última com um ou
+        // dois nós soltos.
+        int porColuna = colunasOcultas == 0 ? 0 : (int)Math.Ceiling(totalOcultos / (double)colunasOcultas);
 
-        for (int c = 0; c < camadas.Length; c++)
-        {
-            double x = camadas.Length == 1
-                ? DiagramaLargura / 2.0
-                : DiagramaMargemHorizontal + (DiagramaLargura - 2 * DiagramaMargemHorizontal) * c / (camadas.Length - 1);
+        double alturaNecessaria = Math.Max(
+            Math.Max(totalEntradas * DiagramaEspacoPorEntradaSaida, totalSaidas * DiagramaEspacoPorEntradaSaida),
+            porColuna * DiagramaEspacoPorOculto);
 
-            int quantidade = camadas[c];
-            for (int n = 0; n < quantidade; n++)
-            {
-                double y = DiagramaAltura * (n + 1) / (quantidade + 1);
-                posicoes[(c, n)] = (x, y);
+        double altura = Math.Max(DiagramaAlturaMinima, alturaNecessaria + (2 * DiagramaMargemVertical));
 
-                string rotulo = c == 0 ? ControladorHibrido.RotulosEntradas[n]
-                    : c == camadas.Length - 1 ? ControladorHibrido.RotulosSaidas[n]
-                    : $"Neurônio oculto #{n + 1}";
+        // Uma coluna de entrada + as de ocultos + uma de saída, com o espaçamento entre elas.
+        double largura = Math.Max(
+            DiagramaLarguraMinima,
+            (2 * DiagramaMargemHorizontal) + ((colunasOcultas + 1) * DiagramaEspacoEntreColunas));
 
-                string corBase = c == 0 ? "#86EFAC" : c == camadas.Length - 1 ? "#FDE68A" : "#93C5FD";
-
-                // Rótulo curto fica sempre visível só em entrada/saída — têm significado fixo.
-                // Oculto não tem (é matriz de pesos), então continua só no tooltip ao passar o mouse.
-                bool temSignificadoFixo = c == 0 || c == camadas.Length - 1;
-
-                NeuroniosVisuais.Add(new NeuronioVisualTreinamento
-                {
-                    Camada = c,
-                    Indice = n,
-                    CanvasX = x,
-                    CanvasY = y,
-                    Raio = c == 0 || c == camadas.Length - 1 ? 16 : 13,
-                    Cor = corBase,
-                    Rotulo = rotulo,
-                    RotuloCurto = temSignificadoFixo ? rotulo : string.Empty
-                });
-            }
-        }
-
-        for (int c = 0; c < camadas.Length - 1; c++)
-        {
-            for (int e = 0; e < camadas[c]; e++)
-            {
-                for (int s = 0; s < camadas[c + 1]; s++)
-                {
-                    (double x1, double y1) = posicoes[(c, e)];
-                    (double x2, double y2) = posicoes[(c + 1, s)];
-
-                    ConexoesVisuais.Add(new ConexaoVisualTreinamento { X1 = x1, Y1 = y1, X2 = x2, Y2 = y2 });
-                    _chavesDasConexoes.Add((c, e, s));
-                }
-            }
-        }
+        return new LayoutDiagrama(largura, altura, colunasOcultas, porColuna);
     }
 
-    /// <summary>
-    /// Recalcula cor/espessura das conexões (a partir dos pesos atuais) e ativação/tooltip dos
-    /// neurônios (propagando <see cref="EntradaDeReferenciaParaDiagrama"/>) — chamado a cada
-    /// geração concluída e sempre que um novo genoma é escolhido para a prévia.
-    /// </summary>
-    private void AtualizarDiagramaRedeNeural(double[] genoma)
+    /// <summary>Distribui <paramref name="total"/> neurônios uniformemente na vertical, centralizados na altura disponível.</summary>
+    internal static double PosicaoVerticalNaColuna(int indice, int total, double altura) =>
+        total <= 0 ? altura / 2.0 : altura * (indice + 1) / (total + 1);
+
+    /// <summary>Esvazia o diagrama — usado em "Iniciar"/"Resetar", quando ainda não existe campeão nenhum para desenhar.</summary>
+    private void LimparDiagramaRedeNeural()
     {
-        if (genoma.Length == 0) return;
-
-        var rede = new RedeNeural(_ambiente.Arquitetura, genoma);
-        double[][] ativacoesPorCamada = rede.AtivarComCamadas(EntradaDeReferenciaParaDiagrama);
-
         RunOnUi(() =>
         {
-            for (int i = 0; i < ConexoesVisuais.Count; i++)
-            {
-                (int camada, int entrada, int saida) = _chavesDasConexoes[i];
-                double peso = rede.Peso(camada, entrada, saida);
-
-                ConexaoVisualTreinamento conexao = ConexoesVisuais[i];
-                conexao.Cor = peso >= 0 ? "#3B82F6" : "#EF4444";
-                conexao.Espessura = Math.Clamp(0.5 + Math.Abs(peso) * 1.5, 0.5, 4.0);
-            }
-
-            foreach (NeuronioVisualTreinamento neuronio in NeuroniosVisuais)
-            {
-                double ativacao = ativacoesPorCamada[neuronio.Camada][neuronio.Indice];
-                neuronio.Rotulo = ConstruirTooltipDoNeuronio(neuronio, ativacao, rede);
-                neuronio.Cor = CorComIntensidade(CorBaseDaCamada(neuronio.Camada), Math.Abs(ativacao));
-            }
+            NeuroniosVisuais.Clear();
+            ConexoesVisuais.Clear();
+            DiagramaLarguraPx = DiagramaLarguraMinima;
+            DiagramaAlturaPx = DiagramaAlturaMinima;
         });
     }
 
-    private string CorBaseDaCamada(int camada) =>
-        camada == 0 ? "86EFAC" : camada == _ambiente.Arquitetura.Length - 1 ? "FDE68A" : "93C5FD";
+    /// <summary>
+    /// Remonta o diagrama INTEIRO a partir do grafo do campeão atual.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Antes o diagrama era montado uma vez (a arquitetura 7-8-2 nunca mudava) e só os pesos
+    /// eram repintados a cada geração. Com NEAT isso não é possível: a topologia muda de uma
+    /// geração para a outra — neurônios aparecem, conexões surgem e são removidas — então a
+    /// estrutura precisa ser reconstruída junto.
+    /// </para>
+    /// <para>
+    /// Layout em três colunas (entradas · ocultos · saídas). Não tenta posicionar os ocultos por
+    /// profundidade real no grafo: numa rede NEAT os ocultos encadeiam entre si em profundidades
+    /// arbitrárias, e um layout por camadas daria a impressão falsa de que a rede ainda é
+    /// organizada em camadas. As conexões desenhadas são as REAIS, inclusive as que pulam
+    /// direto da entrada para a saída (comuns no NEAT, impossíveis na rede anterior).
+    /// </para>
+    /// <para>
+    /// A ativação de cada neurônio OCULTO voltou a ser exibida (era um recurso da rede própria
+    /// anterior, perdido na migração porque a caixa-preta do SharpNEAT expõe apenas entradas e
+    /// saídas): <see cref="AtivacoesRedeNeat"/> refaz a propagação sobre a mesma topologia e os
+    /// mesmos pesos, então o valor mostrado é o real, não uma estimativa. Se a rede não for do
+    /// tipo que aquela propagação sabe reproduzir, os ocultos voltam à cor neutra e
+    /// <see cref="AtivacoesOcultasDisponiveis"/> avisa o motivo na legenda.
+    /// </para>
+    /// <para>
+    /// Duas coisas são preservadas entre remontagens para a tela não "piscar": a posição vertical
+    /// de cada oculto que continua existindo (<see cref="_yDoOcultoPorId"/>) e a lembrança do que
+    /// havia antes, usada para destacar neurônios e conexões que acabaram de surgir.
+    /// </para>
+    /// </remarks>
+    private void RemontarDiagramaRedeNeural(NeatGenome<double> genoma, RedeNeat rede)
+    {
+        NetFileModel modelo = NeatGenomeConverter.ToNetFileModel(genoma);
+        double[] saidas = rede.Ativar(EntradaDeReferenciaParaDiagrama);
+
+        // Entradas na convenção do SharpNEAT (bias na posição 0) — é o que a propagação espera.
+        double[] entradasComBias = new double[modelo.InputCount];
+        entradasComBias[0] = 1.0;
+        for (int i = 1; i < entradasComBias.Length && i - 1 < EntradaDeReferenciaParaDiagrama.Length; i++)
+        {
+            entradasComBias[i] = EntradaDeReferenciaParaDiagrama[i - 1];
+        }
+
+        IReadOnlyDictionary<int, double>? ativacoes = AtivacoesRedeNeat.Calcular(modelo, entradasComBias);
+        bool temAtivacoesOcultas = ativacoes is not null;
+
+        // Convenção de ids do SharpNEAT: [0, InputCount) são entradas (0 = bias),
+        // [InputCount, InputCount+OutputCount) são saídas, e qualquer id acima disso é oculto.
+        int totalEntradas = modelo.InputCount;
+        int primeiroIdSaida = totalEntradas;
+        int primeiroIdOculto = totalEntradas + modelo.OutputCount;
+
+        var idsOcultos = new List<int>();
+        int conexoesDiretas = 0;
+
+        foreach (ConnectionLine conexao in modelo.Connections)
+        {
+            if (conexao.SourceId >= primeiroIdOculto && !idsOcultos.Contains(conexao.SourceId)) idsOcultos.Add(conexao.SourceId);
+            if (conexao.TargetId >= primeiroIdOculto && !idsOcultos.Contains(conexao.TargetId)) idsOcultos.Add(conexao.TargetId);
+
+            if (conexao.SourceId < totalEntradas && conexao.TargetId >= primeiroIdSaida && conexao.TargetId < primeiroIdOculto)
+            {
+                conexoesDiretas++;
+            }
+        }
+
+        // Ordenar pela posição que o nó já ocupava antes de cair no id: assim os ocultos que
+        // sobreviveram mantêm a ordem de antes, e os novos entram nos espaços restantes em vez de
+        // empurrar todos os outros.
+        idsOcultos.Sort((a, b) =>
+        {
+            int ordemA = _ordemDoOcultoPorId.TryGetValue(a, out int va) ? va : int.MaxValue;
+            int ordemB = _ordemDoOcultoPorId.TryGetValue(b, out int vb) ? vb : int.MaxValue;
+            int comparacao = ordemA.CompareTo(ordemB);
+            return comparacao != 0 ? comparacao : a.CompareTo(b);
+        });
+
+        // Dimensiona o diagrama ANTES de posicionar: a quantidade de ocultos é resultado da
+        // evolução e muda a cada geração, então largura, altura e número de colunas não podem
+        // mais ser constantes — era exatamente isso que fazia os ocultos se sobreporem e saírem
+        // da área visível quando a rede crescia.
+        LayoutDiagrama layout = CalcularLayoutDoDiagrama(totalEntradas, modelo.OutputCount, idsOcultos.Count);
+
+        DiagramaLarguraPx = layout.Largura;
+        DiagramaAlturaPx = layout.Altura;
+
+        var posicoes = new Dictionary<int, (double X, double Y)>();
+        var novosNeuronios = new List<NeuronioVisualTreinamento>();
+
+        double xEntrada = DiagramaMargemHorizontal;
+        double xSaida = layout.Largura - DiagramaMargemHorizontal;
+
+        // Entradas. O índice 0 é o bias — ele existe de verdade na rede e é desenhado como tal,
+        // em vez de escondido: faz parte da topologia que a evolução pode (ou não) usar.
+        for (int i = 0; i < totalEntradas; i++)
+        {
+            double y = PosicaoVerticalNaColuna(i, totalEntradas, layout.Altura);
+            posicoes[i] = (xEntrada, y);
+
+            bool ehBias = i == 0;
+            string rotulo = ehBias ? "Bias (constante 1,0)" : ControladorHibrido.RotulosEntradas[i - 1];
+            double valor = ehBias ? 1.0 : EntradaDeReferenciaParaDiagrama[i - 1];
+
+            novosNeuronios.Add(new NeuronioVisualTreinamento
+            {
+                Camada = 0,
+                Indice = i,
+                CanvasX = xEntrada,
+                CanvasY = y,
+                Raio = 16,
+                Cor = CorComIntensidade("86EFAC", Math.Abs(valor)),
+                Rotulo = $"ENTRADA — {rotulo}\nValor no cenário de referência: {valor:0.00}",
+                RotuloCurto = rotulo
+            });
+        }
+
+        // Ocultos — quantos e quais são resultado da evolução, não configuração. Distribuídos em
+        // colunas (ver CalcularLayoutDoDiagrama): com uma coluna só, qualquer rede um pouco maior
+        // empilhava neurônios a poucos pixels um do outro.
+        var novaOrdemDosOcultos = new Dictionary<int, int>(idsOcultos.Count);
+
+        for (int i = 0; i < idsOcultos.Count; i++)
+        {
+            int idOculto = idsOcultos[i];
+            int coluna = layout.PorColunaOculta > 0 ? i / layout.PorColunaOculta : 0;
+            int indiceNaColuna = layout.PorColunaOculta > 0 ? i % layout.PorColunaOculta : i;
+
+            // Quantos nós esta coluna realmente tem — a última pode ficar incompleta, e usar o
+            // total da coluna cheia deixaria os poucos nós dela desalinhados para cima.
+            int nestaColuna = Math.Min(layout.PorColunaOculta, idsOcultos.Count - (coluna * layout.PorColunaOculta));
+
+            double xOculto = xEntrada + ((xSaida - xEntrada) * (coluna + 1) / (layout.ColunasOcultas + 1));
+            double y = PosicaoVerticalNaColuna(indiceNaColuna, nestaColuna, layout.Altura);
+
+            posicoes[idOculto] = (xOculto, y);
+            novaOrdemDosOcultos[idOculto] = i;
+
+            bool recemSurgido = _ocultosDaRemontagemAnterior.Count > 0 && !_ocultosDaRemontagemAnterior.Contains(idOculto);
+            string detalheAtivacao = ativacoes is not null && ativacoes.TryGetValue(idOculto, out double ativacaoOculto)
+                ? $"Ativação no cenário de referência: {ativacaoOculto:0.00}"
+                : "Ativação indisponível para este tipo de rede.";
+
+            novosNeuronios.Add(new NeuronioVisualTreinamento
+            {
+                Camada = 1,
+                Indice = i,
+                CanvasX = xOculto,
+                CanvasY = y,
+                // Nó novo ganha um pouco mais de raio, além da cor de destaque: é o sinal visual
+                // de mutação estrutural acontecendo, que no método anterior nunca existia.
+                Raio = recemSurgido ? 17 : 13,
+                Cor = recemSurgido
+                    ? "#FFF472B6"
+                    : ativacoes is not null && ativacoes.TryGetValue(idOculto, out double intensidade)
+                        ? CorComIntensidade("93C5FD", Math.Abs(intensidade))
+                        : CorComIntensidade("93C5FD", 0.5),
+                Rotulo = $"NEURÔNIO OCULTO #{i + 1} (nó {idOculto})\n{detalheAtivacao}" +
+                         (recemSurgido ? "\nSURGIU NESTA ATUALIZAÇÃO — mutação estrutural do NEAT." : "\nCriado pela evolução, não configurado."),
+                RotuloCurto = string.Empty
+            });
+        }
+
+        // Saídas.
+        for (int i = 0; i < modelo.OutputCount; i++)
+        {
+            double y = PosicaoVerticalNaColuna(i, modelo.OutputCount, layout.Altura);
+            posicoes[primeiroIdSaida + i] = (xSaida, y);
+
+            double ativacao = i < saidas.Length ? saidas[i] : 0.0;
+            string descricao = i == 0
+                ? "Soma à pontuação heurística para decidir qual torre persegue o alvo."
+                : "Decide o instante do disparo dentro do alcance de engajamento — nunca aciona nada por conta própria no sistema real.";
+
+            novosNeuronios.Add(new NeuronioVisualTreinamento
+            {
+                Camada = 2,
+                Indice = i,
+                CanvasX = xSaida,
+                CanvasY = y,
+                Raio = 16,
+                Cor = CorComIntensidade("FDE68A", Math.Abs(ativacao)),
+                Rotulo = $"SAÍDA — {ControladorHibrido.RotulosSaidas[i]}\nAtivação atual: {ativacao:0.00}\n{descricao}",
+                RotuloCurto = ControladorHibrido.RotulosSaidas[i]
+            });
+        }
+
+        var novasConexoes = new List<ConexaoVisualTreinamento>();
+        var chavesDasConexoes = new HashSet<(int Origem, int Destino)>();
+
+        foreach (ConnectionLine conexao in modelo.Connections)
+        {
+            if (!posicoes.TryGetValue(conexao.SourceId, out (double X, double Y) origem)) continue;
+            if (!posicoes.TryGetValue(conexao.TargetId, out (double X, double Y) destino)) continue;
+
+            (int, int) chave = (conexao.SourceId, conexao.TargetId);
+            chavesDasConexoes.Add(chave);
+            bool recemSurgida = _conexoesDaRemontagemAnterior.Count > 0 && !_conexoesDaRemontagemAnterior.Contains(chave);
+
+            novasConexoes.Add(new ConexaoVisualTreinamento
+            {
+                X1 = origem.X,
+                Y1 = origem.Y,
+                X2 = destino.X,
+                Y2 = destino.Y,
+                Cor = recemSurgida ? "#F472B6" : conexao.Weight >= 0 ? "#3B82F6" : "#EF4444",
+                Espessura = Math.Clamp(0.5 + Math.Abs(conexao.Weight) * 1.5, 0.5, 4.0)
+            });
+        }
+
+        _ordemDoOcultoPorId.Clear();
+        foreach ((int id, int ordem) in novaOrdemDosOcultos) _ordemDoOcultoPorId[id] = ordem;
+
+        _ocultosDaRemontagemAnterior.Clear();
+        foreach (int id in idsOcultos) _ocultosDaRemontagemAnterior.Add(id);
+
+        _conexoesDaRemontagemAnterior.Clear();
+        foreach ((int Origem, int Destino) chave in chavesDasConexoes) _conexoesDaRemontagemAnterior.Add(chave);
+
+        RunOnUi(() =>
+        {
+            AtivacoesOcultasDisponiveis = temAtivacoesOcultas;
+            ConexoesDiretasEntradaSaida = conexoesDiretas;
+
+            NeuroniosVisuais.Clear();
+            foreach (NeuronioVisualTreinamento neuronio in novosNeuronios) NeuroniosVisuais.Add(neuronio);
+
+            ConexoesVisuais.Clear();
+            foreach (ConexaoVisualTreinamento conexao in novasConexoes) ConexoesVisuais.Add(conexao);
+        });
+    }
 
     /// <summary>Usa o canal alfa para mostrar a intensidade da ativação (0 = quase transparente/neutro, 1 = cor cheia) sem precisar de uma segunda escala de cor.</summary>
     private static string CorComIntensidade(string corBaseRgbHex, double intensidade01)
@@ -775,45 +1860,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         return $"#{alfa:X2}{corBaseRgbHex}";
     }
 
-    private string ConstruirTooltipDoNeuronio(NeuronioVisualTreinamento neuronio, double ativacao, RedeNeural rede)
-    {
-        int ultimaCamada = _ambiente.Arquitetura.Length - 1;
-
-        if (neuronio.Camada == 0)
-        {
-            return $"ENTRADA — {ControladorHibrido.RotulosEntradas[neuronio.Indice]}\nValor no cenário de referência: {ativacao:0.00}";
-        }
-
-        if (neuronio.Camada == ultimaCamada)
-        {
-            string descricao = neuronio.Indice == 0
-                ? "Soma à pontuação heurística para decidir qual torre persegue o alvo."
-                : "Decide o instante do disparo dentro do alcance de engajamento — nunca aciona nada por conta própria no sistema real.";
-            return $"SAÍDA — {ControladorHibrido.RotulosSaidas[neuronio.Indice]}\nAtivação atual: {ativacao:0.00}\n{descricao}";
-        }
-
-        // Neurônio oculto: sem significado individual fixo (é uma matriz de pesos, não uma
-        // regra) — mostramos a ativação no cenário de referência e, por análise de sensibilidade
-        // dos pesos de entrada, quais entradas mais pesam nele, como aproximação honesta de
-        // "responsável por quê" em vez de inventar um rótulo fixo.
-        var influencias = new List<(string Entrada, double Peso)>();
-        for (int i = 0; i < ControladorHibrido.QuantidadeEntradas; i++)
-        {
-            influencias.Add((ControladorHibrido.RotulosEntradas[i], rede.Peso(0, i, neuronio.Indice)));
-        }
-
-        var maisInfluentes = influencias.OrderByDescending(x => Math.Abs(x.Peso)).Take(2).ToList();
-
-        return $"NEURÔNIO OCULTO #{neuronio.Indice + 1}\nAtivação atual: {ativacao:0.00} (cenário de referência)\n" +
-               $"Mais influenciado por: {maisInfluentes[0].Entrada} (peso {maisInfluentes[0].Peso:+0.00;-0.00}), " +
-               $"{maisInfluentes[1].Entrada} (peso {maisInfluentes[1].Peso:+0.00;-0.00})";
-    }
 
     // ---------------------------------------------------------------- Prévia visual (thread de UI)
 
     private void AvancarPreview()
     {
-        if (_melhorGenomaAtual.Length == 0) return;
+        if (_melhorRedeAtual is null) return;
 
         if (_episodioPreview is null)
         {
@@ -829,18 +1881,62 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             _episodioPreview = _ambiente.NovoEpisodio();
         }
 
-        var rede = new RedeNeural(_ambiente.Arquitetura, _melhorGenomaAtual);
-        var controlador = new ControladorHibrido(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo, tempoDeteccaoRelevanteSegundos: _ambiente.Parametros.TempoDeteccaoRelevanteSegundos);
+        var controlador = new ControladorHibrido(_melhorRedeAtual, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo, tempoDeteccaoRelevanteSegundos: _ambiente.Parametros.TempoDeteccaoRelevanteSegundos);
 
-        _ambiente.Avancar(_episodioPreview, controlador, dt: 0.05);
+        _ambiente.Avancar(_episodioPreview, controlador, dt: IntervaloPreviaSegundos);
         RedesenharAlvos(_episodioPreview);
         AtualizarMiras(_episodioPreview);
         AtualizarCamposDeVisao(_episodioPreview);
+        PublicarTelemetria(_episodioPreview);
 
         if (_episodioPreview.Finalizado && !_previewContinuo)
         {
             _timerPreview.Stop();
         }
+    }
+
+    /// <summary>
+    /// Entrega o estado atual dos alvos a <see cref="ITelemetriaSimulacaoService"/> — o ponto por
+    /// onde a futura ponte com o Arduino vai consumir a simulação.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Publicado daqui, e não do laço de treinamento, porque é a prévia que roda em TEMPO NORMAL:
+    /// <see cref="IntervaloPreviaSegundos"/> de tempo simulado por tique de relógio do mesmo
+    /// tamanho. O laço de treinamento avança o mais rápido possível de propósito — milhares de
+    /// episódios para avaliar fitness —, e o tempo simulado dele não corresponde a nada que possa
+    /// ser enviado ao hardware "ao vivo".
+    /// </para>
+    /// <para>
+    /// Ainda não há transmissão nenhuma: isto apenas disponibiliza os dados, já com a referência
+    /// temporal, para quem for implementá-la.
+    /// </para>
+    /// </remarks>
+    private void PublicarTelemetria(EstadoEpisodio estado)
+    {
+        var alvos = new List<AlvoTelemetria>(estado.Alvos.Count);
+
+        foreach (AlvoTreinamento alvo in estado.Alvos)
+        {
+            if (!alvo.Ativo) continue;
+
+            alvos.Add(new AlvoTelemetria(
+                Id: alvo.Id,
+                X: alvo.X,
+                Y: alvo.Y,
+                AlturaMetros: alvo.AlturaMetros,
+                VelocidadeMetrosPorSegundo: alvo.VelocidadeMetrosPorSegundo,
+                Quadrante: alvo.Quadrante,
+                VisivelPorTodasAsTorres: alvo.VisivelPorTodasAsTorres,
+                TorreComprometidaId: alvo.TorreSelecionadaId,
+                Certeza: alvo.Certeza));
+        }
+
+        _telemetria.Publicar(new QuadroTelemetriaSimulacao(
+            TempoSimulacaoSegundos: estado.TempoDecorridoSegundos,
+            DataHora: DateTime.Now,
+            EixoZHabilitado: _ambiente.Parametros.EixoZHabilitado,
+            Alvos: alvos));
     }
 
     /// <summary>
@@ -926,33 +2022,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Alcance de engajamento (m) — limite até onde as torres conseguem mirar/disparar, a partir de cada torre (mesmo raio do cone, ver <see cref="ConstruirSetorDeVisao"/>).</summary>
     public double DistanciaEngajamentoMetros => _ambiente.Parametros.DistanciaEngajamentoMetros;
 
-    /// <summary>
-    /// Alcance de engajamento "a partir da base" (m) — raio do círculo interno do Canvas,
-    /// centralizado na origem do mundo. Soma a distância da base até a torre mais afastada com
-    /// <see cref="DistanciaEngajamentoMetros"/> para o círculo refletir até onde as torres
-    /// realmente alcançam a partir de SUAS posições (não da origem): sem essa soma, um círculo
-    /// de raio = só <see cref="DistanciaEngajamentoMetros"/> fica bem menor do que a ponta dos
-    /// cones de visão de cada torre (que começam já deslocados da origem), dando a falsa
-    /// impressão de alcance menor do que o real.
-    /// </summary>
-    public double AlcanceEngajamentoTotalMetros => DistanciaBaseAteTorreMaisLongeMetros + DistanciaEngajamentoMetros;
-
-    private double DistanciaBaseAteTorreMaisLongeMetros =>
-        _ambiente.TorresBase.Count == 0 ? 0 : _ambiente.TorresBase.Max(t => Math.Sqrt(t.X * t.X + t.Y * t.Y));
-
-    /// <summary>Diâmetro em pixels do círculo interno (<see cref="AlcanceEngajamentoTotalMetros"/>), já na escala atual do Canvas.</summary>
-    public double DiametroEngajamentoPx => AlcanceEngajamentoTotalMetros * 2 * PixelsPorMetro;
-
-    /// <summary>Deslocamento (Canvas.Left/Top) do círculo interno para ficar centralizado no mundo.</summary>
-    public double OffsetEngajamentoPx => (TamanhoCanvas - DiametroEngajamentoPx) / 2.0;
+    // O arco de alcance de mira centrado na base saiu do Canvas (atrapalhava a leitura dos cones,
+    // das linhas de mira e dos alvos), e com ele saíram as propriedades que existiam só para
+    // desenhá-lo: AlcanceEngajamentoTotalMetros, DiametroEngajamentoPx e OffsetEngajamentoPx.
+    // DistanciaEngajamentoMetros CONTINUA — é o raio real usado pelos cones de visão e pelo
+    // controlador; o que foi removido era a representação redundante dele, não o alcance.
 
     private void NotificarGeometriaDoMundoAlterada()
     {
         OnPropertyChanged(nameof(RaioMundoMetros));
         OnPropertyChanged(nameof(DistanciaEngajamentoMetros));
-        OnPropertyChanged(nameof(AlcanceEngajamentoTotalMetros));
-        OnPropertyChanged(nameof(DiametroEngajamentoPx));
-        OnPropertyChanged(nameof(OffsetEngajamentoPx));
     }
 
     private void DesenharTorresFixas()
@@ -1066,6 +2145,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             visual.CanvasX = ParaCanvasX(alvo.X);
             visual.CanvasY = ParaCanvasY(alvo.Y);
             visual.Cor = alvo.TorreSelecionadaId is null ? "#F87171" : "#FBBF24";
+            // Alvo alto o bastante para ser visto por todas as torres ganha contorno próprio: a
+            // altura muda o comportamento da simulação, então precisa ser visível na tela.
+            visual.Destacado = alvo.VisivelPorTodasAsTorres;
+            // Atualizada no mesmo passo da posição (este método roda a cada tique da prévia),
+            // então a etiqueta acompanha o alvo em tempo real em vez de mostrar onde ele estava.
+            visual.Coordenadas = $"#{alvo.Id} {alvo.X:0.0} ; {alvo.Y:0.0}";
         }
     }
 
@@ -1086,5 +2171,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     {
         _cts?.Cancel();
         _timerPreview.Stop();
+        _timerEstado.Stop();
+        _cronometroSessao.Stop();
     }
 }

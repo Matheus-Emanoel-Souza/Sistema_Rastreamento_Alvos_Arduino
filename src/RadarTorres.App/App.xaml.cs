@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -233,6 +233,10 @@ public partial class App : Application
         services.AddSingleton<IPreferenciasUsuarioRepository, SqlitePreferenciasUsuarioRepository>();
         services.AddSingleton<IHistoricoTreinamentoRepository, SqliteHistoricoTreinamentoRepository>();
         services.AddSingleton<IMarcoFitnessTreinamentoRepository, SqliteMarcoFitnessTreinamentoRepository>();
+        // Singleton de propósito: é o ponto único por onde a futura ponte com o Arduino vai ler o
+        // estado ao vivo da simulação — uma instância por consumidor não veria os mesmos quadros.
+        services.AddSingleton<ITelemetriaSimulacaoService, TelemetriaSimulacaoService>();
+        services.AddSingleton<IEventoTreinamentoRepository, SqliteEventoTreinamentoRepository>();
         services.AddSingleton<IInstantaneoComportamentoRepository, SqliteInstantaneoComportamentoRepository>();
         services.AddSingleton<IExperimentoHiperparametrosRepository, SqliteExperimentoHiperparametrosRepository>();
 

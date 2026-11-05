@@ -12,10 +12,18 @@ namespace RadarTorres.App.NeuralEvolution;
 /// <param name="CertezaBase">Certeza (0 a 1) no instante do nascimento — ver <see cref="AlvoTreinamento.CertezaBase"/>.</param>
 /// <param name="TaxaCrescimentoCertezaPorSegundo">Taxa de crescimento da certeza com o tempo — ver <see cref="AlvoTreinamento.TaxaCrescimentoCertezaPorSegundo"/>.</param>
 /// <param name="FracaoRaioNascimento">Fração (0 a 1) do raio do mundo onde o alvo nasce — 1.0 é a borda (padrão do sorteio); menor aproxima o nascimento da base.</param>
+/// <param name="AlturaMetros">
+/// Altura (m) do alvo quando o eixo Z está ligado (ver <see cref="ParametrosTreinamento.EixoZHabilitado"/>);
+/// ignorada quando ele está desligado. Fica em 0 por padrão — e os casos do
+/// <see cref="CatalogoCenarios"/> mantêm esse padrão — porque um cenário roteirizado só é útil
+/// enquanto for reproduzível: um alvo alto aqui precisa ser uma escolha declarada, não um efeito
+/// colateral de ligar a terceira dimensão.
+/// </param>
 public sealed record SpawnScriptado(
     double InstanteSegundos,
     double AnguloNascimentoGraus,
     double VelocidadeMetrosPorSegundo,
     double CertezaBase,
     double TaxaCrescimentoCertezaPorSegundo,
-    double FracaoRaioNascimento = 1.0);
+    double FracaoRaioNascimento = 1.0,
+    double AlturaMetros = 0.0);
