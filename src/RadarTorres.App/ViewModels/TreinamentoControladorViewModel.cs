@@ -110,6 +110,13 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private double _melhorFitnessBloco;
     private int _contagemGeracoesNoBloco;
 
+    /// <summary>
+    /// Liberado (sinalizado) = treino corre normalmente; limpo por <see cref="Pausar"/> = o laço
+    /// (<see cref="Evoluir"/>) bloqueia antes da próxima geração até <see cref="Continuar"/>
+    /// sinalizar de novo, ou até o <see cref="CancellationToken"/> de "Parar" ser cancelado.
+    /// </summary>
+    private readonly ManualResetEventSlim _pausaLiberada = new(initialState: true);
+
     private AmbienteTreinamento _ambiente;
     private TreinadorNeat? _treinador;
 
@@ -165,6 +172,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     public RelayCommand IniciarCommand { get; }
     public RelayCommand PararCommand { get; }
+    public RelayCommand PausarCommand { get; }
+    public RelayCommand ContinuarCommand { get; }
     public RelayCommand RodarEpisodioUnicoCommand { get; }
     public RelayCommand SimularCenarioCommand { get; }
     public RelayCommand ExportarMelhorGenomaCommand { get; }
@@ -217,6 +226,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         IniciarCommand = new RelayCommand(Iniciar, () => !EmExecucao);
         PararCommand = new RelayCommand(Parar, () => EmExecucao);
+        PausarCommand = new RelayCommand(Pausar, () => EmExecucao && !EmPausa);
+        ContinuarCommand = new RelayCommand(Continuar, () => EmExecucao && EmPausa);
         RodarEpisodioUnicoCommand = new RelayCommand(RodarEpisodioUnico, () => !EmExecucao);
         SimularCenarioCommand = new RelayCommand(SimularCenarioSelecionado, () => !EmExecucao);
         ExportarMelhorGenomaCommand = new RelayCommand(ExportarMelhorGenoma, () => _melhorGenomaAtual is not null);
@@ -427,10 +438,32 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>Estado em uma palavra, para o selo no topo da tela.</summary>
-    public string EstadoTexto => Falhou ? "FALHOU" : EmExecucao ? "TREINANDO" : GeracaoAtual > 0 ? "PARADO" : "PRONTO";
+    /// <summary>
+    /// Verdadeiro entre "Pausar" e "Continuar" — o laço de treinamento (<see cref="Evoluir"/>)
+    /// bloqueia em <see cref="_pausaLiberada"/> ANTES de começar a próxima geração, nunca no meio
+    /// de uma: pausar não corta uma avaliação de população pela metade, só segura o início da
+    /// seguinte. Não é cancelamento — <see cref="_treinador"/> e toda a população continuam
+    /// intactos na memória, "Continuar" retoma exatamente da geração seguinte.
+    /// </summary>
+    private bool _emPausa;
+    public bool EmPausa
+    {
+        get => _emPausa;
+        private set
+        {
+            if (SetProperty(ref _emPausa, value))
+            {
+                RelayCommand.RaiseCanExecuteChangedForAll();
+                OnPropertyChanged(nameof(EstadoTexto));
+                OnPropertyChanged(nameof(EstadoCor));
+            }
+        }
+    }
 
-    public string EstadoCor => Falhou ? "#F87171" : EmExecucao ? "#4ADE80" : "#94A3B8";
+    /// <summary>Estado em uma palavra, para o selo no topo da tela.</summary>
+    public string EstadoTexto => Falhou ? "FALHOU" : EmPausa ? "PAUSADO" : EmExecucao ? "TREINANDO" : GeracaoAtual > 0 ? "PARADO" : "PRONTO";
+
+    public string EstadoCor => Falhou ? "#F87171" : EmPausa ? "#FBBF24" : EmExecucao ? "#4ADE80" : "#94A3B8";
 
     private int _geracaoAtual;
     public int GeracaoAtual
@@ -638,7 +671,17 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     private int _ocultosDoCampeao;
     /// <summary>Neurônios ocultos do campeão. Com NEAT é RESULTADO da evolução — era fixo em 8 no algoritmo anterior.</summary>
-    public int OcultosDoCampeao { get => _ocultosDoCampeao; private set => SetProperty(ref _ocultosDoCampeao, value); }
+    public int OcultosDoCampeao
+    {
+        get => _ocultosDoCampeao;
+        private set
+        {
+            if (SetProperty(ref _ocultosDoCampeao, value)) OnPropertyChanged(nameof(NosDoCampeao));
+        }
+    }
+
+    /// <summary>Total de nós do campeão (entradas + bias + ocultos + saídas) — exibido no resumo "Topologia (campeão)" da tela.</summary>
+    public int NosDoCampeao => EntradasDaRede + 1 + OcultosDoCampeao + SaidasDaRede;
 
     private int _conexoesDiretasEntradaSaida;
     /// <summary>Conexões que pulam direto de uma entrada para uma saída, sem passar por oculto nenhum — impossíveis na rede em camadas anterior, comuns no NEAT.</summary>
@@ -741,6 +784,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         _previewContinuo = true;
         _cts = new CancellationTokenSource();
+        _pausaLiberada.Set();
+        EmPausa = false;
         _cronometroSessao.Restart();
         _tarefaTreinamento = Task.Run(() => LacoDeTreinamento(_cts.Token));
         _timerPreview.Start();
@@ -748,10 +793,35 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         EmExecucao = true;
     }
 
+    /// <summary>
+    /// Segura o laço de treinamento ANTES da próxima geração (ver <see cref="_pausaLiberada"/>) —
+    /// a prévia visual e o cronômetro continuam rodando normalmente, só a evolução em si pausa.
+    /// </summary>
+    private void Pausar()
+    {
+        if (!EmExecucao || EmPausa) return;
+
+        _pausaLiberada.Reset();
+        EmPausa = true;
+        RegistrarEvento("Treinamento pausado pelo usuário.", GeracaoAtual, TipoEventoTreinamento.Informacao);
+    }
+
+    /// <summary>Libera o laço de treinamento para retomar a partir da próxima geração.</summary>
+    private void Continuar()
+    {
+        if (!EmExecucao || !EmPausa) return;
+
+        EmPausa = false;
+        _pausaLiberada.Set();
+        RegistrarEvento("Treinamento retomado pelo usuário.", GeracaoAtual, TipoEventoTreinamento.Informacao);
+    }
+
     private void Parar()
     {
         if (!EmExecucao) return;
 
+        _pausaLiberada.Set();
+        EmPausa = false;
         _cts?.Cancel();
         _timerPreview.Stop();
         _timerEstado.Stop();
@@ -827,6 +897,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// </summary>
     private void Resetar()
     {
+        _pausaLiberada.Set();
+        EmPausa = false;
         _cts?.Cancel();
         _timerPreview.Stop();
         _timerEstado.Stop();
@@ -1105,6 +1177,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         while (!token.IsCancellationRequested)
         {
+            // Bloqueia aqui — ANTES de começar a próxima geração, nunca no meio de uma — enquanto
+            // EmPausa estiver ligado (ver Pausar/Continuar). Lança OperationCanceledException se
+            // "Parar" cancelar o token enquanto pausado, tratada pelo catch em LacoDeTreinamento.
+            _pausaLiberada.Wait(token);
+
             // MESMAS seeds para todos os indivíduos desta geração: sem isso, cada genoma
             // enfrentava um episódio sorteado diferente (spawn/velocidade/certeza), e o fitness
             // comparava sorte, não qualidade do genoma — seleção quase aleatória, média sem

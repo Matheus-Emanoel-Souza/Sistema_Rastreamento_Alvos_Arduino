@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using RadarTorres.App.ViewModels;
 
 namespace RadarTorres.App.Views;
@@ -20,16 +21,15 @@ namespace RadarTorres.App.Views;
 /// </summary>
 public partial class TreinamentoControladorView : UserControl
 {
-    private const double AlturaMinimizadaHistorico = 36.0;
-    private const double AlturaMinimaExpandidaHistorico = 120.0;
-    private const double AlturaPadraoExpandidaHistorico = 220.0;
-
     private readonly TreinamentoControladorViewModel _viewModel;
     private readonly Func<EstatisticasAnaliseWindow> _criarJanelaEstatisticas;
     private EstatisticasAnaliseWindow? _janelaEstatisticasAberta;
 
-    private bool _historicoMinimizado;
-    private double _ultimaAlturaExpandidaHistorico = AlturaPadraoExpandidaHistorico;
+    /// <summary>Lê o ângulo do farol decorativo (ver XAML) e mostra em texto, junto da contagem
+    /// de alvos — só leitura visual da mesma animação já existente, nenhum estado novo de
+    /// domínio. Intervalo igual ao da prévia do treinamento (50 ms) para acompanhar o movimento
+    /// sem sobrecarregar a UI com atualizações a cada frame da Storyboard.</summary>
+    private readonly DispatcherTimer _timerAnguloSensor = new() { Interval = TimeSpan.FromMilliseconds(50) };
 
     public TreinamentoControladorView(TreinamentoControladorViewModel viewModel, Func<EstatisticasAnaliseWindow> criarJanelaEstatisticas)
     {
@@ -50,7 +50,14 @@ public partial class TreinamentoControladorView : UserControl
         // treinamento; a tabela abaixo continua mostrando o histórico persistido.
         _viewModel.HistoricoDaSessao.CollectionChanged += OnHistoricoAlterado;
         SizeChanged += (_, _) => RedesenharGrafico();
-        Unloaded += (_, _) => _viewModel.HistoricoDaSessao.CollectionChanged -= OnHistoricoAlterado;
+        Unloaded += (_, _) =>
+        {
+            _viewModel.HistoricoDaSessao.CollectionChanged -= OnHistoricoAlterado;
+            _timerAnguloSensor.Stop();
+        };
+
+        _timerAnguloSensor.Tick += (_, _) => AnguloSensorTexto.Text = $"{Math.Abs(FarolRotacao.Angle):0.0}°";
+        _timerAnguloSensor.Start();
 
         RedesenharGrafico();
     }
@@ -102,60 +109,47 @@ public partial class TreinamentoControladorView : UserControl
     }
 
     /// <summary>
-    /// Alterna o painel de histórico de gerações entre minimizado (só o título + botão visíveis)
-    /// e expandido (tabela visível, do tamanho que estava antes de minimizar). A divisória
-    /// (<see cref="DivisoriaHistorico"/>) fica desativada enquanto minimizado — não há o que
-    /// arrastar com a tabela escondida.
+    /// Expande a tabela de histórico de gerações para uma altura maior dentro do mesmo card,
+    /// alternando com a altura compacta padrão — não há mais linha de Grid dedicada e
+    /// redimensionável por arraste (layout atual divide a área inferior em proporções fixas
+    /// entre as 3 linhas, para caber sem rolagem dupla nas resoluções-alvo); "expandir" aqui
+    /// aumenta a MaxHeight da tabela, que ganha rolagem interna própria quando o conteúdo passa
+    /// disso — preserva a função pedida (ver mais registros) sem reintroduzir o layout antigo.
     /// </summary>
+    private bool _historicoExpandido;
+
     private void BotaoMinimizarMaximizarHistorico_Click(object sender, RoutedEventArgs e)
     {
-        if (_historicoMinimizado)
-        {
-            LinhaHistorico.MinHeight = AlturaMinimaExpandidaHistorico;
-            LinhaHistorico.Height = new GridLength(_ultimaAlturaExpandidaHistorico);
-            HistoricoDataGrid.Visibility = Visibility.Visible;
-            DivisoriaHistorico.IsEnabled = true;
-            BotaoMinimizarMaximizarHistorico.Content = "▾ Minimizar";
-        }
-        else
-        {
-            _ultimaAlturaExpandidaHistorico = LinhaHistorico.ActualHeight > 0 ? LinhaHistorico.ActualHeight : AlturaPadraoExpandidaHistorico;
-            LinhaHistorico.MinHeight = AlturaMinimizadaHistorico;
-            LinhaHistorico.Height = new GridLength(AlturaMinimizadaHistorico);
-            HistoricoDataGrid.Visibility = Visibility.Collapsed;
-            DivisoriaHistorico.IsEnabled = false;
-            BotaoMinimizarMaximizarHistorico.Content = "▸ Maximizar";
-        }
-
-        _historicoMinimizado = !_historicoMinimizado;
+        _historicoExpandido = !_historicoExpandido;
+        HistoricoDataGrid.MaxHeight = _historicoExpandido ? 600 : double.PositiveInfinity;
+        BotaoMinimizarMaximizarHistorico.Content = _historicoExpandido ? "⤡" : "⤢";
+        BotaoMinimizarMaximizarHistorico.ToolTip = _historicoExpandido
+            ? "Recolher a tabela de histórico de gerações"
+            : "Expandir a tabela de histórico de gerações";
     }
 
-    // ---------------------------------------------------------------- Zoom independente por visualização
+    // ---------------------------------------------------------------- Accordion do painel de controle
     //
-    // Mesma convenção já usada no RadarControl (Ctrl+roda = zoom; roda sozinha continua rolando a
-    // tela pelo ScrollViewer que envolve a coluna). Cada visualização (rede neural e simulação
-    // 2D) tem seu próprio ScaleTransform/estado — ampliar uma nunca afeta a outra.
+    // Mesmo padrão do botão de histórico acima: alterna Visibility do StackPanel de conteúdo e o
+    // glifo (▾ aberta / ▸ fechada) no próprio texto do cabeçalho — sem framework de accordion,
+    // sem estado novo na ViewModel (é puramente apresentação de qual seção está visível agora).
 
-    private const double ZoomMinimo = 0.5;
-    private const double ZoomMaximo = 2.5;
-    private const double PassoZoom = 0.1;
-
-    private void RedeNeuralViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
-        AplicarZoomComRoda(e, ZoomRedeNeuralTransform, ZoomRedeNeuralLabel);
-
-    private void MundoViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) =>
-        AplicarZoomComRoda(e, ZoomMundoTransform, ZoomMundoLabel);
-
-    private static void AplicarZoomComRoda(MouseWheelEventArgs e, ScaleTransform transform, TextBlock rotulo)
+    private void AlternarSecao(Button cabecalho, FrameworkElement conteudo, string titulo)
     {
-        if (Keyboard.Modifiers != ModifierKeys.Control) return;
+        bool abrindo = conteudo.Visibility != Visibility.Visible;
+        conteudo.Visibility = abrindo ? Visibility.Visible : Visibility.Collapsed;
 
-        double novoZoom = Math.Clamp(transform.ScaleX + (e.Delta > 0 ? PassoZoom : -PassoZoom), ZoomMinimo, ZoomMaximo);
-        transform.ScaleX = novoZoom;
-        transform.ScaleY = novoZoom;
-        rotulo.Text = $"{novoZoom:0%}";
-        e.Handled = true;
+        if (cabecalho.Content is DockPanel painel && painel.Children.Count > 0 && painel.Children[0] is TextBlock rotulo)
+        {
+            rotulo.Text = (abrindo ? "▾ " : "▸ ") + titulo;
+        }
     }
+
+    private void BotaoSecaoExecucao_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoExecucao, "Execução");
+    private void BotaoSecaoCenario_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoCenario, "Cenário");
+    private void BotaoSecaoExperimento_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoExperimento, "Experimento e dados");
+    private void BotaoSecaoDesempenho_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoDesempenho, "Desempenho do treinamento");
+    private void BotaoSecaoArquitetura_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoArquitetura, "Arquitetura e aprendizado");
 
     /// <summary>Largura reservada à esquerda para os rótulos de valor do eixo Y.</summary>
     private const double LarguraEixoY = 34.0;
