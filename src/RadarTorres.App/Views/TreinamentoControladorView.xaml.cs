@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Windows.Shapes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -34,14 +36,18 @@ public partial class TreinamentoControladorView : UserControl
         _viewModel = viewModel;
         DataContext = _viewModel;
 
-        // Fonte dos pontos do gráfico é HistoricoRecente (ObservableCollection da ViewModel,
-        // carregada do banco e persistente entre trocas de tela) — NÃO um histórico local do
-        // code-behind: uma lista local era recriada vazia toda vez que esta View era
-        // reconstruída (troca de tela, reabertura do app), fazendo o gráfico "esquecer" tudo
-        // enquanto os números (ligados direto à ViewModel) continuavam certos — esse descompasso
-        // era o motivo do gráfico aparecer vazio mesmo com o treinamento rodando normalmente.
-        _viewModel.HistoricoRecente.CollectionChanged += OnHistoricoAlterado;
-        Unloaded += (_, _) => _viewModel.HistoricoRecente.CollectionChanged -= OnHistoricoAlterado;
+        // Fonte dos pontos do gráfico é HistoricoDaSessao (ObservableCollection da ViewModel) —
+        // NÃO um histórico local do code-behind: uma lista local era recriada vazia toda vez que
+        // esta View era reconstruída (troca de tela, reabertura do app), fazendo o gráfico
+        // "esquecer" tudo enquanto os números (ligados direto à ViewModel) continuavam certos.
+        //
+        // Também não é HistoricoRecente, que vem do banco e traz as últimas 300 gerações de
+        // QUALQUER execução: com ela, a curva começava já cheia de dados de treinos anteriores e
+        // dava um degrau artificial a cada "Iniciar". A série por sessão mostra a evolução DESTE
+        // treinamento; a tabela abaixo continua mostrando o histórico persistido.
+        _viewModel.HistoricoDaSessao.CollectionChanged += OnHistoricoAlterado;
+        SizeChanged += (_, _) => RedesenharGrafico();
+        Unloaded += (_, _) => _viewModel.HistoricoDaSessao.CollectionChanged -= OnHistoricoAlterado;
 
         RedesenharGrafico();
     }
@@ -115,30 +121,136 @@ public partial class TreinamentoControladorView : UserControl
         e.Handled = true;
     }
 
+    /// <summary>Largura reservada à esquerda para os rótulos de valor do eixo Y.</summary>
+    private const double LarguraEixoY = 34.0;
+
+    /// <summary>Linhas de grade horizontais desenhadas (além da base) — poucas de propósito: o card é estreito e o excesso virava ruído.</summary>
+    private const int LinhasDeGrade = 3;
+
+    /// <summary>
+    /// Desenha o gráfico de evolução: grade com rótulos de valor, as três séries (melhor fitness,
+    /// média da população e média móvel do melhor) e a faixa de gerações no eixo X.
+    /// </summary>
+    /// <remarks>
+    /// A média móvel é calculada aqui, sobre a mesma série que o gráfico já tem em mãos, com a
+    /// mesma janela que a ViewModel usa nos indicadores (<see cref="TreinamentoControladorViewModel.JanelaIndicadoresAprendizado"/>)
+    /// — é a terceira linha do gráfico, e serve para separar tendência de ruído de sorteio.
+    /// Continua sendo trabalho de apresentação (converter números em coordenadas de tela), que é
+    /// o motivo deste gráfico viver no code-behind.
+    /// </remarks>
     private void RedesenharGrafico()
     {
-        var historico = _viewModel.HistoricoRecente;
+        GraficoCanvas.Children.Clear();
+
+        var historico = _viewModel.HistoricoDaSessao;
         if (historico.Count < 2)
         {
-            LinhaMelhorFitness.Points.Clear();
-            LinhaFitnessMedio.Points.Clear();
+            GraficoEixoX.Text = historico.Count == 0
+                ? "Sem gerações nesta sessão — inicie o treinamento."
+                : "Aguardando a segunda geração para traçar a curva…";
             return;
         }
 
-        double largura = GraficoCanvas.ActualWidth > 0 ? GraficoCanvas.ActualWidth : 220;
-        double altura = GraficoCanvas.ActualHeight > 0 ? GraficoCanvas.ActualHeight : 120;
+        double largura = GraficoCanvas.ActualWidth > 0 ? GraficoCanvas.ActualWidth : 260;
+        double altura = GraficoCanvas.ActualHeight > 0 ? GraficoCanvas.ActualHeight : 110;
+        double larguraPlot = System.Math.Max(10.0, largura - LarguraEixoY);
 
-        double maiorFitness = historico.Max(r => r.MelhorFitness);
-        double menorFitness = historico.Min(r => r.FitnessMedio);
-        double amplitude = System.Math.Max(1.0, maiorFitness - menorFitness);
+        double maior = historico.Max(r => r.MelhorFitness);
+        double menor = historico.Min(r => System.Math.Min(r.FitnessMedio, r.MelhorFitness));
+        double amplitude = System.Math.Max(1.0, maior - menor);
 
-        double EixoX(int indice) => (indice / (double)(historico.Count - 1)) * largura;
-        double EixoY(double valor) => altura - ((valor - menorFitness) / amplitude * altura);
+        double EixoX(int indice) => LarguraEixoY + (indice / (double)(historico.Count - 1)) * larguraPlot;
+        double EixoY(double valor) => altura - ((valor - menor) / amplitude * altura);
 
-        LinhaMelhorFitness.Points = new PointCollection(historico
-            .Select((r, i) => new Point(EixoX(i), EixoY(r.MelhorFitness))));
+        DesenharGradeComRotulos(menor, maior, altura, largura);
 
-        LinhaFitnessMedio.Points = new PointCollection(historico
-            .Select((r, i) => new Point(EixoX(i), EixoY(r.FitnessMedio))));
+        var corMelhor = (Brush)FindResource("Accent.Fill");
+        DesenharSerie(historico.Select((r, i) => new Point(EixoX(i), EixoY(r.MelhorFitness))), corMelhor, 2);
+        DesenharSerie(historico.Select((r, i) => new Point(EixoX(i), EixoY(r.FitnessMedio))), new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8)), 1);
+
+        PointCollection mediaMovel = CalcularMediaMovel(historico, EixoX, EixoY);
+        if (mediaMovel.Count >= 2)
+        {
+            DesenharSerie(mediaMovel, new SolidColorBrush(Color.FromRgb(0xF4, 0x72, 0xB6)), 1.5);
+        }
+
+        GraficoEixoX.Text = $"gerações {historico[0].Geracao:N0} → {historico[^1].Geracao:N0}  ({historico.Count} pontos)";
+    }
+
+    /// <summary>Grade horizontal com o valor de fitness de cada linha — sem isso o gráfico mostrava forma, mas nenhuma escala.</summary>
+    private void DesenharGradeComRotulos(double menor, double maior, double altura, double largura)
+    {
+        var corGrade = (Brush)FindResource("Border.Divider");
+        var corTexto = (Brush)FindResource("Text.Muted");
+
+        for (int i = 0; i <= LinhasDeGrade; i++)
+        {
+            double fracao = i / (double)LinhasDeGrade;
+            double y = altura * fracao;
+            double valor = maior - ((maior - menor) * fracao);
+
+            GraficoCanvas.Children.Add(new Line
+            {
+                X1 = LarguraEixoY,
+                Y1 = y,
+                X2 = largura,
+                Y2 = y,
+                Stroke = corGrade,
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection { 3, 3 },
+                Opacity = 0.5
+            });
+
+            var rotulo = new TextBlock
+            {
+                Text = valor.ToString("0"),
+                FontSize = 9,
+                Foreground = corTexto,
+                FontFamily = (System.Windows.Media.FontFamily)FindResource("Font.Mono")
+            };
+
+            // Rótulo acima da linha na borda de cima e abaixo na de baixo, para nenhum dos dois
+            // ser cortado pelo ClipToBounds do Canvas.
+            Canvas.SetLeft(rotulo, 0);
+            Canvas.SetTop(rotulo, i == LinhasDeGrade ? y - 11 : y - 1);
+            GraficoCanvas.Children.Add(rotulo);
+        }
+    }
+
+    private void DesenharSerie(IEnumerable<Point> pontos, Brush cor, double espessura) =>
+        GraficoCanvas.Children.Add(new Polyline
+        {
+            Points = pontos is PointCollection colecao ? colecao : new PointCollection(pontos),
+            Stroke = cor,
+            StrokeThickness = espessura,
+            StrokeLineJoin = PenLineJoin.Round
+        });
+
+    /// <summary>
+    /// Média móvel do melhor fitness. Só produz pontos a partir da janela completa: calcular a
+    /// média de 3 gerações e chamá-la de "média de 50" daria um começo de curva que não
+    /// corresponde ao que o rótulo promete.
+    /// </summary>
+    private static PointCollection CalcularMediaMovel(
+        IList<RadarTorres.App.Models.HistoricoGeracaoTreinamento> historico,
+        Func<int, double> eixoX,
+        Func<double, double> eixoY)
+    {
+        int janela = TreinamentoControladorViewModel.JanelaIndicadoresAprendizado;
+        var pontos = new PointCollection();
+        if (historico.Count < janela) return pontos;
+
+        double soma = 0;
+        for (int i = 0; i < janela; i++) soma += historico[i].MelhorFitness;
+
+        pontos.Add(new Point(eixoX(janela - 1), eixoY(soma / janela)));
+
+        for (int i = janela; i < historico.Count; i++)
+        {
+            soma += historico[i].MelhorFitness - historico[i - janela].MelhorFitness;
+            pontos.Add(new Point(eixoX(i), eixoY(soma / janela)));
+        }
+
+        return pontos;
     }
 }

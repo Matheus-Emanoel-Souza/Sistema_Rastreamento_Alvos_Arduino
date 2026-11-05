@@ -8,7 +8,18 @@ public sealed class NeuronioVisualTreinamento : ViewModelBase
 
     public double CanvasX { get; init; }
     public double CanvasY { get; init; }
+
+    /// <summary>Diâmetro do círculo, em pixels (o nome vem da época em que todos tinham o mesmo tamanho).</summary>
     public double Raio { get; init; } = 14;
+
+    /// <summary>
+    /// Deslocamento que centraliza o círculo em <see cref="CanvasX"/>/<see cref="CanvasY"/> — o
+    /// Canvas posiciona pelo canto superior esquerdo. Calculado a partir de <see cref="Raio"/> em
+    /// vez de fixo na tela: neurônios têm tamanhos diferentes (entrada/saída, oculto, e oculto
+    /// recém-surgido), então um deslocamento único deixava parte deles fora do lugar — o
+    /// suficiente para as conexões não encostarem no centro do nó que ligam.
+    /// </summary>
+    public double OffsetCentro => -Raio / 2.0;
 
     private string _cor = "#CCECFF";
     public string Cor { get => _cor; set => SetProperty(ref _cor, value); }

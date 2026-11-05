@@ -1,4 +1,4 @@
-using RadarTorres.App.NeuralEvolution;
+﻿using RadarTorres.App.NeuralEvolution;
 using Xunit;
 
 namespace RadarTorres.Tests;
@@ -9,10 +9,9 @@ public sealed class ExtratorDeRegrasTests
     [Fact]
     public void Extrair_ComRedeZerada_NaoAcusaNenhumaEntradaRelevante()
     {
-        // Pesos/bias zerados -> toda saída é tanh(0)=0 em qualquer ponto do espaço de entrada,
+        // Rede de pesos zero -> toda saída é tanh(0)=0 em qualquer ponto do espaço de entrada,
         // logo nenhuma perturbação muda a saída: nenhuma "regra" deveria ser relevante.
-        double[] genomaZerado = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
-        var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, genomaZerado);
+        RedeNeat rede = RedesDeTeste.Zerada();
 
         RegrasExtraidas regras = ExtratorDeRegras.Extrair(rede, raioMundoMetros: 10, velocidadeMaximaAlvoMetrosPorSegundo: 2.5);
 
@@ -23,9 +22,8 @@ public sealed class ExtratorDeRegrasTests
     [Fact]
     public void Extrair_SempreDevolveAoMenosUmaFrase()
     {
-        double[] genoma = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
-        for (int i = 0; i < genoma.Length; i++) genoma[i] = (i % 7 - 3) * 0.4;
-        var rede = new RedeNeural(ControladorHibrido.ArquiteturaPadrao, genoma);
+        // Rede com influência real de uma entrada (distância) sobre o ajuste de pontuação.
+        RedeNeat rede = RedesDeTeste.DeUmaEntradaParaUmaSaida(indiceEntrada: 0, indiceSaida: 0, peso: 1.5);
 
         RegrasExtraidas regras = ExtratorDeRegras.Extrair(rede, raioMundoMetros: 10, velocidadeMaximaAlvoMetrosPorSegundo: 2.5);
 

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using RadarTorres.App.Configuration;
 using RadarTorres.App.NeuralEvolution;
@@ -7,8 +7,8 @@ using Xunit;
 namespace RadarTorres.Tests;
 
 /// <summary>
-/// Teste comparativo de ponta a ponta (algoritmo genético + ambiente de treinamento reais, não
-/// uma função de fitness sintética) pedido na investigação de estagnação: roda um treinamento
+/// Teste comparativo de ponta a ponta (SharpNEAT + ambiente de treinamento reais, não uma
+/// função de fitness sintética) pedido na investigação de estagnação: roda um treinamento
 /// curto e verifica que a taxa de abate do melhor genoma melhora de verdade entre o começo e o
 /// fim — não só que o número relatado de "melhor fitness" sobe (isso o elitismo já garantia por
 /// construção), mas que o COMPORTAMENTO (abatidos vs. escapados) é mensuravelmente melhor.
@@ -33,16 +33,15 @@ public sealed class EvolucaoDoTreinamentoTests
             EpisodiosPorAvaliacao = 2
         };
         var ambiente = new AmbienteTreinamento(parametros, SemTorresConfiguradas);
-        var algoritmo = new AlgoritmoGenetico(
-            tamanhoGenoma: RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao),
+        var algoritmo = new TreinadorNeat(
+            ambiente,
             tamanhoPopulacao: 24,
-            taxaMutacao: 0.1,
-            elitismo: 2,
-            seed: 2024);
+            quantidadeEspecies: 4,
+            grauParalelismo: 1);
 
-        double TaxaDeAbate(double[] genoma, int seed)
+        double TaxaDeAbate(RedeNeat rede, int seed)
         {
-            var resultado = ambiente.ExecutarEpisodioRapido(genoma, seed);
+            var resultado = ambiente.ExecutarEpisodioRapido(rede, seed);
             int total = resultado.AlvosAbatidos + resultado.AlvosEscapados;
             return total == 0 ? 0 : (double)resultado.AlvosAbatidos / total;
         }
@@ -53,8 +52,7 @@ public sealed class EvolucaoDoTreinamentoTests
         for (int geracao = 1; geracao <= 25; geracao++)
         {
             int[] seedsDaGeracao = [geracao * 1000, geracao * 1000 + 1];
-            ResultadoGeracao resultado = algoritmo.EvoluirGeracao(
-                genoma => ambiente.AvaliarFitness(genoma, seedsDaGeracao));
+            ResultadoGeracao resultado = algoritmo.EvoluirGeracao(seedsDaGeracao);
 
             primeira ??= resultado;
             ultima = resultado;
@@ -66,8 +64,10 @@ public sealed class EvolucaoDoTreinamentoTests
         // Taxa de abate do melhor genoma de CADA ponta, medida sobre vários episódios fixos (não
         // os mesmos usados para treinar) — média para não depender de sorte de uma seed só.
         int[] seedsDeAvaliacao = [90001, 90002, 90003, 90004, 90005, 90006];
-        double taxaInicial = seedsDeAvaliacao.Average(seed => TaxaDeAbate(primeira!.MelhorGenoma, seed));
-        double taxaFinal = seedsDeAvaliacao.Average(seed => TaxaDeAbate(ultima!.MelhorGenoma, seed));
+        RedeNeat redeInicial = algoritmo.Decodificar(primeira!.MelhorGenoma);
+        RedeNeat redeFinal = algoritmo.Decodificar(ultima!.MelhorGenoma);
+        double taxaInicial = seedsDeAvaliacao.Average(seed => TaxaDeAbate(redeInicial, seed));
+        double taxaFinal = seedsDeAvaliacao.Average(seed => TaxaDeAbate(redeFinal, seed));
 
         // Tolerância de 5pp: desde que a certeza efetiva passou a cair quando o alvo está perto
         // demais da torre (ver AlvoTreinamento.CertezaEfetiva), aprender a não deixar o alvo

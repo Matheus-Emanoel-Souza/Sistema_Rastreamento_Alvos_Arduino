@@ -23,8 +23,8 @@ public sealed class LinhaExperimentoComparativo
         bool ehBaseline)
     {
         TamanhoPopulacao = configuracao.TamanhoPopulacao;
-        NeuroniosOcultos = configuracao.NeuroniosOcultos;
-        TaxaMutacao = configuracao.TaxaMutacao;
+        NeuroniosOcultos = configuracao.TetoComplexidade;
+        TaxaMutacao = configuracao.ProbabilidadeAdicionarNo;
         _experimento = experimento;
         EhBaseline = ehBaseline;
     }
@@ -81,7 +81,7 @@ public sealed class LinhaExperimentoComparativo
     public string TaxaMutacaoTexto =>
         _experimento is null ? TaxaMutacao.ToString("0.###", Cultura)
         : _experimento.TaxaMutacao is { } taxa ? taxa.ToString("0.###", Cultura)
-        : $"{ConfiguracaoExperimento.TaxaMutacaoBaseline.ToString("0.###", Cultura)} *";
+        : $"{ConfiguracaoExperimento.ProbabilidadeAdicionarNoBaseline.ToString("0.###", Cultura)} *";
 
     /// <summary>True quando a taxa exibida foi presumida, não lida do registro — ver <see cref="TaxaMutacaoTexto"/>.</summary>
     public bool TaxaMutacaoPresumida => _experimento is not null && _experimento.TaxaMutacao is null;

@@ -17,6 +17,19 @@ Anotações de pontos a revisar/implementar em futuras sessões. Atualizar confo
   por quadro citado em `AlvoVisualService.ObterCandidatos` (estava em ~480 ms com o tiny-YOLOv3
   anterior, em 416×416; não remedido desde a troca). Ver [[DETECCAO_VISAO_YOLO]].
 
+- [ ] Montagem física do protótipo (hardware real: servos, sensor de distância, torres).
+- [ ] Ajustar medidas do motor 28BYJ-48 no modelo 3D do copo de rolamento
+  (`06_copo_rolamento_motor.stl`) — os furos de fixação não coincidiram com os furos do motor na
+  peça impressa; conferir distância entre furos e diâmetro, corrigir e reimprimir.
+- [ ] Testar com mais câmeras — validar detecção, estimativa de distância e calibração dos
+  limiares com webcams de modelos, resoluções e campos de visão diferentes.
+- [ ] Revisar o custo da própria instrumentação de desempenho (gravação do `.log` por execução e
+  acumulação de estatísticas por rodada de detecção) — confirmar se o monitoramento está afetando
+  o desempenho do software.
+- [ ] Revisar a eficiência das opções salvas em "Configurações" (tamanho/modo de abertura da
+  janela, idioma, tema, câmera automática, contorno da detecção, alerta sonoro, relatório de
+  desempenho), persistidas em `%LocalAppData%\RadarTorres\configuracoes-app.json`.
+
 ## Documentos com flag `alteração_pendente`
 
 Marcados com `Status: 🚩 alteração_pendente` no topo do arquivo — ainda vão ser alterados pelo

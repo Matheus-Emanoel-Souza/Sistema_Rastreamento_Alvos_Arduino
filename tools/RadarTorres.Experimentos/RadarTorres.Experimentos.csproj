@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -18,6 +18,11 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
+
+    <!-- Mesma versão de RadarTorres.App: este executor compila os arquivos-fonte do motor de
+         neuroevolução diretamente (ver o comentário abaixo), e eles passaram a depender do
+         SharpNEAT. Sem ProjectReference, o pacote não chega aqui transitivamente. -->
+    <PackageReference Include="SharpNeat" Version="4.1.0" />
   </ItemGroup>
 
   <!--

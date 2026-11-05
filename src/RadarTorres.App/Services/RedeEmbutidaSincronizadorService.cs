@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using RadarTorres.App.NeuralEvolution;
@@ -22,48 +22,34 @@ public sealed class RedeEmbutidaSincronizadorService : IRedeEmbutidaSincronizado
         _logger = logger;
     }
 
-    public async Task<bool> SincronizarGenomaAsync()
+    /// <summary>
+    /// <para>
+    /// INDISPONÍVEL desde a migração para o SharpNEAT. O firmware do Arduino
+    /// (<c>RadarTorres_Firmware.ino</c>) embute uma rede de topologia FIXA de 74 genes
+    /// (<c>REDE_QTD_GENES</c>), e o protocolo <c>GENOMA;INDICE=n;VALOR=x</c> transmite
+    /// exatamente esse vetor plano, posição a posição.
+    /// </para>
+    /// <para>
+    /// O NEAT evolui a topologia junto com os pesos: a rede treinada tem um número de neurônios
+    /// e um conjunto de conexões que mudam de execução para execução, e não existe vetor de 74
+    /// posições que a represente. Enviar os pesos "na ordem" produziria uma rede diferente da
+    /// treinada no Arduino — pior que não sincronizar, porque passaria despercebido.
+    /// </para>
+    /// <para>
+    /// Para reativar isto é preciso ou (a) estender o protocolo e o firmware para receber a
+    /// lista de conexões (origem, destino, peso) de uma topologia arbitrária, ou (b) manter o
+    /// Arduino rodando só a heurística, que é o comportamento atual enquanto nada for
+    /// sincronizado.
+    /// </para>
+    /// </summary>
+    public Task<bool> SincronizarGenomaAsync()
     {
-        double[]? genoma = _controladorTreinado.Genoma;
-        if (genoma is null)
-        {
-            _logger.Warning("Nenhum controlador treinado embutido no app — nada para sincronizar com o Arduino.");
-            return false;
-        }
+        _logger.Error(
+            "Sincronização de genoma com o Arduino indisponível: o firmware espera um vetor fixo de 74 pesos " +
+            "(rede 7-8-2), e a rede treinada pelo SharpNEAT tem topologia variável — não há vetor equivalente. " +
+            "O Arduino continua operando com a rede/heurística já gravada nele.");
 
-        if (genoma.Length != RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao))
-        {
-            _logger.Error($"Genoma embutido tem {genoma.Length} genes, esperado {RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)} — sincronização abortada.");
-            return false;
-        }
-
-        _logger.Info($"Sincronizando rede embutida com o Arduino ({genoma.Length} pesos)...");
-
-        if (!await _serial.SendCommandAsync(SerialProtocolParser.BuildGenomaReset()).ConfigureAwait(false))
-        {
-            _logger.Error("Falha ao enviar GENOMA;RESET — sincronização abortada.");
-            return false;
-        }
-
-        for (int indice = 0; indice < genoma.Length; indice++)
-        {
-            string comando = SerialProtocolParser.BuildGenomaIndice(indice, genoma[indice]);
-            if (!await _serial.SendCommandAsync(comando).ConfigureAwait(false))
-            {
-                _logger.Error($"Falha ao enviar peso {indice} de {genoma.Length} — sincronização abortada (genoma anterior do Arduino permanece em uso).");
-                return false;
-            }
-        }
-
-        bool commitEnviado = await _serial.SendCommandAsync(SerialProtocolParser.BuildGenomaCommit()).ConfigureAwait(false);
-        if (!commitEnviado)
-        {
-            _logger.Error("Falha ao enviar GENOMA;COMMIT — o Arduino permanece com o genoma anterior (nenhum peso parcial é ativado).");
-            return false;
-        }
-
-        _logger.Success("Genoma enviado ao Arduino — aguardando ACK;CMD=GENOMA;COMMIT;STATUS=OK no console de eventos para confirmar a ativação.");
-        return true;
+        return Task.FromResult(false);
     }
 
     public async Task<bool> ValidarEntradasAsync(IReadOnlyList<double> entradas)
@@ -75,6 +61,10 @@ public sealed class RedeEmbutidaSincronizadorService : IRedeEmbutidaSincronizado
         }
 
         double[] saidaDoApp = rede.Ativar(entradas.ToArray());
+        _logger.Warning(
+            "Atenção: o app usa a rede NEAT treinada e o Arduino usa a rede fixa de 74 pesos gravada no firmware — " +
+            "desde a migração para o SharpNEAT as duas NÃO são mais a mesma rede (ver SincronizarGenomaAsync), " +
+            "então divergência nos valores abaixo é esperada e não indica defeito.");
         _logger.Info(
             $"Rede embutida — valor calculado pelo app: ajuste={saidaDoApp[0]:0.000000}, confiança={saidaDoApp[1]:0.000000}. " +
             "Enviando as mesmas entradas ao Arduino para comparação (resposta chega como STATUS;REDE_AJUSTE=...;REDE_CONFIANCA=... no console de eventos).");

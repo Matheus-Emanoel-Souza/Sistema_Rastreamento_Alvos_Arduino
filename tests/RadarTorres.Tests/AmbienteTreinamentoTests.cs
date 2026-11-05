@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using RadarTorres.App.Configuration;
 using RadarTorres.App.NeuralEvolution;
@@ -27,13 +27,13 @@ public sealed class AmbienteTreinamentoTests
     }
 
     [Fact]
-    public void ExecutarEpisodioRapido_ComGenomaZerado_RodaAteOFimEDevolveResultadoFinito()
+    public void ExecutarEpisodioRapido_ComRedeZerada_RodaAteOFimEDevolveResultadoFinito()
     {
         var parametros = new ParametrosTreinamento { DuracaoEpisodioSegundos = 10 };
         var ambiente = new AmbienteTreinamento(parametros, SemTorresConfiguradas);
-        double[] genomaZerado = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+        RedeNeat redeZerada = RedesDeTeste.Zerada();
 
-        EpisodioResultado resultado = ambiente.ExecutarEpisodioRapido(genomaZerado, seed: 123);
+        EpisodioResultado resultado = ambiente.ExecutarEpisodioRapido(redeZerada, seed: 123);
 
         Assert.True(double.IsFinite(resultado.FitnessTotal));
         Assert.True(resultado.AlvosAbatidos >= 0);
@@ -44,11 +44,10 @@ public sealed class AmbienteTreinamentoTests
     public void ExecutarEpisodioRapido_ComMesmaSeed_EDeterministico()
     {
         var ambiente = new AmbienteTreinamento(new ParametrosTreinamento { DuracaoEpisodioSegundos = 8 }, SemTorresConfiguradas);
-        double[] genoma = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
-        for (int i = 0; i < genoma.Length; i++) genoma[i] = (i % 5 - 2) * 0.3;
+        RedeNeat rede = RedesDeTeste.ComPesosParaSaidas(pesoAjuste: 0.6, pesoConfianca: 0.9);
 
-        EpisodioResultado primeiro = ambiente.ExecutarEpisodioRapido(genoma, seed: 99);
-        EpisodioResultado segundo = ambiente.ExecutarEpisodioRapido(genoma, seed: 99);
+        EpisodioResultado primeiro = ambiente.ExecutarEpisodioRapido(rede, seed: 99);
+        EpisodioResultado segundo = ambiente.ExecutarEpisodioRapido(rede, seed: 99);
 
         Assert.Equal(primeiro.FitnessTotal, segundo.FitnessTotal, precision: 10);
         Assert.Equal(primeiro.AlvosAbatidos, segundo.AlvosAbatidos);
@@ -70,11 +69,11 @@ public sealed class AmbienteTreinamentoTests
     public void AvaliarFitness_ComMesmasSeeds_EDeterministico()
     {
         var ambiente = new AmbienteTreinamento(new ParametrosTreinamento { DuracaoEpisodioSegundos = 8 }, SemTorresConfiguradas);
-        double[] genoma = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+        RedeNeat rede = RedesDeTeste.Zerada();
         int[] seeds = [10, 11, 12];
 
-        double primeiro = ambiente.AvaliarFitness(genoma, seeds);
-        double segundo = ambiente.AvaliarFitness(genoma, seeds);
+        double primeiro = ambiente.AvaliarFitness(rede, seeds);
+        double segundo = ambiente.AvaliarFitness(rede, seeds);
 
         Assert.Equal(primeiro, segundo, precision: 10);
     }
@@ -88,11 +87,11 @@ public sealed class AmbienteTreinamentoTests
     public void AvaliarFitness_EAMediaAritmeticaDosEpisodiosIndividuais()
     {
         var ambiente = new AmbienteTreinamento(new ParametrosTreinamento { DuracaoEpisodioSegundos = 8 }, SemTorresConfiguradas);
-        double[] genoma = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+        RedeNeat rede = RedesDeTeste.Zerada();
         int[] seeds = [20, 21, 22];
 
-        double mediaEsperada = seeds.Average(seed => ambiente.ExecutarEpisodioRapido(genoma, seed).FitnessTotal);
-        double mediaObtida = ambiente.AvaliarFitness(genoma, seeds);
+        double mediaEsperada = seeds.Average(seed => ambiente.ExecutarEpisodioRapido(rede, seed).FitnessTotal);
+        double mediaObtida = ambiente.AvaliarFitness(rede, seeds);
 
         Assert.Equal(mediaEsperada, mediaObtida, precision: 10);
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 
 namespace RadarTorres.App.Data;
@@ -33,7 +33,7 @@ public static class AppDataPaths
     /// <summary>
     /// Pasta com os genomas exportados da tela "Treinamento do Controlador" (ver
     /// <see cref="ViewModels.TreinamentoControladorViewModel"/>) — arquivos JSON com os pesos
-    /// da <see cref="NeuralEvolution.RedeNeural"/> evoluída, para reaproveitar fora da sessão de treinamento.
+    /// da <see cref="NeuralEvolution.RedeNeat"/> evoluída, para reaproveitar fora da sessão de treinamento.
     /// </summary>
     public static string TreinamentoFolder { get; } = Path.Combine(RootFolder, "Treinamento");
 

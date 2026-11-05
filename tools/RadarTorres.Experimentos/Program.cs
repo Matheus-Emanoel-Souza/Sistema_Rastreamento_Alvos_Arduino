@@ -1,9 +1,14 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using RadarTorres.App.Configuration;
 using RadarTorres.App.NeuralEvolution;
+using SharpNeat.IO;
+using SharpNeat.IO.Models;
+using SharpNeat.Neat.Genome;
+using SharpNeat.Neat.Genome.IO;
+using SharpNeat.NeuralNets.IO;
 
 namespace RadarTorres.Experimentos;
 
@@ -96,10 +101,10 @@ public static class Program
         };
         var ambiente = new AmbienteTreinamento(p);
 
-        // Genoma nulo => rede devolve tanh(0)=0 em tudo => confiança de disparo nunca > 0, ou
-        // seja, controlador passivo: nenhum abate. Serve para contar nascimentos no pior caso
-        // (teto de simultâneos sempre ocupado).
-        var nulo = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+        // Rede nula => devolve tanh(0)=0 em tudo => confiança de disparo nunca > 0, ou seja,
+        // controlador passivo: nenhum abate. Serve para contar nascimentos no pior caso (teto de
+        // simultâneos sempre ocupado).
+        RedeNeat nulo = RedeNula();
 
         var nascidosPassivo = new List<int>();
         var nascidosHeuristico = new List<int>();
@@ -156,31 +161,36 @@ public static class Program
         int maxAlvos, ControladorHibrido.ModoDecisao modo, bool cenariosFixos, double limiteSegundos,
         double duracao = 45, double spawnMin = 1.5, double spawnMax = 4.0, bool semLimiteDeDuracao = false)
     {
-        int[] arquitetura = [ControladorHibrido.QuantidadeEntradas, ocultos, ControladorHibrido.QuantidadeSaidas];
+        // "ocultos" deixou de ser a largura da camada oculta (o NEAT evolui a topologia) e passou
+        // a ser o TETO DE COMPLEXIDADE em conexões; "mutacao" passou a ser a probabilidade de
+        // mutação estrutural. Os nomes dos argumentos de linha de comando foram mantidos para não
+        // invalidar os scripts e as execuções já registradas em Resultados/.
+        int tetoComplexidade = ocultos;
         var parametros = new ParametrosTreinamento
         {
             TamanhoPopulacao = populacao,
-            TaxaMutacao = mutacao,
+            ProbabilidadeAdicionarNo = mutacao,
+            TetoComplexidade = tetoComplexidade,
             MaxAlvosPorQuadrante = maxAlvos,
             DuracaoEpisodioSegundos = duracao,
             IntervaloSpawnMinSegundos = spawnMin,
             IntervaloSpawnMaxSegundos = spawnMax,
             SemLimiteDeDuracao = semLimiteDeDuracao
         };
-        var ambiente = new AmbienteTreinamento(parametros, arquitetura: arquitetura);
-        var ag = new AlgoritmoGenetico(
-            tamanhoGenoma: RedeNeural.TamanhoGenoma(arquitetura),
+        var ambiente = new AmbienteTreinamento(parametros);
+        var ag = new TreinadorNeat(
+            ambiente,
             tamanhoPopulacao: populacao,
-            taxaMutacao: mutacao,
-            elitismo: Math.Max(2, populacao / 10),
-            seed: seed);
+            quantidadeEspecies: parametros.QuantidadeEspecies,
+            tetoComplexidade: tetoComplexidade,
+            probabilidadeAdicionarNo: mutacao);
 
         IReadOnlyList<TipoCenarioTreinamento>? fixos = cenariosFixos ? CatalogoCenarios.TodosComScript : null;
 
         var cronometro = Stopwatch.StartNew();
         double melhor = double.NegativeInfinity;
         int geracaoPico = 0;
-        double[] melhorGenoma = new double[RedeNeural.TamanhoGenoma(arquitetura)];
+        NeatGenome<double>? melhorGenoma = null;
         ResultadoGeracao? ultimo = null;
         int geracoesRodadas = 0;
 
@@ -190,7 +200,7 @@ public static class Program
                 .Select(i => ag.GeracaoAtual * 1000 + i)
                 .ToArray();
 
-            ultimo = ag.EvoluirGeracao(genoma => ambiente.AvaliarFitness(genoma, seeds, fixos, modo));
+            ultimo = ag.EvoluirGeracao(seeds, fixos, modo);
             geracoesRodadas = ultimo.Geracao;
 
             if (ultimo.MelhorFitness > melhor)
@@ -217,14 +227,15 @@ public static class Program
         // Validação fora das seeds de treino (90000..90049, nunca vistas pelo AG). É o número
         // honesto: o "melhor fitness" do AG é otimista, por ser o máximo sobre a população nas
         // seeds daquela geração específica.
-        var ambienteVal = new AmbienteTreinamento(parametros, arquitetura: arquitetura);
+        var ambienteVal = new AmbienteTreinamento(parametros);
+        RedeNeat melhorRede = melhorGenoma is null ? RedeNula() : ag.Decodificar(melhorGenoma);
         var fit = new List<double>();
         var nasc = new List<int>();
         var ab = new List<int>();
         var esc = new List<int>();
         for (int s = 90000; s < 90050; s++)
         {
-            EpisodioResultado e = ambienteVal.ExecutarEpisodioRapido(melhorGenoma, s, TipoCenarioTreinamento.Aleatorio, modo);
+            EpisodioResultado e = ambienteVal.ExecutarEpisodioRapido(melhorRede, s, TipoCenarioTreinamento.Aleatorio, modo);
             fit.Add(e.FitnessTotal); nasc.Add(e.AlvosNascidos); ab.Add(e.AlvosAbatidos); esc.Add(e.AlvosEscapados);
         }
 
@@ -238,7 +249,7 @@ public static class Program
 
         Console.WriteLine($"[{rotulo}] FIM ger={geracoesRodadas} pico_treino={melhor:0.00}(g{geracaoPico}) | VAL fitness={resultado.ValFitnessMedio:0.00} (max {resultado.ValFitnessMax:0.00}) nascidos={resultado.ValAlvosNascidos:0.00} abatidos={resultado.ValAbatidos:0.00} escapados={resultado.ValEscapados:0.00} fit/alvo={resultado.ValFitnessPorAlvo:0.00} taxaAbate={resultado.ValTaxaAbate:0.000} | {cronometro.Elapsed.TotalSeconds:0}s");
 
-        SalvarGenoma(rotulo, arquitetura, melhorGenoma, melhor);
+        if (melhorGenoma is not null) SalvarRede(rotulo, melhorGenoma);
         return resultado;
     }
 
@@ -259,10 +270,10 @@ public static class Program
         }
 
         // Heurística pura não tem o que evoluir (ignora a rede): basta avaliá-la nas mesmas
-        // seeds de validação, com genoma nulo.
+        // seeds de validação, com a rede nula.
         var parametros = new ParametrosTreinamento { MaxAlvosPorQuadrante = maxAlvos };
         var amb = new AmbienteTreinamento(parametros);
-        var nulo = new double[RedeNeural.TamanhoGenoma(ControladorHibrido.ArquiteturaPadrao)];
+        RedeNeat nulo = RedeNula();
         var fit = new List<double>(); var nasc = new List<int>(); var ab = new List<int>(); var esc = new List<int>();
         for (int s = 90000; s < 90050; s++)
         {
@@ -278,11 +289,9 @@ public static class Program
 
     // --------------------------------------------------- sobrevivencia (teto: rede ou ambiente?)
 
-    private sealed record GenomaCarregado(int[] Arquitetura, double[] Genoma);
-
     /// <summary>
-    /// Carrega um genoma já treinado (formato salvo por <see cref="SalvarGenoma"/> OU pelo
-    /// formato exportado pela tela "Treinamento do Controlador") e avalia quanto ele realmente
+    /// Carrega uma rede já treinada (formato .net salvo por <see cref="SalvarRede"/> OU pela
+    /// tela "Treinamento do Controlador") e avalia quanto ele realmente
     /// aguenta quando o episódio não é mais cortado em <see cref="ParametrosTreinamento.DuracaoEpisodioSegundos"/>
     /// -- só termina quando um alvo de fato rompe uma torre
     /// (<see cref="ParametrosTreinamento.SemLimiteDeDuracao"/>). Responde diretamente à pergunta
@@ -294,17 +303,17 @@ public static class Program
         string caminho = ArgS(args, "genoma", "");
         if (caminho.Length == 0 || !File.Exists(caminho))
         {
-            Console.WriteLine("Uso: sobrevivencia --genoma=<caminho.json> [--episodios=20] [--semlimite=sim]");
+            Console.WriteLine("Uso: sobrevivencia --genoma=<caminho.net> [--episodios=20] [--semlimite=sim]");
             return;
         }
 
-        GenomaCarregado g = CarregarGenoma(caminho);
+        RedeNeat redeCarregada = CarregarRede(caminho);
         int episodios = (int)Arg(args, "episodios", 20);
         bool semLimite = ArgS(args, "semlimite", "sim") == "sim";
         var modo = Enum.Parse<ControladorHibrido.ModoDecisao>(ArgS(args, "modo", "Hibrido"));
 
         var parametros = new ParametrosTreinamento { SemLimiteDeDuracao = semLimite };
-        var ambiente = new AmbienteTreinamento(parametros, arquitetura: g.Arquitetura);
+        var ambiente = new AmbienteTreinamento(parametros);
 
         var fit = new List<double>();
         var nasc = new List<int>();
@@ -317,8 +326,7 @@ public static class Program
         for (int s = 0; s < episodios; s++)
         {
             EstadoEpisodio estado = ambiente.NovoEpisodio(seed: s);
-            var rede = new RedeNeural(g.Arquitetura, g.Genoma);
-            var controlador = new ControladorHibrido(rede, parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo, modo, parametros.TempoDeteccaoRelevanteSegundos);
+            var controlador = new ControladorHibrido(redeCarregada, parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo, modo, parametros.TempoDeteccaoRelevanteSegundos);
 
             const double dt = 0.2;
             while (!estado.Finalizado) ambiente.Avancar(estado, controlador, dt);
@@ -348,18 +356,38 @@ public static class Program
         Console.WriteLine($"duracao   : media={duracao.Average():0.0}s min={duracao.Min():0.0}s max={duracao.Max():0.0}s (ate invadir uma torre ou atingir a salvaguarda de {parametros.DuracaoMaximaSegurancaSegundos:0}s)");
     }
 
-    private static GenomaCarregado CarregarGenoma(string caminho)
+    /// <summary>
+    /// Carrega uma rede do formato <c>.net</c> do SharpNEAT — o mesmo gravado por
+    /// <see cref="SalvarRede"/> e pela tela "Treinamento do Controlador". O formato JSON antigo
+    /// (arquitetura + vetor de pesos) não é mais aceito: descrevia uma rede de topologia fixa
+    /// que não existe mais.
+    /// </summary>
+    private static RedeNeat CarregarRede(string caminho)
     {
-        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(caminho));
-        JsonElement root = doc.RootElement;
+        NetFileModel modelo = NetFile.Load(caminho);
+        return new RedeNeat(NeuralNetConverter.ToNeuralNet(
+            modelo,
+            enableHardwareAcceleratedNeuralNets: false,
+            enableHardwareAcceleratedActivationFunctions: false));
+    }
 
-        JsonElement arqElement = root.TryGetProperty("arquitetura", out JsonElement a1) ? a1 : root.GetProperty("Arquitetura");
-        JsonElement genElement = root.TryGetProperty("genoma", out JsonElement g1) ? g1 : root.GetProperty("Genoma");
+    /// <summary>Rede inerte (todas as saídas em 0), usada como controlador passivo de referência.</summary>
+    private static RedeNeat RedeNula()
+    {
+        var conexoes = new List<ConnectionLine>
+        {
+            new(0, RedeNeat.QuantidadeEntradasComBias, 0.0),
+            new(0, RedeNeat.QuantidadeEntradasComBias + 1, 0.0),
+        };
+        var ativacoes = new List<ActivationFnLine> { new(0, TreinadorNeat.FuncaoAtivacao.ToString()) };
 
-        int[] arquitetura = arqElement.EnumerateArray().Select(e => e.GetInt32()).ToArray();
-        double[] genoma = genElement.EnumerateArray().Select(e => e.GetDouble()).ToArray();
+        NetFileModel modelo = NetFileModel.CreateAcyclic(
+            RedeNeat.QuantidadeEntradasComBias, ControladorHibrido.QuantidadeSaidas, conexoes, ativacoes);
 
-        return new GenomaCarregado(arquitetura, genoma);
+        return new RedeNeat(NeuralNetConverter.ToAcyclicNeuralNet(
+            modelo,
+            enableHardwareAcceleratedNeuralNets: false,
+            enableHardwareAcceleratedActivationFunctions: false));
     }
 
     // --------------------------------------------------- hiperparametros (grid do artigo)
@@ -392,7 +420,7 @@ public static class Program
             .Concat(new[] { 0.04, 0.16 }.Select(m => new ConfiguracaoHiperparametro(60, 8, m)))
             .ToList();
 
-        Console.WriteLine($"Configurações planejadas: {planejadas.Count} (arquitetura: {ControladorHibrido.QuantidadeEntradas} entradas, {ControladorHibrido.QuantidadeSaidas} saídas)");
+        Console.WriteLine($"Configurações planejadas: {planejadas.Count} ({ControladorHibrido.QuantidadeEntradas} entradas, {ControladorHibrido.QuantidadeSaidas} saídas; topologia evoluída pelo NEAT)");
 
         var resultados = new List<ResultadoHiperparametro>();
         int indice = 0;
@@ -400,14 +428,21 @@ public static class Program
         foreach (ConfiguracaoHiperparametro cfg in planejadas)
         {
             indice++;
-            int[] arquitetura = [ControladorHibrido.QuantidadeEntradas, cfg.Ocultos, ControladorHibrido.QuantidadeSaidas];
-            var parametros = new ParametrosTreinamento { TamanhoPopulacao = cfg.Populacao, TaxaMutacao = cfg.Mutacao };
-            var ambiente = new AmbienteTreinamento(parametros, arquitetura: arquitetura);
-            var ag = new AlgoritmoGenetico(
-                tamanhoGenoma: RedeNeural.TamanhoGenoma(arquitetura),
+            // cfg.Ocultos é o teto de complexidade e cfg.Mutacao a probabilidade de mutação
+            // estrutural — ver a observação equivalente em Ga().
+            var parametros = new ParametrosTreinamento
+            {
+                TamanhoPopulacao = cfg.Populacao,
+                ProbabilidadeAdicionarNo = cfg.Mutacao,
+                TetoComplexidade = cfg.Ocultos
+            };
+            var ambiente = new AmbienteTreinamento(parametros);
+            var ag = new TreinadorNeat(
+                ambiente,
                 tamanhoPopulacao: cfg.Populacao,
-                taxaMutacao: cfg.Mutacao,
-                elitismo: Math.Max(2, cfg.Populacao / 10));
+                quantidadeEspecies: parametros.QuantidadeEspecies,
+                tetoComplexidade: cfg.Ocultos,
+                probabilidadeAdicionarNo: cfg.Mutacao);
 
             var cronometro = Stopwatch.StartNew();
             double melhorAteAgora = double.NegativeInfinity;
@@ -421,7 +456,7 @@ public static class Program
                     .Select(i => ag.GeracaoAtual * 1000 + i)
                     .ToArray();
 
-                ultimo = ag.EvoluirGeracao(genoma => ambiente.AvaliarFitness(genoma, seeds, CatalogoCenarios.TodosComScript));
+                ultimo = ag.EvoluirGeracao(seeds, CatalogoCenarios.TodosComScript);
 
                 if (ultimo.MelhorFitness > melhorAteAgora)
                 {
@@ -483,10 +518,11 @@ public static class Program
         File.WriteAllText(caminho, JsonSerializer.Serialize(todas, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    private static void SalvarGenoma(string rotulo, int[] arquitetura, double[] genoma, double fitness)
-    {
-        File.WriteAllText(
-            Path.Combine(PastaResultados(), $"genoma-{rotulo}.json"),
-            JsonSerializer.Serialize(new { rotulo, arquitetura, fitness, genoma }));
-    }
+    /// <summary>
+    /// Grava a rede campeã no formato <c>.net</c> do SharpNEAT. Substitui o JSON com arquitetura
+    /// + vetor de pesos, que não representa uma topologia evoluída; o fitness não cabe mais no
+    /// arquivo (o formato não tem metadados) e continua registrado em <c>resultados.json</c>.
+    /// </summary>
+    private static void SalvarRede(string rotulo, NeatGenome<double> genoma)
+        => NeatGenomeSaver.Save(genoma, Path.Combine(PastaResultados(), $"rede-{rotulo}.net"));
 }

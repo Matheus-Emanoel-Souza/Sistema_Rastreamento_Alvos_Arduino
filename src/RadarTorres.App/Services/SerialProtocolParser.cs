@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -172,7 +172,7 @@ public static class SerialProtocolParser
     /// </summary>
     public static string BuildGenomaReset() => "GENOMA;RESET";
 
-    /// <summary>Envia UM peso/viés do genoma (mesma ordem de <see cref="NeuralEvolution.RedeNeural"/>).</summary>
+    /// <summary>Envia UM peso/viés do genoma na ordem da rede FIXA de 74 genes do firmware. Sem uso desde a migração para o SharpNEAT — ver <see cref="IRedeEmbutidaSincronizadorService.SincronizarGenomaAsync"/>, que não consegue mais montar esse vetor a partir de uma topologia evoluída.</summary>
     public static string BuildGenomaIndice(int indice, double valor) =>
         $"GENOMA;INDICE={indice};VALOR={valor.ToString("0.000000", CultureInfo.InvariantCulture)}";
 

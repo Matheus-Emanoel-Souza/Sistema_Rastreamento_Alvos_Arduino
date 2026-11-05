@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using RadarTorres.App.Helpers;
@@ -8,8 +8,8 @@ namespace RadarTorres.App.NeuralEvolution;
 /// <summary>
 /// O controlador híbrido propriamente dito: combina a MESMA heurística em camadas usada por
 /// <see cref="Services.TowerSelectionService"/> (torre do próprio quadrante → adjacente →
-/// cobertura) com o ajuste de uma <see cref="RedeNeural"/> evoluída por
-/// <see cref="AlgoritmoGenetico"/>. A heurística garante que a decisão nunca seja absurda
+/// cobertura) com o ajuste de uma <see cref="RedeNeat"/> evoluída por
+/// <see cref="TreinadorNeat"/>. A heurística garante que a decisão nunca seja absurda
 /// (nunca escolhe uma torre ocupada, nunca ignora a cooperação entre quadrantes); a rede
 /// neural refina a pontuação dentro do que a heurística já considerou viável — e também decide
 /// o instante do disparo, dado o alvo já mirado.
@@ -22,7 +22,10 @@ public sealed class ControladorHibrido
     /// <summary>ajuste de pontuação da torre candidata, confiança de disparo.</summary>
     public const int QuantidadeSaidas = 2;
 
-    public static readonly int[] ArquiteturaPadrao = { QuantidadeEntradas, 8, QuantidadeSaidas };
+    // Não existe mais "arquitetura padrão": com NEAT (ver TreinadorNeat) a topologia — quantos
+    // neurônios ocultos e quais conexões — é resultado da evolução, não parâmetro. Só a
+    // quantidade de entradas e de saídas continua fixa, porque é o contrato entre o controlador
+    // e o resto do sistema.
 
     /// <summary>Rótulo curto de cada entrada, na mesma ordem de <see cref="ConstruirEntradas(double,double,bool,bool,double,double,double,double,double,double)"/> — usado nos nós de entrada do diagrama da rede (ver tela de treinamento).</summary>
     public static readonly string[] RotulosEntradas =
@@ -36,7 +39,7 @@ public sealed class ControladorHibrido
         "Camada heurística"
     ];
 
-    /// <summary>Rótulo curto de cada saída, na mesma ordem devolvida por <see cref="RedeNeural.Ativar"/> — usado nos nós de saída do diagrama da rede.</summary>
+    /// <summary>Rótulo curto de cada saída, na mesma ordem devolvida por <see cref="RedeNeat.Ativar"/> — usado nos nós de saída do diagrama da rede.</summary>
     public static readonly string[] RotulosSaidas =
     [
         "Ajuste de pontuação da torre candidata",
@@ -46,7 +49,7 @@ public sealed class ControladorHibrido
     /// <summary>Tempo mínimo de mira — veto heurístico INEGOCIÁVEL, igual em <see cref="ModoDecisao.Hibrido"/> e <see cref="ModoDecisao.HeuristicaPura"/> (só <see cref="ModoDecisao.RedePura"/> não o aplica). Público para quem mede a decisão de disparo isoladamente (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>) poder excluir este veto compartilhado da contagem de "recusa da rede".</summary>
     public const double TempoMinimoDeMiraSegundos = 0.3;
 
-    private readonly RedeNeural _rede;
+    private readonly RedeNeat _rede;
     private readonly double _raioMundoMetros;
     private readonly double _velocidadeMaximaAlvoMetrosPorSegundo;
     private readonly double _tempoDeteccaoRelevanteSegundos;
@@ -79,7 +82,7 @@ public sealed class ControladorHibrido
 
     public ModoDecisao Modo => _modo;
 
-    public ControladorHibrido(RedeNeural rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo, ModoDecisao modo = ModoDecisao.Hibrido, double tempoDeteccaoRelevanteSegundos = 3.0)
+    public ControladorHibrido(RedeNeat rede, double raioMundoMetros, double velocidadeMaximaAlvoMetrosPorSegundo, ModoDecisao modo = ModoDecisao.Hibrido, double tempoDeteccaoRelevanteSegundos = 3.0)
     {
         _rede = rede;
         _raioMundoMetros = raioMundoMetros;
@@ -124,7 +127,15 @@ public sealed class ControladorHibrido
             .Select(a => a.Quadrante)
             .ToHashSet();
 
-        List<TorreTreinamento> doProprioQuadrante = livres.Where(t => t.QuadrantePreferido == alvo.Quadrante).ToList();
+        // Eixo Z: um alvo alto o bastante (ver AlvoTreinamento.VisivelPorTodasAsTorres) aparece no
+        // campo de visão de TODAS as torres, então todas as livres entram na primeira camada em
+        // vez de só as do quadrante dele. Não é um atalho: a camada escolhida apenas define QUEM
+        // concorre — a rede continua decidindo qual vence, e os vetos de disparo (zona morta,
+        // certeza mínima, tempo mínimo de mira) seguem intactos em DecidirDisparo.
+        // Com o eixo Z desligado a propriedade é sempre falsa e nada aqui muda.
+        List<TorreTreinamento> doProprioQuadrante = alvo.VisivelPorTodasAsTorres
+            ? livres
+            : livres.Where(t => t.QuadrantePreferido == alvo.Quadrante).ToList();
 
         List<TorreTreinamento> adjacentes = doProprioQuadrante.Count > 0
             ? []
@@ -243,7 +254,7 @@ public sealed class ControladorHibrido
     /// <see cref="SelecionarTorre"/>) e para decidir em produção (ver
     /// <see cref="Services.TowerSelectionService"/>).
     /// </summary>
-    public static double Pontuar(RedeNeural rede, double[] entradas, double fatorCamada)
+    public static double Pontuar(RedeNeat rede, double[] entradas, double fatorCamada)
     {
         double ajusteRedeNeural = rede.Ativar(entradas)[0];
         double distanciaNormalizada = entradas[0];

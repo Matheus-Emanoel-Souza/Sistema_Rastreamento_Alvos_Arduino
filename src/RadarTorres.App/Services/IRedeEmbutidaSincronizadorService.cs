@@ -1,11 +1,12 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace RadarTorres.App.Services;
 
 /// <summary>
 /// Envia o genoma da rede neural treinada ao Arduino (comandos <c>GENOMA;*</c>, ver
-/// <see cref="SerialProtocolParser"/>) e pede validação de entradas (<c>REDE;ENTRADAS=</c>) —
+/// <see cref="SerialProtocolParser"/> — desativado, ver <see cref="SincronizarGenomaAsync"/>) e
+/// pede validação de entradas (<c>REDE;ENTRADAS=</c>) —
 /// SOMENTE diagnóstico/auditoria. Nunca participa da seleção de torre nem da autorização de
 /// disparo, que continuam decididas inteiramente pelo app (ver
 /// <c>Docs/Documentos_Entregaveis/Artigo/Como_a_IA_funciona_no_RadarTorres.MD</c>, Parte 3).
@@ -13,10 +14,10 @@ namespace RadarTorres.App.Services;
 public interface IRedeEmbutidaSincronizadorService
 {
     /// <summary>
-    /// Envia os 74 pesos do genoma atualmente embutido no app (um por comando, com
-    /// <c>GENOMA;RESET</c> antes e <c>GENOMA;COMMIT</c> depois). Não faz nada (e avisa no log) se
-    /// não houver controlador treinado embutido (<see cref="IControladorTreinadoProvider.Genoma"/>
-    /// nulo).
+    /// INDISPONÍVEL desde a migração para o SharpNEAT: sempre registra o motivo no log e devolve
+    /// <c>false</c>. O protocolo <c>GENOMA;*</c> transmite um vetor fixo de 74 pesos, que
+    /// pressupõe a rede 7-8-2 gravada no firmware; uma rede NEAT tem topologia variável e não
+    /// pode ser representada assim. Ver a implementação para o que seria preciso para reativar.
     /// </summary>
     Task<bool> SincronizarGenomaAsync();
 
