@@ -537,7 +537,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     private async Task ManualFireAsync()
     {
         if (SelectedTarget?.SelectedTower is not { } tower) return;
-        await _fireControlService.TryFireAsync(SelectedTarget, tower, IsSimulationMode ? null : _serialService, IsSimulationMode, CurrentMode);
+        await _fireControlService.TryFireAsync(SelectedTarget, tower, IsSimulationMode ? null : _serialService, IsSimulationMode, CurrentMode, _authService.SessaoId);
     }
 
     private void ClearRadar()
@@ -577,6 +577,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 NovoModo = DescribeMode(novo),
                 UsuarioId = _authService.CurrentUser?.Id,
                 DataHora = DateTime.Now,
+                SessaoId = _authService.SessaoId,
             });
         }
         catch (Exception ex)
@@ -632,7 +633,8 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                 ObjetoDetectadoId = target.ObjetoDetectadoId,
                 VelocidadeMetrosPorSegundo = target.SpeedMetersPerSecond,
                 Grau = target.GrauPerigo,
-                DataHora = DateTime.Now
+                DataHora = DateTime.Now,
+                SessaoId = _authService.SessaoId,
             });
         }
         catch (Exception ex)
@@ -774,7 +776,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
                     FireAuthorizationResult auth = _fireControlService.Authorize(target, engagingTower, CurrentMode);
                     if (auth.Authorized)
                     {
-                        _ = _fireControlService.TryFireAsync(target, engagingTower, IsSimulationMode ? null : _serialService, IsSimulationMode, CurrentMode);
+                        _ = _fireControlService.TryFireAsync(target, engagingTower, IsSimulationMode ? null : _serialService, IsSimulationMode, CurrentMode, _authService.SessaoId);
                     }
                     else
                     {

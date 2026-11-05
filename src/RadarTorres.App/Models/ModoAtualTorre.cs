@@ -24,4 +24,7 @@ public class ModoAtualTorre
     public int? UsuarioId { get; set; }
 
     public DateTime DataHora { get; set; }
+
+    /// <summary>Código da sessão (<see cref="Services.IAuthService.SessaoId"/>) de quem confirmou a troca.</summary>
+    public string? SessaoId { get; set; }
 }

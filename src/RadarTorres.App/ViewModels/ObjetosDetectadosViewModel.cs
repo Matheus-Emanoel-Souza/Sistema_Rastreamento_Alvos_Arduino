@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using RadarTorres.App.Helpers;
@@ -130,8 +131,8 @@ public sealed class ObjetosDetectadosViewModel : ViewModelBase
             foreach (OcorrenciaEstadoTransicao transicao in _repository.ObterHistoricoEstados(Selecionado.Id))
             {
                 texto.Append(transicao.DataHora.ToString("dd/MM/yyyy HH:mm:ss"))
-                     .Append(" — ")
-                     .Append(transicao.Estado);
+                     .Append(" — modo #")
+                     .Append(transicao.ModoAtualTorreId?.ToString(CultureInfo.InvariantCulture) ?? "—");
 
                 if (!string.IsNullOrWhiteSpace(transicao.Usuario)) texto.Append(" (").Append(transicao.Usuario).Append(')');
                 if (!string.IsNullOrWhiteSpace(transicao.Observacao)) texto.Append(": ").Append(transicao.Observacao);
@@ -159,7 +160,7 @@ public sealed class ObjetosDetectadosViewModel : ViewModelBase
 
         try
         {
-            if (!_repository.AtualizarEstado(ocorrencia.Id, novoEstado, usuario, observacao))
+            if (!_repository.AtualizarEstado(ocorrencia.Id, novoEstado, usuario, observacao, _authService.SessaoId))
             {
                 SetStatus("A ocorrência já não estava pendente de confirmação — a lista foi recarregada.", success: false);
                 Reload();

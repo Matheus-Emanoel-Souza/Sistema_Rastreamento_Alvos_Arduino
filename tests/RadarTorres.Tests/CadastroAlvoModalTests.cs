@@ -379,6 +379,8 @@ internal sealed class AuthServiceFalso : IAuthService
 
     public Usuario? CurrentUser { get; private set; }
 
+    public string? SessaoId { get; private set; } = "sessao-teste";
+
     public event EventHandler? SessionChanged;
 
     public Task<AuthResult> LoginAsync(string login, string senha) => Task.FromResult(AuthResult.Ok(CurrentUser!));
@@ -386,6 +388,7 @@ internal sealed class AuthServiceFalso : IAuthService
     public void Logout()
     {
         CurrentUser = null;
+        SessaoId = null;
         SessionChanged?.Invoke(this, EventArgs.Empty);
     }
 

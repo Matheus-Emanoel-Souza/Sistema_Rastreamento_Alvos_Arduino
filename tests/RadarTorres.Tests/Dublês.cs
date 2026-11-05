@@ -139,7 +139,7 @@ internal sealed class RepositorioOcorrenciasEmMemoria : IObjetoDetectadoReposito
         {
             objeto.Id = _proximoId++;
             _itens.Add(objeto);
-            RegistrarTransicao(objeto.Id, objeto.Estado, null, "Ocorrência registrada.");
+            RegistrarTransicao(objeto.Id, null, "Ocorrência registrada.", null);
             return objeto;
         }
     }
@@ -159,7 +159,7 @@ internal sealed class RepositorioOcorrenciasEmMemoria : IObjetoDetectadoReposito
 
             objeto.Id = _proximoId++;
             _itens.Add(objeto);
-            RegistrarTransicao(objeto.Id, objeto.Estado, null, "Ocorrência registrada.");
+            RegistrarTransicao(objeto.Id, null, "Ocorrência registrada.", null);
             return objeto;
         }
     }
@@ -173,7 +173,7 @@ internal sealed class RepositorioOcorrenciasEmMemoria : IObjetoDetectadoReposito
         }
     }
 
-    public bool AtualizarEstado(int id, EstadoOcorrencia estado, string? usuario, string? observacao)
+    public bool AtualizarEstado(int id, EstadoOcorrencia estado, string? usuario, string? observacao, string? sessaoId)
     {
         lock (_gate)
         {
@@ -181,7 +181,7 @@ internal sealed class RepositorioOcorrenciasEmMemoria : IObjetoDetectadoReposito
             if (item is null || item.Estado == estado) return false;
 
             item.Estado = estado;
-            RegistrarTransicao(id, estado, usuario, observacao);
+            RegistrarTransicao(id, usuario, observacao, sessaoId);
             return true;
         }
     }
@@ -191,14 +191,18 @@ internal sealed class RepositorioOcorrenciasEmMemoria : IObjetoDetectadoReposito
         lock (_gate) return _transicoes.Where(t => t.ObjetoDetectadoId == objetoDetectadoId).ToList();
     }
 
-    private void RegistrarTransicao(int objetoId, EstadoOcorrencia estado, string? usuario, string? observacao) =>
+    /// <summary>Espelha SqliteObjetoDetectadoRepository.RegistrarTransicao: Estado (agora
+    /// <see cref="OcorrenciaEstadoTransicao.ModoAtualTorreId"/>) não guarda mais o
+    /// <see cref="EstadoOcorrencia"/> — este dublê nunca tem modo_atual_torre, então fica null.</summary>
+    private void RegistrarTransicao(int objetoId, string? usuario, string? observacao, string? sessaoId) =>
         _transicoes.Add(new OcorrenciaEstadoTransicao
         {
             Id = _transicoes.Count + 1,
             ObjetoDetectadoId = objetoId,
-            Estado = estado,
+            ModoAtualTorreId = null,
             DataHora = DateTime.Now,
             Usuario = usuario,
-            Observacao = observacao
+            Observacao = observacao,
+            SessaoId = sessaoId
         });
 }

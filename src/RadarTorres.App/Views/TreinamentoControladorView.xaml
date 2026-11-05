@@ -97,6 +97,43 @@
             <TextBlock Text="TREINAMENTO DO CONTROLADOR" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
             <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
                        Text="Evolui por NEAT (neuroevolução de topologias aumentantes) a rede neural que combina com a heurística de cooperação entre torres adjacentes — pesos E topologia são evoluídos, então o número de neurônios e as conexões são resultado do treinamento, não configuração. Cada geração roda em segundo plano; o Canvas abaixo mostra em tempo real como o campeão atual se comporta e o painel à direita acompanha a evolução."/>
+
+            <!-- Faixa de resumo rápido — mesmos números já exibidos nos cards da barra lateral,
+                 só repetidos aqui em formato compacto para não precisar rolar até lá pra saber o
+                 estado atual do treinamento. Nenhum dado novo, nenhuma lógica nova. -->
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <Border Style="{StaticResource Card}" Margin="0,0,10,0" Padding="12,8" MinWidth="120">
+                    <StackPanel>
+                        <TextBlock Text="GERAÇÃO" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding GeracaoAtual, StringFormat={}{0:N0}}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,0,10,0" Padding="12,8" MinWidth="120">
+                    <StackPanel>
+                        <TextBlock Text="MELHOR FITNESS" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding MelhorFitness, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="#4ADE80"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,0,10,0" Padding="12,8" MinWidth="120">
+                    <StackPanel>
+                        <TextBlock Text="FITNESS MÉDIO" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding FitnessMedio, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,0,10,0" Padding="12,8" MinWidth="120"
+                        ToolTip="Abates sobre alvos que apareceram, medido no episódio de verificação do campeão atual.">
+                    <StackPanel>
+                        <TextBlock Text="TAXA DE ABATE" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding TaxaDeCobertura, StringFormat={}{0:P0}}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,0,0,0" Padding="12,8" MinWidth="140">
+                    <StackPanel>
+                        <TextBlock Text="ESTADO" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding EstadoTexto}" FontSize="16" FontWeight="Bold" FontFamily="{DynamicResource Font.Mono}" Foreground="{Binding EstadoCor}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </StackPanel>
 
         <!-- Conteúdo principal: Canvas 2D + painel lateral -->
@@ -186,6 +223,11 @@
                         <Button Content="Simular caso selecionado" Command="{Binding SimularCenarioCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
 
                         <Button Content="Exportar melhor genoma" Command="{Binding ExportarMelhorGenomaCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                        <!-- Parâmetros de experimento (população, teto de complexidade, mutação
+                             estrutural, meta de gerações, alvos por quadrante, eixo Z) moraram
+                             aqui inline; agora vivem na janela modal "Configurar experimento",
+                             que reaproveita a MESMA ViewModel — ver BotaoConfigurarExperimento_Click. -->
+                        <Button Content="Configurar experimento..." Click="BotaoConfigurarExperimento_Click" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
                         <Button Content="Resetar treinamento" Command="{Binding ResetarCommand}" HorizontalAlignment="Stretch"
                                 Background="#7F1D1D" ToolTip="Para o treinamento (se estiver rodando) e volta tudo ao estado inicial — geração, fitness, genoma e visualizações. Não apaga o histórico já salvo no banco."/>
 
@@ -204,41 +246,6 @@
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
-                        </TextBlock>
-
-                        <TextBlock Text="Meta de gerações (0 = sem meta)" Style="{StaticResource ParametroLabel}"/>
-                        <TextBox Text="{Binding MetaGeracoes, UpdateSourceTrigger=PropertyChanged}"
-                                 ToolTip="Com meta definida, a barra de progresso mostra o percentual concluído e o treinamento para sozinho ao alcançá-la. Com 0, o treinamento roda até você mandar parar — o NEAT não tem condição de parada própria nesta aplicação."/>
-
-                        <TextBlock Text="Tamanho da população" Style="{StaticResource ParametroLabel}"/>
-                        <TextBox Text="{Binding TamanhoPopulacao, UpdateSourceTrigger=PropertyChanged}"/>
-
-                        <TextBlock Text="Teto de complexidade (conexões)" Style="{StaticResource ParametroLabel}"/>
-                        <ComboBox ItemsSource="{Binding NeuroniosOcultosDisponiveis}" SelectedItem="{Binding NeuroniosOcultosSelecionado}"
-                                  ToolTip="Vale a partir do próximo &quot;Iniciar&quot; ou &quot;Resetar&quot; — não afeta um treinamento já em andamento."/>
-
-                        <TextBlock Text="Mutação estrutural (0-1)" Style="{StaticResource ParametroLabel}"/>
-                        <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"
-                                 ToolTip="Probabilidade de um descendente ganhar um NEURÔNIO novo. Não é a antiga taxa de mutação por gene: aqui mutação de peso e mutação de estrutura são eventos distintos, e o que sobra é redistribuído entre as outras mutações. Valores do plano experimental: 0,005 · 0,01 (padrão) · 0,02."/>
-
-                        <TextBlock Text="Máximo de alvos por quadrante" Style="{StaticResource ParametroLabel}"/>
-                        <TextBox Text="{Binding MaxAlvosPorQuadrante, UpdateSourceTrigger=PropertyChanged}"/>
-
-                        <!-- Eixo Z: liga a terceira dimensão da simulação. Desligado por padrão,
-                             porque o modo bidimensional é o que foi usado em todos os treinamentos
-                             e experimentos já registrados — trocar o padrão mudaria em silêncio o
-                             significado de qualquer comparação com eles. -->
-                        <CheckBox Content="Considerar a altura dos alvos (eixo Z)" Margin="0,12,0,0"
-                                  IsChecked="{Binding EixoZHabilitado}"
-                                  Foreground="{DynamicResource Text.Primary}" FontSize="12"
-                                  ToolTip="Vale a partir do próximo &quot;Iniciar&quot;, &quot;Resetar&quot; ou simulação avulsa — um episódio já em curso não muda de dimensão no meio."/>
-                        <TextBlock Text="{Binding DescricaoEixoZ}" Style="{StaticResource ParametroLabel}"
-                                   Margin="0,4,0,0" FontStyle="Italic" TextWrapping="Wrap"/>
-
-                        <TextBlock Style="{StaticResource ParametroLabel}" TextWrapping="Wrap" FontStyle="Italic">
-                            <Run Text="Alcance de mira e certeza mínima de disparo usados aqui são os mesmos ajustados em "/>
-                            <Run Text="Configurações → Radar e mira / Disparo" FontWeight="SemiBold"/>
-                            <Run Text=" — valem a partir do próximo &quot;Iniciar&quot; ou &quot;Resetar&quot;."/>
                         </TextBlock>
                     </StackPanel>
                 </Border>

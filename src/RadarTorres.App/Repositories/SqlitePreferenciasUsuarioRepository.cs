@@ -80,7 +80,7 @@ public sealed class SqlitePreferenciasUsuarioRepository : IPreferenciasUsuarioRe
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "CREATE TABLE IF NOT EXISTS PreferenciasUsuario (" +
-            "UsuarioId INTEGER PRIMARY KEY, " +
+            "UsuarioId INTEGER PRIMARY KEY REFERENCES Usuarios(Id) ON DELETE CASCADE, " +
             "Idioma TEXT NOT NULL, " +
             "Tema TEXT NOT NULL, " +
             "SidebarRecolhida INTEGER NOT NULL, " +

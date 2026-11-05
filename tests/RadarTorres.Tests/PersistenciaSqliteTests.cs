@@ -144,17 +144,16 @@ public sealed class PersistenciaSqliteTests : IDisposable
         var repositorio = new SqliteObjetoDetectadoRepository();
         ObjetoDetectado gravada = repositorio.AdicionarSeNaoExistir(Ocorrencia("rastreio-1", "Q1"));
 
-        Assert.True(repositorio.AtualizarEstado(gravada.Id, EstadoOcorrencia.AbatePendente, "operador", "acionamento"));
-        Assert.True(repositorio.AtualizarEstado(gravada.Id, EstadoOcorrencia.Abatido, "supervisor", "confirmado"));
+        Assert.True(repositorio.AtualizarEstado(gravada.Id, EstadoOcorrencia.AbatePendente, "operador", "acionamento", "sessao-teste"));
+        Assert.True(repositorio.AtualizarEstado(gravada.Id, EstadoOcorrencia.Abatido, "supervisor", "confirmado", "sessao-teste"));
 
         // Repetir o mesmo estado não gera transição nova.
-        Assert.False(repositorio.AtualizarEstado(gravada.Id, EstadoOcorrencia.Abatido, "supervisor", "confirmado"));
+        Assert.False(repositorio.AtualizarEstado(gravada.Id, EstadoOcorrencia.Abatido, "supervisor", "confirmado", "sessao-teste"));
 
         IReadOnlyList<OcorrenciaEstadoTransicao> historico = repositorio.ObterHistoricoEstados(gravada.Id);
 
-        Assert.Equal(
-            new[] { EstadoOcorrencia.Detectado, EstadoOcorrencia.AbatePendente, EstadoOcorrencia.Abatido },
-            historico.Select(h => h.Estado).ToArray());
+        // Estado deixou de guardar o EstadoOcorrencia (ver OcorrenciaEstadoTransicao.ModoAtualTorreId).
+        Assert.Equal(3, historico.Count);
         Assert.Equal("supervisor", historico[^1].Usuario);
         Assert.Equal(EstadoOcorrencia.Abatido, repositorio.GetById(gravada.Id)!.Estado);
     }

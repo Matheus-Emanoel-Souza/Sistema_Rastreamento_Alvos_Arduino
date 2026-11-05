@@ -30,4 +30,14 @@ public class AcaoRealizada
     public DateTime DataHora { get; set; }
 
     public string? Observacao { get; set; }
+
+    /// <summary>
+    /// Câmera (<see cref="Camera.DispositivoId"/>) que originou a ocorrência por trás desta ação,
+    /// resolvida a partir de <see cref="ObjetoDetectadoId"/> no momento do acionamento. <c>null</c>
+    /// quando não havia objeto detectado associado ou ele não tinha câmera (ex.: origem radar).
+    /// </summary>
+    public string? CameraDispositivoId { get; set; }
+
+    /// <summary>Código da sessão (<see cref="Services.IAuthService.SessaoId"/>) de quem disparou — ver <see cref="SessaoUsuario"/>.</summary>
+    public string? SessaoId { get; set; }
 }

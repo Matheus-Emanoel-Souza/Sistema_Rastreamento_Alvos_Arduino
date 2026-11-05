@@ -15,16 +15,24 @@ public sealed class AuthService : IAuthService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILoggingService _logger;
+    private readonly ISessaoUsuarioRepository _sessaoRepository;
 
     public Usuario? CurrentUser { get; private set; }
 
+    public string? SessaoId { get; private set; }
+
     public event EventHandler? SessionChanged;
 
-    public AuthService(IUsuarioRepository usuarioRepository, IPasswordHasher passwordHasher, ILoggingService logger)
+    public AuthService(
+        IUsuarioRepository usuarioRepository,
+        IPasswordHasher passwordHasher,
+        ILoggingService logger,
+        ISessaoUsuarioRepository sessaoRepository)
     {
         _usuarioRepository = usuarioRepository;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _sessaoRepository = sessaoRepository;
     }
 
     public Task<AuthResult> LoginAsync(string login, string senha)
@@ -45,6 +53,7 @@ public sealed class AuthService : IAuthService
         _usuarioRepository.Update(usuario);
 
         CurrentUser = usuario;
+        SessaoId = _sessaoRepository.Abrir(usuario.Id);
         _logger.Success($"Login efetuado: {usuario.Nome} ({usuario.Perfil}).");
         SessionChanged?.Invoke(this, EventArgs.Empty);
         return Task.FromResult(AuthResult.Ok(usuario));
@@ -54,8 +63,11 @@ public sealed class AuthService : IAuthService
     {
         if (CurrentUser is null) return;
 
+        if (SessaoId is not null) _sessaoRepository.Encerrar(SessaoId);
+
         _logger.Info($"Logout: {CurrentUser.Nome}.");
         CurrentUser = null;
+        SessaoId = null;
         SessionChanged?.Invoke(this, EventArgs.Empty);
     }
 
