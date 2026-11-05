@@ -36,4 +36,11 @@ public class InstantaneoComportamentoMelhorGene
     public string GenomaJson { get; set; } = string.Empty;
 
     public DateTime DataHora { get; set; }
+
+    /// <summary>
+    /// Identificador da sessão de treinamento que gravou este instantâneo — mesmo campo e mesmo
+    /// motivo de <see cref="MarcoFitnessTreinamento.ExecucaoId"/>: a geração reinicia em 0 a cada
+    /// sessão, então duas sessões podem produzir o mesmo <see cref="GeracaoMarco"/> legitimamente.
+    /// </summary>
+    public string ExecucaoId { get; set; } = "legada";
 }

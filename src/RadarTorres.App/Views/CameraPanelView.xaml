@@ -39,16 +39,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
-            <Setter Property="Padding" Value="6,3"/>
-        </Style>
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-        </Style>
+        <!-- ComboBox/ComboBoxItem: estilo global em Styles/Controls.xaml. -->
 
         <Style x:Key="StatusText" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="Bold"/>

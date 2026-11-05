@@ -22,12 +22,13 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO marcos_fitness_treinamento (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora) " +
-            "VALUES ($geracaoMarco, $fitnessMedio, $melhorFitness, $dataHora)";
+            "INSERT INTO marcos_fitness_treinamento (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId) " +
+            "VALUES ($geracaoMarco, $fitnessMedio, $melhorFitness, $dataHora, $execucaoId)";
         command.Parameters.AddWithValue("$geracaoMarco", marco.GeracaoMarco);
         command.Parameters.AddWithValue("$fitnessMedio", marco.FitnessMedioDoBloco);
         command.Parameters.AddWithValue("$melhorFitness", marco.MelhorFitnessDoBloco);
         command.Parameters.AddWithValue("$dataHora", marco.DataHora.ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$execucaoId", marco.ExecucaoId);
         command.ExecuteNonQuery();
     }
 
@@ -39,7 +40,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
         var resultado = new List<MarcoFitnessTreinamento>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Id, GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora " +
+            "SELECT Id, GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId " +
             "FROM marcos_fitness_treinamento ORDER BY GeracaoMarco";
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -52,6 +53,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
                 FitnessMedioDoBloco = reader.GetDouble(2),
                 MelhorFitnessDoBloco = reader.GetDouble(3),
                 DataHora = DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                ExecucaoId = reader.GetString(5),
             });
         }
         return resultado;
@@ -70,18 +72,45 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
     private static void EnsureTable(SqliteConnection connection) =>
         SqliteSchema.GarantirUmaVez(connection, nameof(SqliteMarcoFitnessTreinamentoRepository), CriarEsquema);
 
-    /// <summary>Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.</summary>
+    /// <summary>
+    /// Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.
+    /// </summary>
+    /// <remarks>
+    /// Até esta migração, o índice único era só em <c>GeracaoMarco</c>: como a numeração de
+    /// gerações do NEAT reinicia em 0 a cada "Iniciar" (ver TreinadorNeat.EvoluirGeracao), uma
+    /// segunda sessão de treinamento que também passasse pela geração 500 colidia com o marco já
+    /// gravado na primeira e falhava com "UNIQUE constraint failed" — o INSERT era descartado
+    /// silenciosamente (capturado pelo try/catch do chamador), perdendo o marco da sessão nova.
+    /// A correção troca a unicidade para (ExecucaoId, GeracaoMarco): cada sessão tem seu próprio
+    /// <see cref="MarcoFitnessTreinamento.ExecucaoId"/> (um Guid novo por "Iniciar"), então a
+    /// mesma geração em sessões diferentes não colide mais. Nenhum registro existente é apagado
+    /// — os antigos (de antes desta coluna existir) recebem <c>'legada'</c> via
+    /// <c>ALTER TABLE ... DEFAULT</c> (ver <see cref="SqliteSchema.EnsureColumn"/>).
+    /// </remarks>
     private static void CriarEsquema(SqliteConnection connection)
     {
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText =
-            "CREATE TABLE IF NOT EXISTS marcos_fitness_treinamento (" +
-            "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "GeracaoMarco INTEGER NOT NULL, " +
-            "FitnessMedioDoBloco REAL NOT NULL, " +
-            "MelhorFitnessDoBloco REAL NOT NULL, " +
-            "DataHora TEXT NOT NULL); " +
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_marcos_fitness_geracao ON marcos_fitness_treinamento (GeracaoMarco);";
-        command.ExecuteNonQuery();
+        using (SqliteCommand command = connection.CreateCommand())
+        {
+            command.CommandText =
+                "CREATE TABLE IF NOT EXISTS marcos_fitness_treinamento (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "GeracaoMarco INTEGER NOT NULL, " +
+                "FitnessMedioDoBloco REAL NOT NULL, " +
+                "MelhorFitnessDoBloco REAL NOT NULL, " +
+                "DataHora TEXT NOT NULL);";
+            command.ExecuteNonQuery();
+        }
+
+        SqliteSchema.EnsureColumn(connection, "marcos_fitness_treinamento", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
+
+        using (SqliteCommand dropIndex = connection.CreateCommand())
+        {
+            // Índice antigo (só GeracaoMarco) — a causa raiz do bug; precisa sair antes de criar
+            // o composto, senão os dois coexistiriam e o antigo continuaria barrando o INSERT.
+            dropIndex.CommandText = "DROP INDEX IF EXISTS idx_marcos_fitness_geracao";
+            dropIndex.ExecuteNonQuery();
+        }
+
+        SqliteSchema.EnsureIndex(connection, "idx_marcos_fitness_execucao_geracao", "ON marcos_fitness_treinamento (ExecucaoId, GeracaoMarco)", unico: true);
     }
 }

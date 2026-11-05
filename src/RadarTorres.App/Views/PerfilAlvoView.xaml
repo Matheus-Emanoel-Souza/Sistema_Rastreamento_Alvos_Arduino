@@ -24,14 +24,14 @@
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <conv:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisibilityConverter"/>
 
-        <Style TargetType="TextBox">
+        <!-- TextBox/ComboBox/ComboBoxItem: estilo global em Styles/Controls.xaml — faltava aqui
+             o estilo de ComboBoxItem (o popup da lista aberta caía no fundo branco nativo do
+             Windows com texto claro por cima, ilegível). Só o espaçamento local continua aqui. -->
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Padding" Value="6,5"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
         </Style>
-        <Style TargetType="ComboBox">
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Padding" Value="6,5"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>

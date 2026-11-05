@@ -22,8 +22,8 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "INSERT INTO instantaneos_comportamento_melhor_gene " +
-            "(GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora) " +
-            "VALUES ($geracaoMarco, $fitness, $abatidos, $escapados, $errados, $taxaAcerto, $taxaCobertura, $genoma, $dataHora)";
+            "(GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId) " +
+            "VALUES ($geracaoMarco, $fitness, $abatidos, $escapados, $errados, $taxaAcerto, $taxaCobertura, $genoma, $dataHora, $execucaoId)";
         command.Parameters.AddWithValue("$geracaoMarco", instantaneo.GeracaoMarco);
         command.Parameters.AddWithValue("$fitness", instantaneo.Fitness);
         command.Parameters.AddWithValue("$abatidos", instantaneo.AlvosAbatidos);
@@ -33,6 +33,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         command.Parameters.AddWithValue("$taxaCobertura", (object?)instantaneo.TaxaDeCobertura ?? DBNull.Value);
         command.Parameters.AddWithValue("$genoma", instantaneo.GenomaJson);
         command.Parameters.AddWithValue("$dataHora", instantaneo.DataHora.ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$execucaoId", instantaneo.ExecucaoId);
         command.ExecuteNonQuery();
     }
 
@@ -44,7 +45,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         var resultado = new List<InstantaneoComportamentoMelhorGene>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Id, GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora " +
+            "SELECT Id, GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId " +
             "FROM instantaneos_comportamento_melhor_gene ORDER BY GeracaoMarco";
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -62,6 +63,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
                 TaxaDeCobertura = reader.IsDBNull(7) ? null : reader.GetDouble(7),
                 GenomaJson = reader.GetString(8),
                 DataHora = DateTime.Parse(reader.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                ExecucaoId = reader.GetString(10),
             });
         }
         return resultado;
@@ -70,23 +72,41 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
     private static void EnsureTable(SqliteConnection connection) =>
         SqliteSchema.GarantirUmaVez(connection, nameof(SqliteInstantaneoComportamentoRepository), CriarEsquema);
 
-    /// <summary>Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.</summary>
+    /// <summary>
+    /// Criação/migração do esquema desta tabela — mesma correção e mesmo motivo de
+    /// <see cref="SqliteMarcoFitnessTreinamentoRepository.CriarEsquema"/>: o índice único
+    /// trocou de <c>GeracaoMarco</c> sozinho para <c>(ExecucaoId, GeracaoMarco)</c>, porque a
+    /// geração reinicia em 0 a cada sessão de treinamento e duas sessões podiam colidir no mesmo
+    /// marco de 1.000 gerações ("UNIQUE constraint failed"). Nenhum registro existente é
+    /// apagado — os antigos recebem <c>ExecucaoId = 'legada'</c>.
+    /// </summary>
     private static void CriarEsquema(SqliteConnection connection)
     {
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText =
-            "CREATE TABLE IF NOT EXISTS instantaneos_comportamento_melhor_gene (" +
-            "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "GeracaoMarco INTEGER NOT NULL, " +
-            "Fitness REAL NOT NULL, " +
-            "AlvosAbatidos INTEGER NOT NULL, " +
-            "AlvosEscapados INTEGER NOT NULL, " +
-            "TirosErrados INTEGER NOT NULL, " +
-            "TaxaDeAcerto REAL NULL, " +
-            "TaxaDeCobertura REAL NULL, " +
-            "GenomaJson TEXT NOT NULL, " +
-            "DataHora TEXT NOT NULL); " +
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_instantaneos_comportamento_geracao ON instantaneos_comportamento_melhor_gene (GeracaoMarco);";
-        command.ExecuteNonQuery();
+        using (SqliteCommand command = connection.CreateCommand())
+        {
+            command.CommandText =
+                "CREATE TABLE IF NOT EXISTS instantaneos_comportamento_melhor_gene (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "GeracaoMarco INTEGER NOT NULL, " +
+                "Fitness REAL NOT NULL, " +
+                "AlvosAbatidos INTEGER NOT NULL, " +
+                "AlvosEscapados INTEGER NOT NULL, " +
+                "TirosErrados INTEGER NOT NULL, " +
+                "TaxaDeAcerto REAL NULL, " +
+                "TaxaDeCobertura REAL NULL, " +
+                "GenomaJson TEXT NOT NULL, " +
+                "DataHora TEXT NOT NULL);";
+            command.ExecuteNonQuery();
+        }
+
+        SqliteSchema.EnsureColumn(connection, "instantaneos_comportamento_melhor_gene", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
+
+        using (SqliteCommand dropIndex = connection.CreateCommand())
+        {
+            dropIndex.CommandText = "DROP INDEX IF EXISTS idx_instantaneos_comportamento_geracao";
+            dropIndex.ExecuteNonQuery();
+        }
+
+        SqliteSchema.EnsureIndex(connection, "idx_instantaneos_comportamento_execucao_geracao", "ON instantaneos_comportamento_melhor_gene (ExecucaoId, GeracaoMarco)", unico: true);
     }
 }
