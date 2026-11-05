@@ -3,8 +3,8 @@ Funcionalidade: documenta o controlador híbrido heurística+rede neural evoluí
 # Controlador Neuroevolutivo (Heurística + Rede Neural)
 
 Documentação técnica do controlador híbrido que combina a heurística em camadas de seleção de
-torre (ver [[ALGORITMO_SELECAO_TORRE]]) com uma rede neural evoluída por algoritmo genético.
-Código-fonte em `src/RadarTorres.App/NeuralEvolution/`.
+torre (ver [[ALGORITMO_SELECAO_TORRE]]) com uma rede neural evoluída por **NEAT** (via
+SharpNEAT). Código-fonte em `src/RadarTorres.App/NeuralEvolution/`.
 
 ## 1. Visão geral
 
@@ -13,46 +13,57 @@ do que a heurística pura (menor distância) consegue — sem substituí-la. A h
 decidindo a **camada** de candidatas (torre do próprio quadrante → adjacente → sobressalente,
 ver [[ALGORITMO_SELECAO_TORRE]] seção 4) e garante que a decisão nunca seja absurda (nunca
 escolhe torre ocupada, nunca ignora a cooperação entre quadrantes). Dentro da camada escolhida,
-uma rede neural evoluída por algoritmo genético ajusta a pontuação das candidatas e decide o
-instante exato do disparo.
+uma rede neural evoluída por NEAT ajusta a pontuação das candidatas e decide o instante exato
+do disparo.
 
 O treinamento ocorre num **ambiente simulado** próprio (`AmbienteTreinamento`), separado do
-sistema em produção, e o resultado (um genoma, isto é, um vetor de pesos) é exportado e
-embutido no executável para ser usado em tempo real por `TowerSelectionService`.
+sistema em produção, e o resultado (um genoma NEAT, isto é, um grafo de nós e conexões) é
+exportado no formato `.net` do SharpNEAT e embutido no executável para ser usado em tempo real
+por `TowerSelectionService`.
 
-Implementação própria, sem biblioteca de IA/ML: a rede neural e o algoritmo genético são
-código escrito do zero no projeto, "para manter o algoritmo auditável/explicável no TCC"
-(comentário em `AlgoritmoGenetico.cs`).
+Framework de terceiros (SharpNEAT) para a evolução/topologia, mas a função de fitness, o
+ambiente de simulação e a combinação heurística+rede continuam código próprio do projeto —
+substituiu uma implementação 100% própria anterior (rede feedforward de topologia fixa +
+algoritmo genético escrito à mão, ainda presentes no repositório como `RedeNeural.cs` e
+`AlgoritmoGenetico.cs`, porém não mais usados no fluxo de treinamento/produção).
 
 ## 2. Classes principais
 
 | Classe/arquivo | Responsabilidade |
 |---|---|
-| `RedeNeural.cs` | Rede feedforward totalmente conectada, ativação `tanh` em todas as camadas. Pesos e bias não vêm de backpropagation — são lidos de um genoma plano (`double[]`) passado no construtor. |
-| `AlgoritmoGenetico.cs` | Evolui uma população de genomas: seleção por torneio (3 indivíduos), crossover uniforme (50% de chance por gene), mutação gaussiana (Box-Muller) e elitismo. |
+| `RedeNeat.cs` | Adaptador fino sobre a rede do SharpNEAT (`IBlackBox<double>`): expõe `Ativar(entradas)` com a mesma assinatura da antiga rede fixa, cuidando da convenção de bias (nó de índice 0) e do reset entre ativações (necessário porque o NEAT pode gerar redes cíclicas, com estado interno). |
+| `TreinadorNeat.cs` | Comanda a evolução pelo SharpNEAT: configura o experimento (população, nº de espécies, elitismo, teto de complexidade, probabilidade de mutação estrutural), roda `EvoluirGeracao` e decodifica o genoma campeão (`Decodificar`) numa `RedeNeat` pronta para uso. |
 | `ControladorHibrido.cs` | Combina heurística + rede: monta o vetor de entradas, pontua candidatas (`Pontuar`) e decide o instante de disparo (`DecidirDisparo`). É a MESMA classe usada tanto no ambiente de treinamento quanto (via os métodos estáticos `ConstruirEntradas`/`Pontuar`) em produção por `TowerSelectionService`. |
-| `AmbienteTreinamento.cs` | Mundo 2D de simulação: torres fixas (mesmas posições do `appsettings.json`), alvos nascendo na borda e avançando até a base. Função de fitness do algoritmo genético (`ExecutarEpisodioRapido`/`AvaliarFitness`). |
+| `AmbienteTreinamento.cs` | Mundo 2D de simulação: torres fixas (mesmas posições do `appsettings.json`), alvos nascendo na borda e avançando até a base. Função de fitness usada pelo NEAT (`ExecutarEpisodioRapido`/`AvaliarFitness`). |
 | `EstadoEpisodio.cs` | Estado mutável de um episódio em andamento (torres, alvos, relógio, estatísticas). |
 | `TorreTreinamento.cs` / `AlvoTreinamento.cs` | Modelos de torre e alvo exclusivos do ambiente de treinamento (não são `Tower`/`Target` do domínio real). |
-| `ParametrosTreinamento.cs` | Parâmetros ajustáveis de um episódio (raio do mundo, velocidades, recompensas/penalidades, tamanho de população, taxa de mutação etc.), expostos na tela de treinamento. |
+| `ParametrosTreinamento.cs` | Parâmetros ajustáveis de um episódio (raio do mundo, velocidades, recompensas/penalidades, tamanho de população, parâmetros de mutação estrutural etc.), expostos na tela de treinamento. |
 | `EpisodioResultado.cs` | Resumo de um episódio: fitness total, alvos abatidos/escapados, tiros errados. |
 | `ExtratorDeRegras.cs` | Aproxima, por análise de sensibilidade (variação de cada entrada em torno de um ponto de referência), frases em português descrevendo tendências aprendidas pela rede — não é extração exata, é uma leitura qualitativa para acompanhar o treinamento. |
 
 ## 3. Arquitetura da rede
 
-Definida em `ControladorHibrido.ArquiteturaPadrao = [6, 8, 2]`:
+![Rede neural NEAT do controlador híbrido: 7 entradas, camada oculta evolutiva, 2 saídas](../../assets/rede_neural_neat_controlador_hibrido.png)
 
-- **6 entradas** (`ConstruirEntradas`): distância normalizada até o alvo, indicador de mesmo
+
+Desde a migração para **SharpNEAT** (`RedeNeat.cs`, `TreinadorNeat.cs`), não existe mais
+arquitetura fixa de camadas — só entrada e saída são contrato fixo, definidas em
+`ControladorHibrido.QuantidadeEntradas`/`QuantidadeSaidas`:
+
+- **7 entradas** (`ConstruirEntradas`): distância normalizada até o alvo, indicador de mesmo
   quadrante, indicador de quadrante adjacente, ângulo de mira normalizado, velocidade do alvo
-  normalizada, fator da camada heurística (1.0 = própria, 0.5 = adjacente, 0.0 = sobressalente).
-- **1 camada oculta de 8 neurônios.**
+  normalizada, tempo detectado sem abate (normalizado), fator da camada heurística (1.0 =
+  própria, 0.5 = adjacente, 0.0 = sobressalente).
+- **Camada oculta evolutiva**: quantidade de neurônios ocultos e quais conexões existem (inclusive
+  pulando camadas) são resultado da evolução por NEAT, não parâmetro de entrada — cresce ou
+  encolhe geração a geração conforme o que melhora o fitness. Não há mais número fixo de
+  neurônios nem genoma de tamanho previsível (o genoma agora é um grafo, não um vetor de pesos).
 - **2 saídas**: ajuste de pontuação da torre candidata, e confiança de disparo.
 
-Com essa arquitetura, `RedeNeural.TamanhoGenoma([6, 8, 2])` resulta em um genoma de 74 números
-(pesos + bias de todas as camadas) — esse é o tamanho citado em
-`IControladorTreinadoProvider.Genoma` ("vetor plano de 74 números").
-
-Todas as ativações usam `tanh`, então cada saída fica no intervalo `[-1, 1]`.
+`RedeNeat` expõe a caixa-preta do SharpNEAT com a mesma assinatura de `Ativar(entradas)` da
+antiga rede fixa, para que `ControladorHibrido`, `ExtratorDeRegras` e `TowerSelectionService`
+não precisem conhecer a API do framework. Internamente há um nó de bias (índice 0, sempre 1,0)
+somado às 7 entradas reais — convenção do SharpNEAT, tratada só dentro de `RedeNeat`.
 
 ## 4. Como o controlador híbrido combina heurística + rede
 
@@ -128,32 +139,36 @@ adjacente, a até 2 m do alvo) quando o alvo está acima de `VelocidadeRapidaMet
 (padrão 1,2 m/s) — mesma regra 6 citada em commits recentes do projeto ("torre nunca solta
 alvo por erro de tiro e ajuda de torre adjacente em alvo rápido").
 
-### 5.2 Algoritmo genético (`AlgoritmoGenetico`)
+### 5.2 Evolução por NEAT (`TreinadorNeat`)
 
-- População padrão de 60 indivíduos (genomas de 74 genes cada, para a arquitetura `[6,8,2]`).
-- Cada gene começa aleatório entre -1 e 1.
-- A cada geração, todos os indivíduos são avaliados em paralelo (`AsParallel`) pela função de
-  fitness fornecida.
-- **Elitismo** (padrão 3): os melhores indivíduos passam direto para a próxima geração, sem
-  alteração — garante que o melhor fitness nunca regrida entre gerações.
-- O restante da população é gerado por **seleção por torneio** de 3 (sorteia 3, fica com o
-  melhor), **crossover uniforme** (cada gene do filho vem do pai ou da mãe com 50% de chance)
-  e **mutação gaussiana** (cada gene tem `TaxaMutacao`, padrão 8%, de chance de receber ruído
-  com desvio padrão `ForcaMutacao`, padrão 0,5).
+- População padrão de 60 indivíduos, divididos em 6 espécies (`SpeciesCount`) — mecanismo
+  central do NEAT, sem equivalente no algoritmo genético anterior: protege inovações
+  estruturais recentes (nós/conexões novas) da competição direta com genomas já otimizados,
+  dando tempo para elas serem ajustadas antes de serem eliminadas.
+- Diferente da arquitetura fixa anterior, o NEAT parte de redes MÍNIMAS (só entradas ligadas
+  às saídas) e vai acrescentando neurônios e conexões ao longo das gerações — a quantidade de
+  neurônios ocultos do campeão é **resultado** da evolução (`NeuroniosOcultosDoCampeao`), não
+  parâmetro escolhido.
+- A cada geração, todos os indivíduos são avaliados em paralelo (`DegreeOfParallelism`,
+  padrão: todos os núcleos) pela função de fitness fornecida.
+- **Elitismo** (`ElitismProportion`, padrão 5%): fração dos melhores de cada espécie preservada
+  sem alteração.
+- Mutação ESTRUTURAL (`AddNodeMutationProbability`, padrão 1%) soma-se à mutação de pesos e às
+  mutações de adicionar/remover conexão — é o knob que não existia antes, porque a topologia
+  era fixa.
+- **Regulação de complexidade** (`AbsoluteComplexityRegulationStrategy`, teto padrão de 60
+  conexões): enquanto a rede tiver menos conexões que o teto, o NEAT pode crescer
+  ("complexificando"); ao ultrapassar, entra em modo de "simplificando" — sem isso a topologia
+  cresceria indefinidamente e cada avaliação (múltiplos episódios por indivíduo) ficaria
+  progressivamente mais cara sem ganho de fitness correspondente.
 
-Testes automatizados (`tests/RadarTorres.Tests/AlgoritmoGeneticoTests.cs`) cobrem, com uma
-função de fitness sintética (soma dos genes): que o melhor fitness não regride ao longo de
-várias gerações, que o elitismo impede regressão mesmo geração a geração, que o contador de
-geração incrementa corretamente, e — como regressão específica — que o `MelhorGenoma`
-devolvido por `EvoluirGeracao` realmente reproduz o `MelhorFitness` relatado (inclusive com
-`elitismo: 0`, caso em que um bug anterior devolvia um filho recém-cruzado em vez do melhor
-genoma real).
-
-`tests/RadarTorres.Tests/RedeNeuralTests.cs` cobre a rede neural isoladamente: cálculo correto
-do tamanho do genoma a partir da arquitetura, determinismo da ativação para a mesma
-entrada/genoma, saídas sempre dentro de `[-1, 1]` (saturação do `tanh`), erro ao construir com
-genoma de tamanho errado, acesso a pesos individuais (`Peso`) e a ativação por camada
-(`AtivarComCamadas`, usada só para visualização — nunca no laço de treinamento/avaliação).
+Testes automatizados (`tests/RadarTorres.Tests/RedeNeatTests.cs`) cobrem a `RedeNeat`
+isoladamente: determinismo da ativação para a mesma entrada/genoma, saídas sempre dentro de
+`[-1, 1]` (saturação do `tanh`), convenção de bias, e erro ao construir com contagem de
+entradas/saídas incompatível com a caixa-preta do SharpNEAT. `TreinadorNeatTests.cs` cobre o
+treinador: que o melhor fitness não regride entre gerações (elitismo) e a numeração de
+gerações (`EvoluirGeracao` — a primeira chamada apenas cria/avalia a população inicial,
+numerada geração 0 pelo próprio framework).
 
 ### 5.3 Avaliação com múltiplas seeds (`AvaliarFitness`)
 
@@ -167,14 +182,16 @@ até o elitismo a um sorteio.
 ### 5.4 Exportação e embutimento no app
 
 O genoma do melhor indivíduo é exportado pela tela "Treinamento do Controlador"
-(`TreinamentoControladorViewModel.ExportarMelhorGenoma`) para um JSON com arquitetura, genoma,
-geração e melhor fitness. Esse JSON é embutido como `EmbeddedResource` em
-`src/RadarTorres.App/Resources/ControladorTreinado/genoma-controlador.json` e carregado em
-tempo de execução por `ControladorTreinadoProvider`
-(`src/RadarTorres.App/Services/ControladorTreinadoProvider.cs`), que expõe a `RedeNeural`
-pronta (`IControladorTreinadoProvider.Rede`) e o genoma plano (`Genoma`, 74 números) para quem
-precisar. Se nenhum genoma válido estiver embutido (instalação nova, nunca treinada), `Rede` é
-`null` e o sistema cai para a heurística pura (ver seção 4.3).
+(`TreinamentoControladorViewModel.ExportarMelhorGenoma`) no formato `.net` do próprio
+SharpNEAT (lista de nós + conexões, não mais um vetor plano de pesos). Esse arquivo é embutido
+como `EmbeddedResource` (`rede-controlador.net`) e carregado em tempo de execução por
+`ControladorTreinadoProvider` (`src/RadarTorres.App/Services/ControladorTreinadoProvider.cs`),
+usando o leitor do próprio SharpNEAT (`NetFile.Load`), que expõe a `RedeNeat` pronta
+(`IControladorTreinadoProvider.Rede`) para quem precisar. A rede embutida com contagem de
+entradas/saídas incompatível com a versão atual do código (ex.: embutida antes de
+`ControladorHibrido.QuantidadeEntradas` mudar) é rejeitada no carregamento, não trava o app. Se
+nenhuma rede válida estiver embutida (instalação nova, nunca treinada, ou incompatível), `Rede`
+é `null` e o sistema cai para a heurística pura (ver seção 4.3).
 
 Esse genoma embutido também é enviado ao Arduino, mas **apenas para fins de
 diagnóstico/auditoria** (`IRedeEmbutidaSincronizadorService` — comandos `GENOMA;*` e
@@ -204,11 +221,13 @@ geração a geração.
 ### `instantaneos_comportamento_melhor_gene`
 Um retrato completo do melhor genoma a cada 1.000 gerações: fitness, abatidos/escapados/tiros
 errados, taxas derivadas (acerto = abatidos/(abatidos+tiros errados); cobertura =
-abatidos/(abatidos+escapados)), e o **genoma inteiro serializado em JSON** (`GenomaJson`) — para
-poder recarregar e reproduzir exatamente aquele comportamento depois. Sem limite de linhas;
-nunca sobrescrito. Propósito explícito (comentário no modelo
-`InstantaneoComportamentoMelhorGene`): permitir estudar, marco a marco, se a evolução do
-treinamento é real ou apenas oscilação de ruído.
+abatidos/(abatidos+escapados)), e o grafo do genoma NEAT inteiro serializado no formato `.net`
+do SharpNEAT, guardado em texto na coluna `GenomaJson` — para poder recarregar e reproduzir
+exatamente aquele comportamento depois (o nome da coluna é legado da representação anterior,
+vetor de pesos em JSON; o conteúdo hoje é o `.net`, não mais JSON). Sem limite de linhas; nunca
+sobrescrito. Propósito explícito (comentário no modelo `InstantaneoComportamentoMelhorGene`):
+permitir estudar, marco a marco, se a evolução do treinamento é real ou apenas oscilação de
+ruído.
 
 Todas as três são somente-inserção (sem Update, exceto pela limpeza do buffer circular da
 primeira).
