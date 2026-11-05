@@ -10,7 +10,7 @@ namespace RadarTorres.App.Repositories;
 
 /// <summary>
 /// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>acoes_realizadas</c> — nomes de
-/// tabela/colunas espelham exatamente <c>Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql</c>)
+/// tabela/colunas espelham exatamente <c>Software/Banco_de_Dados/schema.sql</c>)
 /// de <see cref="IAcaoRealizadaRepository"/> — único armazenamento; sem fallback para CSV (todo
 /// registro do sistema grava direto no banco, com fila de reenvio via
 /// <see cref="PendingWriteQueue"/> se o banco estiver momentaneamente inacessível).

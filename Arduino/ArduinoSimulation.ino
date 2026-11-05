@@ -11,7 +11,7 @@
  *  deverá usar, além de interpretar e responder aos comandos enviados pelo
  *  aplicativo C# (RadarTorres.App).
  *
- *  Protocolo (ver Docs/Tecnica/COMUNICACAO_ARDUINO.md para a especificação completa):
+ *  Protocolo (ver Software/Integracoes/COMUNICACAO_ARDUINO.md para a especificação completa):
  *
  *   Arduino -> PC:
  *     TARGET;ID=<int>;ANGLE=<0-360>;DIST=<metros>
@@ -32,7 +32,7 @@
  *     GENOMA;COMMIT
  *     REDE;ENTRADAS=<d>;<mesmo_quad>;<quad_adj>;<angulo>;<vel>;<fator_camada>
  *       Rede neural embutida (só diagnóstico, nunca aciona nada — ver
- *       Docs/Documentos_Entregaveis/Artigo/Como_a_IA_funciona_no_RadarTorres.MD,
+ *       Rede_Neural/Arquitetura/CONTROLADOR_NEUROEVOLUTIVO.md,
  *       Parte 3, e o mesmo bloco de comentário em RadarTorres_Firmware.ino).
  *       Arduino -> PC: STATUS;REDE_AJUSTE=<float>;REDE_CONFIANCA=<float>
  *

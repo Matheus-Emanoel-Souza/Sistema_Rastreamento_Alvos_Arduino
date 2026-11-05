@@ -15,7 +15,7 @@ namespace RadarTorres.App.ViewModels;
 /// as ocorrências no quadrante atribuído a ela (ver <see cref="CameraSlotViewModel"/>) — é o que
 /// permite cobrir os quatro quadrantes simultaneamente, uma câmera por quadrante. Continua sem
 /// gravação de vídeo e sem integração direta com o Arduino/torres (ver
-/// Docs/Projeto/LOG_SOLICITACOES.md).
+/// Software/Qualidade/HISTORICO_ALTERACOES.md).
 /// </summary>
 /// <remarks>
 /// Esta classe não sabe nada sobre captura de vídeo em si — isso é responsabilidade de cada

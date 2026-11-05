@@ -5,7 +5,7 @@ namespace RadarTorres.App.Models;
 /// <summary>
 /// Registro de auditoria de uma troca de <see cref="SystemMode"/> confirmada (tentativas
 /// canceladas na confirmação só geram log, não linha aqui — sem uma coluna de resultado para
-/// distingui-las, ver <c>Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql</c>). Gravado a
+/// distingui-las, ver <c>Software/Banco_de_Dados/schema.sql</c>). Gravado a
 /// partir do setter de <c>MainViewModel.CurrentMode</c>. Espelha a tabela acadêmica
 /// <c>modo_atual_torre</c> (ID_MODO, MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO).
 /// </summary>

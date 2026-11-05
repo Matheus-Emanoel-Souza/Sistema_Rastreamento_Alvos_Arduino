@@ -1,5 +1,5 @@
 // Espelha, em TypeScript, a lógica documentada em
-// Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md (CoordinateConverter, QuadrantHelper,
+// Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md (CoordinateConverter, QuadrantHelper,
 // DistanceCalculator e TowerSelectionService do app C#/WPF real).
 
 export interface Point {

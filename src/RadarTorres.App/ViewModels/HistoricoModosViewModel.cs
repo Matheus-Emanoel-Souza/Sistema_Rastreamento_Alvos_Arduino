@@ -8,7 +8,7 @@ namespace RadarTorres.App.ViewModels;
 /// <summary>
 /// Linha de exibição da tela "Histórico de Modos": um <see cref="ModoAtualTorre"/> com o login
 /// do usuário já resolvido a partir de <see cref="ModoAtualTorre.UsuarioId"/> — a tabela em si
-/// só guarda o Id (ver <c>Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql</c>).
+/// só guarda o Id (ver <c>Software/Banco_de_Dados/schema.sql</c>).
 /// </summary>
 public sealed class ModoAtualTorreDisplay
 {

@@ -9,7 +9,7 @@ namespace RadarTorres.App.Models;
 /// <see cref="Repositories.IAcaoRealizadaRepository"/>, que propositalmente não expõe
 /// Update/Delete). Espelha a tabela acadêmica <c>acoes_realizadas</c> (ID_ACAO, ID_TORRE,
 /// ID_OBJETO, DH_ACAO, OBSERVACAO) descrita em
-/// <c>Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql</c>.
+/// <c>Software/Banco_de_Dados/schema.sql</c>.
 /// </summary>
 public class AcaoRealizada
 {

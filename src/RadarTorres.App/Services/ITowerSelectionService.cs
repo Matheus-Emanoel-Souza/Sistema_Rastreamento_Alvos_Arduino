@@ -13,7 +13,7 @@ public interface ITowerSelectionService
     ObservableCollection<Tower> Towers { get; }
 
     /// <summary>
-    /// Executa o algoritmo de seleção de torre (ver Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md) para o
+    /// Executa o algoritmo de seleção de torre (ver Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md) para o
     /// alvo informado, atualiza <see cref="Target.SelectedTower"/> e retorna o resultado da decisão.
     /// </summary>
     /// <param name="target">Alvo para o qual uma torre deve ser escolhida.</param>

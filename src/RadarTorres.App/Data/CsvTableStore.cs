@@ -12,7 +12,7 @@ namespace RadarTorres.App.Data;
 /// <remarks>
 /// <para>
 /// Origem: solução deliberadamente simples, escolhida para a etapa inicial do projeto (ver
-/// <c>Docs/Tecnica/MODELO_DADOS.md</c>), usada à época por todos os repositórios. Todo
+/// <c>Software/Banco_de_Dados/BANCO_DE_DADOS.md</c>), usada à época por todos os repositórios. Todo
 /// registro do sistema grava hoje exclusivamente em SQLite (<c>radartorres.db</c>, ver
 /// <c>Sqlite*Repository</c> em <c>Repositories/</c>) — o único uso restante desta classe é a
 /// exportação manual de "Objetos Detectados" para arquivo CSV
