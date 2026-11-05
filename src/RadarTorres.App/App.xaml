@@ -17,6 +17,11 @@
                 <!-- Estilos das janelas modais de formulário (diretriz de UX: ações no canto
                      superior direito abrindo modal centralizado) — ver Styles/Modal.xaml. -->
                 <ResourceDictionary Source="Styles/Modal.xaml"/>
+                <!-- ComboBox/ComboBoxItem/TextBox/CheckBox globais (corrige contraste — ver
+                     Styles/Controls.xaml). Mesclado por último: Application.Resources é
+                     consultado depois dos Resources locais de cada tela, então uma tela que
+                     ainda declarar seu próprio estilo local continua podendo sobrepor isto. -->
+                <ResourceDictionary Source="Styles/Controls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

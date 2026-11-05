@@ -87,28 +87,18 @@
             <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
             <Setter Property="Margin" Value="0,3,0,3"/>
         </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+        <!-- ComboBox/ComboBoxItem/TextBox/CheckBox: estilo global em Styles/Controls.xaml — só o
+             espaçamento específico desta tela continua aqui (BasedOn no implícito global). -->
+        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
             <Setter Property="Margin" Value="0,3,0,3"/>
         </Style>
-        <Style TargetType="ComboBox">
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Margin" Value="0,0,0,6"/>
-            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
             <Setter Property="Padding" Value="6,3"/>
         </Style>
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-        </Style>
-        <Style TargetType="TextBox">
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Margin" Value="0,0,0,6"/>
             <Setter Property="Padding" Value="4,2"/>
-            <Setter Property="Background" Value="{DynamicResource Bg.Card}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Border.Control}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource Text.Primary}"/>
         </Style>
     </UserControl.Resources>
 

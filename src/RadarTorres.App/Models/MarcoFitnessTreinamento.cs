@@ -24,4 +24,15 @@ public class MarcoFitnessTreinamento
     public double MelhorFitnessDoBloco { get; set; }
 
     public DateTime DataHora { get; set; }
+
+    /// <summary>
+    /// Identificador da sessão de treinamento (um <see cref="Guid"/> novo a cada "Iniciar"
+    /// — ver TreinamentoControladorViewModel) que gravou este marco. A numeração de gerações do
+    /// NEAT reinicia em 0 a cada sessão (ver TreinadorNeat.EvoluirGeracao), então duas sessões
+    /// diferentes podem legitimamente produzir o MESMO <see cref="GeracaoMarco"/> (ex.: 500) —
+    /// sem este campo, a segunda gravação colidia com a primeira no índice único e falhava com
+    /// "UNIQUE constraint failed". Registros gravados antes deste campo existir usam
+    /// <c>"legada"</c> (ver migração em SqliteMarcoFitnessTreinamentoRepository).
+    /// </summary>
+    public string ExecucaoId { get; set; } = "legada";
 }

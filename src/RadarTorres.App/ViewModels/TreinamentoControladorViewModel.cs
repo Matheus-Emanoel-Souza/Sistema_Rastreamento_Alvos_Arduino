@@ -112,6 +112,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     private AmbienteTreinamento _ambiente;
     private TreinadorNeat? _treinador;
+
+    /// <summary>
+    /// Identifica esta sessão de treinamento para os marcos/instantâneos gravados por ela (ver
+    /// <see cref="RegistrarMarcoFitnessSeCompletouBloco"/>/<see cref="RegistrarInstantaneoDeComportamentoSeCompletouBloco"/>)
+    /// — gerado de novo toda vez que um <see cref="TreinadorNeat"/> novo é criado (<see cref="Iniciar"/>
+    /// e o <c>??=</c> equivalente). Necessário porque a numeração de gerações do NEAT reinicia em
+    /// 0 a cada sessão: sem isto, duas sessões que passassem pela mesma geração de marco (500,
+    /// 1000...) colidiam no índice único da tabela e o INSERT falhava ("UNIQUE constraint failed").
+    /// </summary>
+    private string _execucaoId = Guid.NewGuid().ToString("N");
     private CancellationTokenSource? _cts;
     private Task? _tarefaTreinamento;
 
@@ -703,6 +713,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _ambiente = new AmbienteTreinamento(parametros);
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
+        _execucaoId = Guid.NewGuid().ToString("N");
         _treinador = new TreinadorNeat(
             _ambiente,
             tamanhoPopulacao: parametros.TamanhoPopulacao,
@@ -1369,7 +1380,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             GeracaoMarco = resultado.Geracao,
             FitnessMedioDoBloco = _somaFitnessMedioBloco / Math.Max(1, _contagemGeracoesNoBloco),
             MelhorFitnessDoBloco = _melhorFitnessBloco,
-            DataHora = DateTime.Now
+            DataHora = DateTime.Now,
+            ExecucaoId = _execucaoId
         };
 
         try
@@ -1421,7 +1433,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // referências à população); o formato .net do framework é a representação canônica
             // da rede, então é ele que guardamos — em texto, na mesma coluna.
             GenomaJson = SerializarRede(resultado.MelhorGenoma),
-            DataHora = DateTime.Now
+            DataHora = DateTime.Now,
+            ExecucaoId = _execucaoId
         };
 
         try
