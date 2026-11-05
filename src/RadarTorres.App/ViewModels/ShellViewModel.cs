@@ -236,7 +236,10 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         (MenuItem.ConfiguracoesArduino, "Sidebar.ConfiguracoesArduino", "Icon.ConfiguracoesArduino", null),
         (MenuItem.Usuarios, "Sidebar.Usuarios", "Icon.Usuarios", "Sidebar.Group.Administracao"),
         (MenuItem.TreinamentoControlador, "Sidebar.TreinamentoControlador", "Icon.TreinamentoControlador", null),
-        (MenuItem.EstatisticasTreinamento, "Sidebar.EstatisticasTreinamento", "Icon.EstatisticasTreinamento", null),
+        // MenuItem.EstatisticasTreinamento saiu do menu lateral: agora é o botão "Estatísticas e
+        // Análises" dentro da tela "Treinamento do Controlador", que abre a MESMA View (ver
+        // TreinamentoControladorView.BotaoEstatisticasEAnalises_Click), num painel modal com
+        // abas (Visão geral / Experimentos / Marcos) em vez de tela própria.
         (MenuItem.Configuracoes, "Sidebar.Configuracoes", "Icon.Configuracoes", null),
     ];
 

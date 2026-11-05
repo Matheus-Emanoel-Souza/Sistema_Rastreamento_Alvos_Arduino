@@ -310,6 +310,12 @@ public partial class App : Application
         services.AddTransient<EstatisticasTreinamentoViewModel>();
         services.AddScoped<EstatisticasTreinamentoView>();
 
+        // Janela "Estatísticas e Análises" (ver TreinamentoControladorView.
+        // BotaoEstatisticasEAnalises_Click): hospeda a EstatisticasTreinamentoView acima, que
+        // saiu do menu lateral. Fábrica (Func<T>) no mesmo padrão de Func<TermosDeUsoWindow>.
+        services.AddTransient<EstatisticasAnaliseWindow>();
+        services.AddTransient<Func<EstatisticasAnaliseWindow>>(sp => () => sp.GetRequiredService<EstatisticasAnaliseWindow>());
+
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginView>();
 
