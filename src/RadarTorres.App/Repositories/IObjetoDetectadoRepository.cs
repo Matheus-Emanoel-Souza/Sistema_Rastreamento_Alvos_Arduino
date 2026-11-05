@@ -39,7 +39,7 @@ public interface IObjetoDetectadoRepository
     /// Muda o estado da ocorrência e registra a transição no histórico. Devolve <c>false</c> se a
     /// ocorrência não existe ou se já estava neste estado.
     /// </summary>
-    bool AtualizarEstado(int id, EstadoOcorrencia estado, string? usuario, string? observacao);
+    bool AtualizarEstado(int id, EstadoOcorrencia estado, string? usuario, string? observacao, string? sessaoId);
 
     /// <summary>Transições de estado de uma ocorrência, da mais antiga para a mais recente.</summary>
     IReadOnlyList<OcorrenciaEstadoTransicao> ObterHistoricoEstados(int objetoDetectadoId);

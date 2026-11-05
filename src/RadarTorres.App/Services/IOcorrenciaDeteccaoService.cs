@@ -54,7 +54,7 @@ public interface IOcorrenciaDeteccaoService
     /// Marca a ocorrência ligada a um acionamento bem-sucedido como pendente de confirmação de
     /// abate. Chamada por <see cref="IFireControlService"/>.
     /// </summary>
-    bool MarcarAbatePendente(int objetoDetectadoId, string? usuario, string? observacao);
+    bool MarcarAbatePendente(int objetoDetectadoId, string? usuario, string? observacao, string? sessaoId);
 
     /// <summary>
     /// Disparado a cada rodada de <see cref="RegistrarDeteccao"/> com a pontuação de

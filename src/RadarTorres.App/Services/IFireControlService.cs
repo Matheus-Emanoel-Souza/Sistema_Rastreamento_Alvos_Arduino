@@ -28,5 +28,12 @@ public interface IFireControlService
     /// (<see cref="ILoggingService"/>), sem linha na tabela (schema acadêmico não tem coluna
     /// de resultado para distingui-las).
     /// </summary>
-    Task<bool> TryFireAsync(Target target, Tower tower, ISerialCommunicationService? serialService, bool simulationMode, SystemMode currentMode);
+    /// <param name="sessaoId">
+    /// Código da sessão (<see cref="IAuthService.SessaoId"/>) de quem desencadeou este
+    /// acionamento — carimbado em <c>acoes_realizadas.SessaoId</c> e propagado também para a
+    /// transição de <c>AbatePendente</c> que este disparo pode gerar. <c>null</c> para disparos
+    /// sem um operador específico por trás (não deveria ocorrer em uso normal, já que o acesso
+    /// exige login, mas o parâmetro aceita por segurança).
+    /// </param>
+    Task<bool> TryFireAsync(Target target, Tower tower, ISerialCommunicationService? serialService, bool simulationMode, SystemMode currentMode, string? sessaoId);
 }

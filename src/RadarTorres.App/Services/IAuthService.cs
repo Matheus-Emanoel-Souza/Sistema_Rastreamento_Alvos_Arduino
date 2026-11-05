@@ -21,6 +21,14 @@ public interface IAuthService
     /// <summary>Usuário autenticado no momento, ou <c>null</c> se ninguém logado.</summary>
     Usuario? CurrentUser { get; }
 
+    /// <summary>
+    /// Código da sessão atual (<see cref="Models.SessaoUsuario.Id"/>), gerado no login e usado
+    /// para carimbar as tabelas de auditoria (ações realizadas, transições de estado, troca de
+    /// modo, classificação de perigo) com "quem estava no sistema quando isto aconteceu". <c>null</c>
+    /// se ninguém logado nesta aba.
+    /// </summary>
+    string? SessaoId { get; }
+
     /// <summary>Disparado após login bem-sucedido ou logout.</summary>
     event EventHandler? SessionChanged;
 

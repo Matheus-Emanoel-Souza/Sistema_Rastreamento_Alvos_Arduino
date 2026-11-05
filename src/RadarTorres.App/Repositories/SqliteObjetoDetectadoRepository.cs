@@ -69,7 +69,9 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
             Vincular(command, objeto);
 
             objeto.Id = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
-            RegistrarTransicao(connection, objeto.Id, objeto.Estado, usuario: null, observacao: "Ocorrência registrada.");
+            // sessaoId: null — ocorrência aberta automaticamente pela câmera, sem operador por
+            // trás da ação (ver remarks de RegistrarTransicao).
+            RegistrarTransicao(connection, objeto.Id, usuario: null, observacao: "Ocorrência registrada.", sessaoId: null);
             return objeto;
         }
         catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
@@ -125,7 +127,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
             if (inseridoAgora)
             {
                 reader.Close();
-                RegistrarTransicao(connection, gravado.Id, gravado.Estado, usuario: null, observacao: "Ocorrência registrada.");
+                RegistrarTransicao(connection, gravado.Id, usuario: null, observacao: "Ocorrência registrada.", sessaoId: null);
             }
 
             return gravado;
@@ -159,7 +161,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
         }
     }
 
-    public bool AtualizarEstado(int id, EstadoOcorrencia estado, string? usuario, string? observacao)
+    public bool AtualizarEstado(int id, EstadoOcorrencia estado, string? usuario, string? observacao, string? sessaoId)
     {
         using SqliteConnection connection = SqliteConnectionFactory.OpenConnection();
         EnsureTable(connection);
@@ -173,7 +175,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
             if (command.ExecuteNonQuery() == 0) return false;
         }
 
-        RegistrarTransicao(connection, id, estado, usuario, observacao);
+        RegistrarTransicao(connection, id, usuario, observacao, sessaoId);
         return true;
     }
 
@@ -186,7 +188,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Id, ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao FROM OcorrenciaEstados " +
+            "SELECT Id, ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao, SessaoId FROM OcorrenciaEstados " +
             "WHERE ObjetoDetectadoId = $id ORDER BY Id";
         command.Parameters.AddWithValue("$id", objetoDetectadoId);
 
@@ -197,10 +199,11 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
             {
                 Id = reader.GetInt32(0),
                 ObjetoDetectadoId = reader.GetInt32(1),
-                Estado = Enum.TryParse(reader.GetString(2), out EstadoOcorrencia e) ? e : EstadoOcorrencia.Detectado,
+                ModoAtualTorreId = reader.IsDBNull(2) ? null : reader.GetInt32(2),
                 DataHora = DateTime.Parse(reader.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
                 Usuario = reader.IsDBNull(4) ? null : reader.GetString(4),
-                Observacao = reader.IsDBNull(5) ? null : reader.GetString(5)
+                Observacao = reader.IsDBNull(5) ? null : reader.GetString(5),
+                SessaoId = reader.IsDBNull(6) ? null : reader.GetString(6)
             });
         }
 
@@ -269,17 +272,23 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
             : DateTime.Parse(reader.GetString(16), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
     };
 
-    private static void RegistrarTransicao(SqliteConnection connection, int objetoDetectadoId, EstadoOcorrencia estado, string? usuario, string? observacao)
+    /// <summary>
+    /// Registra uma transição. <c>Estado</c> deixou de guardar o nome do
+    /// <see cref="EstadoOcorrencia"/> (ver <see cref="OcorrenciaEstadoTransicao"/>) e passou a
+    /// guardar o ID_MODO vigente em <c>modo_atual_torre</c> no instante da transição — o mais
+    /// recente registrado até agora, ou <c>NULL</c> se nenhum modo foi registrado ainda.
+    /// </summary>
+    private static void RegistrarTransicao(SqliteConnection connection, int objetoDetectadoId, string? usuario, string? observacao, string? sessaoId)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO OcorrenciaEstados (ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao) " +
-            "VALUES ($objetoId, $estado, $dataHora, $usuario, $observacao)";
+            "INSERT INTO OcorrenciaEstados (ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao, SessaoId) " +
+            "VALUES ($objetoId, (SELECT ID_MODO FROM modo_atual_torre ORDER BY ID_MODO DESC LIMIT 1), $dataHora, $usuario, $observacao, $sessaoId)";
         command.Parameters.AddWithValue("$objetoId", objetoDetectadoId);
-        command.Parameters.AddWithValue("$estado", estado.ToString());
         command.Parameters.AddWithValue("$dataHora", DateTime.Now.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$usuario", (object?)usuario ?? DBNull.Value);
         command.Parameters.AddWithValue("$observacao", (object?)observacao ?? DBNull.Value);
+        command.Parameters.AddWithValue("$sessaoId", (object?)sessaoId ?? DBNull.Value);
         command.ExecuteNonQuery();
     }
 
@@ -333,12 +342,16 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
                 "CREATE TABLE IF NOT EXISTS OcorrenciaEstados (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "ObjetoDetectadoId INTEGER NOT NULL REFERENCES ObjetosDetectados(Id), " +
-                "Estado TEXT NOT NULL, " +
+                "Estado INTEGER NULL REFERENCES modo_atual_torre(ID_MODO), " +
                 "DataHora TEXT NOT NULL, " +
                 "Usuario TEXT NULL, " +
                 "Observacao TEXT NULL)";
             command.ExecuteNonQuery();
         }
+
+        // Código de sessão (sessoes_usuario.ID_SESSAO) de quem desencadeou a transição — null
+        // para transições automáticas (ocorrência aberta pela câmera, sem operador por trás).
+        SqliteSchema.EnsureColumn(connection, "OcorrenciaEstados", "SessaoId", "TEXT NULL");
 
         SqliteSchema.EnsureIndex(connection, "IX_OcorrenciaEstados_Objeto", "ON OcorrenciaEstados(ObjetoDetectadoId)", unico: false);
     }

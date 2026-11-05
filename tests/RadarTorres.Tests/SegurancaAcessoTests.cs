@@ -137,9 +137,15 @@ public sealed class SegurancaAcessoTests
 /// um usuário Ativo — aqui também é possível simular ausência de sessão e usuário inativo).</summary>
 internal sealed class AuthServiceStub : IAuthService
 {
-    public AuthServiceStub(Usuario? usuario) => CurrentUser = usuario;
+    public AuthServiceStub(Usuario? usuario)
+    {
+        CurrentUser = usuario;
+        SessaoId = usuario is null ? null : "sessao-teste";
+    }
 
     public Usuario? CurrentUser { get; private set; }
+
+    public string? SessaoId { get; private set; }
 
     public event EventHandler? SessionChanged;
 
@@ -149,6 +155,7 @@ internal sealed class AuthServiceStub : IAuthService
     public void Logout()
     {
         CurrentUser = null;
+        SessaoId = null;
         SessionChanged?.Invoke(this, EventArgs.Empty);
     }
 

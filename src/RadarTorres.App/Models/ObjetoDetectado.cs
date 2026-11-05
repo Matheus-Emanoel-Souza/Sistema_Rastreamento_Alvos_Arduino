@@ -123,7 +123,12 @@ public sealed class OcorrenciaEstadoTransicao
 
     public int ObjetoDetectadoId { get; set; }
 
-    public EstadoOcorrencia Estado { get; set; }
+    /// <summary>
+    /// ID_MODO de <c>modo_atual_torre</c> vigente no instante desta transição (coluna <c>Estado</c>
+    /// da tabela <c>OcorrenciaEstados</c>) — deixou de guardar o nome do <see cref="EstadoOcorrencia"/>
+    /// do objeto. <c>null</c> quando nenhum modo havia sido registrado ainda no momento da transição.
+    /// </summary>
+    public int? ModoAtualTorreId { get; set; }
 
     public DateTime DataHora { get; set; }
 
@@ -131,4 +136,7 @@ public sealed class OcorrenciaEstadoTransicao
     public string? Usuario { get; set; }
 
     public string? Observacao { get; set; }
+
+    /// <summary>Código da sessão (<see cref="Services.IAuthService.SessaoId"/>) de quem desencadeou a transição. <c>null</c> para transições automáticas.</summary>
+    public string? SessaoId { get; set; }
 }

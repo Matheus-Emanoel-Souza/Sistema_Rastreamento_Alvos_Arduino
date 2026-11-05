@@ -65,6 +65,19 @@ public partial class TreinamentoControladorView : UserControl
         janela.ShowDialog();
     }
 
+    /// <summary>Abre a janela modal "Configurar experimento" (população, teto de complexidade,
+    /// mutação estrutural, meta de gerações, alvos por quadrante, eixo Z) — não modal, apenas
+    /// não bloqueia o treinamento em segundo plano: os campos continuam ligados à MESMA
+    /// ViewModel, então editá-los lá já reflete aqui, sem precisar fechar a janela.</summary>
+    private void BotaoConfigurarExperimento_Click(object sender, RoutedEventArgs e)
+    {
+        var janela = new ConfigurarExperimentoWindow(_viewModel)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        janela.Show();
+    }
+
     /// <summary>
     /// Alterna o painel de histórico de gerações entre minimizado (só o título + botão visíveis)
     /// e expandido (tabela visível, do tamanho que estava antes de minimizar). A divisória

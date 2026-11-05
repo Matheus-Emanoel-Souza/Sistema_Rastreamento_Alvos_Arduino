@@ -29,6 +29,7 @@ public sealed class FireControlService : IFireControlService
     private readonly IZonaMortaService _zonaMortaService;
     private readonly IOcorrenciaDeteccaoService _ocorrenciaService;
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
+    private readonly IObjetoDetectadoRepository _objetoDetectadoRepository;
     private readonly Dispatcher _dispatcher;
 
     public FireControlService(
@@ -37,6 +38,7 @@ public sealed class FireControlService : IFireControlService
         IZonaMortaService zonaMortaService,
         IOcorrenciaDeteccaoService ocorrenciaService,
         IConfiguracoesAplicativoRepository configuracoes,
+        IObjetoDetectadoRepository objetoDetectadoRepository,
         Dispatcher? dispatcher = null)
     {
         _logger = logger;
@@ -44,6 +46,7 @@ public sealed class FireControlService : IFireControlService
         _zonaMortaService = zonaMortaService;
         _ocorrenciaService = ocorrenciaService;
         _configuracoes = configuracoes;
+        _objetoDetectadoRepository = objetoDetectadoRepository;
         _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
     }
 
@@ -84,7 +87,7 @@ public sealed class FireControlService : IFireControlService
         return new FireAuthorizationResult(true, "AUTORIZADO");
     }
 
-    public async Task<bool> TryFireAsync(Target target, Tower tower, ISerialCommunicationService? serialService, bool simulationMode, SystemMode currentMode)
+    public async Task<bool> TryFireAsync(Target target, Tower tower, ISerialCommunicationService? serialService, bool simulationMode, SystemMode currentMode, string? sessaoId)
     {
         FireAuthorizationResult authorization = Authorize(target, tower, currentMode);
 
@@ -127,11 +130,11 @@ public sealed class FireControlService : IFireControlService
         double probabilidadeDeErro = CalculadoraErroDisparo.ProbabilidadeDeErro(target.SpeedMetersPerSecond);
         bool acertou = Random.Shared.NextDouble() >= probabilidadeDeErro;
 
-        RegistrarAcao(tower, target.ObjetoDetectadoId, acertou, target.SpeedMetersPerSecond);
+        RegistrarAcao(tower, target.ObjetoDetectadoId, acertou, target.SpeedMetersPerSecond, sessaoId);
 
         if (acertou)
         {
-            MarcarOcorrenciaPendenteDeAbate(target);
+            MarcarOcorrenciaPendenteDeAbate(target, sessaoId);
         }
         else
         {
@@ -150,14 +153,15 @@ public sealed class FireControlService : IFireControlService
     /// um operador na tela "Objetos Detectados". Esta é a ÚNICA porta de entrada automática para
     /// o ciclo de abate: desaparecer da imagem nunca abate nada.
     /// </summary>
-    private void MarcarOcorrenciaPendenteDeAbate(Target target)
+    private void MarcarOcorrenciaPendenteDeAbate(Target target, string? sessaoId)
     {
         if (target.ObjetoDetectadoId is not { } ocorrenciaId) return;
 
         bool marcada = _ocorrenciaService.MarcarAbatePendente(
             ocorrenciaId,
             usuario: null,
-            observacao: $"Acionamento demonstrativo executado contra o alvo #{target.Id:D2}. Aguardando confirmação de abate pelo operador.");
+            observacao: $"Acionamento demonstrativo executado contra o alvo #{target.Id:D2}. Aguardando confirmação de abate pelo operador.",
+            sessaoId: sessaoId);
 
         if (marcada)
         {
@@ -165,10 +169,14 @@ public sealed class FireControlService : IFireControlService
         }
     }
 
-    private void RegistrarAcao(Tower tower, int? objetoDetectadoId, bool acertou, double velocidadeAlvoMetrosPorSegundo)
+    private void RegistrarAcao(Tower tower, int? objetoDetectadoId, bool acertou, double velocidadeAlvoMetrosPorSegundo, string? sessaoId)
     {
         try
         {
+            string? cameraDispositivoId = objetoDetectadoId is { } id
+                ? _objetoDetectadoRepository.GetById(id)?.CameraDispositivoId
+                : null;
+
             _acaoRepository.Add(new AcaoRealizada
             {
                 TorreId = tower.Id,
@@ -177,6 +185,8 @@ public sealed class FireControlService : IFireControlService
                 Observacao = acertou
                     ? $"Acerto (velocidade do alvo: {velocidadeAlvoMetrosPorSegundo:0.00} m/s)."
                     : $"Erro (velocidade do alvo: {velocidadeAlvoMetrosPorSegundo:0.00} m/s).",
+                CameraDispositivoId = cameraDispositivoId,
+                SessaoId = sessaoId,
             });
         }
         catch (Exception ex)

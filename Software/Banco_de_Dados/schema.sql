@@ -44,16 +44,20 @@ CREATE TABLE objetos_detectados (
     DataHoraUltimaDeteccao  TEXT
 );
 
--- Histórico de transições de estado de cada ocorrência (auditoria do ciclo de abate:
--- Detectado → AbatePendente pelo acionamento → Abatido por confirmação do operador).
+-- Histórico de transições de cada ocorrência. Estado NÃO guarda mais o nome do ciclo de abate
+-- (Detectado/AbatePendente/Abatido, ver objetos_detectados.Estado para o estado ATUAL) — guarda
+-- o ID_MODO de modo_atual_torre vigente no instante da transição. NULL quando nenhum modo havia
+-- sido registrado ainda.
 CREATE TABLE ocorrencia_estados (
     Id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     ObjetoDetectadoId  INTEGER NOT NULL REFERENCES objetos_detectados (Id),
-    Estado             TEXT    NOT NULL
-                               CHECK (Estado IN ('Detectado', 'AbatePendente', 'Abatido')),
+    Estado             INTEGER REFERENCES modo_atual_torre (ID_MODO),
     DataHora           TEXT    NOT NULL,
     Usuario            TEXT,
-    Observacao         TEXT
+    Observacao         TEXT,
+    -- Sessão de quem desencadeou a transição (NULL para transições automáticas — ocorrência
+    -- aberta pela câmera, sem operador por trás). Ver sessoes_usuario.
+    SessaoId           TEXT    REFERENCES sessoes_usuario (ID_SESSAO)
 );
 
 -- Qual câmera monitora qual quadrante. Uma câmera responde por exatamente um quadrante e cada
@@ -67,19 +71,43 @@ CREATE TABLE cameras (
 );
 
 CREATE TABLE acoes_realizadas (
-    ID_ACAO     INTEGER PRIMARY KEY AUTOINCREMENT,
-    ID_TORRE    INTEGER NOT NULL,
-    ID_OBJETO   INTEGER REFERENCES objetos_detectados (Id),
-    DH_ACAO     TEXT    NOT NULL,
-    OBSERVACAO  TEXT
+    ID_ACAO               INTEGER PRIMARY KEY AUTOINCREMENT,
+    ID_TORRE              INTEGER NOT NULL,
+    ID_OBJETO             INTEGER REFERENCES objetos_detectados (Id),
+    DH_ACAO                TEXT   NOT NULL,
+    OBSERVACAO             TEXT,
+    -- Câmera que originou a ocorrência por trás da ação (resolvida via ID_OBJETO no momento do
+    -- acionamento) — mesma convenção documentária de objetos_detectados.CameraDispositivoId.
+    CameraDispositivoId    TEXT    REFERENCES cameras (DispositivoId),
+    -- Sessão de quem desencadeou o disparo. Ver sessoes_usuario.
+    SessaoId                TEXT   REFERENCES sessoes_usuario (ID_SESSAO)
 );
+
+-- "AcoesRealizadas" (PascalCase) existiu como tabela órfã de uma versão anterior do schema em
+-- bancos já instalados — nenhum código atual cria, lê ou escreve nela; acoes_realizadas acima é
+-- a única em uso real. Repositório remove a órfã ao abrir o banco (ver
+-- SqliteAcaoRealizadaRepository.CriarEsquema).
 
 CREATE TABLE modo_atual_torre (
     ID_MODO       INTEGER PRIMARY KEY AUTOINCREMENT,
     MODOATUAL     TEXT    NOT NULL,
     MODOANTERIOR  TEXT    NOT NULL,
     ID_USER       INTEGER REFERENCES usuarios (Id),
-    DHALTERACAO   TEXT    NOT NULL
+    DHALTERACAO   TEXT    NOT NULL,
+    -- Sessão de quem confirmou a troca. Ver sessoes_usuario.
+    SessaoId      TEXT    REFERENCES sessoes_usuario (ID_SESSAO)
+);
+
+-- Uma sessão de uso do sistema: aberta no login (uma por aba — várias podem estar abertas ao
+-- mesmo tempo, uma por usuário logado em cada aba) e encerrada no logout ou ao fechar a aba. É o
+-- "código de sessão" referenciado pelas tabelas de auditoria acima: consultando o ID_SESSAO de
+-- uma ação dá pra recuperar quem estava no sistema e em que janela de tempo exata (data, hora,
+-- minuto, segundo) ela aconteceu.
+CREATE TABLE sessoes_usuario (
+    ID_SESSAO       TEXT    PRIMARY KEY,
+    UsuarioId       INTEGER NOT NULL REFERENCES usuarios (Id),
+    DataHoraInicio  TEXT    NOT NULL,
+    DataHoraFim     TEXT
 );
 
 -- Buffer circular com o comportamento do melhor indivíduo de cada geração treinada na tela
@@ -129,7 +157,9 @@ CREATE TABLE classificacoes_alvo (
     ObjetoDetectadoId           INTEGER REFERENCES objetos_detectados (Id),
     VelocidadeMetrosPorSegundo  REAL    NOT NULL,
     Grau                        TEXT    NOT NULL CHECK (Grau IN ('Baixo', 'Medio', 'Alto', 'Critico')),
-    DataHora                    TEXT    NOT NULL
+    DataHora                    TEXT    NOT NULL,
+    -- Sessão de quem tinha o alvo na tela quando o grau mudou. Ver sessoes_usuario.
+    SessaoId                    TEXT    REFERENCES sessoes_usuario (ID_SESSAO)
 );
 
 CREATE TABLE preferencias_usuario (
@@ -151,6 +181,7 @@ CREATE INDEX idx_historico_treinamento_geracao ON historico_treinamento_geracoes
 CREATE INDEX idx_classificacoes_alvo_objeto ON classificacoes_alvo (ObjetoDetectadoId);
 CREATE UNIQUE INDEX idx_marcos_fitness_geracao ON marcos_fitness_treinamento (GeracaoMarco);
 CREATE UNIQUE INDEX idx_instantaneos_comportamento_geracao ON instantaneos_comportamento_melhor_gene (GeracaoMarco);
+CREATE INDEX idx_sessoes_usuario_usuario ON sessoes_usuario (UsuarioId);
 
 -- É esta restrição que torna impossível duplicar a ocorrência do mesmo acompanhamento num
 -- mesmo quadrante, inclusive quando várias câmeras processam em paralelo. Parcial (WHERE NOT

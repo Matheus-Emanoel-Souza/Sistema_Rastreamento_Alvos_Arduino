@@ -149,11 +149,11 @@ public sealed class OcorrenciaDeteccaoService : IOcorrenciaDeteccaoService
     public void EncerrarCamera(string cameraDispositivoId, string motivo) =>
         _rastreamento.EncerrarDaCamera(cameraDispositivoId, motivo);
 
-    public bool MarcarAbatePendente(int objetoDetectadoId, string? usuario, string? observacao)
+    public bool MarcarAbatePendente(int objetoDetectadoId, string? usuario, string? observacao, string? sessaoId)
     {
         try
         {
-            return _repository.AtualizarEstado(objetoDetectadoId, EstadoOcorrencia.AbatePendente, usuario, observacao);
+            return _repository.AtualizarEstado(objetoDetectadoId, EstadoOcorrencia.AbatePendente, usuario, observacao, sessaoId);
         }
         catch (Exception ex)
         {

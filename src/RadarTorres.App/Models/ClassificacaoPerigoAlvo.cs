@@ -20,4 +20,7 @@ public class ClassificacaoPerigoAlvo
     public GrauPerigoAlvo Grau { get; set; }
 
     public DateTime DataHora { get; set; }
+
+    /// <summary>Código da sessão (<see cref="Services.IAuthService.SessaoId"/>) de quem estava com o alvo na tela quando o grau mudou.</summary>
+    public string? SessaoId { get; set; }
 }

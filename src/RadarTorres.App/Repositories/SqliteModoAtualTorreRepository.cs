@@ -25,7 +25,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
         var result = new List<ModoAtualTorre>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT ID_MODO, MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO " +
+            "SELECT ID_MODO, MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId " +
             "FROM modo_atual_torre ORDER BY ID_MODO";
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -38,6 +38,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
                 ModoAnterior = reader.GetString(2),
                 UsuarioId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
                 DataHora = DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                SessaoId = reader.IsDBNull(5) ? null : reader.GetString(5),
             });
         }
         return result;
@@ -52,13 +53,14 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO modo_atual_torre (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO) " +
-                "VALUES ($modoAtual, $modoAnterior, $idUser, $dhAlteracao); " +
+                "INSERT INTO modo_atual_torre (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId) " +
+                "VALUES ($modoAtual, $modoAnterior, $idUser, $dhAlteracao, $sessaoId); " +
                 "SELECT last_insert_rowid();";
             command.Parameters.AddWithValue("$modoAtual", alteracao.NovoModo);
             command.Parameters.AddWithValue("$modoAnterior", alteracao.ModoAnterior);
             command.Parameters.AddWithValue("$idUser", (object?)alteracao.UsuarioId ?? DBNull.Value);
             command.Parameters.AddWithValue("$dhAlteracao", alteracao.DataHora.ToString("O", CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("$sessaoId", (object?)alteracao.SessaoId ?? DBNull.Value);
 
             alteracao.Id = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
             return alteracao;
@@ -67,9 +69,9 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
         {
             alteracao.Id = PendingWriteQueue.NextOfflineId();
             PendingWriteQueue.Enqueue(
-                "INSERT INTO modo_atual_torre (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO) VALUES (" +
+                "INSERT INTO modo_atual_torre (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId) VALUES (" +
                 $"{SqlLiteral.Text(alteracao.NovoModo)}, {SqlLiteral.Text(alteracao.ModoAnterior)}, {SqlLiteral.Number(alteracao.UsuarioId)}, " +
-                $"{SqlLiteral.DateTime(alteracao.DataHora)})");
+                $"{SqlLiteral.DateTime(alteracao.DataHora)}, {SqlLiteral.Text(alteracao.SessaoId)})");
             return alteracao;
         }
     }
@@ -89,5 +91,8 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
             "ID_USER INTEGER NULL, " +
             "DHALTERACAO TEXT NOT NULL)";
         command.ExecuteNonQuery();
+
+        // Código de sessão (sessoes_usuario.ID_SESSAO) de quem confirmou a troca de modo.
+        SqliteSchema.EnsureColumn(connection, "modo_atual_torre", "SessaoId", "TEXT NULL");
     }
 }

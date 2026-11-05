@@ -3,8 +3,13 @@ using System.Linq;
 
 namespace RadarTorres.App.NeuralEvolution;
 
-/// <summary>Resultado da avaliação de uma geração: usado pela UI para alimentar o gráfico de evolução.</summary>
-public sealed record ResultadoGeracao(int Geracao, double MelhorFitness, double FitnessMedio, double[] MelhorGenoma);
+/// <summary>
+/// Resultado da avaliação de uma geração pelo algoritmo genético anterior (código morto, não
+/// mais usado no fluxo de treinamento/produção — ver <see cref="TreinadorNeat.ResultadoGeracao"/>
+/// para o equivalente atual). Renomeado de <c>ResultadoGeracao</c> para não colidir em nome com o
+/// record homônimo do SharpNEAT no mesmo namespace.
+/// </summary>
+public sealed record ResultadoGeracaoLegado(int Geracao, double MelhorFitness, double FitnessMedio, double[] MelhorGenoma);
 
 /// <summary>
 /// Algoritmo genético que evolui uma população de genomas (pesos de <see cref="RedeNeural"/>)
@@ -72,7 +77,7 @@ public sealed class AlgoritmoGenetico
     /// Quanto maior o fitness retornado, melhor — cabe a quem chama definir a escala (ver
     /// <see cref="AmbienteTreinamento.ExecutarEpisodio"/>).
     /// </summary>
-    public ResultadoGeracao EvoluirGeracao(Func<double[], double> avaliarFitness)
+    public ResultadoGeracaoLegado EvoluirGeracao(Func<double[], double> avaliarFitness)
     {
         double[] fitness = _populacao.AsParallel().Select(avaliarFitness).ToArray();
 
@@ -109,7 +114,7 @@ public sealed class AlgoritmoGenetico
         _populacao = proximaPopulacao;
         _geracaoAtual++;
 
-        return new ResultadoGeracao(
+        return new ResultadoGeracaoLegado(
             Geracao: _geracaoAtual,
             MelhorFitness: melhorFitness,
             FitnessMedio: fitnessMedio,
