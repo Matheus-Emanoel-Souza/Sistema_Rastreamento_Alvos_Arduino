@@ -152,69 +152,43 @@
             </Grid>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
+        <!-- Três abas (pedido do usuário): Visão geral (resumo + gráficos), Experimentos
+             (análise de hiperparâmetros) e Marcos (tabelas completas). Reagrupamento puro dos
+             MESMOS cards que já existiam numa página única só — nenhuma propriedade/comando da
+             ViewModel mudou. -->
+        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="Padding" Value="14,8"/>
+                    <Setter Property="FontSize" Value="13"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabItem">
+                                <Border x:Name="Borda" Background="Transparent" BorderBrush="{DynamicResource Accent.Fill}"
+                                        BorderThickness="0,0,0,2" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Borda" Property="BorderBrush" Value="{DynamicResource Accent.Fill}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource Accent.Fill}"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="False">
+                                        <Setter TargetName="Borda" Property="BorderBrush" Value="Transparent"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TabControl.Resources>
 
-                <!--
-                    ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS (pedida no parecer do artigo).
-                    Duas tabelas no MESMO painel, cada configuração em uma linha: a primeira varia
-                    só o teto de complexidade da rede, a segunda varia só o tamanho da
-                    população. Cada uma é subdividida por valor travado — a série de referência
-                    (baseline) e as séries adicionais que já existem no banco por terem sido
-                    treinadas antes, para nenhum treinamento ser desperdiçado. Separar as séries é
-                    o que permite atribuir a diferença de fitness ao hiperparâmetro variado;
-                    mantê-las no mesmo painel é o que permite comparar todas de relance.
-                    Todas as linhas vêm de execuções REAIS registradas em
-                    IExperimentoHiperparametrosRepository — configurações ainda não treinadas
-                    aparecem em itálico com "não executado", nunca com valor estimado.
-                    Ver EstatisticasTreinamentoViewModel e ExecutorExperimentosHiperparametros.
-                -->
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Text="ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS" Style="{StaticResource CardTitle}"/>
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,10" TextWrapping="Wrap">
-                            <Run Text="Um hiperparâmetro por vez, todo o resto idêntico:"/>
-                            <Run Text="{Binding GeracoesPorExperimento, Mode=OneWay}" FontWeight="SemiBold"/>
-                            <Run Text="gerações por configuração, mesma função de fitness, mesmos cenários táticos e mesma probabilidade de mutação estrutural. Os dados abaixo são de execuções reais — nenhum valor é estimado. Execuções anteriores a outubro de 2026 usaram o algoritmo genético de topologia fixa e não são comparáveis linha a linha com as atuais (ver a coluna METODO no banco)."/>
-                        </TextBlock>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <Button Content="Executar configurações pendentes" Command="{Binding ExecutarExperimentosCommand}"
-                                    ToolTip="Treina apenas as configurações exibidas que ainda não têm execução registrada (uma configuração presente nas duas tabelas é treinada uma vez só)."/>
-                            <Button Content="Refazer tudo" Command="{Binding RefazerExperimentosCommand}" Margin="8,0,0,0"
-                                    ToolTip="Apaga as execuções registradas das configurações exibidas e treina todas de novo."/>
-                            <Button Content="Parar" Command="{Binding PararExperimentosCommand}" Margin="8,0,0,0"
-                                    ToolTip="Interrompe após a configuração em andamento — as já concluídas continuam registradas."/>
-                        </StackPanel>
-
-                        <TextBlock Text="{Binding CoberturaDoPlano}" FontSize="11" Margin="0,0,0,4"
-                                   Foreground="{DynamicResource Text.Muted}" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding StatusExperimentos}" FontSize="11" Margin="0,0,0,12" TextWrapping="Wrap"
-                                   FontFamily="{DynamicResource Font.Mono}" Foreground="{DynamicResource Text.Secondary}"/>
-
-                        <!-- As três tabelas usam o MESMO template de série (SerieTemplate): mesmas
-                             colunas, mesma leitura. O título de cada sub-tabela já diz quais
-                             hiperparâmetros estão travados, então não é preciso reordenar as
-                             colunas por tabela. -->
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2"
-                                   Text="EXPERIMENTO 1 — TETO DE COMPLEXIDADE, EM CONEXÕES (30 / 60 / 120)"/>
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
-                                   Text="Cada tabela abaixo trava a população e a mutação estrutural e varia só o teto de complexidade."/>
-                        <ItemsControl ItemsSource="{Binding SeriesCamadaOculta}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
-
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
-                                   Text="EXPERIMENTO 2 — TAMANHO DA POPULAÇÃO (30 / 60 / 120)"/>
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
-                                   Text="Cada tabela abaixo trava o teto de complexidade e a mutação estrutural e varia só a população."/>
-                        <ItemsControl ItemsSource="{Binding SeriesPopulacao}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
-
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
-                                   Text="EXPERIMENTO 3 — TAXA DE MUTAÇÃO (0,04 / 0,08 / 0,16)"/>
-                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
-                                   Text="Cada tabela abaixo trava a população e o teto de complexidade e varia só a probabilidade de mutação estrutural (acrescentar um neurônio). A coluna &quot;Ger. do pico&quot; é a resposta para &quot;evoluem mais rápido?&quot;: é a primeira geração em que o fitness final foi atingido."/>
-                        <ItemsControl ItemsSource="{Binding SeriesTaxaMutacao}" ItemTemplate="{StaticResource SerieTemplate}"/>
-                    </StackPanel>
-                </Border>
+            <!-- ============================ ABA: VISÃO GERAL ============================ -->
+            <TabItem Header="VISÃO GERAL">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,12,0,0">
 
                 <!-- Sem dados ainda: nenhum marco completou 500 gerações nesta base. -->
                 <Border Style="{StaticResource SemDadosCard}">
@@ -292,6 +266,89 @@
                             </ItemsControl>
                         </Grid>
                     </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+            </TabItem>
+
+            <!-- ============================ ABA: EXPERIMENTOS ============================ -->
+            <TabItem Header="EXPERIMENTOS">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,12,0,0">
+
+                <!--
+                    ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS (pedida no parecer do artigo).
+                    Duas tabelas no MESMO painel, cada configuração em uma linha: a primeira varia
+                    só o teto de complexidade da rede, a segunda varia só o tamanho da
+                    população. Cada uma é subdividida por valor travado — a série de referência
+                    (baseline) e as séries adicionais que já existem no banco por terem sido
+                    treinadas antes, para nenhum treinamento ser desperdiçado. Separar as séries é
+                    o que permite atribuir a diferença de fitness ao hiperparâmetro variado;
+                    mantê-las no mesmo painel é o que permite comparar todas de relance.
+                    Todas as linhas vêm de execuções REAIS registradas em
+                    IExperimentoHiperparametrosRepository — configurações ainda não treinadas
+                    aparecem em itálico com "não executado", nunca com valor estimado.
+                    Ver EstatisticasTreinamentoViewModel e ExecutorExperimentosHiperparametros.
+                -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="ANÁLISE EXPERIMENTAL DE HIPERPARÂMETROS" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,10" TextWrapping="Wrap">
+                            <Run Text="Um hiperparâmetro por vez, todo o resto idêntico:"/>
+                            <Run Text="{Binding GeracoesPorExperimento, Mode=OneWay}" FontWeight="SemiBold"/>
+                            <Run Text="gerações por configuração, mesma função de fitness, mesmos cenários táticos e mesma probabilidade de mutação estrutural. Os dados abaixo são de execuções reais — nenhum valor é estimado. Execuções anteriores a outubro de 2026 usaram o algoritmo genético de topologia fixa e não são comparáveis linha a linha com as atuais (ver a coluna METODO no banco)."/>
+                        </TextBlock>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Content="Executar configurações pendentes" Command="{Binding ExecutarExperimentosCommand}"
+                                    ToolTip="Treina apenas as configurações exibidas que ainda não têm execução registrada (uma configuração presente nas duas tabelas é treinada uma vez só)."/>
+                            <Button Content="Refazer tudo" Command="{Binding RefazerExperimentosCommand}" Margin="8,0,0,0"
+                                    ToolTip="Apaga as execuções registradas das configurações exibidas e treina todas de novo."/>
+                            <Button Content="Parar" Command="{Binding PararExperimentosCommand}" Margin="8,0,0,0"
+                                    ToolTip="Interrompe após a configuração em andamento — as já concluídas continuam registradas."/>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding CoberturaDoPlano}" FontSize="11" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource Text.Muted}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding StatusExperimentos}" FontSize="11" Margin="0,0,0,12" TextWrapping="Wrap"
+                                   FontFamily="{DynamicResource Font.Mono}" Foreground="{DynamicResource Text.Secondary}"/>
+
+                        <!-- As três tabelas usam o MESMO template de série (SerieTemplate): mesmas
+                             colunas, mesma leitura. O título de cada sub-tabela já diz quais
+                             hiperparâmetros estão travados, então não é preciso reordenar as
+                             colunas por tabela. -->
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,0,0,2"
+                                   Text="EXPERIMENTO 1 — TETO DE COMPLEXIDADE, EM CONEXÕES (30 / 60 / 120)"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="Cada tabela abaixo trava a população e a mutação estrutural e varia só o teto de complexidade."/>
+                        <ItemsControl ItemsSource="{Binding SeriesCamadaOculta}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
+
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
+                                   Text="EXPERIMENTO 2 — TAMANHO DA POPULAÇÃO (30 / 60 / 120)"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="Cada tabela abaixo trava o teto de complexidade e a mutação estrutural e varia só a população."/>
+                        <ItemsControl ItemsSource="{Binding SeriesPopulacao}" ItemTemplate="{StaticResource SerieTemplate}" Margin="0,0,0,10"/>
+
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="12" Margin="0,6,0,2"
+                                   Text="EXPERIMENTO 3 — TAXA DE MUTAÇÃO (0,04 / 0,08 / 0,16)"/>
+                        <TextBlock Style="{StaticResource CardTitle}" FontSize="11" FontWeight="Normal" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="Cada tabela abaixo trava a população e o teto de complexidade e varia só a probabilidade de mutação estrutural (acrescentar um neurônio). A coluna &quot;Ger. do pico&quot; é a resposta para &quot;evoluem mais rápido?&quot;: é a primeira geração em que o fitness final foi atingido."/>
+                        <ItemsControl ItemsSource="{Binding SeriesTaxaMutacao}" ItemTemplate="{StaticResource SerieTemplate}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+            </TabItem>
+
+            <!-- ============================ ABA: MARCOS ============================ -->
+            <TabItem Header="MARCOS">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,12,0,0">
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+                    <Button Content="Exportar marcos (CSV)" Click="BotaoExportarMarcosCsv_Click"/>
+                    <Button Content="Exportar gráfico (PNG)" Click="BotaoExportarGraficoPng_Click" Margin="8,0,0,0"/>
+                </StackPanel>
 
                     <!-- Tabela — mesmos estilos de DataGrid usados em "Treinamento do Controlador". -->
                     <Border Style="{StaticResource Card}">
@@ -383,8 +440,9 @@
                         </StackPanel>
                     </Border>
 
-                </StackPanel>
             </StackPanel>
         </ScrollViewer>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>

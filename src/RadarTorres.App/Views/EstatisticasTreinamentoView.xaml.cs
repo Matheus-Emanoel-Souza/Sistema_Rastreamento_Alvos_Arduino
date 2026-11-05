@@ -1,9 +1,15 @@
 using System;
 using System.Collections.Specialized;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Microsoft.Win32;
+using RadarTorres.App.Models;
 using RadarTorres.App.ViewModels;
 
 namespace RadarTorres.App.Views;
@@ -91,5 +97,76 @@ public partial class EstatisticasTreinamentoView : UserControl
 
         LinhaMelhorFitness.Points = new PointCollection(
             marcos.Select((m, i) => new Point(EixoX(i), EixoY(m.MelhorFitnessDoBloco))));
+    }
+
+    /// <summary>Exporta os marcos registrados (os mesmos da tabela "MARCOS") para um arquivo CSV — dados brutos, sem formatação de apresentação.</summary>
+    private void BotaoExportarMarcosCsv_Click(object sender, RoutedEventArgs e)
+    {
+        var dialogo = new SaveFileDialog
+        {
+            Title = "Exportar marcos de treinamento",
+            FileName = $"marcos-treinamento-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
+            DefaultExt = ".csv",
+            Filter = "CSV (*.csv)|*.csv",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+        if (dialogo.ShowDialog(Window.GetWindow(this)) != true) return;
+
+        try
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Geracao;FitnessMedioDoBloco;MelhorFitnessDoBloco;DataHora");
+            foreach (MarcoFitnessTreinamento marco in _viewModel.Marcos)
+            {
+                sb.AppendLine(string.Join(';',
+                    marco.GeracaoMarco.ToString(CultureInfo.InvariantCulture),
+                    marco.FitnessMedioDoBloco.ToString("0.0", CultureInfo.InvariantCulture),
+                    marco.MelhorFitnessDoBloco.ToString("0.0", CultureInfo.InvariantCulture),
+                    marco.DataHora.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)));
+            }
+
+            File.WriteAllText(dialogo.FileName, sb.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            MessageBox.Show($"Exportado: {dialogo.FileName}", "Exportar marcos", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Não foi possível exportar: {ex.Message}", "Exportar marcos", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>Exporta o gráfico "Evolução do fitness por bloco de 500 gerações" como PNG — captura o mesmo Canvas já desenhado em tela (<see cref="Redesenhar"/>), não reconstrói nada.</summary>
+    private void BotaoExportarGraficoPng_Click(object sender, RoutedEventArgs e)
+    {
+        var dialogo = new SaveFileDialog
+        {
+            Title = "Exportar gráfico de evolução do fitness",
+            FileName = $"grafico-fitness-{DateTime.Now:yyyyMMdd-HHmmss}.png",
+            DefaultExt = ".png",
+            Filter = "PNG (*.png)|*.png",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+        if (dialogo.ShowDialog(Window.GetWindow(this)) != true) return;
+
+        try
+        {
+            double largura = GraficoCanvas.ActualWidth > 0 ? GraficoCanvas.ActualWidth : 600;
+            double altura = GraficoCanvas.ActualHeight > 0 ? GraficoCanvas.ActualHeight : 180;
+
+            var bitmap = new RenderTargetBitmap((int)largura, (int)altura, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(GraficoCanvas);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using FileStream arquivo = File.Create(dialogo.FileName);
+            encoder.Save(arquivo);
+
+            MessageBox.Show($"Exportado: {dialogo.FileName}", "Exportar gráfico", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Não foi possível exportar: {ex.Message}", "Exportar gráfico", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }

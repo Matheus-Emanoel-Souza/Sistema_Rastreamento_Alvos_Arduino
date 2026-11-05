@@ -25,15 +25,18 @@ public partial class TreinamentoControladorView : UserControl
     private const double AlturaPadraoExpandidaHistorico = 220.0;
 
     private readonly TreinamentoControladorViewModel _viewModel;
+    private readonly Func<EstatisticasAnaliseWindow> _criarJanelaEstatisticas;
+    private EstatisticasAnaliseWindow? _janelaEstatisticasAberta;
 
     private bool _historicoMinimizado;
     private double _ultimaAlturaExpandidaHistorico = AlturaPadraoExpandidaHistorico;
 
-    public TreinamentoControladorView(TreinamentoControladorViewModel viewModel)
+    public TreinamentoControladorView(TreinamentoControladorViewModel viewModel, Func<EstatisticasAnaliseWindow> criarJanelaEstatisticas)
     {
         InitializeComponent();
 
         _viewModel = viewModel;
+        _criarJanelaEstatisticas = criarJanelaEstatisticas;
         DataContext = _viewModel;
 
         // Fonte dos pontos do gráfico é HistoricoDaSessao (ObservableCollection da ViewModel) —
@@ -63,6 +66,26 @@ public partial class TreinamentoControladorView : UserControl
             Owner = Window.GetWindow(this)
         };
         janela.ShowDialog();
+    }
+
+    /// <summary>
+    /// Abre o painel "Estatísticas e Análises" (3 abas: Visão geral, Experimentos, Marcos) —
+    /// não-modal e sem pausar/reiniciar o treinamento em andamento (ver
+    /// EstatisticasAnaliseWindow). Reaproveita a janela já aberta em vez de abrir uma segunda,
+    /// só trazendo-a para frente.
+    /// </summary>
+    private void BotaoEstatisticasEAnalises_Click(object sender, RoutedEventArgs e)
+    {
+        if (_janelaEstatisticasAberta is not null)
+        {
+            _janelaEstatisticasAberta.Activate();
+            return;
+        }
+
+        _janelaEstatisticasAberta = _criarJanelaEstatisticas();
+        _janelaEstatisticasAberta.Owner = Window.GetWindow(this);
+        _janelaEstatisticasAberta.Closed += (_, _) => _janelaEstatisticasAberta = null;
+        _janelaEstatisticasAberta.Show();
     }
 
     /// <summary>Abre a janela modal "Configurar experimento" (população, teto de complexidade,
