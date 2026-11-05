@@ -83,6 +83,16 @@ public partial class ConfiguracoesView : UserControl
     /// </summary>
     private void ListaCategorias_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // O ListBoxItem "Geral" já nasce com IsSelected="True" no XAML, e isso dispara este
+        // SelectionChanged DURANTE o InitializeComponent — antes de os seis StackPanels abaixo
+        // (declarados depois do ListBox na árvore) terem sido conectados aos seus campos
+        // x:Name. Nesse instante todos ainda são null; sem o guard abaixo, abrir a tela dava
+        // NullReferenceException sempre que "Geral" é a categoria inicial. PainelGeral já começa
+        // visível no próprio XAML (sem Visibility="Collapsed"), então pular a chamada aqui não
+        // perde nada — o normal e o evento real (clique do usuário) chegam depois, com os campos
+        // já conectados.
+        if (PainelGeral is null) return;
+
         var paineis = new[] { PainelGeral, PainelAparencia, PainelCamera, PainelControlador, PainelDiagnostico, PainelDados };
         int selecionado = ListaCategorias.SelectedIndex;
 
