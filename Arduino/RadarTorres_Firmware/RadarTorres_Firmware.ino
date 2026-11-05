@@ -18,7 +18,7 @@
  *      decisão (eixo PAN apenas — modelo 2D, sem necessidade de TILT), que
  *      giram a torre Q1-Q4 selecionada para apontar na direção do alvo
  *      (próprio quadrante ou de cobertura, ver TowerSelectionService no
- *      lado PC / Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md).
+ *      lado PC / Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md).
  *
  *  Sem indicador luminoso dedicado: torre selecionada e evento de disparo
  *  (Requisito 3) são só registrados via protocolo serial (ACK/STATUS), sem
@@ -28,7 +28,7 @@
  *  motores de passo não cabem nos ~20 pinos do Uno).
  *
  *  Protocolo: ESTENDE o protocolo textual já documentado em
- *  Docs/Tecnica/COMUNICACAO_ARDUINO.md (mesma sintaxe TIPO;CHAVE=VALOR,
+ *  Software/Integracoes/COMUNICACAO_ARDUINO.md (mesma sintaxe TIPO;CHAVE=VALOR,
  *  9600 baud, terminador '\n'). Mensagens novas, além das já existentes
  *  (TARGET/STATUS/ACK/ERROR vindo do Arduino; SYSTEM/MODE/SET/FIRE vindo
  *  do PC):
@@ -632,7 +632,7 @@ void atualizarRastreamentoCameras() {
 }
 
 // ============================================================================
-// MIRA DAS TORRES (cooperação entre torres — Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md)
+// MIRA DAS TORRES (cooperação entre torres — Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md)
 // ----------------------------------------------------------------------------
 // Diferente da correção das câmeras (relativa, por erro de pixel), a mira da
 // torre é um posicionamento ABSOLUTO: o PC já calculou o ângulo de bússola
@@ -711,7 +711,7 @@ void lerComandosSerial() {
 // Sem nenhuma linha do PC por tempo demais: assume perda de comunicação e
 // força o sistema para o estado seguro (VERDE) — mesmo filosofia de
 // "degradação graciosa, nunca travar" já usada no SerialCommunicationService
-// do lado PC (Docs/Tecnica/COMUNICACAO_ARDUINO.md, seção 5).
+// do lado PC (Software/Integracoes/COMUNICACAO_ARDUINO.md, seção 5).
 void verificarWatchdogComunicacao() {
   if (ultimaLinhaValidaMs == 0) return; // ainda não recebeu nada desde o boot — não aciona watchdog prematuramente
   if (millis() - ultimaLinhaValidaMs > COMUNICACAO_WATCHDOG_MS && estadoAtual != VERDE) {

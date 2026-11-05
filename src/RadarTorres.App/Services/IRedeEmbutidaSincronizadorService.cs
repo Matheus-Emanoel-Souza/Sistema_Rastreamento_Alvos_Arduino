@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace RadarTorres.App.Services;
@@ -9,7 +9,7 @@ namespace RadarTorres.App.Services;
 /// pede validação de entradas (<c>REDE;ENTRADAS=</c>) —
 /// SOMENTE diagnóstico/auditoria. Nunca participa da seleção de torre nem da autorização de
 /// disparo, que continuam decididas inteiramente pelo app (ver
-/// <c>Docs/Documentos_Entregaveis/Artigo/Como_a_IA_funciona_no_RadarTorres.MD</c>, Parte 3).
+/// <c>Rede_Neural/Arquitetura/CONTROLADOR_NEUROEVOLUTIVO.md</c>, Parte 3).
 /// </summary>
 public interface IRedeEmbutidaSincronizadorService
 {

@@ -70,7 +70,7 @@ export default function Home() {
         id="simulador"
         eyebrow="Demonstração interativa"
         title="Veja o radar em ação"
-        description="Arraste o alvo ou ajuste ângulo/distância: o simulador reproduz o mesmo cálculo de quadrante e seleção de torre do TowerSelectionService real (documentado em Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md)."
+        description="Arraste o alvo ou ajuste ângulo/distância: o simulador reproduz o mesmo cálculo de quadrante e seleção de torre do TowerSelectionService real (documentado em Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md)."
       >
         <RadarSimulation />
       </PageSection>

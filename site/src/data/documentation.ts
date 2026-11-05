@@ -29,13 +29,13 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Decisões arquiteturais',
         description: 'Racional das escolhas de arquitetura (WPF, MVVM, camadas).',
-        href: `${REPO_BLOB}/Docs/Tecnica/ARQUITETURA.md`,
+        href: `${REPO_BLOB}/Software/Arquitetura/ARQUITETURA_SISTEMA.md`,
         kind: 'md',
       },
       {
         title: 'Documentação técnica',
         description: 'Referência de cada classe/serviço, limitações e bugs conhecidos.',
-        href: `${REPO_BLOB}/Docs/Tecnica/DOCUMENTACAO_TECNICA.md`,
+        href: `${REPO_BLOB}/Software/Arquitetura/DOCUMENTACAO_TECNICA.md`,
         kind: 'md',
       },
     ],
@@ -46,13 +46,13 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Requisitos do sistema (PDF entregável)',
         description: 'Requisitos funcionais e não funcionais consolidados.',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/Requisitos_de_Sistema/Requisitos_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Software/Arquitetura/Requisitos_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {
-        title: 'Pasta Requisitos_de_Sistema',
+        title: 'Pasta Requisitos (Arquitetura)',
         description: 'Fonte LaTeX, matriz de rastreabilidade e conteúdo completo.',
-        href: `${REPO_TREE}/Docs/Documentos_Entregaveis/Requisitos_de_Sistema`,
+        href: `${REPO_TREE}/Software/Arquitetura`,
         kind: 'folder',
       },
     ],
@@ -63,31 +63,31 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'UML aplicada ao RadarTorres',
         description: 'Introdução à UML e como cada diagrama do projeto se encaixa.',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/UML_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Software/UML/UML_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {
         title: 'Casos de uso (PDF entregável)',
         description: 'Documento de casos de uso com diagrama.',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Casos_de_Uso/Documento_Casos_de_Uso_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Software/UML/Documento_Casos_de_Uso_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {
         title: 'Diagrama de Implantação (PDF entregável)',
         description: 'Distribuição física dos componentes (app desktop + Arduino).',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/UML/Implantacao/Diagrama_de_Implantacao_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Software/UML/Diagrama_de_Implantacao_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {
         title: 'Diagrama de Classes (PDF entregável)',
         description: 'Modelos de domínio e interfaces de serviço do sistema.',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/Diagrama_de_Classes/Diagrama_de_Classes_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Software/UML/Diagrama_de_Classes_RadarTorres.drawio`,
         kind: 'pdf',
       },
       {
         title: 'Pasta UML',
         description: 'Diagramas de casos de uso, pacotes, implantação e decisões arquiteturais.',
-        href: `${REPO_TREE}/Docs/Documentos_Entregaveis/UML`,
+        href: `${REPO_TREE}/Software/UML`,
         kind: 'folder',
       },
     ],
@@ -98,13 +98,13 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Modelo de Banco de Dados (PDF entregável)',
         description: 'Modelo lógico do banco de dados do sistema.',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf`,
+        href: `${REPO_BLOB}/Software/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf`,
         kind: 'pdf',
       },
       {
         title: 'Modelo de dados (técnico)',
         description: 'Schema das tabelas CSV, relacionamentos e plano de migração para SQL.',
-        href: `${REPO_BLOB}/Docs/Tecnica/MODELO_DADOS.md`,
+        href: `${REPO_BLOB}/Software/Banco_de_Dados/BANCO_DE_DADOS.md`,
         kind: 'md',
       },
     ],
@@ -115,7 +115,7 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Artigo do TCC (PDF)',
         description: 'Artigo acadêmico do Trabalho de Conclusão de Curso.',
-        href: `${REPO_BLOB}/Docs/Documentos_Entregaveis/Artigo/Artigo.pdf`,
+        href: `${REPO_BLOB}/Artigo/Texto/Artigo.pdf`,
         kind: 'pdf',
       },
     ],
@@ -126,13 +126,13 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Comunicação com o Arduino',
         description: 'Protocolo serial completo (ANGLE/DIST) entre app e firmware.',
-        href: `${REPO_BLOB}/Docs/Tecnica/COMUNICACAO_ARDUINO.md`,
+        href: `${REPO_BLOB}/Software/Integracoes/COMUNICACAO_ARDUINO.md`,
         kind: 'md',
       },
       {
         title: 'Algoritmo de seleção de torre',
         description: 'Matemática do radar e da seleção automática de torres.',
-        href: `${REPO_BLOB}/Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`,
+        href: `${REPO_BLOB}/Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md`,
         kind: 'md',
       },
     ],
@@ -143,7 +143,7 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Conceito de UML',
         description: 'Base teórica de UML usada para fundamentar os diagramas do artigo.',
-        href: `${REPO_BLOB}/Docs/Embasamento_Teorico/Conceito_UML.pdf`,
+        href: `${REPO_BLOB}/Artigo/Fundamentacao/Conceito_UML.pdf`,
         kind: 'pdf',
       },
     ],
@@ -154,7 +154,7 @@ export const documentationSections: DocumentationSection[] = [
       {
         title: 'Visão Computacional',
         description: 'Módulo de tratamento de imagens e detecção com YOLO/ONNX.',
-        href: `${REPO_BLOB}/Docs/Tecnica/VISAO_COMPUTACIONAL.md`,
+        href: `${REPO_BLOB}/Rede_Neural/Algoritmos/DETECCAO_VISAO_YOLO.md`,
         kind: 'md',
       },
       {

@@ -1,4 +1,4 @@
-﻿using RadarTorres.App.Configuration;
+using RadarTorres.App.Configuration;
 using RadarTorres.App.Helpers;
 using RadarTorres.App.Models;
 using RadarTorres.App.NeuralEvolution;
@@ -11,7 +11,7 @@ namespace RadarTorres.Tests;
 /// Cobertura do algoritmo em camadas de <see cref="TowerSelectionService.SelectTowerFor"/>:
 /// torre do próprio quadrante, cooperação entre torres adjacentes quando o quadrante tem mais de
 /// um alvo simultâneo, e cobertura pela torre sobressalente. Ver
-/// Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md, seção 4.
+/// Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md, seção 4.
 /// </summary>
 public sealed class TowerSelectionServiceTests : IDisposable
 {

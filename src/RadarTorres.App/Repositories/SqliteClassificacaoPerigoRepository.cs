@@ -10,7 +10,7 @@ namespace RadarTorres.App.Repositories;
 
 /// <summary>
 /// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>classificacoes_alvo</c> — nomes
-/// espelham <c>Docs/Documentos_Entregaveis/Banco_de_Dados/schema.sql</c>) de
+/// espelham <c>Software/Banco_de_Dados/schema.sql</c>) de
 /// <see cref="IClassificacaoPerigoRepository"/>. Mesmo padrão de <see cref="SqliteAcaoRealizadaRepository"/>:
 /// só inserção, com fila de reenvio via <see cref="PendingWriteQueue"/> se o banco estiver
 /// momentaneamente inacessível.

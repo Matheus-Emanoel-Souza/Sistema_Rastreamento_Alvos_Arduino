@@ -44,13 +44,13 @@ Fornecer uma plataforma de software completa para:
 
 1. Receber, de forma assíncrona e não bloqueante, leituras de sensores enviadas por um
    Arduino via serial (protocolo texto simples, documentado em
-   [`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md)).
+   [`Software/Integracoes/COMUNICACAO_ARDUINO.md`](Software/Integracoes/COMUNICACAO_ARDUINO.md)).
 2. Converter as leituras (ângulo + distância) em posição cartesiana e exibi-las em tempo
    real em um radar circular, dividido em quatro quadrantes.
 3. Selecionar automaticamente, entre um conjunto configurável de torres demonstrativas
    posicionadas ao redor da base, qual delas está mais próxima/melhor posicionada para
    cada alvo (algoritmo documentado em
-   [`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md)).
+   [`Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md`](Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md)).
 4. Permitir um modo de acionamento **demonstrativo** (indicador/laser de baixa potência ou
    simulação puramente em software), sempre respeitando uma distância mínima de segurança.
 5. Funcionar de ponta a ponta mesmo sem nenhum Arduino conectado, através de um modo de
@@ -248,8 +248,8 @@ Senha:   admin123
 
 Troque a senha padrão em **Perfil > Alterar senha** assim que possível. Detalhes completos
 (arquitetura, tabelas, como validar cada funcionalidade) em
-[`Docs/Projeto/ETAPA1_FUNDACAO.md`](Docs/Projeto/ETAPA1_FUNDACAO.md) e
-[`Docs/Tecnica/MODELO_DADOS.md`](Docs/Tecnica/MODELO_DADOS.md).
+[`Software/Arquitetura/DOCUMENTACAO_TECNICA.md`](Software/Arquitetura/DOCUMENTACAO_TECNICA.md) e
+[`Software/Banco_de_Dados/BANCO_DE_DADOS.md`](Software/Banco_de_Dados/BANCO_DE_DADOS.md).
 
 ### Conectar ao Arduino
 
@@ -265,7 +265,7 @@ Troque a senha padrão em **Perfil > Alterar senha** assim que possível. Detalh
 
 Se a conexão cair (cabo desconectado, porta ocupada, etc.), o software detecta a falha
 automaticamente e registra o evento no console, sem travar ou fechar a aplicação — detalhes em
-[`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md).
+[`Software/Integracoes/COMUNICACAO_ARDUINO.md`](Software/Integracoes/COMUNICACAO_ARDUINO.md).
 
 ### Modo de simulação
 
@@ -301,7 +301,7 @@ e acompanhar a saída em tempo real, sem sair do aplicativo:
 
 Esta aba implementa apenas **compilação**; gravação/upload de firmware para a placa não está
 incluída. Detalhes completos em
-[`Docs/Tecnica/COMUNICACAO_ARDUINO.md`](Docs/Tecnica/COMUNICACAO_ARDUINO.md), seção 8.
+[`Software/Integracoes/COMUNICACAO_ARDUINO.md`](Software/Integracoes/COMUNICACAO_ARDUINO.md), seção 8.
 
 ### Configurar as torres
 
@@ -367,8 +367,7 @@ O `.csproj` publica como **self-contained** (`--self-contained true` +
 usuário final não precisa ter nenhuma versão do .NET instalada antes de rodar o RadarTorres.
 Isso prioriza confiabilidade em demonstração (funciona em qualquer Windows 10/11 x64 "limpo",
 sem depender de internet) e simplicidade (o instalador só copia arquivos), ao custo de um
-pacote maior (~42 MB comprimido). Racional completo em
-[`Docs/Projeto/INSTALADOR.md`](Docs/Projeto/INSTALADOR.md).
+pacote maior (~42 MB comprimido).
 
 ### Solução de problemas
 
@@ -402,8 +401,8 @@ Views (WPF/XAML)  <-->  ViewModels (MainViewModel)  <-->  Services (regras de ne
   recriar a interface.
 
 Detalhes completos de cada classe estão em
-[`Docs/Tecnica/DOCUMENTACAO_TECNICA.md`](Docs/Tecnica/DOCUMENTACAO_TECNICA.md) e o racional
-arquitetural em [`Docs/Tecnica/ARQUITETURA.md`](Docs/Tecnica/ARQUITETURA.md).
+[`Software/Arquitetura/DOCUMENTACAO_TECNICA.md`](Software/Arquitetura/DOCUMENTACAO_TECNICA.md) e o racional
+arquitetural em [`Software/Arquitetura/ARQUITETURA_SISTEMA.md`](Software/Arquitetura/ARQUITETURA_SISTEMA.md).
 
 ### Como funciona o radar (resumo)
 
@@ -425,7 +424,7 @@ existentes em vez de recriar a árvore visual — mantendo a interface fluida.
    mínima de segurança.
 
 Matemática completa em
-[`Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md`](Docs/Tecnica/ALGORITMO_SELECAO_TORRE.md).
+[`Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md`](Rede_Neural/Algoritmos/ALGORITMO_SELECAO_TORRE.md).
 
 ---
 
@@ -447,19 +446,32 @@ Sistema_Rastreamento_Alvos_Arduino/
 │   └── RadarTorres.iss                (script do Inno Setup 6)
 ├── dist/                              (gerado pelo build — Setup.exe; não versionado)
 ├── site/                              (site oficial de documentação/TCC/portfólio — React + TypeScript)
+├── assets/                            (imagens/diagramas compartilhados entre docs, artigo e site)
+├── Rede_Neural/                       (README.md — índice)
+│   ├── Arquitetura/                   (controlador neuroevolutivo NEAT/SharpNEAT)
+│   ├── Treinamento/                   (reservada — hoje dentro de Arquitetura/)
+│   └── Algoritmos/                    (seleção de torre, detecção de visão YOLO)
+├── Projeto_Fisico/                    (README.md — índice)
+│   ├── Impressao_3D/                  (modelos .stl das peças)
+│   ├── Pecas/                         (especificações mecânicas, maquete, imagens)
+│   └── Eletronica/                    (diagrama elétrico, pinagem, datasheets)
+├── Artigo/                            (README.md — índice)
+│   ├── Texto/                         (Artigo.tex — fonte canônica — .pdf/.docx gerados)
+│   ├── Fundamentacao/                 (embasamento teórico, PDFs de referência)
+│   ├── Revisoes/                      (parecer da banca, checklist de melhorias)
+│   └── Apresentacao/                  (apoio à defesa)
+├── Software/                          (README.md — índice)
+│   ├── Arquitetura/                   (arquitetura do sistema, requisitos, decisões)
+│   ├── Design/                        (identidade visual, UX, guia do site)
+│   ├── Banco_de_Dados/                (schema SQLite, DER, modelo de dados)
+│   ├── UML/                           (casos de uso, pacotes, implantação, classes)
+│   ├── Seguranca/                     (reservada)
+│   ├── Integracoes/                   (protocolo serial Arduino)
+│   └── Qualidade/                     (índice geral, histórico, limitações, rastreabilidade)
 ├── Docs/
-│   ├── README.md                       (guia de onde procurar cada tipo de documento)
-│   ├── Tecnica/                        (arquitetura, protocolo Arduino, modelo de dados, algoritmo, referência de classes)
-│   ├── Projeto/                        (contexto do TCC, etapas, notas de apoio, log de solicitações)
-│   ├── Embasamento_Teorico/            (conceitos teóricos de apoio ao artigo — ex.: UML)
-│   └── Documentos_Entregaveis/         (documentos acadêmicos entregáveis do TCC)
-│       ├── Requisitos_de_Sistema/      (requisitos funcionais/não funcionais, matriz de rastreabilidade)
-│       ├── UML/                        (casos de uso, diagrama de implantação, decisões arquiteturais)
-│       ├── Diagrama_de_Classes/        (diagrama de classes)
-│       ├── Banco_de_Dados/             (modelo de dados lógico/proposto)
-│       ├── Diagrama_Eletrico/          (diagrama elétrico conceitual do protótipo)
-│       ├── Controle_de_Sessoes/        (atas/anexos de acompanhamento de orientação do TCC)
-│       └── Artigo/                     (artigo acadêmico do TCC)
+│   └── Documentos_Entregaveis/
+│       └── Controle_de_Sessoes/       (atas/anexos de acompanhamento de orientação do TCC —
+│                                        confidencial, criptografado via git-crypt)
 └── src/
     ├── RadarTorres.App/
     │   ├── RadarTorres.App.csproj
@@ -512,13 +524,18 @@ melhor desempenho de redesenho em tempo real — todos requisitos centrais deste
 
 | Documento | Conteúdo |
 |---|---|
-| [Requisitos funcionais e não funcionais](Docs/Documentos_Entregaveis/Requisitos_de_Sistema/Requisitos_RadarTorres.pdf) | Levantamento completo de requisitos do sistema |
-| [Casos de uso](Docs/Documentos_Entregaveis/UML/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
-| [Diagrama de Implantação](Docs/Documentos_Entregaveis/UML/Diagrama_de_Implantacao_RadarTorres.pdf) | Distribuição física dos componentes (app desktop + Arduino) |
-| [Diagrama de Classes](Docs/Documentos_Entregaveis/Diagrama_de_Classes/Diagrama_de_Classes_RadarTorres.pdf) | Modelos de domínio e interfaces de serviço |
-| [Modelo Banco de Dados](Docs/Documentos_Entregaveis/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf) | Modelo de dados do sistema |
-| [Artigo do TCC](Docs/Documentos_Entregaveis/Artigo/Artigo.pdf) | Artigo acadêmico do Trabalho de Conclusão de Curso |
-| [Embasamento teórico — UML](Docs/Embasamento_Teorico/Conceito_UML.pdf) | Conceitos de UML aplicados ao projeto |
+| [Requisitos funcionais e não funcionais](Software/Arquitetura/Requisitos_RadarTorres.pdf) | Levantamento completo de requisitos do sistema |
+| [Casos de uso](Software/UML/Documento_Casos_de_Uso_RadarTorres.pdf) | Documento de casos de uso |
+| [Diagrama de Implantação](Software/UML/Diagrama_de_Implantacao_RadarTorres.pdf) | Distribuição física dos componentes (app desktop + Arduino) |
+| [Diagrama de Classes](Software/UML/Diagrama_de_Classes_RadarTorres.drawio) | Modelos de domínio e interfaces de serviço |
+| [Modelo Banco de Dados](Software/Banco_de_Dados/Modelo_Banco_Dados_RadarTorres.pdf) | Modelo de dados do sistema |
+| [Artigo do TCC](Artigo/Texto/Artigo.pdf) | Artigo acadêmico do Trabalho de Conclusão de Curso |
+| [Embasamento teórico — UML](Artigo/Fundamentacao/Conceito_UML.pdf) | Conceitos de UML aplicados ao projeto |
+
+Índices completos por domínio: [`Rede_Neural/README.md`](Rede_Neural/README.md) ·
+[`Projeto_Fisico/README.md`](Projeto_Fisico/README.md) · [`Artigo/README.md`](Artigo/README.md) ·
+[`Software/README.md`](Software/README.md) · índice geral em
+[`Software/Qualidade/REGISTRO_GERAL.md`](Software/Qualidade/REGISTRO_GERAL.md).
 
 ---
 
@@ -544,3 +561,17 @@ fusão dos dois em um único documento na raiz do projeto, conforme convenção 
 só renderiza `README.md` automaticamente). O `README_LOCAL.md` foi removido; nenhum conteúdo
 de valor foi perdido — tudo foi incorporado às seções acima ou já vivia em
 `Docs/`.</sub>
+
+<sub>📁 **Nota sobre a reorganização da documentação:** a documentação do projeto, antes
+concentrada em `Docs/` (por tipo: `Tecnica/`, `Projeto/`, `Embasamento_Teorico/`,
+`Documentos_Entregaveis/`), foi redistribuída por domínio em `Rede_Neural/`, `Projeto_Fisico/`,
+`Artigo/` e `Software/` na raiz do projeto, cada uma com seu próprio `README.md` como índice.
+`Docs/` permanece só com `Documentos_Entregaveis/Controle_de_Sessoes/` (confidencial,
+criptografado via git-crypt — não movido). Documentos com conteúdo sobreposto foram unificados
+(`MODELO_DADOS.md` + `Modelo_Banco_de_Dados.md` → `BANCO_DE_DADOS.md`; `ARQUITETURA.md` +
+`Diagrama_Arquitetura_Geral.md` → `ARQUITETURA_SISTEMA.md`; `IDENTIDADE_VISUAL.md` +
+`DIRETRIZ_UX.md` → `DESIGN_INTERFACE.md`; `CONTROLADOR_NEUROEVOLUTIVO.md` +
+`Como_a_IA_funciona_no_RadarTorres.md` → `CONTROLADOR_NEUROEVOLUTIVO.md`;
+`Apoio_Modificações.md` + `LOG_SOLICITACOES.md` → `HISTORICO_ALTERACOES.md`; `Apoio_index.md` +
+`Registro_index.md` → `REGISTRO_GERAL.md`). Nenhum conteúdo técnico/acadêmico/histórico foi
+removido nessas fusões — ver nota no topo de cada arquivo consolidado.</sub>

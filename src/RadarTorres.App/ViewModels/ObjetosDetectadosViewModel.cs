@@ -25,7 +25,7 @@ namespace RadarTorres.App.ViewModels;
 /// se fecha: o acionamento demonstrativo deixa a ocorrência em
 /// <see cref="EstadoOcorrencia.AbatePendente"/> e é aqui que um operador confirma o abate ou o
 /// descarta — nenhum automatismo faz isso, por decisão de negócio registrada em
-/// <c>Docs/Projeto/LOG_SOLICITACOES.md</c>.
+/// <c>Software/Qualidade/HISTORICO_ALTERACOES.md</c>.
 /// </remarks>
 public sealed class ObjetosDetectadosViewModel : ViewModelBase
 {

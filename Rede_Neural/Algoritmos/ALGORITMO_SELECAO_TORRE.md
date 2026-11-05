@@ -1,0 +1,279 @@
+Funcionalidade: detalha a fundamentação matemática do algoritmo de seleção de torre.
+
+# Algoritmo de Seleção de Torre — Fundamentação Matemática
+
+Este documento detalha, com exemplos numéricos, toda a matemática por trás do radar e da
+escolha automática de torre: conversão de coordenadas, identificação de quadrantes, cálculo
+de distância e o algoritmo de decisão em si.
+
+## 1. Coordenadas polares → coordenadas cartesianas de mundo
+
+Cada leitura de sensor chega como um par **(ângulo, distância)** — coordenadas polares
+centradas na base. O ângulo é medido em graus, **sentido horário, com 0° apontando para o
+Norte** (convenção de bússola/radar, mais natural para o operador do que a convenção
+matemática padrão de 0°=Leste).
+
+Convertendo para coordenadas cartesianas de mundo (X = Leste/Oeste, Y = Norte/Sul), com
+`θ` em radianos:
+
+```
+x = distância · sin(θ)
+y = distância · cos(θ)
+```
+
+> Nota: se `θ` fosse medido no sentido anti-horário a partir do eixo Leste (convenção
+> puramente matemática, `x = d·cos θ`, `y = d·sin θ`), o resultado seria apenas uma rotação
+> de 90° do mesmo radar. A convenção "0°=Norte, sentido horário" foi escolhida por ser a
+> leitura mais intuitiva para quem opera um radar/bússola, mas a implementação
+> (`CoordinateConverter.PolarToCartesian`) está isolada em um único método — trocar a
+> convenção no futuro é uma mudança de poucas linhas em um único lugar.
+
+### Exemplo numérico
+
+Alvo com `ANGLE=45°`, `DIST=2.80 m`:
+
+```
+θ = 45° · (π/180) = 0.7854 rad
+x = 2.80 · sin(45°) = 2.80 · 0.7071 ≈ 1.98 m
+y = 2.80 · cos(45°) = 2.80 · 0.7071 ≈ 1.98 m
+```
+
+Resultado: alvo aproximadamente em `(X=1.98, Y=1.98)` — a nordeste da base.
+
+## 2. Identificação do quadrante
+
+Convenção fixa adotada em todo o projeto (`Helpers/QuadrantHelper.cs`):
+
+| Quadrante | Condição |
+|---|---|
+| Q1 | X ≥ 0 e Y ≥ 0 |
+| Q2 | X < 0 e Y ≥ 0 |
+| Q3 | X < 0 e Y < 0 |
+| Q4 | X ≥ 0 e Y < 0 |
+
+```mermaid
+flowchart TD
+    A["Alvo em (X, Y)"] --> B{"X ≥ 0?"}
+    B -- Sim --> C{"Y ≥ 0?"}
+    B -- Não --> D{"Y ≥ 0?"}
+    C -- Sim --> Q1["Q1"]
+    C -- Não --> Q4["Q4"]
+    D -- Sim --> Q2["Q2"]
+    D -- Não --> Q3["Q3"]
+```
+
+No exemplo anterior, `(X=1.98, Y=1.98)` → X≥0 e Y≥0 → **Q1**.
+
+## 3. Distância Euclidiana (alvo ↔ torre)
+
+Para decidir qual torre está fisicamente mais próxima de um alvo, usa-se a distância
+Euclidiana clássica entre dois pontos no plano:
+
+```
+d(alvo, torre) = √( (x_alvo − x_torre)² + (y_alvo − y_torre)² )
+```
+
+Implementada em `Helpers/DistanceCalculator.Euclidean`.
+
+### Exemplo numérico
+
+Alvo em `(1.98, 1.98)`, Torre 1 em `(1.75, 1.75)` (configuração padrão):
+
+```
+d = √( (1.98−1.75)² + (1.98−1.75)² )
+  = √( (0.23)² + (0.23)² )
+  = √( 0.0529 + 0.0529 )
+  = √0.1058 ≈ 0.33 m
+```
+
+## 4. Algoritmo de seleção de torre (visão geral)
+
+```mermaid
+flowchart TD
+    S["Nova leitura TARGET;ID;ANGLE;DIST"] --> P["Converter polar → cartesiano (X, Y)"]
+    P --> Q["Determinar quadrante"]
+    Q --> T{"Existe alvo com esse ID?"}
+    T -- Sim --> U["Atualizar alvo existente"]
+    T -- Não --> N["Criar novo alvo"]
+    U --> AV["Filtrar torres disponíveis (IsAvailable) e não comprometidas com outro alvo"]
+    N --> AV
+    AV --> AVN{"Alguma livre?"}
+    AVN -- Não --> ERR["Registrar: NENHUMA TORRE DISPONÍVEL"]
+    AVN -- Sim --> HOME{"Torre do próprio quadrante livre?"}
+    HOME -- Sim --> CANDHOME["Candidatas = torre(s) do quadrante — camada 'casa'"]
+    HOME -- Não --> ADJ{"Torre adjacente livre, com o PRÓPRIO quadrante sem alvo concorrente?"}
+    ADJ -- Sim --> CANDADJ["Candidatas = torre(s) adjacente(s) — camada 'adjacente' (cooperação)"]
+    ADJ -- Não --> COV{"Alguma torre livre restante (mesmo diagonal)?"}
+    COV -- Sim --> CANDCOV["Candidatas = torre sobressalente — camada 'cobertura'"]
+    COV -- Não --> CANDOVER["Candidatas = todas as disponíveis, mesmo comprometidas — 'sobrecarregada'"]
+    CANDHOME --> DIST["Calcular distância Euclidiana alvo↔cada candidata"]
+    CANDADJ --> DIST
+    CANDCOV --> DIST
+    CANDOVER --> DIST
+    DIST --> MIN["Selecionar a candidata de menor distância"]
+    MIN --> AIMCALC["Calcular ângulo de mira (BearingCalculator.AngleTo) e enviar AIM;TOWER=;ANGLE="]
+    AIMCALC --> REG["Registrar decisão no console de eventos"]
+    REG --> UI["Atualizar radar (torre destacada + linha até o alvo)"]
+    UI --> MODE{"Modo do sistema"}
+    MODE -- "Localização + Torre" --> FIM1["Apenas informa a seleção"]
+    MODE -- "Localização + Auto" --> SAFE{"distância do alvo ≥ mínima?"}
+    SAFE -- Não --> BLOQ["ACIONAMENTO BLOQUEADO — DISTÂNCIA MÍNIMA"]
+    SAFE -- Sim --> FIRE["Envia FIRE;TOWER=x;TARGET=y"]
+```
+
+### Passo a passo (implementação: `Services/TowerSelectionService.SelectTowerFor`)
+
+1. Filtra torres com `IsAvailable == true` e estado diferente de `Offline`/`Unavailable`.
+2. Se nenhuma torre estiver disponível → decisão = "NENHUMA TORRE DISPONÍVEL", registrada e
+   exibida; o alvo fica sem torre associada.
+3. **Exclusividade**: entre as alvos ativos, remove das candidatas qualquer torre já
+   selecionada para OUTRO alvo neste instante — uma torre só aponta para um lugar por vez.
+4. **Camada "casa"**: torres livres cujo `PreferredQuadrant` é igual ao do alvo. Se houver
+   pelo menos uma, as candidatas são só essas.
+5. **Camada "adjacente" (cooperação entre torres)**: se a camada "casa" estiver vazia (torre
+   natural ocupada com outro alvo do mesmo quadrante, ou indisponível), considera torres de
+   quadrante geometricamente **adjacente** (`QuadrantHelper.AreAdjacent` — vizinhos de eixo,
+   nunca diagonal) que estejam livres **e** cujo próprio quadrante não tenha nenhum alvo
+   concorrente no momento (só ajuda quem não precisa de si mesma em casa).
+6. **Camada "cobertura"**: se nem "casa" nem "adjacente" renderam candidatas, qualquer torre
+   livre restante (inclusive de quadrante diagonal) — a torre que sobrar cobre o que puder.
+7. **Último recurso ("sobrecarregada")**: se mesmo assim não houver torre livre, reusa a
+   torre disponível mais próxima mesmo que já comprometida, para nunca deixar um alvo
+   totalmente sem cobertura — e registra aviso de sobrecarga.
+8. Dentro da camada escolhida, pontua cada candidata (distância Euclidiana — ou a combinação
+   heurística+rede neural treinada, se houver um controlador embutido, ver
+   [[CONTROLADOR_NEUROEVOLUTIVO]]) e aplica as cinco regras adicionais da seção 7
+   (cada uma independentemente desligável em Configurações) para chegar à vencedora final.
+9. Atualiza `Target.SelectedTower`, `Target.DistanceToSelectedTower` e `Tower.AimAngleDegrees`
+   (via `CalcularAnguloDeMira` — `BearingCalculator.AngleTo` com predição de trajetória
+   opcional, regra 7.5), registra a decisão (com a camada usada) no console de eventos
+   (`LoggingService`) e atualiza o estado visual das torres (`RecomputeTowerStates`).
+   O ângulo de mira é enviado ao Arduino como `AIM;TOWER=x;ANGLE=y` (ver
+   [[COMUNICACAO_ARDUINO]]), girando fisicamente o eixo PAN da torre escolhida — inclusive
+   quando ela está cobrindo um alvo de outro quadrante.
+10. Se o modo de operação for "Localização + Acionamento Automático", o
+    `FireControlService` reavalia a regra de segurança antes de enviar (ou simular) o comando
+    `FIRE`.
+
+## 7. Regras heurísticas adicionais (configuráveis)
+
+Além das camadas da seção 4, cinco regras independentes refinam a decisão final — cada uma
+com um toggle próprio em **Configurações → Heurísticas do controlador**
+(`ConfiguracoesAplicativo`), desligável sem recompilar. Com todas desligadas, o algoritmo volta
+exatamente ao comportamento descrito nas seções 1-6.
+
+### 7.1 Anti-oscilação
+
+Se o alvo já tem uma torre comprometida e ela ainda é candidata válida, e a diferença entre a
+pontuação dela e a da "vencedora crua" é menor que a margem de empate (0.3 m de distância, ou
+0.1 de pontuação quando há rede treinada), **mantém a torre atual** em vez de trocar. Sem isto,
+um alvo perto da fronteira entre duas torres poderia fazer a seleção oscilar a cada leitura do
+sensor, reenviando `AIM` sem necessidade.
+
+### 7.2 Priorização por urgência
+
+Um alvo é considerado **urgente** quando sua distância até a base é ≤ 1,5 × a distância mínima
+de segurança (`RadarSettings.MinSafetyDistanceMeters`). Ao montar o conjunto de torres
+comprometidas com outros alvos, um alvo urgente pode "tomar" a torre de outro alvo que esteja
+claramente mais longe (diferença > 1 m) e que ele próprio não seja urgente — o alvo que perdeu a
+torre simplesmente procura outra na próxima leitura, em vez de ficar com a torre reservada para
+um alvo bem menos crítico.
+
+### 7.3 Corredor de tiro
+
+Para cada torre candidata, amostra 11 pontos ao longo do segmento torre→alvo e testa cada um
+contra as zonas mortas ativas (mesmo critério de `ZonaMortaService.FindBlockingZone`, mas
+aplicado a um ponto do caminho, não só à posição do alvo). Candidatas cujo "tiro" atravessaria
+uma zona morta são descartadas — a menos que isso deixasse a camada sem NENHUMA candidata, caso
+em que a regra recua para não deixar o alvo sem cobertura.
+
+### 7.4 Balanceamento de carga
+
+Entre as candidatas dentro da margem de empate da vencedora, prefere a torre usada com menos
+frequência nesta sessão (contador em memória, reiniciado a cada abertura do aplicativo;
+empate final por `Tower.Id`). Sem isto, a mesma torre é sempre escolhida quando duas opções são
+praticamente equivalentes.
+
+### 7.5 Predição de trajetória
+
+`Target` passou a guardar `VelocityXMetersPerSecond`/`VelocityYMetersPerSecond`, calculados por
+`TargetTrackingService.ProcessReading` por diferença finita entre a leitura atual e a anterior
+(`Δposição / Δtempo`; zero na primeira leitura de cada alvo). Com a regra ativa, o ângulo de
+mira é calculado para a posição prevista 0,3 s à frente (`posição_atual + velocidade × 0,3`),
+em vez da posição atual — só afeta `Tower.AimAngleDegrees`, nunca qual torre é escolhida.
+Essa mesma velocidade real também passou a alimentar a entrada "velocidade do alvo" da rede
+neural treinada (antes um valor fixo, por o sistema não medir velocidade ainda).
+
+### Exemplo numérico completo
+
+Alvo #1: `ANGLE=45°`, `DIST=2.80 m` → `(X=1.98, Y=1.98)` → **Q1**.
+
+Torres (configuração padrão):
+
+| Torre | Posição | Quadrante próprio | Distância até o alvo |
+|---|---|---|---|
+| Torre 1 | (1.75, 1.75) | Q1 | √((1.98−1.75)²+(1.98−1.75)²) ≈ **0.33 m** |
+| Torre 2 | (−1.75, 1.75) | Q2 | √((1.98+1.75)²+(1.98−1.75)²) ≈ 3.74 m |
+| Torre 3 | (−1.75, −1.75) | Q3 | √((1.98+1.75)²+(1.98+1.75)²) ≈ 5.28 m |
+| Torre 4 | (1.75, −1.75) | Q4 | √((1.98−1.75)²+(1.98+1.75)²) ≈ 3.74 m |
+
+Como a Torre 1 pertence ao mesmo quadrante do alvo (Q1), está disponível e livre, ela já seria a
+única candidata da camada "casa" — e, coincidentemente, também é a de menor distância entre todas.
+Resultado: **Torre 1 selecionada** (camada "casa"), distância registrada = 0.33 m, mira =
+`BearingCalculator.AngleTo(Torre 1, Alvo #1)` = 45.0° (a torre está exatamente na mesma direção
+da base até o alvo, nesse exemplo).
+
+### Exemplo numérico — cooperação entre torres adjacentes
+
+Dois alvos aparecem ao mesmo tempo em Q1: Alvo #1 em `(1.98, 1.98)` (já tratado acima) e Alvo #2
+em `(0.50, 3.00)` — também Q1, pois X≥0 e Y≥0.
+
+1. Alvo #1 é processado primeiro: Torre 1 (única torre de Q1) fica **comprometida** com ele.
+2. Alvo #2 é processado: camada "casa" (Torre 1) está vazia — ela já está comprometida. Vai
+   para a camada "adjacente": `QuadrantHelper.AreAdjacent(Q1, •)` é verdadeiro para Q2 e Q4.
+   Nenhum alvo ativo está em Q2 nem em Q4 agora, então a Torre 2 (Q2) e a Torre 4 (Q4) são
+   candidatas. Torre 4 (1.75, −1.75) está mais perto de (0.50, 3.00) do que Torre 2? Calculando:
+   `d(Torre2, Alvo#2) = √((0.50+1.75)²+(3.00−1.75)²) ≈ 2.53 m`;
+   `d(Torre4, Alvo#2) = √((0.50−1.75)²+(3.00+1.75)²) ≈ 4.94 m`.
+   Torre 2 é a mais próxima → **Torre 2 selecionada** para o Alvo #2 (camada "adjacente —
+   cobrindo Q1"), mesmo Q2 não tendo nenhum alvo seu no momento.
+3. Se um terceiro alvo aparecesse em Q3 (diagonal a Q1, não adjacente) enquanto Q2 e Q4
+   também estivessem ocupados ajudando Q1, a Torre 3 (a única restante) ainda cobriria esse
+   alvo normalmente — ela está livre em sua própria camada "casa" (Q3).
+
+## 5. Regra de segurança de acionamento
+
+Antes de qualquer acionamento demonstrativo (manual ou automático), `FireControlService.Authorize` aplica:
+
+```
+autorizado = alvo.IsActive
+             AND alvo.SelectedTower != null
+             AND alvo.Distance ≥ distânciaMínima
+```
+
+Se `alvo.Distance < distânciaMínima`, o acionamento é bloqueado e a mensagem exata exigida
+pelo enunciado é registrada:
+
+```
+ACIONAMENTO BLOQUEADO — ALVO DENTRO DA DISTÂNCIA MÍNIMA DE SEGURANÇA
+```
+
+## 6. Coordenadas de tela (apenas para desenho)
+
+Por fim, para desenhar no `RadarControl`, as coordenadas de mundo (metros) são convertidas
+em pixels (`CoordinateConverter.WorldToScreen`):
+
+```
+escala   = (tamanho_do_canvas / 2) / distância_máxima_configurada
+tela_x   = (tamanho_do_canvas / 2) + x_mundo · escala
+tela_y   = (tamanho_do_canvas / 2) − y_mundo · escala    // eixo Y de tela é invertido
+```
+
+O sinal invertido em `tela_y` existe porque, na tela, Y cresce para baixo, enquanto no
+mundo (e na convenção de bússola) Y cresce para o Norte (para cima).
+
+## Ver também
+
+- [[ARQUITETURA_SISTEMA]] — onde `TowerSelectionService` se encaixa no fluxo de dados completo.
+- [[DOCUMENTACAO_TECNICA]] — referência de `CoordinateConverter`, `DistanceCalculator`, `QuadrantHelper`.
+- [[Matriz_de_Rastreabilidade]] — RF05 → arquivo/classe desta funcionalidade.

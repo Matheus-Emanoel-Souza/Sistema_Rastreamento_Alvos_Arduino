@@ -39,7 +39,7 @@ public sealed record ErrorMessage(string Reason, string RawLine)
 /// Mensagem <c>STATUS;REDE_AJUSTE=..;REDE_CONFIANCA=..</c> — resposta da rede neural embutida no
 /// Arduino (ver <c>REDE;ENTRADAS=</c> em <see cref="SerialProtocolParser.BuildRedeEntradas"/>) a
 /// um pedido de cálculo. Só diagnóstico: nunca aciona nada no firmware por conta própria (ver
-/// <c>Docs/Documentos_Entregaveis/Artigo/Como_a_IA_funciona_no_RadarTorres.MD</c>, Parte 3).
+/// <c>Rede_Neural/Arquitetura/CONTROLADOR_NEUROEVOLUTIVO.md</c>, Parte 3).
 /// </summary>
 public sealed record RedeSaidaMessage(double AjustePontuacao, double ConfiancaDisparo, string RawLine)
     : SerialMessage(SerialMessageType.RedeSaida, RawLine);

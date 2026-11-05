@@ -7,7 +7,7 @@ export default function Arquitetura() {
       <PageSection
         eyebrow="Arquitetura atual"
         title="Do sensor à interface"
-        description="Separação clássica de responsabilidades (inspirada em MVVM), com toda a lógica de negócio isolada da interface gráfica — detalhado em Docs/Tecnica/ARQUITETURA.md."
+        description="Separação clássica de responsabilidades (inspirada em MVVM), com toda a lógica de negócio isolada da interface gráfica — detalhado em Software/Arquitetura/ARQUITETURA_SISTEMA.md."
       >
         <div className="mx-auto max-w-md">
           <Diagram
@@ -47,7 +47,7 @@ export default function Arquitetura() {
       <PageSection
         eyebrow="Arquitetura futura"
         title="Módulo de Visão Computacional"
-        description="Pipeline isolado (branch tratamento-de-imagens), preparado para até 4 câmeras — ver Docs/Tecnica/VISAO_COMPUTACIONAL.md."
+        description="Pipeline isolado (branch tratamento-de-imagens), preparado para até 4 câmeras — ver Rede_Neural/Algoritmos/DETECCAO_VISAO_YOLO.md."
       >
         <div className="mx-auto max-w-md">
           <Diagram

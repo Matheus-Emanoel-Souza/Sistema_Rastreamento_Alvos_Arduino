@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace RadarTorres.App.Data;
@@ -18,7 +18,7 @@ public static class AppDataPaths
 
     /// <summary>
     /// Pasta com <c>radartorres.db</c> (SQLite, único armazenamento — ver
-    /// <see cref="SqliteConnectionFactory"/> e <c>Docs/Tecnica/MODELO_DADOS.md</c>).
+    /// <see cref="SqliteConnectionFactory"/> e <c>Software/Banco_de_Dados/BANCO_DE_DADOS.md</c>).
     /// </summary>
     public static string DataFolder { get; } = Path.Combine(RootFolder, "Data");
 

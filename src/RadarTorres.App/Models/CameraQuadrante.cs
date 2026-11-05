@@ -18,7 +18,7 @@ namespace RadarTorres.App.Models;
 /// </para>
 /// <para>
 /// <b>Regra:</b> cada câmera responde por exatamente UM quadrante, e cada quadrante tem no
-/// máximo UMA câmera (decisão do usuário registrada em <c>Docs/Projeto/LOG_SOLICITACOES.md</c>) —
+/// máximo UMA câmera (decisão do usuário registrada em <c>Software/Qualidade/HISTORICO_ALTERACOES.md</c>) —
 /// garantido pelo serviço e também por índices únicos no banco, ver
 /// <see cref="Repositories.SqliteCameraQuadranteRepository"/>.
 /// </para>

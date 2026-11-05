@@ -94,7 +94,7 @@ public sealed class PerfilAlvoService : IPerfilAlvoService
             return ResultadoPerfilAlvo.Falha("Este perfil não está mais cadastrado — recarregue a lista.");
         }
 
-        // Mínimo de fotos vale no CADASTRO (decisão registrada em Docs/Projeto/LOG_SOLICITACOES.md):
+        // Mínimo de fotos vale no CADASTRO (decisão registrada em Software/Qualidade/HISTORICO_ALTERACOES.md):
         // na edição, perfis antigos (criados quando o sistema aceitava uma foto só) continuam
         // podendo ser corrigidos sem obrigar a refotografar o objeto na hora.
         if (!Validar(nome, formato, dimensoes, fotos, exigirMinimoDeFotos: false, out string? erro, out List<FotoReferenciaAlvo> fotosValidas, out DimensoesAlvo normalizadas))

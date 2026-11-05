@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -14,7 +14,7 @@ namespace RadarTorres.App.Services;
 /// JSON ou binário) alterando apenas este arquivo.
 ///
 /// Formato geral de uma mensagem: <c>TIPO;CHAVE1=VALOR1;CHAVE2=VALOR2;...</c>
-/// Ver <c>Docs/Tecnica/COMUNICACAO_ARDUINO.md</c> para a especificação completa.
+/// Ver <c>Software/Integracoes/COMUNICACAO_ARDUINO.md</c> para a especificação completa.
 /// </summary>
 public static class SerialProtocolParser
 {
@@ -167,7 +167,7 @@ public static class SerialProtocolParser
 
     /// <summary>
     /// Rede neural embutida no Arduino (diagnóstico, nunca aciona nada — ver
-    /// <c>Docs/Documentos_Entregaveis/Artigo/Como_a_IA_funciona_no_RadarTorres.MD</c>, Parte 3).
+    /// <c>Rede_Neural/Arquitetura/CONTROLADOR_NEUROEVOLUTIVO.md</c>, Parte 3).
     /// Zera o buffer de carregamento de um genoma novo antes de enviar os 74 pesos.
     /// </summary>
     public static string BuildGenomaReset() => "GENOMA;RESET";
