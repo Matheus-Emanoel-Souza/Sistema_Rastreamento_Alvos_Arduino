@@ -63,4 +63,37 @@ public sealed class AlvoTreinamentoTests
 
         Assert.True(alvo.Certeza >= 0.70, $"Certeza ficou em {alvo.Certeza}, não ultrapassou o limiar padrão mesmo no pior caso.");
     }
+
+    // ------------------------------------------------- CertezaEfetiva (regra de 1,2 m)
+
+    /// <summary>Dentro de 1,2 m, certeza é SEMPRE 100% — mesmo com certeza bruta baixíssima (alvo recém-nascido).</summary>
+    [Fact]
+    public void CertezaEfetiva_AteUmVirgulaDoisMetros_ESempreCemPorCento()
+    {
+        var alvo = new AlvoTreinamento { Id = 1, CertezaBase = 0.01, TaxaCrescimentoCertezaPorSegundo = 0.0 };
+
+        Assert.Equal(1.0, alvo.CertezaEfetiva(distanciaAteTorreMetros: 1.2, distanciaMinimaBoaCertezaMetros: 2.0, distanciaCertezaMaximaMetros: 1.2));
+        Assert.Equal(1.0, alvo.CertezaEfetiva(distanciaAteTorreMetros: 0.3, distanciaMinimaBoaCertezaMetros: 2.0, distanciaCertezaMaximaMetros: 1.2));
+    }
+
+    /// <summary>Passado o alcance de confirmação garantida, volta a valer a penalização proporcional de sempre.</summary>
+    [Fact]
+    public void CertezaEfetiva_AcimaDoAlcanceDeConfirmacaoGarantida_UsaAPenalizacaoProporcional()
+    {
+        var alvo = new AlvoTreinamento { Id = 1, CertezaBase = 0.8, TaxaCrescimentoCertezaPorSegundo = 0.0 };
+
+        double efetivaA1Metro5 = alvo.CertezaEfetiva(distanciaAteTorreMetros: 1.5, distanciaMinimaBoaCertezaMetros: 2.0, distanciaCertezaMaximaMetros: 1.2);
+
+        // 1,5 m fora do alcance garantido (>1,2) mas dentro de DistanciaMinimaBoaCertezaMetros (2,0) — proporcional: 0,8 * (1,5/2,0) = 0,6.
+        Assert.Equal(0.6, efetivaA1Metro5, precision: 10);
+    }
+
+    /// <summary>Parâmetro padrão (sem passar <c>distanciaCertezaMaximaMetros</c> explicitamente) usa 1,2 m — mesmo valor de <see cref="ParametrosTreinamento.DistanciaCertezaMaximaMetrosPadrao"/>.</summary>
+    [Fact]
+    public void CertezaEfetiva_SemParametroExplicito_UsaOPadraoDeUmVirgulaDoisMetros()
+    {
+        var alvo = new AlvoTreinamento { Id = 1, CertezaBase = 0.05, TaxaCrescimentoCertezaPorSegundo = 0.0 };
+
+        Assert.Equal(1.0, alvo.CertezaEfetiva(distanciaAteTorreMetros: 1.1, distanciaMinimaBoaCertezaMetros: 2.0));
+    }
 }

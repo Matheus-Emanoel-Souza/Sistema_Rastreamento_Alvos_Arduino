@@ -148,7 +148,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     public ObservableCollection<PontoVisualTreinamento> AlvosVisuais { get; } = new();
     public ObservableCollection<LinhaVisualTreinamento> MirasVisuais { get; } = new();
     public ObservableCollection<SetorVisualTreinamento> CamposDeVisaoVisuais { get; } = new();
-    public ObservableCollection<string> RegrasAprendidas { get; } = new();
     public ObservableCollection<HistoricoGeracaoTreinamento> HistoricoRecente { get; } = new();
     public ObservableCollection<NeuronioVisualTreinamento> NeuroniosVisuais { get; } = new();
     public ObservableCollection<ConexaoVisualTreinamento> ConexoesVisuais { get; } = new();
@@ -770,7 +769,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _episodioPreview = null;
         AlvosVisuais.Clear();
         MirasVisuais.Clear();
-        RegrasAprendidas.Clear();
 
         TetoComplexidadeEmUso = parametros.TetoComplexidade;
         AtualizarParametrosEmUso(parametros, _treinador);
@@ -925,7 +923,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         LimparDiagramaRedeNeural();
         AlvosVisuais.Clear();
         MirasVisuais.Clear();
-        RegrasAprendidas.Clear();
 
         MostrarStatus("Treinamento reiniciado — geração, fitness e genoma voltaram ao zero.", sucesso: true);
     }
@@ -1091,7 +1088,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
         if (!remontarDiagrama) return;
 
-        AtualizarRegras(_melhorRedeAtual);
         RemontarDiagramaRedeNeural(genoma, _melhorRedeAtual);
     }
 
@@ -1585,17 +1581,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         using var buffer = new MemoryStream();
         NeatGenomeSaver.Save(genoma, buffer);
         return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
-    }
-
-    private void AtualizarRegras(RedeNeat rede)
-    {
-        RegrasExtraidas regras = ExtratorDeRegras.Extrair(rede, _ambiente.Parametros.RaioMundoMetros, _ambiente.Parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
-
-        RunOnUi(() =>
-        {
-            RegrasAprendidas.Clear();
-            foreach (string frase in regras.Frases) RegrasAprendidas.Add(frase);
-        });
     }
 
     // ---------------------------------------------------------------- Diagrama da rede neural

@@ -54,14 +54,31 @@ m, Torre 4 em `(1.75, -1.75)` m — um quadrado de 3,5 m de lado centrado na bas
 instalação.
 
 **Formato físico (hardware real, `Projeto_Fisico/Eletronica/Diagrama_Eletrico.md`).** Cada torre
-de decisão tem **1 grau de liberdade** (pan — giro horizontal), motor de passo NEMA17 + driver
-A4988/DRV8825, sem eixo de elevação (tilt) — modelo 2D. É distinta das 4 câmeras CAM1-CAM4, que
-têm 2 eixos cada (pan + tilt) só para centralizar visualmente o alvo detectado, e também distinta
-da torre central de varredura (motor 28BYJ-48 + 2 sensores ultrassônicos HC-SR04 opostos a 180°,
-cobrindo 360° a cada ciclo). O acionamento é **demonstrativo**: laser de baixa potência, LED ou
-simulação em software — nunca armamento real (ver README, seção "Objetivo do sistema"). Não há
-indicador luminoso dedicado no hardware atual: o evento de disparo só é registrado via protocolo
-serial (`FIRE;TOWER=;TARGET=`, ACK/`STATUS`).
+de decisão tem **2 graus de liberdade** (pan — giro horizontal — e tilt — elevação), um motor de
+passo 28BYJ-48 + driver ULN2003 por eixo (atualização: antes era 1 motor NEMA17 só pan, modelo 2D
+— ver nota de rastreabilidade em `Diagrama_Eletrico.md`). É distinta das 4 câmeras CAM1-CAM4, que
+têm 2 eixos cada (pan + tilt, mas NEMA17 + A4988/DRV8825) só para centralizar visualmente o alvo
+detectado, e também distinta da torre central de varredura (motor 28BYJ-48 + 2 sensores
+ultrassônicos HC-SR04 opostos a 180°, cobrindo 360° a cada ciclo). O acionamento é
+**demonstrativo**: laser de baixa potência, LED ou simulação em software — nunca armamento real
+(ver README, seção "Objetivo do sistema"). Não há indicador luminoso dedicado no hardware atual: o
+evento de disparo só é registrado via protocolo serial (`FIRE;TOWER=;TARGET=`, ACK/`STATUS`).
+
+**Velocidade angular assumida.** 15 RPM por eixo (extremo inferior da faixa 15-60 RPM do
+datasheet do 28BYJ-48 — escolha conservadora, sem ensaio de torque real da torre montada; ver a
+dedução completa em `ParametrosTreinamento.cs`, bloco de comentários acima de
+`VelocidadeAngularTorreRpm`). Isso é usado para DUAS coisas no ambiente de treinamento: (1) limitar
+o giro simulado da torre nos dois eixos — ela persegue o ângulo ideal do alvo a no máximo essa
+velocidade, e só dispara quando alinhada dentro de `ToleranciaMiraGraus` = 3° (veto inegociável
+novo, `TorreTreinamento.MiraAlinhada`); (2) derivar `VelocidadeMaximaAlvoDerivadaMetrosPorSegundo`
+≈ **2,20 m/s** (antes 2,5 m/s, fixo/sem dedução) — a velocidade linear máxima de alvo que ainda
+permite acompanhamento, calculada para o pior caso (alvo cruzando tangencialmente a linha de visão,
+a 2 m de distância — `DistanciaMinimaBoaCertezaMetros`) com 70% de margem para o atraso de
+aceleração do motor e o tempo de reação do resto do sistema. **Quando o acompanhamento não pode ser
+garantido**: um alvo que muda de direção rápido demais (ver trajetória aleatória, seção de alvos
+abaixo) pode manter a torre permanentemente atrás do ângulo ideal — ela nunca alinha, nunca dispara,
+e o alvo escapa ou invade sem ter sido engajado. Isso é uma consequência física aceita, não um bug:
+reflete o motor real não acompanhar qualquer movimento instantaneamente.
 
 **Alcance de detecção/engajamento.** Uma torre só considera um alvo "visível" para fins de
 seleção/engajamento dentro de `AlcanceMiraMetros` — valor de fábrica **2,5 m**
@@ -109,13 +126,21 @@ escapar de um erro isolado.
 comprometida com um alvo precisa de pelo menos `TempoMinimoDeMiraSegundos` = **0,3 s** antes de
 poder disparar (`ControladorHibrido.TempoMinimoDeMiraSegundos`, veto inegociável — vale tanto no
 modo híbrido quanto na heurística pura). Só depois desse piso a rede neural (ou, sem rede, a
-heurística) decide o instante exato.
+heurística) decide o instante exato. Desde a introdução da mira física limitada por velocidade
+angular (ver acima), existe um segundo veto inegociável, independente deste: a torre também precisa
+estar fisicamente ALINHADA (`TorreTreinamento.MiraAlinhada`) — os dois vetos coexistem, sem
+substituir um ao outro.
 
 **Alvos (para contraste).** No ambiente simulado, um alvo nasce na borda de um mundo circular de
 raio `RaioMundoMetros` = 10 m (padrão de treinamento), com velocidade entre
-`VelocidadeMinimaAlvoMetrosPorSegundo` = 0,5 m/s e `VelocidadeMaximaAlvoMetrosPorSegundo` = 2,5
-m/s, e uma "certeza" de detecção que começa entre 0,20 e 0,50 e sobe entre 0,08 e 0,25 por segundo
-de observação (seção 5.1). No sistema real, o timeout de um alvo sem leitura nova é
+`VelocidadeMinimaAlvoMetrosPorSegundo` = 0,5 m/s e `VelocidadeMaximaAlvoMetrosPorSegundo` ≈ 2,20
+m/s (derivada da velocidade angular da torre — ver acima; antes era 2,5 m/s fixo), e uma "certeza"
+de detecção que começa entre 0,20 e 0,50 e sobe entre 0,08 e 0,25 por segundo de observação (seção
+5.1) — exceto a até `DistanciaCertezaMaximaMetros` = **1,2 m** da torre, onde a certeza é sempre
+100% independente do tempo de observação (`AlvoTreinamento.CertezaEfetiva`). A trajetória também
+deixou de ser uma linha reta fixa: a direção do movimento sofre um passeio aleatório contínuo (até
+`VariacaoMaximaDirecaoGrausPorSegundo` = 15°/s), reproduzível pela seed do episódio — ver
+`AmbienteTreinamento.MoverAlvos`. No sistema real, o timeout de um alvo sem leitura nova é
 `RadarSettings.TargetTimeoutMs` = 5000 ms, com taxa de atualização do radar de `RefreshRateMs` =
 150 ms.
 
