@@ -88,10 +88,8 @@ public sealed class TreinadorNeat
     /// <summary>Função de ativação usada em todos os nós — <c>TanH</c> mantém as saídas em -1..1, a mesma faixa que a rede anterior produzia e que <see cref="ControladorHibrido"/> assume (confiança de disparo &gt; 0 significa "dispare").</summary>
     public const ActivationFunctionId FuncaoAtivacao = ActivationFunctionId.TanH;
 
-    /// <summary>Redes acíclicas: o controlador toma uma decisão independente por alvo/passo, não precisa de memória entre ativações — e acíclico é mais rápido de avaliar, o que importa com 12 episódios por indivíduo. Continua sendo o PADRÃO; ver <see cref="_aciclica"/> para a instância configurada com rede recorrente.</summary>
+    /// <summary>Redes acíclicas: o controlador toma uma decisão independente por alvo/passo, não precisa de memória entre ativações — e acíclico é mais rápido de avaliar, o que importa com 12 episódios por indivíduo.</summary>
     public const bool Aciclica = true;
-
-    private readonly bool _aciclica;
 
     public int GeracaoAtual => _algoritmo.Stats.Generation;
 
@@ -108,20 +106,6 @@ public sealed class TreinadorNeat
     /// <param name="tetoComplexidade">Número de conexões a partir do qual a evolução passa a SIMPLIFICAR em vez de crescer, evitando redes inchadas que só ficam lentas sem melhorar o fitness.</param>
     /// <param name="probabilidadeAdicionarNo">Com que frequência um descendente ganha um neurônio novo — o knob de crescimento ESTRUTURAL, que não tinha equivalente no algoritmo anterior (lá a topologia era fixa).</param>
     /// <param name="grauParalelismo">Quantos indivíduos avaliados em paralelo; -1 usa todos os núcleos (equivale ao <c>AsParallel()</c> do algoritmo anterior).</param>
-    /// <param name="controladorV2">
-    /// <c>false</c> (padrão) treina o contrato V1 (<see cref="ControladorHibrido"/>, 7 entradas/2
-    /// saídas) — é o único modo usado em produção e no histórico de experimentos. <c>true</c>
-    /// treina o contrato V2 (<see cref="ControladorHibridoV2"/>, 15 entradas/3 saídas) através de
-    /// <see cref="AmbienteTreinamento.AvaliarFitnessV2(RedeNeat,System.Collections.Generic.IReadOnlyList{int},System.Collections.Generic.IReadOnlyList{TipoCenarioTreinamento}?)"/>.
-    /// </param>
-    /// <param name="redeRecorrente">
-    /// <c>false</c> (padrão) treina rede ACÍCLICA (sem estado entre ativações — comportamento
-    /// histórico). <c>true</c> treina rede CÍCLICA e usa <see cref="RedeNeat"/> em modo
-    /// "manter estado entre ativações" durante a avaliação — só tem efeito quando
-    /// <paramref name="controladorV2"/> também é <c>true</c> (ver
-    /// <see cref="ParametrosTreinamento.RedeRecorrente"/> e a observação de escopo em
-    /// <see cref="RedeNeatRecorrente"/> sobre o que a recorrência cobre dentro do laço evolutivo).
-    /// </param>
     public TreinadorNeat(
         AmbienteTreinamento ambiente,
         int tamanhoPopulacao = 60,
@@ -129,9 +113,7 @@ public sealed class TreinadorNeat
         double proporcaoElitismo = 0.05,
         int tetoComplexidade = 60,
         double probabilidadeAdicionarNo = 0.01,
-        int grauParalelismo = -1,
-        bool controladorV2 = false,
-        bool redeRecorrente = false)
+        int grauParalelismo = -1)
     {
         ArgumentNullException.ThrowIfNull(ambiente);
         if (tamanhoPopulacao < 4) throw new ArgumentOutOfRangeException(nameof(tamanhoPopulacao), "A população precisa de pelo menos 4 indivíduos.");
@@ -139,19 +121,16 @@ public sealed class TreinadorNeat
 
         ProporcaoElitismo = proporcaoElitismo;
         GrauParalelismo = grauParalelismo;
-        _aciclica = !redeRecorrente;
 
         _contexto = new ContextoAvaliacaoNeat();
 
-        IBlackBoxEvaluationScheme<double> esquema = controladorV2
-            ? new EsquemaAvaliacaoAmbienteV2(ambiente, _contexto, redeRecorrente)
-            : new EsquemaAvaliacaoAmbiente(ambiente, _contexto);
+        var esquema = new EsquemaAvaliacaoAmbiente(ambiente, _contexto);
 
         var experimento = new NeatExperiment<double>(esquema, "radartorres-controlador")
         {
             Name = "Controlador híbrido RadarTorres",
             Description = "Seleção de torre e decisão de disparo — heurística em camadas + rede evoluída por NEAT.",
-            IsAcyclic = _aciclica,
+            IsAcyclic = Aciclica,
             ActivationFnName = FuncaoAtivacao.ToString(),
             PopulationSize = tamanhoPopulacao,
             DegreeOfParallelism = grauParalelismo,
@@ -167,16 +146,8 @@ public sealed class TreinadorNeat
         AjustarProbabilidadeDeMutacaoEstrutural(experimento.ReproductionAsexualSettings, probabilidadeAdicionarNo);
 
         _algoritmo = NeatUtils.CreateNeatEvolutionAlgorithm(experimento);
-        _decodificador = NeatGenomeDecoderFactory.CreateGenomeDecoder(_aciclica, enableHardwareAcceleration: false);
+        _decodificador = NeatGenomeDecoderFactory.CreateGenomeDecoder(Aciclica, enableHardwareAcceleration: false);
     }
-
-    /// <summary>
-    /// Envolve o genoma campeão (ou qualquer outro) numa <see cref="RedeNeatRecorrente"/>, que
-    /// decodifica uma caixa-preta independente por contexto (torre) em vez de reaproveitar uma
-    /// única — ver as observações de escopo na própria classe sobre por que isto só é usado para
-    /// REPRODUZIR um genoma já escolhido, não durante o laço evolutivo.
-    /// </summary>
-    public RedeNeatRecorrente CriarRedeRecorrente(NeatGenome<double> genoma) => new(genoma, _decodificador);
 
     /// <summary>
     /// Avalia a população atual com as seeds desta geração e produz a próxima. Mesmo contrato do

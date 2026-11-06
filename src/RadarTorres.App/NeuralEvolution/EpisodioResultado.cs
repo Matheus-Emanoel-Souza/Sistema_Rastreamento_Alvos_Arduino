@@ -8,8 +8,4 @@ public sealed record EpisodioResultado(
     int TirosErrados = 0,
     int AlvosNascidos = 0,
     int OportunidadesDeDisparo = 0,
-    int DisparosRecusadosPelaRede = 0,
-    double TempoDeRespostaMedioSegundos = 0,
-    int TrocasDeAlvoPenalizadas = 0,
-    int CooperacoesConcedidas = 0,
-    int CooperacoesNegadasPorConcentracao = 0);
+    int DisparosRecusadosPelaRede = 0);

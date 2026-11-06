@@ -136,12 +136,4 @@ public sealed class AlvoTreinamento
 
     /// <summary>Já aplicada a penalidade de "perda de ponto da geração" por ter chegado perto demais da base sem ser abatido nem ter escapado de fato — evita descontar a cada passo enquanto o alvo continua dentro do raio.</summary>
     public bool PenalidadeProximidadeAplicada { get; set; }
-
-    /// <summary>
-    /// Já contabilizado no "tempo de resposta" médio do episódio (ver
-    /// <see cref="EstadoEpisodio.SomaTemposRespostaSegundos"/>) — marcado no PRIMEIRO disparo
-    /// contra este alvo (acerto ou erro, tanto faz: o que importa é quanto tempo levou para a
-    /// torre reagir), nunca de novo depois disso.
-    /// </summary>
-    public bool TempoDeRespostaRegistrado { get; set; }
 }
