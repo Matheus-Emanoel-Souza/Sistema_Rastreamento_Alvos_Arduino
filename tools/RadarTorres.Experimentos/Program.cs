@@ -35,8 +35,9 @@ public static class Program
             case "ablacao": Ablacao(args); return 0;
             case "hiperparametros": Hiperparametros(); return 0;
             case "sobrevivencia": Sobrevivencia(args); return 0;
+            case "v2": V2(args); return 0;
             default:
-                Console.WriteLine("Comandos: teto | ga | ablacao | hiperparametros | sobrevivencia");
+                Console.WriteLine("Comandos: teto | ga | ablacao | hiperparametros | sobrevivencia | v2");
                 return 1;
         }
     }
@@ -490,6 +491,166 @@ public static class Program
         string jsonPath = Path.Combine(PastaResultados(), "experimentos_hiperparametros_7entradas.json");
         File.WriteAllText(jsonPath, JsonSerializer.Serialize(resultados, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine($"JSON exportado: {jsonPath} ({resultados.Count} linhas)");
+    }
+
+    // ------------------------------------------------------------------- v2
+
+    /// <summary>Uma linha da bateria comparativa V1×V2×V2-recorrente — ver <see cref="V2"/>.</summary>
+    private sealed record ResultadoComparacaoV2(
+        string Variante, int Repeticao, int Populacao, int Geracoes, int TetoComplexidade, bool RedeRecorrente, bool FitnessV2,
+        double FitnessTreinoPico, int GeracaoDoPico, double SegundosTreino,
+        double ValFitnessMedio, double ValAlvosNascidosMedio, double ValAbatidosMedio, double ValEscapadosMedio,
+        double ValTirosErradosMedio, double ValTempoRespostaMedioSegundos,
+        double ValTrocasPenalizadasMedia, double ValCooperacoesConcedidasMedia, double ValCooperacoesNegadasMedia);
+
+    /// <summary>
+    /// Bateria comparativa real pedida na tarefa: treina o controlador V1 (referência) e o V2
+    /// (novas entradas/saída/fitness — ver ControladorHibridoV2 e ParametrosTreinamento), em
+    /// condições equivalentes (mesma população, mesmas gerações, mesmos cenários táticos fixos,
+    /// mesmas seeds de validação) e com <paramref name="args"/> <c>--repeticoes</c> sementes de
+    /// treino diferentes. Grava um JSON por linha (sem sobrescrever execuções anteriores) e
+    /// imprime a média por variante — NADA aqui é estimado: cada número vem de rodar o ambiente.
+    /// </summary>
+    private static void V2(string[] args)
+    {
+        int populacao = (int)Arg(args, "pop", 24);
+        int geracoes = (int)Arg(args, "ger", 40);
+        int repeticoes = (int)Arg(args, "repeticoes", 3);
+        int episodiosValidacao = (int)Arg(args, "val", 30);
+        int tetoComplexidade = (int)Arg(args, "teto", 60);
+        bool incluirRecorrente = ArgS(args, "recorrente", "sim") == "sim";
+
+        Console.WriteLine($"--- COMPARACAO V1 x V2 (pop={populacao}, geracoes={geracoes}, repeticoes={repeticoes}, validacao={episodiosValidacao} episodios, teto={tetoComplexidade}) ---");
+
+        var todos = new List<ResultadoComparacaoV2>();
+
+        for (int r = 0; r < repeticoes; r++)
+        {
+            todos.Add(RodarV1(r, populacao, geracoes, tetoComplexidade, episodiosValidacao));
+            todos.Add(RodarV2(r, populacao, geracoes, tetoComplexidade, episodiosValidacao, redeRecorrente: false));
+            if (incluirRecorrente)
+            {
+                todos.Add(RodarV2(r, populacao, geracoes, tetoComplexidade, episodiosValidacao, redeRecorrente: true));
+            }
+        }
+
+        string caminho = Path.Combine(PastaResultados(), "comparacao_v2.json");
+        List<ResultadoComparacaoV2> acumulado = File.Exists(caminho)
+            ? JsonSerializer.Deserialize<List<ResultadoComparacaoV2>>(File.ReadAllText(caminho)) ?? new()
+            : new();
+        acumulado.AddRange(todos);
+        File.WriteAllText(caminho, JsonSerializer.Serialize(acumulado, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine($"JSON exportado (acrescentado): {caminho} ({todos.Count} linhas novas, {acumulado.Count} no total)");
+
+        foreach (var grupo in todos.GroupBy(r => r.Variante))
+        {
+            List<ResultadoComparacaoV2> linhas = grupo.ToList();
+            Console.WriteLine($"[{grupo.Key}] (média de {linhas.Count} execução(ões))");
+            Console.WriteLine($"  fitness treino (pico)  : {linhas.Average(l => l.FitnessTreinoPico):0.00}");
+            Console.WriteLine($"  VAL fitness médio      : {linhas.Average(l => l.ValFitnessMedio):0.00}");
+            Console.WriteLine($"  VAL abatidos médio     : {linhas.Average(l => l.ValAbatidosMedio):0.00}");
+            Console.WriteLine($"  VAL escapados médio    : {linhas.Average(l => l.ValEscapadosMedio):0.00}");
+            Console.WriteLine($"  VAL tiros errados médio: {linhas.Average(l => l.ValTirosErradosMedio):0.00}");
+            Console.WriteLine($"  VAL tempo resposta (s) : {linhas.Average(l => l.ValTempoRespostaMedioSegundos):0.00}");
+            Console.WriteLine($"  VAL trocas penalizadas : {linhas.Average(l => l.ValTrocasPenalizadasMedia):0.00}");
+            Console.WriteLine($"  VAL cooperacoes (conc/neg): {linhas.Average(l => l.ValCooperacoesConcedidasMedia):0.00} / {linhas.Average(l => l.ValCooperacoesNegadasMedia):0.00}");
+            Console.WriteLine($"  tempo de treino (s)    : {linhas.Average(l => l.SegundosTreino):0.0}");
+        }
+    }
+
+    private static ResultadoComparacaoV2 RodarV1(int repeticao, int populacao, int geracoes, int tetoComplexidade, int episodiosValidacao)
+    {
+        var parametros = new ParametrosTreinamento { TamanhoPopulacao = populacao, TetoComplexidade = tetoComplexidade };
+        var ambiente = new AmbienteTreinamento(parametros);
+        var treinador = new TreinadorNeat(ambiente, tamanhoPopulacao: populacao, quantidadeEspecies: parametros.QuantidadeEspecies, tetoComplexidade: tetoComplexidade, probabilidadeAdicionarNo: parametros.ProbabilidadeAdicionarNo);
+
+        var cronometro = Stopwatch.StartNew();
+        double melhor = double.NegativeInfinity;
+        int geracaoPico = 0;
+        NeatGenome<double>? melhorGenoma = null;
+
+        for (int g = 0; g < geracoes; g++)
+        {
+            int[] seeds = Enumerable.Range(0, Math.Max(1, parametros.EpisodiosPorAvaliacao)).Select(i => (repeticao * 100000) + treinador.GeracaoAtual * 1000 + i).ToArray();
+            ResultadoGeracao resultado = treinador.EvoluirGeracao(seeds, CatalogoCenarios.TodosComScript);
+            if (resultado.MelhorFitness > melhor) { melhor = resultado.MelhorFitness; geracaoPico = resultado.Geracao; melhorGenoma = resultado.MelhorGenoma; }
+        }
+        cronometro.Stop();
+
+        RedeNeat rede = melhorGenoma is null ? RedeNula() : treinador.Decodificar(melhorGenoma);
+        var ambienteVal = new AmbienteTreinamento(parametros);
+        var fit = new List<double>(); var nasc = new List<int>(); var ab = new List<int>(); var esc = new List<int>(); var erros = new List<int>(); var resp = new List<double>();
+
+        for (int s = 95000; s < 95000 + episodiosValidacao; s++)
+        {
+            EstadoEpisodio estado = ambienteVal.NovoEpisodio(seed: repeticao * 1000 + s);
+            var controlador = new ControladorHibrido(rede, parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo);
+            const double dt = 0.2;
+            while (!estado.Finalizado) ambienteVal.Avancar(estado, controlador, dt);
+
+            fit.Add(estado.FitnessAcumulado); nasc.Add(estado.AlvosNascidos); ab.Add(estado.AlvosAbatidos);
+            esc.Add(estado.AlvosEscapados); erros.Add(estado.TirosErrados); resp.Add(estado.TempoDeRespostaMedioSegundos);
+        }
+
+        return new ResultadoComparacaoV2(
+            "V1-referencia", repeticao, populacao, geracoes, tetoComplexidade, RedeRecorrente: false, FitnessV2: false,
+            melhor, geracaoPico, cronometro.Elapsed.TotalSeconds,
+            fit.Average(), nasc.Average(), ab.Average(), esc.Average(), erros.Average(), resp.Where(r => r > 0).DefaultIfEmpty(0).Average(),
+            0, 0, 0);
+    }
+
+    private static ResultadoComparacaoV2 RodarV2(int repeticao, int populacao, int geracoes, int tetoComplexidade, int episodiosValidacao, bool redeRecorrente)
+    {
+        var parametros = new ParametrosTreinamento { TamanhoPopulacao = populacao, TetoComplexidade = tetoComplexidade, UsarFitnessV2 = true, RedeRecorrente = redeRecorrente };
+        var ambiente = new AmbienteTreinamento(parametros);
+        var treinador = new TreinadorNeat(
+            ambiente, tamanhoPopulacao: populacao, quantidadeEspecies: parametros.QuantidadeEspecies, tetoComplexidade: tetoComplexidade,
+            probabilidadeAdicionarNo: parametros.ProbabilidadeAdicionarNo, controladorV2: true, redeRecorrente: redeRecorrente);
+
+        var cronometro = Stopwatch.StartNew();
+        double melhor = double.NegativeInfinity;
+        int geracaoPico = 0;
+        NeatGenome<double>? melhorGenoma = null;
+
+        for (int g = 0; g < geracoes; g++)
+        {
+            int[] seeds = Enumerable.Range(0, Math.Max(1, parametros.EpisodiosPorAvaliacao)).Select(i => (repeticao * 100000) + treinador.GeracaoAtual * 1000 + i).ToArray();
+            ResultadoGeracao resultado = treinador.EvoluirGeracao(seeds, CatalogoCenarios.TodosComScript);
+            if (resultado.MelhorFitness > melhor) { melhor = resultado.MelhorFitness; geracaoPico = resultado.Geracao; melhorGenoma = resultado.MelhorGenoma; }
+        }
+        cronometro.Stop();
+
+        var ambienteVal = new AmbienteTreinamento(parametros);
+        var fit = new List<double>(); var nasc = new List<int>(); var ab = new List<int>(); var esc = new List<int>(); var erros = new List<int>(); var resp = new List<double>();
+        var trocas = new List<int>(); var coopConc = new List<int>(); var coopNeg = new List<int>();
+
+        // Rede única por configuração: estável (sem estado) usa Decodificar; recorrente usa
+        // CriarRedeRecorrente (estado isolado por torre, reiniciado a cada episódio novo dentro de
+        // ExecutarEpisodioRapidoV2 — ver RedeNeatRecorrente).
+        RedeNeat? redeEstavel = redeRecorrente ? null : (melhorGenoma is null ? RedeNula() : treinador.Decodificar(melhorGenoma));
+        RedeNeatRecorrente? redeRecorrenteInstancia = redeRecorrente && melhorGenoma is not null ? treinador.CriarRedeRecorrente(melhorGenoma) : null;
+
+        for (int s = 95000; s < 95000 + episodiosValidacao; s++)
+        {
+            int seedEpisodio = repeticao * 1000 + s;
+
+            EpisodioResultado resultadoEpisodio = redeRecorrenteInstancia is not null
+                ? ambienteVal.ExecutarEpisodioRapidoV2(redeRecorrenteInstancia, seedEpisodio)
+                : ambienteVal.ExecutarEpisodioRapidoV2(redeEstavel!, seedEpisodio);
+
+            fit.Add(resultadoEpisodio.FitnessTotal); nasc.Add(resultadoEpisodio.AlvosNascidos); ab.Add(resultadoEpisodio.AlvosAbatidos);
+            esc.Add(resultadoEpisodio.AlvosEscapados); erros.Add(resultadoEpisodio.TirosErrados);
+            if (resultadoEpisodio.TempoDeRespostaMedioSegundos > 0) resp.Add(resultadoEpisodio.TempoDeRespostaMedioSegundos);
+            trocas.Add(resultadoEpisodio.TrocasDeAlvoPenalizadas);
+            coopConc.Add(resultadoEpisodio.CooperacoesConcedidas);
+            coopNeg.Add(resultadoEpisodio.CooperacoesNegadasPorConcentracao);
+        }
+
+        return new ResultadoComparacaoV2(
+            redeRecorrente ? "V2-recorrente" : "V2", repeticao, populacao, geracoes, tetoComplexidade, redeRecorrente, FitnessV2: true,
+            melhor, geracaoPico, cronometro.Elapsed.TotalSeconds,
+            fit.Average(), nasc.Average(), ab.Average(), esc.Average(), erros.Average(), resp.DefaultIfEmpty(0).Average(),
+            trocas.Average(), coopConc.Average(), coopNeg.Average());
     }
 
     // ----------------------------------------------------------- resultados

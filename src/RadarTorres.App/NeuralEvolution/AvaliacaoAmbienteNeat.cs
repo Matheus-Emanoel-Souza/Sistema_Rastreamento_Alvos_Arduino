@@ -113,3 +113,65 @@ public sealed class AvaliadorAmbiente : IPhenomeEvaluator<IBlackBox<double>>
     /// </summary>
     public const double DeslocamentoFitness = 500.0;
 }
+
+/// <summary>Mesmo papel de <see cref="EsquemaAvaliacaoAmbiente"/>, mas para o contrato V2 (<see cref="ControladorHibridoV2"/>) — ver <see cref="TreinadorNeat"/> (parâmetro <c>controladorV2</c>).</summary>
+public sealed class EsquemaAvaliacaoAmbienteV2 : IBlackBoxEvaluationScheme<double>
+{
+    private readonly AmbienteTreinamento _ambiente;
+    private readonly ContextoAvaliacaoNeat _contexto;
+    private readonly bool _redeRecorrente;
+
+    public EsquemaAvaliacaoAmbienteV2(AmbienteTreinamento ambiente, ContextoAvaliacaoNeat contexto, bool redeRecorrente)
+    {
+        _ambiente = ambiente;
+        _contexto = contexto;
+        _redeRecorrente = redeRecorrente;
+    }
+
+    public int InputCount => ControladorHibridoV2.QuantidadeEntradas + 1;
+
+    public int OutputCount => ControladorHibridoV2.QuantidadeSaidas;
+
+    public bool IsDeterministic => false;
+
+    public IComparer<FitnessInfo> FitnessComparer => PrimaryFitnessInfoComparer.Singleton;
+
+    public FitnessInfo NullFitness => FitnessInfo.DefaultFitnessInfo;
+
+    public bool EvaluatorsHaveState => false;
+
+    public IPhenomeEvaluator<IBlackBox<double>> CreateEvaluator() => new AvaliadorAmbienteV2(_ambiente, _contexto, _redeRecorrente);
+
+    public bool TestForStopCondition(FitnessInfo fitnessInfo) => false;
+}
+
+/// <summary>Mesmo papel de <see cref="AvaliadorAmbiente"/>, mas rodando <see cref="AmbienteTreinamento.AvaliarFitnessV2"/>.</summary>
+public sealed class AvaliadorAmbienteV2 : IPhenomeEvaluator<IBlackBox<double>>
+{
+    private readonly AmbienteTreinamento _ambiente;
+    private readonly ContextoAvaliacaoNeat _contexto;
+    private readonly bool _redeRecorrente;
+
+    public AvaliadorAmbienteV2(AmbienteTreinamento ambiente, ContextoAvaliacaoNeat contexto, bool redeRecorrente)
+    {
+        _ambiente = ambiente;
+        _contexto = contexto;
+        _redeRecorrente = redeRecorrente;
+    }
+
+    public FitnessInfo Evaluate(IBlackBox<double> caixaPreta)
+    {
+        // manterEstadoEntreAtivacoes=_redeRecorrente: com rede cíclica, a MESMA caixa-preta (deste
+        // genoma) acumula estado entre ativações dentro de um episódio, e AvaliarFitnessV2 chama
+        // RedeNeat.Reiniciar() no início de CADA episódio (ver AmbienteTreinamento) — isola entre
+        // simulações (episódios/seeds) sem isolar entre torres dentro do mesmo episódio (ver a nota
+        // de escopo em RedeNeatRecorrente). Entre INDIVÍDUOS não há vazamento possível: o SharpNEAT
+        // decodifica uma caixa-preta nova por genoma avaliado.
+        var rede = new RedeNeat(caixaPreta, manterEstadoEntreAtivacoes: _redeRecorrente);
+
+        double fitness = _ambiente.AvaliarFitnessV2(rede, _contexto.Seeds, _contexto.CenariosFixos);
+
+        double fitnessDeslocado = fitness + AvaliadorAmbiente.DeslocamentoFitness;
+        return new FitnessInfo(Math.Max(0.0, fitnessDeslocado), [fitness]);
+    }
+}

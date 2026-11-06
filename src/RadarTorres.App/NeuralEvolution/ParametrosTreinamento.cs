@@ -154,4 +154,51 @@ public sealed record ParametrosTreinamento
     /// essa amostra é ruído demais para a seleção distinguir genoma melhor de genoma sortudo.
     /// </remarks>
     public int EpisodiosPorAvaliacao { get; init; } = 12;
+
+    // ---------------------------------------------------------------------------------------
+    // Controlador V2 (ver ControladorHibridoV2) e fitness V2 — tudo nesta seção é OPT-IN e com
+    // padrão que reproduz exatamente o comportamento V1/original. Nenhum parâmetro acima desta
+    // linha foi alterado: um treinamento com ParametrosTreinamento padrão continua bit-a-bit
+    // igual ao que era antes desta mudança — é o que garante o controlador V1 como referência
+    // válida para comparação (ver AmbienteTreinamento.ExecutarEpisodioRapidoV2).
+    // ---------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Liga os termos de fitness NOVOS (tempo de resposta, cooperação, trocas excessivas de
+    /// alvo) — ver <see cref="AmbienteTreinamento.DecidirDisparosV2"/>. Desligado por padrão para
+    /// não mudar em silêncio o significado de uma comparação com resultados V1 já registrados;
+    /// a bateria comparativa liga explicitamente só para o lado V2.
+    /// </summary>
+    public bool UsarFitnessV2 { get; init; } = false;
+
+    /// <summary>Tempo de resposta (seleção → primeiro disparo) considerado "ótimo" — abaixo disto, o bônus de tempo de resposta satura no máximo (ver <see cref="RecompensaTempoRespostaMaximo"/>).</summary>
+    public double TempoRespostaReferenciaSegundos { get; init; } = 1.0;
+
+    /// <summary>Bônus de fitness por disparar no tempo de referência ou antes — cai linearmente a 0 em 2× <see cref="TempoRespostaReferenciaSegundos"/>.</summary>
+    public double RecompensaTempoRespostaMaximo { get; init; } = 2.0;
+
+    /// <summary>Bônus por uma cooperação concedida (torre de ajuda chamada pela saída "prioridade de cooperação" ou por velocidade alta) que efetivamente ajudou a abater o alvo.</summary>
+    public double RecompensaCooperacaoBemSucedida { get; init; } = 4.0;
+
+    /// <summary>Penalidade quando a rede pede cooperação (ou a regra de velocidade aciona ajuda) enquanto existe outro alvo ativo sem NENHUMA torre comprometida — concentrar torres num alvo só enquanto outro fica descoberto é o cenário que o enunciado pede para não incentivar.</summary>
+    public double PenalidadeCooperacaoConcentrada { get; init; } = 2.0;
+
+    /// <summary>Janela (s) usada para contar "trocas recentes de alvo" de uma torre — ver <see cref="TorreTreinamento.ContarTrocasRecentes"/>.</summary>
+    public double JanelaTrocaDeAlvoSegundos { get; init; } = 6.0;
+
+    /// <summary>A partir de quantas trocas DENTRO da janela a troca seguinte passa a ser penalizada (a primeira troca de um alvo livre nunca é "excessiva" por si só).</summary>
+    public int LimiteTrocasAntesDePenalizar { get; init; } = 2;
+
+    /// <summary>Penalidade de fitness por troca de alvo além do limite, dentro da janela — desencoraja uma torre pingando entre vários alvos em sequência rápida em vez de resolver um por vez.</summary>
+    public double PenalidadeTrocaDeAlvoExcessiva { get; init; } = 1.5;
+
+    /// <summary>
+    /// Liga a rede RECORRENTE (NEAT cíclico — ver <see cref="RedeNeat"/> e <see cref="TreinadorNeat"/>):
+    /// a mesma caixa-preta não é reiniciada entre ativações dentro do MESMO episódio, só ao
+    /// início de cada episódio novo (ver <see cref="AmbienteTreinamento.ExecutarEpisodioRapidoV2"/>).
+    /// Desligado por padrão — o padrão continua sendo a rede acíclica sem estado, mais rápida de
+    /// avaliar e mais fácil de auditar (<see cref="AtivacoesRedeNeat"/> só sabe colorir o diagrama
+    /// de redes acíclicas).
+    /// </summary>
+    public bool RedeRecorrente { get; init; } = false;
 }
