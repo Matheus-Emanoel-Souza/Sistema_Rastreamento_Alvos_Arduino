@@ -133,7 +133,7 @@ public sealed class AmbienteTreinamento
 
         return new EpisodioResultado(
             estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
-            estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede);
+            estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos);
     }
 
     /// <summary>
@@ -553,6 +553,8 @@ public sealed class AmbienteTreinamento
     /// </summary>
     private void Disparar(EstadoEpisodio estado, TorreTreinamento torre, AlvoTreinamento alvo)
     {
+        RegistrarTempoDeResposta(estado, alvo);
+
         // Erro probabilístico crescendo com a velocidade do alvo (mesma regra do sistema
         // real — ver CalculadoraErroDisparo): alvo rápido escapando de uma torre sozinha é o
         // sinal de fitness que empurra a rede a não demorar tanto para comprometer/disparar.
@@ -591,5 +593,220 @@ public sealed class AmbienteTreinamento
         {
             torre.AlvoComprometidoId = null;
         }
+    }
+
+    /// <summary>
+    /// Mede o "tempo de resposta" (seleção → primeiro disparo, acerto ou erro) de um alvo —
+    /// sempre contabilizado nas estatísticas do episódio (ver <see cref="EstadoEpisodio.TempoDeRespostaMedioSegundos"/>),
+    /// em QUALQUER modo/versão de controlador; só entra no FITNESS quando
+    /// <see cref="ParametrosTreinamento.UsarFitnessV2"/> está ligado — por isso V1 com parâmetros
+    /// padrão continua produzindo exatamente o mesmo fitness de antes desta mudança.
+    /// </summary>
+    private void RegistrarTempoDeResposta(EstadoEpisodio estado, AlvoTreinamento alvo)
+    {
+        if (alvo.TempoDeRespostaRegistrado) return;
+        alvo.TempoDeRespostaRegistrado = true;
+
+        estado.SomaTemposRespostaSegundos += alvo.TempoDesdeSelecao;
+        estado.ContagemTemposResposta++;
+
+        if (!_parametros.UsarFitnessV2) return;
+
+        double fatorResposta = Math.Clamp(
+            1.0 - alvo.TempoDesdeSelecao / Math.Max(2.0 * _parametros.TempoRespostaReferenciaSegundos, 0.01),
+            0.0, 1.0);
+        estado.FitnessAcumulado += _parametros.RecompensaTempoRespostaMaximo * fatorResposta;
+    }
+
+    // =====================================================================================
+    // Controlador V2 (ver ControladorHibridoV2) — espelha Avancar/SelecionarTorresParaAlvosLivres/
+    // DecidirDisparos, mas em métodos PRÓPRIOS em vez de ramificar os existentes: o controlador V1
+    // acima desta linha não foi tocado por nenhuma mudança desta seção, que é exatamente o que
+    // "manter o controlador atual como referência, testável separadamente" pede. O nascimento de
+    // alvo, movimento, penalidades de proximidade/invasão/desequilíbrio e o próprio Disparar são
+    // REAPROVEITADOS (não dependem de qual controlador decide torre/disparo).
+    // =====================================================================================
+
+    /// <summary>Episódio completo com o controlador V2 e rede SEM estado entre ativações (padrão) — mesmo papel de <see cref="ExecutarEpisodioRapido"/>.</summary>
+    public EpisodioResultado ExecutarEpisodioRapidoV2(RedeNeat rede, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio)
+    {
+        if (_parametros.RedeRecorrente) rede.Reiniciar(); // zera estado de um episódio anterior avaliado com a MESMA caixa-preta (ver AvaliadorAmbienteV2)
+
+        EstadoEpisodio estado = NovoEpisodio(seed, cenario);
+        var controlador = new ControladorHibridoV2(
+            rede, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo,
+            _parametros.TempoDeteccaoRelevanteSegundos, _parametros.AlturaMaximaAlvoMetros, _parametros.JanelaTrocaDeAlvoSegundos);
+
+        const double dt = 0.2;
+        while (!estado.Finalizado) AvancarV2(estado, controlador, dt);
+
+        return new EpisodioResultado(
+            estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
+            estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos,
+            estado.TrocasDeAlvoPenalizadas, estado.CooperacoesConcedidas, estado.CooperacoesNegadasPorConcentracao);
+    }
+
+    /// <summary>Episódio completo com o controlador V2 e rede RECORRENTE com estado isolado por torre — ver observações de escopo em <see cref="RedeNeatRecorrente"/> (usado para replay/avaliação isolada de um genoma já escolhido, não dentro do laço evolutivo).</summary>
+    public EpisodioResultado ExecutarEpisodioRapidoV2(RedeNeatRecorrente redeRecorrente, int? seed = null, TipoCenarioTreinamento cenario = TipoCenarioTreinamento.Aleatorio)
+    {
+        redeRecorrente.ReiniciarTudo(); // nenhuma torre começa este episódio lembrando de um episódio anterior
+
+        EstadoEpisodio estado = NovoEpisodio(seed, cenario);
+        var controlador = new ControladorHibridoV2(
+            redeRecorrente, _parametros.RaioMundoMetros, _parametros.VelocidadeMaximaAlvoMetrosPorSegundo,
+            _parametros.TempoDeteccaoRelevanteSegundos, _parametros.AlturaMaximaAlvoMetros, _parametros.JanelaTrocaDeAlvoSegundos);
+
+        const double dt = 0.2;
+        while (!estado.Finalizado) AvancarV2(estado, controlador, dt);
+
+        return new EpisodioResultado(
+            estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
+            estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos,
+            estado.TrocasDeAlvoPenalizadas, estado.CooperacoesConcedidas, estado.CooperacoesNegadasPorConcentracao);
+    }
+
+    /// <summary>Fitness médio sobre várias seeds — mesmo papel de <see cref="AvaliarFitness"/>, controlador V2, rede sem estado entre ativações.</summary>
+    public double AvaliarFitnessV2(RedeNeat rede, IReadOnlyList<int> seeds, IReadOnlyList<TipoCenarioTreinamento>? cenariosFixos = null)
+    {
+        double soma = 0;
+        int total = 0;
+
+        foreach (int seed in seeds)
+        {
+            soma += ExecutarEpisodioRapidoV2(rede, seed, TipoCenarioTreinamento.Aleatorio).FitnessTotal;
+            total++;
+        }
+
+        if (cenariosFixos is not null)
+        {
+            foreach (TipoCenarioTreinamento cenario in cenariosFixos)
+            {
+                soma += ExecutarEpisodioRapidoV2(rede, seed: 0, cenario).FitnessTotal;
+                total++;
+            }
+        }
+
+        return soma / Math.Max(1, total);
+    }
+
+    private void AvancarV2(EstadoEpisodio estado, ControladorHibridoV2 controlador, double dt)
+    {
+        if (estado.Finalizado) return;
+
+        estado.TempoDecorridoSegundos += dt;
+
+        TalvezNascerAlvo(estado);
+        MoverAlvos(estado, dt);
+        AcumularTempoComprometido(estado, dt);
+        AplicarPenalidadeDeProximidade(estado);
+        TratarAlvosNaBase(estado);
+        TratarInvasaoDeTorre(estado);
+        SelecionarTorresParaAlvosLivresV2(estado, controlador);
+        DecidirDisparosV2(estado, controlador);
+
+        estado.Alvos.RemoveAll(a => !a.Ativo);
+
+        double tetoDeTempo = _parametros.SemLimiteDeDuracao
+            ? _parametros.DuracaoMaximaSegurancaSegundos
+            : _parametros.DuracaoEpisodioSegundos;
+
+        if (estado.TempoDecorridoSegundos >= tetoDeTempo)
+        {
+            FinalizarEpisodio(estado);
+        }
+    }
+
+    private void SelecionarTorresParaAlvosLivresV2(EstadoEpisodio estado, ControladorHibridoV2 controlador)
+    {
+        List<AlvoTreinamento> ativos = estado.Alvos.Where(a => a.Ativo).ToList();
+
+        foreach (AlvoTreinamento alvo in ativos.Where(a => a.TorreSelecionadaId is null))
+        {
+            TorreTreinamento? torre = controlador.SelecionarTorre(alvo, estado.Torres, ativos);
+            if (torre is null) continue;
+
+            bool trocaExcessiva = _parametros.UsarFitnessV2 &&
+                torre.ContarTrocasRecentes(alvo.TempoDeVidaSegundos, _parametros.JanelaTrocaDeAlvoSegundos) >= _parametros.LimiteTrocasAntesDePenalizar;
+            if (trocaExcessiva)
+            {
+                estado.FitnessAcumulado -= _parametros.PenalidadeTrocaDeAlvoExcessiva;
+                estado.TrocasDeAlvoPenalizadas++;
+            }
+
+            torre.RegistrarNovoCompromisso(alvo.TempoDeVidaSegundos);
+            torre.AlvoComprometidoId = alvo.Id;
+            alvo.TorreSelecionadaId = torre.Id;
+            alvo.TempoDesdeSelecao = 0;
+        }
+    }
+
+    private void DecidirDisparosV2(EstadoEpisodio estado, ControladorHibridoV2 controlador)
+    {
+        foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo && a.TorreSelecionadaId is not null))
+        {
+            // Mesmos vetos inegociáveis da V1 — ver DecidirDisparos.
+            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante) continue;
+            if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao) continue;
+
+            TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
+            if (torre is null) continue;
+
+            double distanciaTorre = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
+            double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros);
+            if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao) continue;
+
+            bool passouTempoMinimoDeMira = alvo.TempoDesdeSelecao >= ControladorHibridoV2.TempoMinimoDeMiraSegundos;
+            if (passouTempoMinimoDeMira) estado.OportunidadesDeDisparo++;
+
+            (bool disparar, double prioridadeCooperacao) = controlador.DecidirDisparo(alvo, torre, estado.Torres);
+
+            if (!disparar)
+            {
+                if (passouTempoMinimoDeMira)
+                {
+                    estado.DisparosRecusadosPelaRede++;
+                    estado.FitnessAcumulado -= _parametros.PenalidadeRecusaDisparo;
+                }
+                continue;
+            }
+
+            Disparar(estado, torre, alvo);
+            if (!alvo.Ativo) continue; // abatido pela torre principal — não precisa de ajuda
+
+            // Cooperação: pede ajuda tanto pela regra de velocidade da V1 (compatibilidade com o
+            // mesmo caso tático) quanto pela saída nova "prioridade de cooperação" — qualquer uma
+            // das duas aciona a tentativa de ajuda.
+            bool pedirAjuda = alvo.VelocidadeMetrosPorSegundo >= _parametros.VelocidadeRapidaMetrosPorSegundo || prioridadeCooperacao > 0;
+            if (!pedirAjuda) continue;
+
+            // "Evite concentrar todas as torres num alvo quando outro precisa de atendimento":
+            // com UsarFitnessV2, se existe AGORA outro alvo ativo sem nenhuma torre, a cooperação
+            // é negada e penalizada — a torre de ajuda faria mais falta lá.
+            bool existeAlvoSemTorre = estado.Alvos.Any(a => a.Ativo && a.Id != alvo.Id && a.TorreSelecionadaId is null);
+            if (_parametros.UsarFitnessV2 && existeAlvoSemTorre)
+            {
+                estado.CooperacoesNegadasPorConcentracao++;
+                estado.FitnessAcumulado -= _parametros.PenalidadeCooperacaoConcentrada;
+                continue;
+            }
+
+            TorreTreinamento? ajuda = estado.Torres.FirstOrDefault(t =>
+                t.Id != torre.Id &&
+                (alvo.VisivelPorTodasAsTorres || QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante)) &&
+                DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= RaioAjudaTorreAdjacenteMetros);
+
+            if (ajuda is null) continue;
+
+            estado.CooperacoesConcedidas++;
+            Disparar(estado, ajuda, alvo);
+            RecompensarCooperacaoSeConcedida(estado, alvo, cooperacaoFoiConcedida: true);
+        }
+    }
+
+    /// <summary>Bônus de fitness (só com <see cref="ParametrosTreinamento.UsarFitnessV2"/>) quando uma cooperação concedida terminou com o alvo abatido — recompensa o RESULTADO da cooperação, não só o pedido.</summary>
+    private void RecompensarCooperacaoSeConcedida(EstadoEpisodio estado, AlvoTreinamento alvo, bool cooperacaoFoiConcedida)
+    {
+        if (!_parametros.UsarFitnessV2 || !cooperacaoFoiConcedida || alvo.Ativo) return;
+        estado.FitnessAcumulado += _parametros.RecompensaCooperacaoBemSucedida;
     }
 }
