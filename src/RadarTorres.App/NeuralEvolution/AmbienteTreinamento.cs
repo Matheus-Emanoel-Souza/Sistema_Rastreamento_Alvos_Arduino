@@ -102,12 +102,18 @@ public sealed class AmbienteTreinamento
 
         foreach (TorreTreinamento baseTorre in _torresBase)
         {
+            // Mira física inicial "voltada para fora da base" — mesma convenção do campo de
+            // visão fixo da torre (ver TreinamentoControladorViewModel.AnguloCampoDeVisaoGraus) —
+            // para não começar o episódio já com um giro grande pendente rumo ao primeiro alvo.
+            double azimuteInicial = (Math.Atan2(baseTorre.X, baseTorre.Y) * 180.0 / Math.PI + 360.0) % 360.0;
+
             estado.Torres.Add(new TorreTreinamento
             {
                 Id = baseTorre.Id,
                 X = baseTorre.X,
                 Y = baseTorre.Y,
-                QuadrantePreferido = baseTorre.QuadrantePreferido
+                QuadrantePreferido = baseTorre.QuadrantePreferido,
+                AnguloAzimuteAtualGraus = azimuteInicial
             });
         }
 
@@ -194,6 +200,7 @@ public sealed class AmbienteTreinamento
         TratarAlvosNaBase(estado);
         TratarInvasaoDeTorre(estado);
         SelecionarTorresParaAlvosLivres(estado, controlador);
+        AtualizarMiraDasTorres(estado, dt);
         DecidirDisparos(estado, controlador);
 
         estado.Alvos.RemoveAll(a => !a.Ativo);
@@ -326,6 +333,11 @@ public sealed class AmbienteTreinamento
             VelocidadeX = velocidade * Math.Cos(anguloMovimento),
             VelocidadeY = velocidade * Math.Sin(anguloMovimento),
             VelocidadeMetrosPorSegundo = velocidade,
+            // Ponto de partida da trajetória ALEATÓRIA (ver MoverAlvos) — só o sorteio padrão
+            // ganha trajetória curva; os cenários scriptados continuam em linha reta (deixam isto
+            // null, ver TalvezNascerAlvoScriptado) porque precisam continuar 100% reproduzíveis
+            // tal como documentados.
+            AnguloMovimentoRadianos = anguloMovimento,
             Quadrante = quadranteNascimento,
             // Certeza nasce baixa e SOBE com o tempo de observação (ver AlvoTreinamento.Certeza)
             // — nunca fica presa abaixo do limiar para sempre; só demora mais ou menos conforme
@@ -413,10 +425,34 @@ public sealed class AmbienteTreinamento
     private bool VisivelPorTodasAsTorres(double alturaMetros) =>
         _parametros.EixoZHabilitado && alturaMetros > _parametros.AlturaVisivelPorTodasAsTorresMetros;
 
-    private static void MoverAlvos(EstadoEpisodio estado, double dt)
+    /// <summary>
+    /// Move cada alvo ativo e, para os de trajetória ALEATÓRIA (<see cref="AlvoTreinamento.AnguloMovimentoRadianos"/>
+    /// não nulo — ver <see cref="TalvezNascerAlvo"/>), perturba a direção do movimento por um
+    /// passeio aleatório contínuo antes de deslocar: a cada passo, soma-se um desvio sorteado
+    /// dentro de ±<see cref="ParametrosTreinamento.VariacaoMaximaDirecaoGrausPorSegundo"/>·dt ao
+    /// ângulo de movimento, e <see cref="AlvoTreinamento.VelocidadeX"/>/<see cref="AlvoTreinamento.VelocidadeY"/>
+    /// são recalculadas a partir do novo ângulo — a MAGNITUDE da velocidade nunca muda, só a
+    /// direção, então os limites de <see cref="ParametrosTreinamento.VelocidadeMaximaAlvoMetrosPorSegundo"/>
+    /// continuam valendo durante toda a trajetória. Alvos scriptados (ângulo nulo) continuam em
+    /// linha reta, sem nenhuma chamada a <see cref="EstadoEpisodio.Rng"/> — determinismo total
+    /// preservado para eles.
+    /// </summary>
+    private void MoverAlvos(EstadoEpisodio estado, double dt)
     {
+        double variacaoMaximaRadianos = _parametros.VariacaoMaximaDirecaoGrausPorSegundo * Math.PI / 180.0 * dt;
+
         foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo))
         {
+            if (alvo.AnguloMovimentoRadianos is { } anguloAtual && variacaoMaximaRadianos > 0)
+            {
+                double desvio = (estado.Rng.NextDouble() * 2 - 1) * variacaoMaximaRadianos;
+                double anguloNovo = anguloAtual + desvio;
+
+                alvo.AnguloMovimentoRadianos = anguloNovo;
+                alvo.VelocidadeX = alvo.VelocidadeMetrosPorSegundo * Math.Cos(anguloNovo);
+                alvo.VelocidadeY = alvo.VelocidadeMetrosPorSegundo * Math.Sin(anguloNovo);
+            }
+
             alvo.X += alvo.VelocidadeX * dt;
             alvo.Y += alvo.VelocidadeY * dt;
             alvo.Quadrante = QuadrantHelper.Determine(alvo.X, alvo.Y);
@@ -477,7 +513,66 @@ public sealed class AmbienteTreinamento
             torre.AlvoComprometidoId = alvo.Id;
             alvo.TorreSelecionadaId = torre.Id;
             alvo.TempoDesdeSelecao = 0;
+            torre.MiraAlinhada = false; // alvo novo — a torre ainda não girou na direção dele
         }
+    }
+
+    /// <summary>
+    /// Gira a mira FÍSICA de cada torre comprometida (os dois motores de passo 28BYJ-48, azimute e
+    /// elevação) em direção ao alvo, no máximo <see cref="ParametrosTreinamento.VelocidadeAngularTorreGrausPorSegundo"/>
+    /// por eixo neste passo — é isto que modela o motor real não girar instantaneamente de um
+    /// ângulo para outro. Atualiza <see cref="TorreTreinamento.MiraAlinhada"/>, o veto inegociável
+    /// de disparo consultado por <see cref="DecidirDisparos"/>: enquanto a mira ainda não alcançou
+    /// o alvo dentro de <see cref="ParametrosTreinamento.ToleranciaMiraGraus"/>, não há disparo
+    /// possível, por mais que a heurística/rede "queiram". É aqui que nasce a situação em que o
+    /// ACOMPANHAMENTO NÃO PODE SER GARANTIDO: um alvo rápido o bastante (ou que muda de direção
+    /// rápido demais, ver <see cref="MoverAlvos"/>) pode manter a torre permanentemente atrás da
+    /// mira ideal, nunca alinhando — ele então escapa ou invade sem nunca ter sido engajado, sem
+    /// nenhum "erro" especial além do natural (ver <see cref="TratarAlvosNaBase"/>/<see cref="TratarInvasaoDeTorre"/>).
+    /// A elevação só é considerada quando <see cref="ParametrosTreinamento.EixoZHabilitado"/> está
+    /// ligado — desligado, ela fica sempre 0 e sempre alinhada, reproduzindo o comportamento
+    /// bidimensional anterior (só o azimute importa).
+    /// </summary>
+    private void AtualizarMiraDasTorres(EstadoEpisodio estado, double dt)
+    {
+        double passoMaximoGraus = _parametros.VelocidadeAngularTorreGrausPorSegundo * dt;
+
+        foreach (TorreTreinamento torre in estado.Torres.Where(t => !t.Livre))
+        {
+            AlvoTreinamento? alvo = estado.Alvos.FirstOrDefault(a => a.Id == torre.AlvoComprometidoId);
+            if (alvo is null) continue; // alvo já saiu da lista de ativos neste mesmo passo — nada a perseguir até a próxima seleção
+
+            double anguloAzimuteDesejado = (Math.Atan2(alvo.X - torre.X, alvo.Y - torre.Y) * 180.0 / Math.PI + 360.0) % 360.0;
+            torre.AnguloAzimuteAtualGraus = GirarAzimuteEmDirecaoA(torre.AnguloAzimuteAtualGraus, anguloAzimuteDesejado, passoMaximoGraus);
+            double erroAzimuteGraus = DiferencaAngularAbsoluta(torre.AnguloAzimuteAtualGraus, anguloAzimuteDesejado);
+
+            double erroElevacaoGraus = 0.0;
+            if (_parametros.EixoZHabilitado)
+            {
+                double distanciaHorizontal = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
+                double anguloElevacaoDesejado = Math.Atan2(alvo.AlturaMetros, Math.Max(distanciaHorizontal, 0.01)) * 180.0 / Math.PI;
+                double passo = Math.Clamp(anguloElevacaoDesejado - torre.AnguloElevacaoAtualGraus, -passoMaximoGraus, passoMaximoGraus);
+                torre.AnguloElevacaoAtualGraus += passo;
+                erroElevacaoGraus = Math.Abs(anguloElevacaoDesejado - torre.AnguloElevacaoAtualGraus);
+            }
+
+            torre.MiraAlinhada = erroAzimuteGraus <= _parametros.ToleranciaMiraGraus && erroElevacaoGraus <= _parametros.ToleranciaMiraGraus;
+        }
+    }
+
+    /// <summary>Gira <paramref name="atualGraus"/> até <paramref name="desejadoGraus"/> pelo caminho mais curto (considera o wraparound 0°/360°), sem passar de <paramref name="passoMaximoGraus"/> neste passo.</summary>
+    private static double GirarAzimuteEmDirecaoA(double atualGraus, double desejadoGraus, double passoMaximoGraus)
+    {
+        double diferenca = ((desejadoGraus - atualGraus + 540.0) % 360.0) - 180.0; // normaliza para (-180, 180]
+        double passo = Math.Clamp(diferenca, -passoMaximoGraus, passoMaximoGraus);
+        return (atualGraus + passo + 360.0) % 360.0;
+    }
+
+    /// <summary>Menor diferença angular (sempre ≥ 0, considera o wraparound 0°/360°) entre dois ângulos em graus.</summary>
+    private static double DiferencaAngularAbsoluta(double aGraus, double bGraus)
+    {
+        double diferenca = Math.Abs(aGraus - bGraus) % 360.0;
+        return diferenca > 180.0 ? 360.0 - diferenca : diferenca;
     }
 
     /// <summary>Regra 6 (ajuda de torre adjacente): mesmo raio usado em produção (ver <see cref="Services.TowerSelectionService"/>).</summary>
@@ -492,18 +587,22 @@ public sealed class AmbienteTreinamento
             // estado.ZonaMortaForcadaQuadrante soma mais um quadrante só para este episódio (ver
             // CatalogoCenarios.AlvoEmZonaMorta), sem alterar a configuração global do ambiente.
             if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante) continue;
-            // Curto-circuito: Certeza bruta é limite superior de CertezaEfetiva (ver
-            // AlvoTreinamento.CertezaEfetiva), então se já está abaixo do limiar aqui, não há
-            // necessidade de calcular a distância até a torre para confirmar o mesmo resultado.
-            if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao) continue;
 
             TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
             if (torre is null) continue;
 
-            // Certeza EFETIVA (não a bruta): alvo perto demais da torre não conta o tempo de
-            // observação como confirmação de verdade, igual à limitação real da câmera.
+            // Veto físico: os motores de passo ainda não giraram até o alvo (ver
+            // AtualizarMiraDasTorres) — sem isto um alvo rápido demais seria "abatido" por uma
+            // torre que, fisicamente, ainda estaria apontando para outro lugar.
+            if (!torre.MiraAlinhada) continue;
+
+            // Certeza EFETIVA (não a bruta): dentro do alcance de confirmação garantida (ver
+            // AlvoTreinamento.CertezaEfetiva) a certeza bruta deixa de ser teto — um alvo recém-
+            // nascido (certeza bruta baixa) mas já a 1,2 m da torre é confirmado a 100% mesmo
+            // assim, então o antigo atalho "certeza bruta abaixo do limiar dispensa calcular a
+            // distância" não vale mais: a distância precisa ser calculada sempre.
             double distanciaTorre = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
-            double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros);
+            double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros, _parametros.DistanciaCertezaMaximaMetros);
             if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao) continue;
 
             // Só conta "oportunidade" DEPOIS do tempo mínimo de mira já ter passado (veto

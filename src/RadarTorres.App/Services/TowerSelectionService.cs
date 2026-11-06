@@ -42,8 +42,8 @@ namespace RadarTorres.App.Services;
 /// </remarks>
 public sealed class TowerSelectionService : ITowerSelectionService
 {
-    /// <summary>Mesmo padrão usado como velocidade máxima no ambiente de treinamento (ver <see cref="ParametrosTreinamento"/>) — só normaliza a entrada da rede.</summary>
-    private const double VelocidadeMaximaAlvoMetrosPorSegundo = 2.5;
+    /// <summary>Mesmo padrão usado como velocidade máxima no ambiente de treinamento (ver <see cref="ParametrosTreinamento.VelocidadeMaximaAlvoDerivadaMetrosPorSegundo"/>, derivado da velocidade angular dos motores de passo da torre) — só normaliza a entrada da rede.</summary>
+    private const double VelocidadeMaximaAlvoMetrosPorSegundo = ParametrosTreinamento.VelocidadeMaximaAlvoDerivadaMetrosPorSegundo;
 
     /// <summary>Mesmo padrão usado como tempo de detecção relevante no ambiente de treinamento (<see cref="ParametrosTreinamento.TempoDeteccaoRelevanteSegundos"/>) — só normaliza a entrada da rede.</summary>
     private const double TempoDeteccaoRelevanteSegundos = 3.0;

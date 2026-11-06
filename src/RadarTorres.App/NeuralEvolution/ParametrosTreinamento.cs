@@ -9,10 +9,32 @@ public sealed record ParametrosTreinamento
     public double RaioMundoMetros { get; init; } = 10.0;
     public double DistanciaEngajamentoMetros { get; init; } = 3.0;
     public double VelocidadeMinimaAlvoMetrosPorSegundo { get; init; } = 0.5;
-    public double VelocidadeMaximaAlvoMetrosPorSegundo { get; init; } = 2.5;
+
+    /// <summary>
+    /// Velocidade MÁXIMA (m/s) que um alvo pode ter — derivada da velocidade angular da torre
+    /// (<see cref="VelocidadeAngularTorreGrausPorSegundo"/>), não escolhida à parte: um alvo mais
+    /// rápido que isto pode, em tese, exigir giro mais rápido do que o motor de passo consegue
+    /// entregar (ver a dedução completa em <see cref="VelocidadeMaximaAlvoDerivadaMetrosPorSegundo"/>).
+    /// Mantido como propriedade própria (em vez de só usar a derivada direto) porque é um parâmetro
+    /// de MUNDO (afeta o sorteio de nascimento) e precisa continuar ajustável/registrável como os
+    /// demais — o valor de fábrica é a derivada calculada com os parâmetros de fábrica.
+    /// </summary>
+    public double VelocidadeMaximaAlvoMetrosPorSegundo { get; init; } = VelocidadeMaximaAlvoDerivadaMetrosPorSegundo;
+
     public double DuracaoEpisodioSegundos { get; init; } = 45.0;
     public double IntervaloSpawnMinSegundos { get; init; } = 1.5;
     public double IntervaloSpawnMaxSegundos { get; init; } = 4.0;
+
+    /// <summary>
+    /// Variação máxima de direção (°/s) aplicada à trajetória de um alvo nascido pelo sorteio
+    /// padrão (não pelos cenários scriptados — ver <see cref="AlvoTreinamento.AnguloMovimentoRadianos"/>)
+    /// — a cada passo a direção do movimento é perturbada por um valor sorteado dentro de
+    /// ±<see cref="VariacaoMaximaDirecaoGrausPorSegundo"/>·dt, um passeio aleatório (random walk)
+    /// contínuo em vez do desvio fixo sorteado só uma vez no nascimento (comportamento anterior).
+    /// Reproduzível: usa o <see cref="EstadoEpisodio.Rng"/> do episódio, igual a todo o resto do
+    /// sorteio — a MESMA seed sempre produz a MESMA sequência de curvas.
+    /// </summary>
+    public double VariacaoMaximaDirecaoGrausPorSegundo { get; init; } = 15.0;
 
     /// <summary>Intervalo mínimo de nascimento no FIM do episódio — <see cref="IntervaloSpawnMinSegundos"/> é o do início; a interpolação linear entre os dois ao longo de <see cref="DuracaoEpisodioSegundos"/> é a escalada de dificuldade (mais alvos quanto mais o episódio avança), ver <see cref="AmbienteTreinamento"/>.</summary>
     public double IntervaloSpawnMinFinalSegundos { get; init; } = 0.6;
@@ -53,6 +75,65 @@ public sealed record ParametrosTreinamento
     /// <see cref="AmbienteTreinamento.DecidirDisparos"/>).
     /// </remarks>
     public double AlturaVisivelPorTodasAsTorresMetros { get; init; } = 0.5;
+
+    // ---------------------------------------------------------------------------------------
+    // Velocidade angular da torre (motor de passo) — base física de VelocidadeMaximaAlvoMetrosPorSegundo
+    // acima e de ToleranciaMiraGraus abaixo. Premissas documentadas aqui porque são elas que
+    // justificam os números, não os números em si.
+    //
+    // HARDWARE: cada torre de decisão tem DOIS motores de passo 28BYJ-48 (um por eixo — azimute e
+    // elevação), cada um com seu driver ULN2003 (ver Projeto_Fisico/Eletronica/Diagrama_Eletrico.md).
+    // Datasheet do 28BYJ-48: engrenagem de redução ~1:64, 2048 passos por volta do eixo de saída
+    // em modo meio-passo (mesma convenção já usada pelo motor de varredura central deste projeto —
+    // ver Arduino/RadarTorres_Firmware/RadarTorres_Firmware.ino, SWEEP_STEPS_POR_VOLTA).
+    //
+    // VELOCIDADE ESCOLHIDA: 15 RPM — o EXTREMO INFERIOR da faixa 15-60 RPM, de propósito. O
+    // 28BYJ-48 com driver ULN2003 entrega torque suficiente para girar com carga (o canhão/câmera
+    // da torre) de forma confiável só na faixa baixa dessa janela; velocidades mais altas (até 60
+    // RPM) só são alcançáveis sem carga ou com menos torque de retenção — sem ensaio de torque real
+    // da torre montada, 15 RPM é a escolha defensável (não otimista) e documentada aqui como
+    // premissa explícita, não medição.
+    // ---------------------------------------------------------------------------------------
+
+    /// <summary>Velocidade de operação assumida para os dois motores de passo 28BYJ-48 da torre — ver a nota acima. Dentro da faixa 15-60 RPM informada; escolhido o piso (mais conservador/confiável sob carga).</summary>
+    public const double VelocidadeAngularTorreRpm = 15.0;
+
+    /// <summary>Mesma velocidade acima, convertida para °/s (15 RPM × 360°/60s) — é a unidade usada para limitar o movimento simulado da torre nos dois eixos (ver <see cref="TorreTreinamento.AnguloAzimuteAtualGraus"/>/<see cref="TorreTreinamento.AnguloElevacaoAtualGraus"/> e <see cref="AmbienteTreinamento.AtualizarMiraDasTorres"/>).</summary>
+    public const double VelocidadeAngularTorreGrausPorSegundoPadrao = VelocidadeAngularTorreRpm / 60.0 * 360.0;
+
+    /// <summary>Velocidade angular (°/s) que os DOIS eixos da torre (azimute e elevação) conseguem girar — mesmo valor para os dois, já que são o mesmo modelo de motor.</summary>
+    public double VelocidadeAngularTorreGrausPorSegundo { get; init; } = VelocidadeAngularTorreGrausPorSegundoPadrao;
+
+    /// <summary>
+    /// Diferença angular (°), em QUALQUER eixo, abaixo da qual a mira é considerada "alcançada" e o
+    /// disparo passa a ser fisicamente possível — motor de passo real nunca para EXATAMENTE no
+    /// ângulo-alvo (resolução finita de passo); esta tolerância absorve isso. Veto inegociável de
+    /// disparo (ver <see cref="TorreTreinamento.MiraAlinhada"/>), igual em espírito a zona morta e
+    /// certeza mínima.
+    /// </summary>
+    public double ToleranciaMiraGraus { get; init; } = 3.0;
+
+    /// <summary>
+    /// Dedução de <see cref="VelocidadeMaximaAlvoMetrosPorSegundo"/> a partir da velocidade angular
+    /// da torre: para a torre conseguir acompanhar um alvo que se move tangencialmente (pior caso —
+    /// movimento perpendicular à linha de visão, que exige a MAIOR velocidade angular para uma
+    /// dada velocidade linear) a uma distância crítica <c>r</c>, a velocidade angular necessária é
+    /// <c>ω = v / r</c>; isolando <c>v</c>: <c>v_max = ω_torre · r_critico</c>. Usa
+    /// <see cref="DistanciaMinimaBoaCertezaMetrosPadrao"/> (2 m) como <c>r_critico</c> — a distância
+    /// mais exigente em que o sistema ainda precisa confirmar/acompanhar com margem (mais perto que
+    /// isso, ver a regra de certeza garantida em <see cref="AlvoTreinamento.CertezaEfetiva"/>, onde
+    /// a torre já está em alcance de confirmação e girar um pouco mais devagar não compromete tanto
+    /// a decisão). Um fator de margem de 70% é aplicado por cima do limite teórico — folga para o
+    /// atraso de aceleração do motor (ele não atinge a velocidade máxima instantaneamente) e para o
+    /// tempo de reação do resto do sistema (seleção de torre, processamento de imagem).
+    /// </summary>
+    /// <remarks>
+    /// Resultado: 15 RPM = 90 °/s = π/2 rad/s; r_critico = 2 m ⇒ v_max teórico ≈ 3,14 m/s;
+    /// com a margem de 70% ⇒ ≈ 2,2 m/s. Documentado como constante calculada (não um número
+    /// "chutado") para a premissa inteira ficar auditável a partir daqui.
+    /// </remarks>
+    public const double VelocidadeMaximaAlvoDerivadaMetrosPorSegundo =
+        0.7 * (VelocidadeAngularTorreGrausPorSegundoPadrao * System.Math.PI / 180.0) * DistanciaMinimaBoaCertezaMetrosPadrao;
 
     public double RecompensaAbate { get; init; } = 10.0;
     public double PenalidadeEscape { get; init; } = 8.0;
@@ -101,8 +182,21 @@ public sealed record ParametrosTreinamento
     /// <summary>Certeza mínima (0 a 1) para autorizar disparo — equivalente a <see cref="Configuration.ConfiguracoesAplicativo.LimiarConfiancaDisparoPercentual"/>, mas em fração.</summary>
     public double LimiarConfiancaDisparoFracao { get; init; } = 0.70;
 
-    /// <summary>Distância (m) da torre abaixo da qual a câmera não consegue mais confirmar o alvo com boa certeza (alvo perto demais da lente) — ver <see cref="AlvoTreinamento.CertezaEfetiva"/>.</summary>
-    public double DistanciaMinimaBoaCertezaMetros { get; init; } = 2.0;
+    /// <summary>Valor de fábrica de <see cref="DistanciaMinimaBoaCertezaMetros"/> — <c>const</c> para poder entrar na dedução de <see cref="VelocidadeMaximaAlvoDerivadaMetrosPorSegundo"/> (que precisa de uma constante em tempo de compilação).</summary>
+    public const double DistanciaMinimaBoaCertezaMetrosPadrao = 2.0;
+
+    /// <summary>Distância (m) da torre abaixo da qual a câmera não consegue mais confirmar o alvo com boa certeza (alvo perto demais da lente) — ver <see cref="AlvoTreinamento.CertezaEfetiva"/>. Acima de <see cref="DistanciaCertezaMaximaMetros"/> esta regra nem chega a valer (ver lá).</summary>
+    public double DistanciaMinimaBoaCertezaMetros { get; init; } = DistanciaMinimaBoaCertezaMetrosPadrao;
+
+    /// <summary>Valor de fábrica de <see cref="DistanciaCertezaMaximaMetros"/>.</summary>
+    public const double DistanciaCertezaMaximaMetrosPadrao = 1.2;
+
+    /// <summary>
+    /// Distância (m) da torre até a qual o alvo é confirmado com 100% de certeza, independente de
+    /// <see cref="AlvoTreinamento.Certeza"/> — ver a dedução completa e a descontinuidade proposital
+    /// com <see cref="DistanciaMinimaBoaCertezaMetros"/> em <see cref="AlvoTreinamento.CertezaEfetiva"/>.
+    /// </summary>
+    public double DistanciaCertezaMaximaMetros { get; init; } = DistanciaCertezaMaximaMetrosPadrao;
 
     /// <summary>Quadrantes tratados como zona morta neste episódio — vazio por padrão (nenhuma restrição). Espelha <see cref="Services.IZonaMortaService"/> do sistema real, só que fixo por episódio em vez de configurável em tela.</summary>
     public IReadOnlySet<Quadrant> ZonasMortasQuadrantes { get; init; } = new HashSet<Quadrant>();

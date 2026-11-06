@@ -157,13 +157,18 @@ public static class SerialProtocolParser
         $"FIRE;TOWER={towerId};TARGET={targetId}";
 
     /// <summary>
-    /// Comando que reposiciona fisicamente (eixo PAN) a torre indicada para o ângulo informado —
-    /// mesma convenção de bússola de <c>TARGET.ANGLE</c> (0°-360°, 0°=Norte, sentido horário).
-    /// Enviado pelo <see cref="Services.TowerSelectionService"/> sempre que uma torre é designada
-    /// para um alvo, inclusive quando está cobrindo um alvo de outro quadrante.
+    /// Comando que reposiciona fisicamente os DOIS eixos da torre indicada — azimute (PAN, mesma
+    /// convenção de bússola de <c>TARGET.ANGLE</c>, 0°-360°, 0°=Norte, sentido horário) e elevação
+    /// (TILT, 0°=nível do horizonte) — para os ângulos informados. Cada eixo é um motor de passo
+    /// 28BYJ-48 próprio (ver Projeto_Fisico/Eletronica/Diagrama_Eletrico.md). Enviado pelo
+    /// <see cref="Services.TowerSelectionService"/> sempre que uma torre é designada para um alvo,
+    /// inclusive quando está cobrindo um alvo de outro quadrante. <paramref name="tiltAngleDegrees"/>
+    /// é sempre 0 na produção atual (ver <see cref="Models.Tower.TiltAngleDegrees"/>) — o campo
+    /// existe no protocolo para o firmware já aceitar um valor real assim que a detecção de altura
+    /// existir.
     /// </summary>
-    public static string BuildAim(int towerId, double angleDegrees) =>
-        $"AIM;TOWER={towerId};ANGLE={angleDegrees.ToString("0.0", CultureInfo.InvariantCulture)}";
+    public static string BuildAim(int towerId, double angleDegrees, double tiltAngleDegrees = 0.0) =>
+        $"AIM;TOWER={towerId};ANGLE={angleDegrees.ToString("0.0", CultureInfo.InvariantCulture)};TILT={tiltAngleDegrees.ToString("0.0", CultureInfo.InvariantCulture)}";
 
     /// <summary>
     /// Rede neural embutida no Arduino (diagnóstico, nunca aciona nada — ver

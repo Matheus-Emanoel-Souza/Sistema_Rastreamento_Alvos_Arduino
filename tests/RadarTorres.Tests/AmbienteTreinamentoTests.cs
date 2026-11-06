@@ -95,4 +95,42 @@ public sealed class AmbienteTreinamentoTests
 
         Assert.Equal(mediaEsperada, mediaObtida, precision: 10);
     }
+
+    /// <summary>Mesma trajetória, mas trocando só a seed: o passeio aleatório tem que divergir (prova de que a perturbação realmente usa o Rng do episódio, não é um ruído descartado). A reprodutibilidade da MESMA seed já é coberta por <see cref="ExecutarEpisodioRapido_ComMesmaSeed_EDeterministico"/>, que agora também passa pela trajetória aleatória.</summary>
+    [Fact]
+    public void MoverAlvos_TrajetoriaAleatoria_SeedsDiferentesProduzemTrajetoriasDiferentes()
+    {
+        var parametros = new ParametrosTreinamento { VariacaoMaximaDirecaoGrausPorSegundo = 60.0 };
+        var ambiente = new AmbienteTreinamento(parametros, SemTorresConfiguradas);
+
+        EstadoEpisodio estadoA = ambiente.NovoEpisodio(seed: 1);
+        EstadoEpisodio estadoB = ambiente.NovoEpisodio(seed: 2);
+
+        for (int i = 0; i < 25; i++)
+        {
+            ambiente.Avancar(estadoA, new ControladorHibrido(RedesDeTeste.Zerada(), parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo), 0.2);
+            ambiente.Avancar(estadoB, new ControladorHibrido(RedesDeTeste.Zerada(), parametros.RaioMundoMetros, parametros.VelocidadeMaximaAlvoMetrosPorSegundo), 0.2);
+        }
+
+        Assert.NotEmpty(estadoA.Alvos);
+        Assert.NotEmpty(estadoB.Alvos);
+        Assert.NotEqual(estadoA.Alvos[0].X, estadoB.Alvos[0].X);
+    }
+
+    /// <summary>
+    /// Veto físico novo (ver TorreTreinamento.MiraAlinhada/AmbienteTreinamento.AtualizarMiraDasTorres):
+    /// com velocidade angular ZERO, a torre nunca sai do ângulo inicial — então nunca alinha, nunca
+    /// dispara, e o episódio só pode terminar em escape/invasão, nunca em abate.
+    /// </summary>
+    [Fact]
+    public void AtualizarMiraDasTorres_ComVelocidadeAngularZero_TorreNuncaAlinhaENuncaAbate()
+    {
+        var parametros = new ParametrosTreinamento { VelocidadeAngularTorreGrausPorSegundo = 0.0, DuracaoEpisodioSegundos = 20 };
+        var ambiente = new AmbienteTreinamento(parametros, SemTorresConfiguradas);
+        RedeNeat redeSempreAtira = RedesDeTeste.ComPesosParaSaidas(pesoAjuste: 1.0, pesoConfianca: 1.0);
+
+        EpisodioResultado resultado = ambiente.ExecutarEpisodioRapido(redeSempreAtira, seed: 5);
+
+        Assert.Equal(0, resultado.AlvosAbatidos);
+    }
 }

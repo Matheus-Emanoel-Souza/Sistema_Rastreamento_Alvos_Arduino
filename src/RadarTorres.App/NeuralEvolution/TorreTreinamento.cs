@@ -32,4 +32,32 @@ public sealed class TorreTreinamento
 
     /// <summary>Soma do tempo (s), ao longo do episódio, em que esta torre esteve comprometida com algum alvo (<see cref="Livre"/> == false) — usada só ao fim do episódio para penalizar desequilíbrio entre torres (ver <see cref="ParametrosTreinamento.PenalidadeDesequilibrioTorresPorSegundo"/>), não influencia nenhuma decisão durante o episódio.</summary>
     public double TempoComprometidoSegundos { get; set; }
+
+    /// <summary>
+    /// Para onde a torre está FISICAMENTE apontada agora, no eixo horizontal (azimute, 0-360°,
+    /// mesma convenção de <see cref="Models.Tower.AimAngleDegrees"/>) — distinto do ângulo de
+    /// mira IDEAL (onde o alvo está agora), que a torre persegue a uma velocidade angular limitada
+    /// (ver <see cref="ParametrosTreinamento.VelocidadeAngularTorreGrausPorSegundo"/> e
+    /// <see cref="AmbienteTreinamento.AtualizarMiraDasTorres"/>) — é essa diferença que modela o
+    /// motor de passo real não girando instantaneamente. Inicializada voltada para fora da base
+    /// (mesma convenção do campo de visão fixo da torre, ver <see cref="AmbienteTreinamento"/>).
+    /// </summary>
+    public double AnguloAzimuteAtualGraus { get; set; }
+
+    /// <summary>
+    /// Para onde a torre está FISICAMENTE apontada agora, no eixo vertical (elevação, 0° = nível
+    /// do horizonte) — só muda de 0 quando <see cref="ParametrosTreinamento.EixoZHabilitado"/> está
+    /// ligado. Mesma lógica de perseguição com velocidade angular limitada do azimute, no segundo
+    /// motor de passo da torre (ver <see cref="ParametrosTreinamento.VelocidadeAngularTorreGrausPorSegundo"/>).
+    /// </summary>
+    public double AnguloElevacaoAtualGraus { get; set; }
+
+    /// <summary>
+    /// Se a mira física (<see cref="AnguloAzimuteAtualGraus"/>/<see cref="AnguloElevacaoAtualGraus"/>)
+    /// já alcançou o alvo comprometido dentro da tolerância angular (ver
+    /// <see cref="ParametrosTreinamento.ToleranciaMiraGraus"/>) — veto inegociável de disparo,
+    /// igual em espírito a zona morta/certeza mínima: a torre não dispara enquanto os motores ainda
+    /// estão girando até o alvo, por mais que a rede/heurística "queira" disparar.
+    /// </summary>
+    public bool MiraAlinhada { get; set; }
 }
