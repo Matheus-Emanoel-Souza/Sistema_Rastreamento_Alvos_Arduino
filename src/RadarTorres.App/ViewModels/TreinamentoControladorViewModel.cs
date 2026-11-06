@@ -110,6 +110,17 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private double _melhorFitnessBloco;
     private int _contagemGeracoesNoBloco;
 
+    // Acumuladores da EXECUÇÃO INTEIRA (desde o "Iniciar"/"Resetar" até agora) — diferentes de
+    // HistoricoDaSessao, que é só uma JANELA das últimas LimiteSerieDaSessao gerações (para o
+    // gráfico não crescer sem limite numa execução de horas). Os indicadores do topo da tela
+    // (Melhor fitness, Fitness médio, Taxa de abate) precisam somar TODA a execução, não só o que
+    // ainda está na janela — por isso vivem em contadores próprios, atualizados a cada geração em
+    // AplicarResultadoNaTela e zerados só em ZerarIndicadoresDaSessao (Iniciar/Resetar).
+    private double _somaFitnessMedioPonderadaExecucao;
+    private long _somaIndividuosAvaliadosExecucao;
+    private long _totalAlvosAbatidosExecucao;
+    private long _totalAlvosEscapadosExecucao;
+
     /// <summary>
     /// Liberado (sinalizado) = treino corre normalmente; limpo por <see cref="Pausar"/> = o laço
     /// (<see cref="Evoluir"/>) bloqueia antes da próxima geração até <see cref="Continuar"/>
@@ -497,6 +508,27 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private int _geracaoDoMelhorFitness;
     public int GeracaoDoMelhorFitness { get => _geracaoDoMelhorFitness; private set => SetProperty(ref _geracaoDoMelhorFitness, value); }
 
+    private double _fitnessMedioExecucao;
+    /// <summary>
+    /// Média ponderada do fitness médio de TODAS as gerações desde o início da execução — ponderada
+    /// pela quantidade de indivíduos avaliados em cada geração (<see cref="ParametrosTreinamento.TamanhoPopulacao"/>
+    /// da execução em uso), não uma média simples das médias. Diferente de <see cref="FitnessMedio"/>
+    /// (só da geração mais recente) e não derivada de <see cref="HistoricoDaSessao"/>, que é só uma
+    /// JANELA das últimas <see cref="LimiteSerieDaSessao"/> gerações — soma à parte em
+    /// <see cref="_somaFitnessMedioPonderadaExecucao"/>/<see cref="_somaIndividuosAvaliadosExecucao"/>,
+    /// atualizada a cada geração e zerada só em <see cref="ZerarIndicadoresDaSessao"/>.
+    /// </summary>
+    public double FitnessMedioExecucao { get => _fitnessMedioExecucao; private set => SetProperty(ref _fitnessMedioExecucao, value); }
+
+    private double? _taxaDeAbateExecucao;
+    /// <summary>
+    /// Total de alvos abatidos dividido pelo total de alvos finalizados (abatidos + escapados) em
+    /// TODA a execução — soma de cada episódio de verificação do campeão, geração a geração, não
+    /// só o último (ver <see cref="TaxaDeCobertura"/>, que é só do episódio mais recente). <c>null</c>
+    /// enquanto nenhum alvo tiver sido finalizado ainda nesta execução.
+    /// </summary>
+    public double? TaxaDeAbateExecucao { get => _taxaDeAbateExecucao; private set => SetProperty(ref _taxaDeAbateExecucao, value); }
+
     /// <summary>Quantas gerações entram na média móvel e na comparação "antes × agora" do fitness.</summary>
     public const int JanelaIndicadoresAprendizado = 50;
 
@@ -848,6 +880,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         FitnessMedio = 0;
         MelhorFitnessDaSessao = 0;
         GeracaoDoMelhorFitness = 0;
+        FitnessMedioExecucao = 0;
+        TaxaDeAbateExecucao = null;
         FitnessMediaMovel = 0;
         VariacaoNaJanela = null;
         GeracoesSemCampeaoNovo = 0;
@@ -878,6 +912,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _somaFitnessMedioBloco = 0;
         _melhorFitnessBloco = 0;
         _contagemGeracoesNoBloco = 0;
+        _somaFitnessMedioPonderadaExecucao = 0;
+        _somaIndividuosAvaliadosExecucao = 0;
+        _totalAlvosAbatidosExecucao = 0;
+        _totalAlvosEscapadosExecucao = 0;
         _geracoesNestaSessao = 0;
         _cronometroSessao.Reset();
 
@@ -1258,6 +1296,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             ? comportamento.DisparosRecusadosPelaRede / (double)comportamento.OportunidadesDeDisparo
             : null;
 
+        AtualizarIndicadoresDaExecucaoCompleta(resultado, comportamento);
+
         _geracoesNestaSessao++;
         TempoDecorrido = _cronometroSessao.Elapsed;
 
@@ -1273,6 +1313,31 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
                 resultado.Geracao,
                 TipoEventoTreinamento.Atencao);
         }
+    }
+
+    /// <summary>
+    /// Acumula esta geração nos contadores de EXECUÇÃO INTEIRA (ver os campos declarados logo
+    /// acima de <see cref="FitnessMedioExecucao"/>) e republica <see cref="FitnessMedioExecucao"/>
+    /// e <see cref="TaxaDeAbateExecucao"/> — diferente de <see cref="AtualizarIndicadoresDeAprendizado"/>,
+    /// que só olha a JANELA de <see cref="HistoricoDaSessao"/>. Roda na thread de UI (chamado de
+    /// dentro de <see cref="AplicarResultadoNaTela"/>).
+    /// </summary>
+    private void AtualizarIndicadoresDaExecucaoCompleta(ResultadoGeracao resultado, EpisodioResultado comportamento)
+    {
+        int populacaoDestaGeracao = Math.Max(1, _ambiente.Parametros.TamanhoPopulacao);
+
+        _somaFitnessMedioPonderadaExecucao += resultado.FitnessMedio * populacaoDestaGeracao;
+        _somaIndividuosAvaliadosExecucao += populacaoDestaGeracao;
+        FitnessMedioExecucao = _somaIndividuosAvaliadosExecucao > 0
+            ? _somaFitnessMedioPonderadaExecucao / _somaIndividuosAvaliadosExecucao
+            : 0.0;
+
+        _totalAlvosAbatidosExecucao += comportamento.AlvosAbatidos;
+        _totalAlvosEscapadosExecucao += comportamento.AlvosEscapados;
+        long totalFinalizadosExecucao = _totalAlvosAbatidosExecucao + _totalAlvosEscapadosExecucao;
+        TaxaDeAbateExecucao = totalFinalizadosExecucao > 0
+            ? _totalAlvosAbatidosExecucao / (double)totalFinalizadosExecucao
+            : null;
     }
 
     /// <summary>Para o treinamento por ter alcançado <see cref="MetaGeracoes"/> — roda na thread de UI.</summary>
