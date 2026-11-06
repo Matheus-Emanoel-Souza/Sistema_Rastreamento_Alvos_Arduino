@@ -184,13 +184,49 @@ resposta).
   evolução "descobrir" como usá-lo, além de a entrada 14 (trocas recentes) já cobrir parte dessa
   informação de forma explícita, sem precisar de memória implícita.
 
-### O que falta para uma conclusão definitiva
+### Bateria 3 — escala grande (população 60, 300 gerações, 5 repetições, 50 episódios de validação)
 
-Rodar `v2` com os parâmetros do regime histórico do projeto (`--pop=60 --ger=300 --repeticoes>=5`),
-o que não coube no orçamento desta sessão (ordem de horas, não minutos) — o comando já está pronto
-e documentado para isso. Também valeria testar um layout de mundo com mais torres por quadrante
-(onde a cooperação e a disponibilidade de torre candidata têm mais chance de importar) e os
-cenários fixos de `CatalogoCenarios` isolados um a um, em vez de só a média agregada.
+Rodada numa sessão posterior, já sob a física nova (trajetória aleatória, velocidade de alvo
+derivada do motor, certeza a 1,2 m — ver `HISTORICO_ALTERACOES.md`/commits desta branch). Levou
+195 s no total para as 15 execuções (3 variantes × 5 repetições). Comando exato na seção 5.
+
+| Variante | VAL fitness | abatidos | escapados | tiros errados | tempo resposta (s) | trocas penalizadas | cooperações conc./neg. | tempo treino (s) |
+|---|---|---|---|---|---|---|---|---|
+| V1 (referência) | 117,96 | 14,16 | 0,56 | 8,99 | 2,22 | — | — | 13,6 |
+| V2 | 102,40 | 13,50 | 0,60 | 8,44 | 2,18 | 8,41 | 0,01 / 0,00 | 12,5 |
+| V2-recorrente | 98,58 | 13,32 | 0,60 | 8,41 | 2,22 | 8,33 | 0,01 / 0,00 | 12,5 |
+
+**Leitura honesta — agora com dado suficiente para uma conclusão, não mais "falta rodar maior":**
+
+- **V1 continua abatendo mais que V2 nesta escala** (14,16 vs 13,50 vs 13,32 — V1 cerca de 5-6%
+  acima). A diferença é pequena mas CONSISTENTE nas 5 repetições (ver médias) e na mesma direção
+  da bateria pequena (seção anterior) — não é ruído que se inverteu com mais treino. **Não há, com
+  estes dados, evidência de que a V2 (entradas/saída novas, fitness revisado) melhora o resultado
+  tático em relação à V1** — ao contrário, ela fica ligeiramente atrás, possivelmente porque o
+  espaço de busca maior (15 entradas vs 7, mais os termos de fitness V2) exige mais que 300
+  gerações para a evolução explorar tão bem quanto já explora o espaço menor da V1.
+- **Cooperação deixou de ser ZERO** (0,01 em média — cerca de 1 cooperação concedida a cada ~100
+  episódios de validação) — confirma que, com a trajetória aleatória curva agora presente na
+  física, o mecanismo FUNCIONA de ponta a ponta em produção, exatamente como a seção acima previu.
+  Continua raro por ser geometricamente exigente (ver seção acima), não por estar quebrado.
+- **V2-recorrente não supera V2 acíclica** mesmo nesta escala maior — mesma leitura de antes
+  continua válida: a entrada explícita de trocas recentes (entrada 14) parece cobrir boa parte do
+  sinal que a recorrência tentaria capturar implicitamente, e/ou 300 gerações ainda não é o
+  suficiente para a evolução aprender a USAR memória de verdade.
+- **Trocas penalizadas (~8,4 por episódio) são uma penalidade ativa e não-trivial no fitness da
+  V2** — isso sozinho pode explicar parte da diferença de fitness bruto V1×V2 (lembrando que as
+  escalas de fitness NÃO são diretamente comparáveis — ver aviso acima), mas o abatidos/escapados
+  (comparável diretamente) já mostra a mesma tendência.
+
+**Conclusão prática desta revisão:** no estado atual, com os hiperparâmetros de fábrica, a V2 não
+demonstra vantagem tática sobre a V1 — demonstra, sim, que toda a instrumentação nova (cooperação,
+trocas, tempo de resposta, rede recorrente) funciona corretamente de ponta a ponta. Antes de
+considerar promover a V2 a candidata de produção, valeria: (a) tentar um teto de complexidade maior
+(a V2 tem quase o dobro de entradas da V1, pode precisar de mais conexões para equivaler), (b) mais
+gerações (600-1000) para ver se a diferença encolhe ou se estabiliza, e (c) isolar o efeito de CADA
+termo novo (rodar com só `RecompensaTempoRespostaMaximo`, só a penalidade de trocas, etc., um de
+cada vez) para saber qual está ajudando e qual está atrapalhando — agregados, o resultado líquido
+hoje é neutro-a-levemente-negativo.
 
 ## 5. Como reproduzir
 
@@ -198,7 +234,13 @@ cenários fixos de `CatalogoCenarios` isolados um a um, em vez de só a média a
 dotnet test tests/RadarTorres.Tests/RadarTorres.Tests.csproj --filter "FullyQualifiedName!~PersistenciaSqliteTests"
 
 dotnet run --project tools/RadarTorres.Experimentos -c Release -- v2 --pop=24 --ger=40 --repeticoes=3 --val=30 --teto=60 --recorrente=sim
+
+# Bateria 3 (escala grande, regime histórico do projeto) — ~195 s
+dotnet run --project tools/RadarTorres.Experimentos -c Release -- v2 --pop=60 --ger=300 --repeticoes=5 --val=50 --teto=60 --recorrente=sim
+
+# Teste de integração que comprova cooperação funcionando de ponta a ponta (sorteio aleatório, trajetória curva)
+dotnet test tests/RadarTorres.Tests/RadarTorres.Tests.csproj --filter "FullyQualifiedName~SorteioAleatorioComTrajetoriaCurva"
 ```
 
-Resultados brutos (todas as execuções, inclusive as duas baterias acima) em
+Resultados brutos (todas as execuções, inclusive as três baterias acima) em
 `tools/RadarTorres.Experimentos/Resultados/comparacao_v2.json`.
