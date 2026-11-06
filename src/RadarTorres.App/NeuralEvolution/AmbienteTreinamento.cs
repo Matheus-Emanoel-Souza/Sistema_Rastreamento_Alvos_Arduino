@@ -788,7 +788,13 @@ public sealed class AmbienteTreinamento
         return soma / Math.Max(1, total);
     }
 
-    private void AvancarV2(EstadoEpisodio estado, ControladorHibridoV2 controlador, double dt)
+    /// <summary>
+    /// Equivalente V2 de <see cref="Avancar"/> — público pela mesma razão: permite montar um
+    /// episódio com nascimentos customizados (<see cref="NovoEpisodioComSpawnsPersonalizados"/>) e
+    /// avançar passo a passo com o controlador V2, seja na tela (replay) ou em teste isolado de um
+    /// cenário específico (ex.: geometria controlada para validar a cooperação entre torres).
+    /// </summary>
+    public void AvancarV2(EstadoEpisodio estado, ControladorHibridoV2 controlador, double dt)
     {
         if (estado.Finalizado) return;
 

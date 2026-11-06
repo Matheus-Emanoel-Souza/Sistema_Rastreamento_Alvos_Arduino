@@ -158,14 +158,26 @@ resposta).
 - **"Trocas penalizadas" só existe para V2** (~5 por episódio em média) — confirma que o rastreio
   de troca de alvo por torre está de fato sendo contado e penalizado; não há como comparar com V1
   porque a V1 não tem esse conceito.
-- **Cooperação ficou em 0/0 nas duas baterias.** O layout de treino tem 4 torres, 1 por quadrante —
-  uma situação em que DUAS torres livres e vizinhas ao mesmo tempo (pré-condição da regra de
-  ajuda) é rara, e mais rara ainda dentro de episódios curtos com pouco treino. O mecanismo foi
-  testado isoladamente (`ControladorHibridoV2Tests.DecidirDisparo_DevolveAPrioridadeDeCooperacaoDaSaida3`)
-  e funciona; só não teve oportunidade de se expressar nestas execuções específicas. Para medir o
-  efeito de cooperação de verdade, valeria rodar o cenário `CatalogoCenarios.AlvoRapidoDeAltaVelocidade`
-  isoladamente (onde a regra de velocidade já força uma tentativa de ajuda) e comparar a taxa de
-  sucesso entre V1 e V2 nesse cenário específico — não foi feito aqui por tempo.
+- **Cooperação ficou em 0/0 nas duas baterias.** Investigado a fundo numa revisão posterior (ver
+  `AmbienteTreinamentoTests.DecidirDisparosV2_SorteioAleatorioComTrajetoriaCurva_ConcedeCooperacaoEmAlgumaSeed`):
+  **não é raridade por pouco treino, é geometria do layout.** Testei primeiro
+  `CatalogoCenarios.AlvoRapidoDeAltaVelocidade` isoladamente (que nasce na diagonal Q1→Q3) e depois
+  um spawn scriptado à mão cruzando perto da fronteira Q1/Q4 — as duas tentativas deram ZERO
+  cooperação em 15 episódios combinados. Motivo: no layout real (quadrado 3,5 m de lado, torres a
+  ~2,475 m do centro), QUALQUER trajetória RADIAL (linha reta) perto o bastante de uma torre
+  ADJACENTE para entrar no raio de ajuda (`RaioAjudaTorreAdjacenteMetros` = 2,0 m) passa, pela
+  simetria do quadrado, IGUALMENTE perto da torre do PRÓPRIO quadrante — e é essa torre principal
+  que perde o alinhamento primeiro (o "flyby" de perto exige mais que os 90°/s do motor — ver seção
+  2.3), nunca chega a disparar, e sem tiro perdido não há cooperação para pedir. Só com a
+  trajetória ALEATÓRIA (curva, ver `ParametrosTreinamento.VariacaoMaximaDirecaoGrausPorSegundo`,
+  não existia na época desta bateria) o caminho deixa de ser reto e a cooperação passa a disparar —
+  confirmado em pelo menos 1 de 40 seeds do sorteio aleatório no teste citado acima. Conclusão
+  prática: **a regra de ajuda de 2,0 m, herdada da V1, é quase morta neste layout de 4 torres com
+  trajetória reta** — ela só ganhou vida com a trajetória curva adicionada depois. Vale reavaliar
+  se 2,0 m é o raio certo para este layout (o ponto mais próximo possível de uma torre adjacente, a
+  partir do centro do mundo, é 2,475 m — ou seja, mesmo no melhor caso geométrico sem flyby na
+  torre principal, o raio de 2,0 m já está abaixo da distância mínima teórica ao QUADRANTE
+  adjacente, dependendo só da curva levar o alvo pra mais perto que isso).
 - **Rede recorrente (V2-recorrente) não mostrou diferença consistente** em relação à V2 acíclica
   nestas duas baterias — esperado neste orçamento: o sinal que a recorrência poderia explorar
   (memória de decisões anteriores da mesma torre) é sutil e precisa de mais gerações para a

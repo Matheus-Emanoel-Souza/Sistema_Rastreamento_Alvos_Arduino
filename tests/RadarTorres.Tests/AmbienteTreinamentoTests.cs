@@ -133,4 +133,59 @@ public sealed class AmbienteTreinamentoTests
 
         Assert.Equal(0, resultado.AlvosAbatidos);
     }
+
+    /// <summary>
+    /// Cooperação (saída 3 da V2, ver ControladorHibridoV2) de ponta a ponta, usando o sorteio
+    /// ALEATÓRIO padrão (com trajetória curva — ver <see cref="AmbienteTreinamento.MoverAlvos"/>)
+    /// em vez de um cenário scriptado em linha reta.
+    /// </summary>
+    /// <remarks>
+    /// Geometria fixa (cenários scriptados, inclusive <see cref="TipoCenarioTreinamento.AlvoRapidoDeAltaVelocidade"/>,
+    /// que nasce bem no meio do quadrante) foi tentada primeiro e descartada: num layout de torres
+    /// em QUADRADO perfeito (como o real, 3,5 m de lado), qualquer trajetória RADIAL (linha reta,
+    /// sem curva) que passe perto o bastante de uma torre ADJACENTE para entrar no raio de ajuda
+    /// (2,0 m) passa, pela simetria do quadrado, IGUALMENTE perto da torre do PRÓPRIO quadrante —
+    /// e aí é a torre principal que não consegue manter a mira (a velocidade angular exigida pelo
+    /// "flyby" de perto excede os 90°/s do motor) e nunca chega a disparar, então nunca há um tiro
+    /// perdido para pedir ajuda. Medido na prática: zero cooperações em 15 episódios scriptados
+    /// testados antes desta versão. Com trajetória curva (sorteio aleatório), o caminho não é mais
+    /// uma linha reta e pode se afastar o bastante da torre principal enquanto ainda passa perto de
+    /// uma adjacente — por isso o teste aqui usa muitas seeds do sorteio aleatório, não geometria
+    /// fixa, e verifica que a cooperação dispara em PELO MENOS UMA delas.
+    /// </remarks>
+    [Fact]
+    public void DecidirDisparosV2_SorteioAleatorioComTrajetoriaCurva_ConcedeCooperacaoEmAlgumaSeed()
+    {
+        List<TowerDefinition> torresProximas =
+        [
+            new() { Id = 1, Name = "T1", X = 1.75, Y = 1.75 },
+            new() { Id = 2, Name = "T2", X = -1.75, Y = 1.75 },
+            new() { Id = 3, Name = "T3", X = -1.75, Y = -1.75 },
+            new() { Id = 4, Name = "T4", X = 1.75, Y = -1.75 },
+        ];
+        var parametros = new ParametrosTreinamento
+        {
+            UsarFitnessV2 = true,
+            // Velocidade mínima igual à de "rápido" (regra 6): TODO alvo sorteado já aciona a
+            // tentativa de cooperação, sem depender também do sorteio de velocidade.
+            VelocidadeMinimaAlvoMetrosPorSegundo = 1.2,
+            // Curva bem mais acentuada que o padrão (15°/s) — amplia a chance de um caminho sortear
+            // exatamente o desvio que livra a torre principal e aproxima a adjacente, sem precisar
+            // rodar centenas de seeds.
+            VariacaoMaximaDirecaoGrausPorSegundo = 60.0,
+            MaxAlvosPorQuadrante = 1,
+        };
+        var ambiente = new AmbienteTreinamento(parametros, torresProximas);
+        RedeNeat redeSempreAtiraEColabora = RedesDeTeste.ComPesosParaSaidasV2(pesoAjuste: 0.0, pesoConfianca: 1.0, pesoCooperacao: 1.0);
+
+        int totalCooperacoesConcedidas = 0;
+        for (int seed = 0; seed < 40; seed++)
+        {
+            EpisodioResultado resultado = ambiente.ExecutarEpisodioRapidoV2(redeSempreAtiraEColabora, seed, TipoCenarioTreinamento.Aleatorio);
+            totalCooperacoesConcedidas += resultado.CooperacoesConcedidas;
+        }
+
+        Assert.True(totalCooperacoesConcedidas > 0,
+            "Nenhuma cooperação concedida em 40 episódios sorteados — o mecanismo de ajuda da V2 pode estar quebrado.");
+    }
 }
