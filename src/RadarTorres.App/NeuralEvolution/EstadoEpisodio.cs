@@ -37,6 +37,28 @@ public sealed class EstadoEpisodio
 
     public bool Finalizado { get; set; }
 
+    /// <summary>
+    /// Soma do tempo (s) entre a seleção de torre e o PRIMEIRO disparo contra cada alvo que chegou
+    /// a receber algum disparo — métrica de "tempo de resposta", medida em qualquer modo/versão de
+    /// controlador (ver <see cref="AlvoTreinamento.TempoDeRespostaRegistrado"/>), mas só vira termo
+    /// de fitness quando <see cref="ParametrosTreinamento.UsarFitnessV2"/> está ativo.
+    /// </summary>
+    public double SomaTemposRespostaSegundos { get; set; }
+
+    /// <summary>Quantos alvos entraram na média de <see cref="SomaTemposRespostaSegundos"/>.</summary>
+    public int ContagemTemposResposta { get; set; }
+
+    public double TempoDeRespostaMedioSegundos => ContagemTemposResposta > 0 ? SomaTemposRespostaSegundos / ContagemTemposResposta : 0.0;
+
+    /// <summary>Quantas vezes uma torre de ajuda foi concedida por cooperação (saída 3 da V2 > 0, ou velocidade alta) — ver <see cref="AmbienteTreinamento.DecidirDisparosV2"/>.</summary>
+    public int CooperacoesConcedidas { get; set; }
+
+    /// <summary>Quantas vezes a cooperação foi NEGADA porque havia outro alvo ativo sem torre nenhuma no momento — evita concentrar as torres num só alvo (só contabilizado com <see cref="ParametrosTreinamento.UsarFitnessV2"/>).</summary>
+    public int CooperacoesNegadasPorConcentracao { get; set; }
+
+    /// <summary>Quantas vezes uma torre foi penalizada por trocar de alvo demais num intervalo curto (ver <see cref="ParametrosTreinamento.LimiteTrocasAntesDePenalizar"/>) — só contabilizado com <see cref="ParametrosTreinamento.UsarFitnessV2"/>, exclusivo do controlador V2.</summary>
+    public int TrocasDeAlvoPenalizadas { get; set; }
+
     /// <summary>Instante (em <see cref="TempoDecorridoSegundos"/>) do próximo surgimento de alvo.</summary>
     public double ProximoSpawnSegundos { get; set; }
 
