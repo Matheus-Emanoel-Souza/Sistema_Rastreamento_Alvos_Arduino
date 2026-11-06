@@ -21,9 +21,22 @@ public sealed class AlvoTreinamento
     /// efeito da altura sobre a visibilidade, não um modelo de voo.
     /// </remarks>
     public double AlturaMetros { get; set; }
-    public double VelocidadeX { get; init; }
-    public double VelocidadeY { get; init; }
+    public double VelocidadeX { get; set; }
+    public double VelocidadeY { get; set; }
     public double VelocidadeMetrosPorSegundo { get; init; }
+
+    /// <summary>
+    /// Direção do movimento agora, em radianos (mesma convenção de <see cref="System.Math.Cos"/>/
+    /// <see cref="System.Math.Sin"/> usada no nascimento) — ponto de partida para a trajetória
+    /// ALEATÓRIA deste alvo: a cada passo, <see cref="AmbienteTreinamento.MoverAlvos"/> perturba
+    /// este ângulo por uma quantidade sorteada (ver <see cref="ParametrosTreinamento.VariacaoMaximaDirecaoGrausPorSegundo"/>)
+    /// e recalcula <see cref="VelocidadeX"/>/<see cref="VelocidadeY"/> a partir dele — a
+    /// MAGNITUDE da velocidade (<see cref="VelocidadeMetrosPorSegundo"/>) nunca muda, só a
+    /// direção. <see langword="null"/> para alvos de cenário scriptado (ver
+    /// <see cref="AmbienteTreinamento.TalvezNascerAlvoScriptado"/>), que continuam em linha reta
+    /// de propósito — a trajetória aleatória só se aplica ao sorteio padrão.
+    /// </summary>
+    public double? AnguloMovimentoRadianos { get; set; }
 
     /// <summary>
     /// Se este alvo está alto o bastante para ser enxergado por TODAS as torres, e não apenas
@@ -87,15 +100,34 @@ public sealed class AlvoTreinamento
     public double Certeza => System.Math.Clamp(CertezaBase + TaxaCrescimentoCertezaPorSegundo * TempoDeVidaSegundos, 0.0, 1.0);
 
     /// <summary>
-    /// Certeza usada para AUTORIZAR disparo: <see cref="Certeza"/> penalizada quando o alvo está
-    /// mais perto da torre do que <paramref name="distanciaMinimaBoaCertezaMetros"/> — câmera real
-    /// não consegue confirmar bem um alvo muito próximo da lente, então tempo de observação sozinho
-    /// não deveria compensar isso (ver <see cref="ParametrosTreinamento.DistanciaMinimaBoaCertezaMetros"/>).
-    /// A penalização é proporcional (não um corte abrupto): a 1m de uma mínima de 2m, por exemplo,
-    /// a certeza já cai pela metade.
+    /// Certeza usada para AUTORIZAR disparo. Duas regras de distância, aplicadas nesta ordem:
+    /// <list type="number">
+    /// <item>
+    /// Alcance de confirmação garantida (<paramref name="distanciaCertezaMaximaMetros"/>, padrão
+    /// <see cref="ParametrosTreinamento.DistanciaCertezaMaximaMetros"/> = 1,2 m): a essa distância
+    /// ou mais perto, a torre enxerga o alvo bem o bastante para confirmar com 100% de certeza,
+    /// não importa quanto tempo ele já está sendo observado — <see cref="Certeza"/> é ignorada.
+    /// </item>
+    /// <item>
+    /// Fora desse alcance, <see cref="Certeza"/> é penalizada quando o alvo está mais perto da
+    /// torre do que <paramref name="distanciaMinimaBoaCertezaMetros"/> (ver
+    /// <see cref="ParametrosTreinamento.DistanciaMinimaBoaCertezaMetros"/>) — câmera num meio-termo
+    /// de distância perde definição e tempo de observação sozinho não deveria compensar isso. A
+    /// penalização é proporcional (não um corte abrupto): a 1m de uma mínima de 2m, por exemplo, a
+    /// certeza já cai pela metade.
+    /// </item>
+    /// </list>
+    /// As duas regras coexistem de propósito — descrevem câmeras/situações diferentes (confirmação
+    /// de perto vs. perda de definição a meia distância) — então HÁ uma descontinuidade proposital
+    /// bem no limite de <paramref name="distanciaCertezaMaximaMetros"/>: um passo antes dele a
+    /// certeza é 100% garantida; um passo depois, volta a valer só a penalização proporcional
+    /// (que pode ser bem menor que 100%). Não é um bug de suavização pendente — é a regra tal como
+    /// especificada: "até 1,2 m, certeza 100%", sem transição gradual declarada para além disso.
     /// </summary>
-    public double CertezaEfetiva(double distanciaAteTorreMetros, double distanciaMinimaBoaCertezaMetros)
+    public double CertezaEfetiva(double distanciaAteTorreMetros, double distanciaMinimaBoaCertezaMetros, double distanciaCertezaMaximaMetros = ParametrosTreinamento.DistanciaCertezaMaximaMetrosPadrao)
     {
+        if (distanciaAteTorreMetros <= distanciaCertezaMaximaMetros) return 1.0;
+
         if (distanciaMinimaBoaCertezaMetros <= 0) return Certeza;
 
         double fatorDistancia = System.Math.Clamp(distanciaAteTorreMetros / distanciaMinimaBoaCertezaMetros, 0.0, 1.0);
