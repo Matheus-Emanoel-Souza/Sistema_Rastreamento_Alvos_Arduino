@@ -5,13 +5,14 @@
 ' complementando o Diagrama de Implantação (Software/UML/Implantacao_RadarTorres.puml)
 ' e o protocolo serial (Software/Integracoes/COMUNICACAO_ARDUINO.md).
 '
-' Hardware real (extraído de Arduino/RadarTorres_Firmware/RadarTorres_Firmware.ino em 2026-10-26,
-' substitui a topologia Uno/1 servo/1 sensor confirmada com o autor em 2026-09-19):
-'   - Placa: Arduino MEGA 2560 (ATmega2560, lógica 5V) — 13 motores de passo não cabem no Uno
+' Hardware real (extraído de Arduino/RadarTorres_Firmware/RadarTorres_Firmware.ino, última
+' atualização: torres ganharam eixo de tilt, 28BYJ-48 no lugar do NEMA17 — ver
+' Diagrama_Eletrico.md para a nota de rastreabilidade completa):
+'   - Placa: Arduino MEGA 2560 (ATmega2560, lógica 5V) — 17 motores de passo não cabem no Uno
 '   - Varredura central: 1x motor 28BYJ-48 + driver ULN2003
 '   - Detecção de distância: 2x sensor ultrassônico HC-SR04, opostos 180° no eixo de varredura
 '   - Mira das câmeras: 8x motor NEMA17 + driver A4988/DRV8825 (pan+tilt, CAM1-CAM4)
-'   - Mira das torres: 4x motor NEMA17 + driver A4988/DRV8825 (pan, Q1-Q4)
+'   - Mira das torres: 8x motor 28BYJ-48 + driver ULN2003 (pan+tilt, Q1-Q4) — 15 RPM/eixo
 '   - Sem indicador luminoso dedicado: torre selecionada e disparo só via protocolo serial
 '
 ' Este diagrama é funcional (mostra QUAIS sinais ligam a QUAIS pinos), não um esquemático
@@ -45,7 +46,7 @@ rectangle "Arduino MEGA 2560" as MEGA {
   rectangle "D22-D25" as P_SWEEP
   rectangle "D26-D29" as P_US
   rectangle "D36-D51" as P_CAM
-  rectangle "D2-D9" as P_TORRE
+  rectangle "D10-D21, D30-D35,\nA0-A15" as P_TORRE
   rectangle "D52\n(ENABLE)" as P_EN
 }
 
@@ -54,7 +55,7 @@ rectangle "HC-SR04 #1" as US1 <<todo>>
 rectangle "HC-SR04 #2\n(oposto 180°)" as US2 <<todo>>
 
 rectangle "8x NEMA17 + A4988/DRV8825\n(pan+tilt CAM1-CAM4)" as CAMS <<todo>>
-rectangle "4x NEMA17 + A4988/DRV8825\n(pan Torre Q1-Q4)" as TORRES <<todo>>
+rectangle "8x 28BYJ-48 + ULN2003\n(pan+tilt Torre Q1-Q4)" as TORRES <<todo>>
 
 PC -down-> MEGA #black;line.bold : USB\n(5V + serial 9600 baud,\nprotocolo TIPO;CHAVE=VALOR)
 
@@ -65,9 +66,8 @@ P_US -down-> US1 #0000AA : Trig/Echo
 P_US -down-> US2 #0000AA : Trig/Echo
 
 P_CAM -down-> CAMS #0000AA : 8x STEP+DIR
-P_TORRE -down-> TORRES #0000AA : 4x STEP+DIR
+P_TORRE -down-> TORRES #0000AA : 8x 4 fios (IN1-IN4)
 P_EN .down. CAMS : habilita (LOW)
-P_EN .down. TORRES : habilita (LOW)
 
 note right of SWEEP
   28BYJ-48 tolera 5V direto do driver ULN2003, mas

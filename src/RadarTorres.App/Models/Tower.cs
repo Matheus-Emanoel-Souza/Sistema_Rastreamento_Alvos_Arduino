@@ -15,6 +15,7 @@ public class Tower : INotifyPropertyChanged
     private bool _isAvailable = true;
     private double _distanceToTarget;
     private double _aimAngleDegrees;
+    private double _tiltAngleDegrees;
 
     /// <summary>Identificador único da torre.</summary>
     public int Id { get; init; }
@@ -70,6 +71,23 @@ public class Tower : INotifyPropertyChanged
     {
         get => _aimAngleDegrees;
         set => SetField(ref _aimAngleDegrees, value);
+    }
+
+    /// <summary>
+    /// Ângulo de elevação (eixo TILT, 0° = nível do horizonte) — segundo motor de passo 28BYJ-48
+    /// da torre (ver Projeto_Fisico/Eletronica/Diagrama_Eletrico.md). Enviado ao firmware junto do
+    /// azimute (ver <see cref="Services.SerialProtocolParser.BuildAim"/>), mas SEMPRE 0 por
+    /// enquanto: o sistema de detecção de produção não estima altura/elevação real do alvo (só
+    /// <see cref="Target.X"/>/<see cref="Target.Y"/> em 2D — ver <see cref="Target"/>), diferente do
+    /// ambiente de treinamento neuroevolutivo, que tem essa informação só como experimento (eixo Z
+    /// opcional, ver <see cref="NeuralEvolution.ParametrosTreinamento.EixoZHabilitado"/>). Existe
+    /// aqui (e no protocolo) para o hardware de dois eixos já ter onde receber um valor real assim
+    /// que a detecção de altura existir de verdade — até lá, a torre fica nivelada.
+    /// </summary>
+    public double TiltAngleDegrees
+    {
+        get => _tiltAngleDegrees;
+        set => SetField(ref _tiltAngleDegrees, value);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

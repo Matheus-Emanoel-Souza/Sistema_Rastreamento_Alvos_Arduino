@@ -70,13 +70,6 @@
             <Setter Property="Margin" Value="0,8,0,2"/>
         </Style>
 
-        <Style x:Key="RegraTexto" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,0,0,6"/>
-        </Style>
-
         <!-- Cabeçalho de seção recolhível (accordion) — Button em vez de Expander: mesmo padrão
              já usado nesta tela para o histórico de gerações (ver BotaoMinimizarMaximizarHistorico_Click),
              com controle total do estilo (o Expander nativo do WPF não segue o tema sem um
@@ -750,15 +743,6 @@
                                         <TextBlock Grid.Column="0" Text="{Binding Nome}" Style="{StaticResource MetricaRotulo}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Valor}" Style="{StaticResource MetricaValor}"/>
                                     </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <TextBlock Text="REGRAS QUE A REDE ESTÁ APRENDENDO" Style="{StaticResource CardTitle}" FontSize="12" Margin="0,12,0,4"/>
-                        <ItemsControl ItemsSource="{Binding RegrasAprendidas}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}" Style="{StaticResource RegraTexto}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

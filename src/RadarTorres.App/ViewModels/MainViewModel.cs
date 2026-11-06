@@ -761,9 +761,10 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
             {
                 _logger.Info($"Torre {result.SelectedTower!.Name} selecionada para o alvo #{target.Id:D2}");
 
-                // Reposiciona fisicamente (pan) a torre escolhida para encarar o alvo — inclusive
-                // quando ela está cobrindo um alvo de outro quadrante (adjacente ou sobressalente).
-                _ = SendCommandSafeAsync(SerialProtocolParser.BuildAim(result.SelectedTower!.Id, result.SelectedTower.AimAngleDegrees));
+                // Reposiciona fisicamente (pan + tilt) a torre escolhida para encarar o alvo —
+                // inclusive quando ela está cobrindo um alvo de outro quadrante (adjacente ou
+                // sobressalente). TiltAngleDegrees é sempre 0 por enquanto (ver Tower.TiltAngleDegrees).
+                _ = SendCommandSafeAsync(SerialProtocolParser.BuildAim(result.SelectedTower!.Id, result.SelectedTower.AimAngleDegrees, result.SelectedTower.TiltAngleDegrees));
             }
 
             if (CurrentMode == SystemMode.Disparar && result.Success)

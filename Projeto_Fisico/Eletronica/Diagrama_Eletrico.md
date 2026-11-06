@@ -23,10 +23,19 @@ Funcionalidade: documenta o diagrama elétrico conceitual/funcional do hardware 
 | Arduino MEGA 2560 | 1 | Microcontrolador (ATmega2560, lógica 5V) | Substituiu o Uno: 13 motores de passo não cabem nos ~20 pinos do Uno. Alimentado via USB pelo PC — mesma porta usada para o protocolo serial (`Software/Integracoes/COMUNICACAO_ARDUINO.md`) |
 | Motor de passo 28BYJ-48 + driver ULN2003 | 1 | Varredura angular em zigue-zague (0°-180°) da torre central | 4 fios (IN1-IN4), controlado via biblioteca AccelStepper (modo FULL4WIRE) |
 | Sensor ultrassônico HC-SR04 | 2 | Medem distância na posição angular atual, montados **opostos a 180° no mesmo eixo** de varredura — juntos cobrem os 360° a cada ciclo ida-e-volta | Lógica 5V — compatível direto com o MEGA, sem divisor de tensão. SENSOR=2 sempre reporta ângulo = ângulo do motor + 180° (mod 360) |
-| Motor de passo NEMA17 + driver A4988/DRV8825 | 8 | Mira (pan + tilt) das 4 câmeras CAM1-CAM4 — 2 eixos por câmera, para centralizar o alvo detectado pela visão computacional do PC | STEP+DIR por eixo; enable compartilhado com os motores de torre |
-| Motor de passo NEMA17 + driver A4988/DRV8825 | 4 | Mira (pan apenas, modelo 2D) das torres de decisão Q1-Q4 | STEP+DIR por eixo; gira a torre selecionada na direção do alvo (ver `TowerSelectionService`, lado PC) |
+| Motor de passo NEMA17 + driver A4988/DRV8825 | 8 | Mira (pan + tilt) das 4 câmeras CAM1-CAM4 — 2 eixos por câmera, para centralizar o alvo detectado pela visão computacional do PC | STEP+DIR por eixo; enable próprio (D52), não mais compartilhado com as torres (ver nota de 2026 abaixo) |
+| Motor de passo 28BYJ-48 + driver ULN2003 | 8 | Mira (pan + tilt, modelo 3D) das torres de decisão Q1-Q4 — 2 eixos por torre | 4 fios (IN1-IN4) por eixo, mesma convenção do motor de varredura central; gira a torre selecionada na direção do alvo (ver `TowerSelectionService`, lado PC). Velocidade assumida 15 RPM/eixo — ver `RadarTorres.App/NeuralEvolution/ParametrosTreinamento.cs` |
 
-Total de eixos controlados (não bloqueante, via AccelStepper): **13** (1 varredura + 8 mira de câmeras + 4 mira de torres). Sem indicador luminoso dedicado: torre selecionada e evento de disparo são só registrados via protocolo serial (ACK/STATUS).
+Total de eixos controlados (não bloqueante, via AccelStepper): **17** (1 varredura + 8 mira de câmeras + 8 mira de torres). Sem indicador luminoso dedicado: torre selecionada e evento de disparo são só registrados via protocolo serial (ACK/STATUS).
+
+> **Atualização (eixo de tilt nas torres)**: as torres de decisão passaram de 1 motor NEMA17 (só
+> pan) para 2 motores 28BYJ-48 por torre (pan + tilt) — mesmo modelo do motor de varredura central,
+> trocado por ser mais barato/simples de controlar em pares por torre e por já ter precedente de uso
+> validado no projeto. O TILT físico existe, mas o software de produção ainda não estima altura real
+> do alvo (só o ambiente de treinamento neuroevolutivo tem essa informação, como experimento opcional
+> — eixo Z); por isso o PC manda sempre `TILT=0.0` por enquanto (ver `RadarTorres.App/Models/Tower.cs`,
+> `TiltAngleDegrees`). Mudança registrada aqui por não ter sido compilada/testada em hardware real —
+> confira a pinagem (seção 2.4) antes de montar.
 
 ## 2. Pinagem (confirmada no firmware — `RadarTorres_Firmware.ino`, bloco "PINAGEM (MEGA 2560)")
 
@@ -50,7 +59,8 @@ Total de eixos controlados (não bloqueante, via AccelStepper): **13** (1 varred
 
 ### 2.3 Motores de mira das câmeras (NEMA17 + A4988/DRV8825, 8 eixos)
 
-Enable compartilhado entre os 8 drivers de câmera **e** os 4 drivers de torre: **D52** (ativo em LOW).
+Enable dos 8 drivers de câmera: **D52** (ativo em LOW). As torres (seção 2.4) não usam mais este
+pino — 28BYJ-48/ULN2003 não tem linha de enable compartilhada como os drivers STEP+DIR.
 
 | Eixo | STEP | DIR |
 |---|---|---|
@@ -63,14 +73,25 @@ Enable compartilhado entre os 8 drivers de câmera **e** os 4 drivers de torre: 
 | CAM4 — Pan | D48 | D49 |
 | CAM4 — Tilt | D50 | D51 |
 
-### 2.4 Motores de mira das torres (NEMA17 + A4988/DRV8825, 4 eixos — só pan)
+### 2.4 Motores de mira das torres (28BYJ-48 + ULN2003, 8 eixos — pan + tilt)
 
-| Eixo | STEP | DIR |
-|---|---|---|
-| Torre Q1 — Pan | D2 | D3 |
-| Torre Q2 — Pan | D4 | D5 |
-| Torre Q3 — Pan | D6 | D7 |
-| Torre Q4 — Pan | D8 | D9 |
+D2-D9 (antigo STEP+DIR das torres, modelo anterior) ficaram livres. A nova fiação usa 4 fios
+(IN1-IN4) por eixo — 32 pinos no total para os 8 eixos — ocupando os digitais livres do Mega
+(D10-D21, D30-D35) e, para as torres Q3/Q4, os pinos analógicos A0-A15 usados como digitais (uso
+padrão no Mega 2560 quando os pinos digitais acabam).
+
+| Eixo | IN1 | IN2 | IN3 | IN4 |
+|---|---|---|---|---|
+| Torre Q1 — Pan | D10 | D11 | D12 | D13 |
+| Torre Q1 — Tilt | D14 | D15 | D16 | D17 |
+| Torre Q2 — Pan | D18 | D19 | D20 | D21 |
+| Torre Q2 — Tilt | D30 | D31 | D32 | D33 |
+| Torre Q3 — Pan | A0 | A1 | A2 | A3 |
+| Torre Q3 — Tilt | A4 | A5 | A6 | A7 |
+| Torre Q4 — Pan | A8 | A9 | A10 | A11 |
+| Torre Q4 — Tilt | A12 | A13 | A14 | A15 |
+
+D34, D35 e D53 ficam livres/sobressalentes (não usados por nenhum componente desta revisão).
 
 > **A confirmar**: o firmware não declara explicitamente um pino de alimentação dedicado para os
 > drivers (VMOT dos A4988/DRV8825, tipicamente 8-35V externo, separado dos 5V lógicos do MEGA) nem a
@@ -89,8 +110,8 @@ flowchart TB
         SWEEP_PINS["D22-D25\n(varredura 28BYJ-48)"]
         US_PINS["D26-D29\n(US1/US2 Trig+Echo)"]
         CAM_PINS["D36-D51\n(8 eixos STEP+DIR\npan/tilt CAM1-CAM4)"]
-        TORRE_PINS["D2-D9\n(4 eixos STEP+DIR\npan Torre Q1-Q4)"]
-        ENABLE_PIN["D52\n(ENABLE comum\ndrivers A4988/DRV8825)"]
+        TORRE_PINS["D10-D21, D30-D35, A0-A15\n(8 eixos 4 fios\npan+tilt Torre Q1-Q4)"]
+        ENABLE_PIN["D52\n(ENABLE\ndrivers A4988/DRV8825 das câmeras)"]
     end
 
     SWEEP_PINS -- "4 fios" --> SWEEP["Motor 28BYJ-48 + ULN2003\n(varredura 0°-180°)"]
@@ -100,9 +121,8 @@ flowchart TB
     US_PINS --> US2
 
     CAM_PINS --> CAMS["8x NEMA17 + A4988/DRV8825\n(pan+tilt CAM1-CAM4)"]
-    TORRE_PINS --> TORRES["4x NEMA17 + A4988/DRV8825\n(pan Torre Q1-Q4)"]
+    TORRE_PINS --> TORRES["8x 28BYJ-48 + ULN2003\n(pan+tilt Torre Q1-Q4)"]
     ENABLE_PIN -. "habilita" .-> CAMS
-    ENABLE_PIN -. "habilita" .-> TORRES
 
     classDef todo fill:#fff3cd,stroke:#cc9900
     class CAMS,TORRES,US1,US2 todo
@@ -126,7 +146,7 @@ terminador `\n`):
 | PC → Arduino | `COLOR;STATE=VERDE\|AMARELO\|VERMELHO` | Estado operacional do semáforo de segurança (máquina de estados de 3 níveis; distinto de `MODE;DETECTION\|AUTO`) |
 | PC → Arduino | `CAM;ID=<1-4>;X=<px>;Y=<px>;Z=<cm>` | Deslocamento do alvo (X: +direita, Y: +abaixo) e distância estimada para a câmera CAM`<ID>` |
 | PC → Arduino | `CALIB;CAM=<1-4>;PASSOS_POR_PX_PAN=<float>;PASSOS_POR_PX_TILT=<float>` | Ajusta em runtime a calibração pixel→passo de uma câmera |
-| PC → Arduino | `AIM;TOWER=<1-4>;ANGLE=<0.0-360.0>` | Gira o eixo pan da torre indicada (convenção de bússola, 0°=Norte, sentido horário) |
+| PC → Arduino | `AIM;TOWER=<1-4>;ANGLE=<0.0-360.0>;TILT=<-90.0-90.0>` | Gira os eixos pan (convenção de bússola, 0°=Norte, sentido horário) e tilt (0°=nível) da torre indicada. `TILT` é opcional (ausente = 0°); o PC atual sempre manda 0° (sem detecção de altura real do alvo em produção) |
 | PC → Arduino | `FIRE;TOWER=<id>;TARGET=<id>` (reaproveitada) | Sinaliza o evento de disparo (sem LED) — só aceito com `COLOR;STATE=VERMELHO` e alvo estável |
 | PC → Arduino | `GENOMA;RESET` / `GENOMA;INDICE=<0-81>;VALOR=<float>` / `GENOMA;COMMIT` | Carrega os 82 pesos/viés da rede neural embutida (mesma ordem de `RedeNeural.cs`, lado PC) |
 | PC → Arduino | `REDE;ENTRADAS=<d>;<mesmo_quad>;<quad_adj>;<angulo>;<vel>;<tempo_deteccao>;<fator_camada>` | Pede o cálculo da rede embutida para 7 entradas |
