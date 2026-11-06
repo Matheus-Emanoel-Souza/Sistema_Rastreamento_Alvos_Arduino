@@ -184,29 +184,31 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,8,0">
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,8,0"
+                    ToolTip="Maior fitness registrado entre TODAS as gerações desde o início desta execução.">
                 <StackPanel>
                     <TextBlock Text="MELHOR FITNESS" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding MelhorFitness, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="#4ADE80"/>
+                        <TextBlock Text="{Binding MelhorFitnessDaSessao, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="#4ADE80"/>
                         <TextBlock Text="{Binding GeracaoDoMelhorFitness, StringFormat={} (ger. {0:N0})}" FontSize="10"
                                    Foreground="{DynamicResource Text.Muted}" VerticalAlignment="Bottom" Margin="4,0,0,2"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0,0,8,0">
+            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0,0,8,0"
+                    ToolTip="Média do fitness médio de TODAS as gerações desde o início desta execução, ponderada pela quantidade de indivíduos avaliados em cada geração.">
                 <StackPanel>
                     <TextBlock Text="FITNESS MÉDIO" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
-                    <TextBlock Text="{Binding FitnessMedio, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
+                    <TextBlock Text="{Binding FitnessMedioExecucao, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="3" Style="{StaticResource Card}" Margin="0,0,8,0"
-                    ToolTip="Abates sobre alvos que apareceram, no episódio de verificação do campeão atual.">
+                    ToolTip="Total de alvos abatidos dividido pelo total de alvos finalizados (abatidos + escapados) em TODA a execução.">
                 <StackPanel>
                     <TextBlock Text="TAXA DE ABATE" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,2"/>
-                    <TextBlock Text="{Binding TaxaDeCobertura, StringFormat={}{0:P0}}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
+                    <TextBlock Text="{Binding TaxaDeAbateExecucao, StringFormat={}{0:P0}}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
                 </StackPanel>
             </Border>
 
