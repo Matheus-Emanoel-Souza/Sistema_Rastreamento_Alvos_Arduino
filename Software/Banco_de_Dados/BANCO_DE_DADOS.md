@@ -349,6 +349,23 @@ Uma linha por usuário (Requisito 8) — idioma, tema, sidebar recolhida/expandi
 personalização mais granular (ordem dos cartões, colunas por tabela) ficam reservadas para a
 Etapa 2.
 
+### `rede_neural`
+Registro das versões/variações da rede neural do `ControladorHibrido` efetivamente implementadas
+ou testadas (não hipotéticas) — identificador de versão (texto, ex. `"3b"`), entradas, saídas,
+tipo de camada oculta (`Fixa`/`Variavel` — no NEAT a contagem de neurônios ocultos do campeão é
+resultado da evolução, por isso fica `NULL` quando variável), biblioteca e observações. Só
+inserção, índice único em `Versao`. Ver
+`Software/Qualidade/REDESENHO_CONTROLADOR_V2.md` seção 5 para as versões registradas e o
+raciocínio por trás de cada uma.
+
+### `experimento_rede_neural`
+Resultado REAL (nunca estimado) de uma repetição de uma bateria de treino+validação comparando
+versões de `rede_neural` — `RedeNeuralId` referencia `rede_neural.Id`. Guarda parâmetros da
+bateria (população, gerações, teto de complexidade, recorrente?) e métricas táticas de validação
+em episódios nunca vistos no treino (fitness, abatidos, escapados, tiros errados, tempo de
+resposta, trocas de alvo penalizadas, cooperações concedidas/negadas), mais `FonteDados` —
+proveniência do número, nunca deixada em branco. Só inserção.
+
 ## 5. Migração CSV → SQLite (histórico)
 
 Esta seção documenta, em retrospecto, a migração que era descrita em versões anteriores como

@@ -228,7 +228,85 @@ termo novo (rodar com só `RecompensaTempoRespostaMaximo`, só a penalidade de t
 cada vez) para saber qual está ajudando e qual está atrapalhando — agregados, o resultado líquido
 hoje é neutro-a-levemente-negativo.
 
-## 5. Como reproduzir
+## 5. Registro de versões no banco (`rede_neural` / `experimento_rede_neural`)
+
+Pedido do usuário: manter um registro, no `radartorres.db` (SQLite, mesmo banco único do app —
+ver `Software/Banco_de_Dados/BANCO_DE_DADOS.md`), de cada versão da rede do controlador e das
+baterias de comparação táticas entre elas. **Nada das seções 1-4 acima foi reimplementado para
+isto** — a auditoria desta seção confirmou que entradas, saídas, fitness revisado e recorrência já
+existiam (ver seção 2); o trabalho novo foi só registrar o que já existe e importar os números
+reais já medidos, sem rodar nenhuma bateria nova.
+
+### 5.1 Esquema
+
+Dois repositórios novos, no mesmo padrão dos demais `Sqlite*Repository` do projeto (`CREATE TABLE
+IF NOT EXISTS` + `SqliteSchema.EnsureColumn`/`EnsureIndex` para migração aditiva, sem apagar
+histórico — ver `src/RadarTorres.App/Data/SqliteSchema.cs`):
+
+- **`IRedeNeuralRepository`/`SqliteRedeNeuralRepository`** (tabela `rede_neural`): `Versao`
+  (texto, não inteiro — comporta rótulos como `"3b"`), `Nome`, `Entradas`, `Saidas`,
+  `TipoCamadaOculta` (`"Fixa"`/`"Variavel"`), `NeuroniosOcultos` (só preenchido quando a camada é
+  fixa; `NULL` quando variável — no NEAT a contagem de neurônios ocultos do campeão é RESULTADO da
+  evolução, não parâmetro de versão), `Biblioteca`, `Observacoes`. Índice único em `Versao`.
+- **`IExperimentoRedeNeuralRepository`/`SqliteExperimentoRedeNeuralRepository`** (tabela
+  `experimento_rede_neural`): uma linha por repetição de uma bateria, com `RedeNeuralId`
+  (`REFERENCES rede_neural(Id)`), os mesmos parâmetros e métricas já gravados em
+  `comparacao_v2.json` (população, gerações, teto de complexidade, recorrente?, fitness V2?,
+  fitness de treino/validação, abatidos, escapados, tiros errados, tempo de resposta, trocas
+  penalizadas, cooperações concedidas/negadas) e `FonteDados` (de onde o número real veio —
+  nenhuma linha sem proveniência rastreável).
+
+Testes em `tests/RadarTorres.Tests/RedeNeuralRepositoryTests.cs` (round-trip de campos nulos,
+unicidade de versão, vínculo experimento→rede). Suíte completa: **252/252 aprovados** (mesma
+exclusão pré-existente de `PersistenciaSqliteTests` da seção 3).
+
+### 5.2 Versões registradas
+
+| Versão | Nome | Entradas | Saídas | Camada oculta | Biblioteca |
+|---|---|---|---|---|---|
+| `1` | Reservada (a recuperar do GitHub) | — | — | — | — |
+| `2` | `ControladorHibrido` (produção atual) | 7 | 2 | Variável (NEAT) | SharpNEAT 4.1.0 |
+| `3` | `ControladorHibridoV2` (experimental, acíclica) | 15 | 3 | Variável (NEAT) | SharpNEAT 4.1.0 |
+| `3b` | `ControladorHibridoV2` (experimental, recorrente) | 15 | 3 | Variável (NEAT) | SharpNEAT 4.1.0 |
+
+A **versão 1** foi deixada com todos os campos técnicos em branco a pedido do usuário — ele vai
+recuperá-la do GitHub depois. Pela investigação desta sessão, é provavelmente a implementação
+pré-SharpNEAT (`AlgoritmoGenetico.cs`/`RedeNeural.cs`, código morto mantido como referência no
+repositório: rede feedforward fixa de 6 entradas, 1 camada de 8 neurônios, 74 pesos, GA próprio) —
+mas isso **não foi confirmado contra o código recuperado**, por isso não foi preenchido como fato.
+
+A **versão 2** é o `ControladorHibrido` descrito na seção 1 (ponto de partida desta branch, ainda
+em produção, não alterado). As **versões 3 e 3b** são o `ControladorHibridoV2` descrito na seção
+2 — a mesma classe e o mesmo contrato de entradas/saídas/fitness; `3b` existe como linha separada
+porque a variante recorrente é uma rede tecnicamente distinta (cíclica vs. acíclica — ver seção
+2.3), a pedido explícito do usuário, não por diferença de hiperparâmetro de treino.
+
+### 5.3 Experimentos importados
+
+As **32 linhas** de `tools/RadarTorres.Experimentos/Resultados/comparacao_v2.json` (as mesmas das
+baterias 1, 2, 3 e um teste de sanidade de 2 execuções, pop 24/5 gerações, da seção 4) foram
+importadas para `experimento_rede_neural`, vinculadas por `Variante`: `"V1-referencia"` → versão
+`2`, `"V2"` → versão `3`, `"V2-recorrente"` → versão `3b`. Nenhum número foi recalculado nem
+re-rodado — é a mesma fonte já publicada na seção 4, só agora também consultável via SQL/DBeaver
+em vez de só no JSON. Conferido por agregação (`AVG` por bateria) batendo exatamente com as
+tabelas da seção 4.
+
+**Limitação explícita**: `DataRegistro` em cada linha é a data da IMPORTAÇÃO para o banco (desta
+sessão), não a data em que o treino rodou de fato — a ferramenta de origem não grava isso, e não
+foi inventada uma data retroativa.
+
+### 5.4 O que não foi feito nesta etapa
+
+- Nenhuma bateria nova foi executada — decisão explícita do usuário, para não gastar tempo de
+  máquina/tokens reproduzindo o que já está medido e documentado na seção 4.
+- Não há tela no app para consultar `rede_neural`/`experimento_rede_neural` — somente banco +
+  repositórios, registrados no container de DI (`App.xaml.cs`) por consistência com os demais
+  repositórios de experimento, mas sem consumidor (ViewModel) ainda.
+- As lacunas já identificadas na seção 4 (isolar efeito de cada termo novo do fitness, teto de
+  complexidade maior para a V2, mais gerações) continuam em aberto — esta etapa não tentou
+  respondê-las, só organizou os dados já existentes.
+
+## 6. Como reproduzir
 
 ```powershell
 dotnet test tests/RadarTorres.Tests/RadarTorres.Tests.csproj --filter "FullyQualifiedName!~PersistenciaSqliteTests"

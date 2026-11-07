@@ -240,6 +240,11 @@ public partial class App : Application
         services.AddSingleton<IEventoTreinamentoRepository, SqliteEventoTreinamentoRepository>();
         services.AddSingleton<IInstantaneoComportamentoRepository, SqliteInstantaneoComportamentoRepository>();
         services.AddSingleton<IExperimentoHiperparametrosRepository, SqliteExperimentoHiperparametrosRepository>();
+        // Registro de versões da rede neural do controlador e das baterias de comparação táticas
+        // entre elas (ver Software/Qualidade/REDESENHO_CONTROLADOR_V2.md) — sem tela própria ainda,
+        // registrado aqui por consistência com os demais repositórios de experimento.
+        services.AddSingleton<IRedeNeuralRepository, SqliteRedeNeuralRepository>();
+        services.AddSingleton<IExperimentoRedeNeuralRepository, SqliteExperimentoRedeNeuralRepository>();
 
         // Singleton (não transient): a trava de execução simultânea da bateria de experimentos
         // vive na instância — ver IExecutorExperimentosHiperparametros.EmExecucao.
