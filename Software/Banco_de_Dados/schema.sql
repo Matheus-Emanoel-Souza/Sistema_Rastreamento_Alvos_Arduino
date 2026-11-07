@@ -199,3 +199,123 @@ VALUES ('Administrador', 'admin', 'N/A', 'N/A', 'Administrador', 1, datetime('no
 
 INSERT INTO preferencias_usuario (UsuarioId, Idioma, Tema, SidebarRecolhida, RegistrosPorPagina)
 VALUES (1, 'pt-BR', 'Escuro', 0, 25);
+
+-- ============================================================================
+-- Views de leitura/relatório — nenhuma delas é consumida pelo app (que faz os
+-- joins em memória no C#); existem só para facilitar consulta e auditoria via
+-- SQL Developer/DBeaver, como descrito no topo deste arquivo.
+-- ============================================================================
+
+-- Ocorrência atual de cada detecção, com a última transição registrada em
+-- ocorrencia_estados e o modo da torre vigente nesse instante (Estado ali
+-- referencia modo_atual_torre.ID_MODO, não o enum Detectado/Abatido — ver
+-- comentário da tabela).
+CREATE VIEW vw_ocorrencias_atuais AS
+SELECT
+    od.Id,
+    od.Tipo,
+    od.X, od.Y, od.Z,
+    od.Quadrante,
+    od.DataHora,
+    od.Dispositivo,
+    od.NivelConfianca,
+    od.CameraDispositivoId,
+    od.CameraNome,
+    od.RastreamentoId,
+    od.Estado                  AS EstadoAtual,
+    od.DataHoraUltimaDeteccao,
+    oe.DataHora                AS DataHoraUltimaTransicao,
+    oe.Usuario                 AS UsuarioUltimaTransicao,
+    mat.MODOATUAL               AS ModoVigenteNaTransicao,
+    oe.SessaoId                AS SessaoUltimaTransicao
+FROM objetos_detectados od
+LEFT JOIN ocorrencia_estados oe
+    ON oe.Id = (SELECT MAX(oe2.Id) FROM ocorrencia_estados oe2
+                WHERE oe2.ObjetoDetectadoId = od.Id)
+LEFT JOIN modo_atual_torre mat ON mat.ID_MODO = oe.Estado;
+
+-- Cada acionamento com o alvo, a câmera e o usuário/sessão por trás, numa
+-- linha só (hoje isso exige três consultas separadas em acoes_realizadas,
+-- objetos_detectados, cameras e sessoes_usuario).
+CREATE VIEW vw_acoes_com_contexto AS
+SELECT
+    ar.ID_ACAO,
+    ar.ID_TORRE,
+    ar.ID_OBJETO,
+    od.Tipo                AS TipoAlvo,
+    od.Quadrante,
+    ar.DH_ACAO,
+    ar.OBSERVACAO,
+    ar.CameraDispositivoId,
+    c.Nome                 AS CameraNome,
+    ar.SessaoId,
+    u.Nome                 AS UsuarioNome,
+    u.Login                AS UsuarioLogin
+FROM acoes_realizadas ar
+LEFT JOIN objetos_detectados od ON od.Id = ar.ID_OBJETO
+LEFT JOIN cameras c             ON c.DispositivoId = ar.CameraDispositivoId
+LEFT JOIN sessoes_usuario su    ON su.ID_SESSAO = ar.SessaoId
+LEFT JOIN usuarios u            ON u.Id = su.UsuarioId;
+
+-- Histórico de troca de modo da torre com nome/login do usuário em vez de só
+-- ID_USER, e a janela da sessão que confirmou a troca.
+CREATE VIEW vw_auditoria_modo_torre AS
+SELECT
+    mat.ID_MODO,
+    mat.MODOATUAL,
+    mat.MODOANTERIOR,
+    mat.ID_USER,
+    u.Nome              AS UsuarioNome,
+    u.Login             AS UsuarioLogin,
+    mat.DHALTERACAO,
+    mat.SessaoId,
+    su.DataHoraInicio   AS SessaoInicio,
+    su.DataHoraFim      AS SessaoFim
+FROM modo_atual_torre mat
+LEFT JOIN usuarios u         ON u.Id = mat.ID_USER
+LEFT JOIN sessoes_usuario su ON su.ID_SESSAO = mat.SessaoId;
+
+-- Mudanças de grau de perigosidade com o alvo e o usuário/sessão que tinha o
+-- alvo em tela no momento da mudança (classificacoes_alvo só grava quando o
+-- grau muda, não a cada leitura — ver comentário da tabela).
+CREATE VIEW vw_classificacoes_com_contexto AS
+SELECT
+    ca.Id,
+    ca.ObjetoDetectadoId,
+    od.Tipo                         AS TipoAlvo,
+    od.Quadrante,
+    ca.VelocidadeMetrosPorSegundo,
+    ca.Grau,
+    ca.DataHora,
+    ca.SessaoId,
+    u.Nome                          AS UsuarioNome,
+    u.Login                         AS UsuarioLogin
+FROM classificacoes_alvo ca
+LEFT JOIN objetos_detectados od ON od.Id = ca.ObjetoDetectadoId
+LEFT JOIN sessoes_usuario su    ON su.ID_SESSAO = ca.SessaoId
+LEFT JOIN usuarios u            ON u.Id = su.UsuarioId;
+
+-- Linha do tempo única do treinamento (neuroevolução), unindo o buffer
+-- recente (historico_treinamento_geracoes, limitado a 300 linhas) com os
+-- marcos agregados (marcos_fitness_treinamento, nunca descartados) — Origem
+-- distingue a granularidade de cada linha.
+CREATE VIEW vw_treinamento_resumo AS
+SELECT
+    'Geracao'               AS Origem,
+    GERACAO                 AS Geracao,
+    MELHOR_FITNESS          AS MelhorFitness,
+    FITNESS_MEDIO           AS FitnessMedio,
+    ALVOS_ABATIDOS          AS AlvosAbatidos,
+    ALVOS_ESCAPADOS         AS AlvosEscapados,
+    DH_REGISTRO             AS DataHora
+FROM historico_treinamento_geracoes
+UNION ALL
+SELECT
+    'Marco'                 AS Origem,
+    GeracaoMarco            AS Geracao,
+    MelhorFitnessDoBloco    AS MelhorFitness,
+    FitnessMedioDoBloco     AS FitnessMedio,
+    NULL                    AS AlvosAbatidos,
+    NULL                    AS AlvosEscapados,
+    DataHora
+FROM marcos_fitness_treinamento;
