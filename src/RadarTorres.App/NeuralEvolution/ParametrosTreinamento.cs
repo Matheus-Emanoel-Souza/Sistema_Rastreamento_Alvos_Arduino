@@ -210,7 +210,7 @@ public sealed record ParametrosTreinamento
     /// <summary>Velocidade (m/s) a partir da qual um alvo aciona ajuda de torre adjacente — mesma regra e mesmo valor de fábrica de <see cref="Configuration.ConfiguracoesAplicativo.VelocidadeRapidaMetrosPorSegundo"/> (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>).</summary>
     public double VelocidadeRapidaMetrosPorSegundo { get; init; } = 1.2;
 
-    public int TamanhoPopulacao { get; init; } = 60;
+    public int TamanhoPopulacao { get; init; } = 100;
 
     /// <summary>
     /// Probabilidade de um descendente ganhar um neurônio novo (mutação estrutural do NEAT).
@@ -218,7 +218,15 @@ public sealed record ParametrosTreinamento
     /// aqui: o SharpNEAT trata mutação de PESO e mutação de ESTRUTURA como eventos distintos, e
     /// é a segunda que define o quanto a rede pode mudar de forma ao longo da evolução.
     /// </summary>
-    public double ProbabilidadeAdicionarNo { get; init; } = 0.01;
+    /// <remarks>
+    /// Elevado de 0,01 para 0,03 em 2026-11-07: baterias V2 em escala grande (ver
+    /// <c>REDESENHO_CONTROLADOR_V2.md</c>, seção "Bateria 3") mostraram desempenho tático
+    /// levemente abaixo de V1 mesmo com 300 gerações — hipótese de que o valor de fábrica,
+    /// combinado com população pequena dividida em poucas espécies, satura a busca num ótimo
+    /// local de topologia cedo demais. Não é conclusão fechada, é tentativa de reabrir o espaço
+    /// de busca estrutural.
+    /// </remarks>
+    public double ProbabilidadeAdicionarNo { get; init; } = 0.03;
 
     /// <summary>
     /// Número de conexões a partir do qual a evolução passa a SIMPLIFICAR em vez de crescer
@@ -229,7 +237,8 @@ public sealed record ParametrosTreinamento
     public int TetoComplexidade { get; init; } = 60;
 
     /// <summary>Em quantas espécies a população é dividida. Mecanismo central do NEAT: protege uma topologia recém-criada de competir de igual para igual com redes já otimizadas antes de ter tempo de ser ajustada.</summary>
-    public int QuantidadeEspecies { get; init; } = 6;
+    /// <remarks>Elevado de 6 para 10 em 2026-11-07 junto com <see cref="TamanhoPopulacao"/> e <see cref="ProbabilidadeAdicionarNo"/> — mesma hipótese: mais espécies simultâneas sustentam diversidade de topologia por mais tempo antes de uma dominar a população.</remarks>
+    public int QuantidadeEspecies { get; init; } = 10;
 
     /// <summary>
     /// Quantos episódios independentes (seeds diferentes) são rodados e tirada a MÉDIA para
