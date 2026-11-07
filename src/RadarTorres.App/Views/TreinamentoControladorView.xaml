@@ -25,6 +25,7 @@
     <UserControl.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolParaVisibilidade"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="BoolParaVisibilidadeInvertido"/>
         <conv:TipoEventoTreinamentoToBrushConverter x:Key="TipoEventoParaCor"/>
 
         <Style x:Key="MetricaRotulo" TargetType="TextBlock">
@@ -798,12 +799,25 @@
                         <ItemsControl ItemsSource="{Binding EventosExecucao}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,0,0,5">
+                                    <Grid Margin="0,0,0,5" ToolTip="{Binding ExecucaoId, StringFormat='Sessão de treinamento: {0}'}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
+                                        <Grid.Style>
+                                            <!-- Eventos de uma sessão de treinamento ANTERIOR (ExecucaoId diferente da
+                                                 atual — ver TreinamentoControladorViewModel.CarregarEventos/Iniciar)
+                                                 ficam com opacidade reduzida, para diferenciar de relance do que
+                                                 aconteceu agora, sem precisar ler o relógio de cada linha. -->
+                                            <Style TargetType="Grid">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EhSessaoAtual}" Value="False">
+                                                        <Setter Property="Opacity" Value="0.5"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
                                         <TextBlock Grid.Column="0" Text="{Binding DataHora, StringFormat={}{0:HH:mm:ss}}"
                                                    FontSize="10" FontFamily="{DynamicResource Font.Mono}"
                                                    Foreground="{DynamicResource Text.Muted}" Margin="0,0,6,0" VerticalAlignment="Top"/>
@@ -811,8 +825,13 @@
                                                    FontFamily="{DynamicResource Font.Mono}" Foreground="{DynamicResource Text.Muted}"
                                                    Margin="0,0,6,0" VerticalAlignment="Top" MinWidth="34" TextAlignment="Right"
                                                    ToolTip="Geração em que o evento ocorreu"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Mensagem}" FontSize="11" TextWrapping="Wrap"
-                                                   Foreground="{Binding Tipo, Converter={StaticResource TipoEventoParaCor}}"/>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="{Binding Mensagem}" FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{Binding Tipo, Converter={StaticResource TipoEventoParaCor}}"/>
+                                            <TextBlock Text="sessão anterior" FontSize="9" FontStyle="Italic"
+                                                       Foreground="{DynamicResource Text.Muted}"
+                                                       Visibility="{Binding EhSessaoAtual, Converter={StaticResource BoolParaVisibilidadeInvertido}}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

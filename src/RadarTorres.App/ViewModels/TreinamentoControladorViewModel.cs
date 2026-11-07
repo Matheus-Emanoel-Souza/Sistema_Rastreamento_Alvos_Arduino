@@ -269,6 +269,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             EventosExecucao.Clear();
             foreach (EventoTreinamento evento in _eventoRepository.ObterUltimos(LimiteEventosExecucao))
             {
+                // _execucaoId já está definido aqui (inicializado no field initializer — ver
+                // declaração do campo), então compara com o Guid da sessão que esta tela abriu
+                // agora, mesmo antes de qualquer "Iniciar" ser clicado nesta sessão.
+                evento.EhSessaoAtual = evento.ExecucaoId == _execucaoId;
                 EventosExecucao.Add(evento);
             }
         }
@@ -787,6 +791,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _ambiente = new AmbienteTreinamento(parametros);
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
+        // Os eventos já na tela (desta sessão de app, de "Iniciar"s anteriores ou carregados do
+        // banco ao abrir a tela) passam a pertencer a uma execução PASSADA a partir daqui — sem
+        // isto, EhSessaoAtual ficaria com o valor computado na hora em que cada evento entrou na
+        // coleção, e não seria reavaliado quando _execucaoId muda de novo.
+        foreach (EventoTreinamento eventoAnterior in EventosExecucao) eventoAnterior.EhSessaoAtual = false;
         _execucaoId = Guid.NewGuid().ToString("N");
         _treinador = new TreinadorNeat(
             _ambiente,
@@ -1432,7 +1441,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// </remarks>
     private void RegistrarEvento(string mensagem, int? geracao, TipoEventoTreinamento tipo)
     {
-        var evento = new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo };
+        // ExecucaoId/EhSessaoAtual: todo evento registrado AGORA pertence, por definição, à
+        // sessão em curso (mesmo Guid usado em MarcoFitnessTreinamento/InstantaneoComportamento
+        // para esta execução — ver _execucaoId). Eventos de execuções passadas só chegam via
+        // CarregarEventos, que marca EhSessaoAtual comparando o ExecucaoId lido do banco.
+        var evento = new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo, ExecucaoId = _execucaoId, EhSessaoAtual = true };
 
         try
         {
