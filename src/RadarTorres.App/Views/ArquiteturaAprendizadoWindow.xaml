@@ -1,0 +1,133 @@
+<Window x:Class="RadarTorres.App.Views.ArquiteturaAprendizadoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Arquitetura e aprendizado" Height="620" Width="460"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        Background="{DynamicResource Bg.Window}"
+        Foreground="{DynamicResource Text.Primary}"
+        FontFamily="{DynamicResource Font.Body}">
+
+    <!--
+        Antes era a seção recolhível "5. ARQUITETURA E APRENDIZADO" na barra lateral da tela de
+        Treinamento do Controlador — movida para janela própria (mesmo pedido/padrão de
+        DesempenhoTreinamentoWindow, ver TreinamentoControladorView.
+        BotaoArquiteturaAprendizado_Click). Não-modal, mesma ViewModel da tela via DataContext —
+        nenhum dado novo, só outra apresentação das mesmas propriedades (EntradasDaRede,
+        SaidasDaRede, ConexoesDiretasEntradaSaida, IdDoCampeao, GeracaoDeNascimentoDoCampeao,
+        FuncaoAtivacaoTexto, TopologiaTexto, Especies, ParametrosEmUso).
+    -->
+    <Window.Resources>
+        <Style x:Key="MetricaRotulo" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="MetricaValor" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Font.Mono}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="ARQUITETURA E APRENDIZADO" FontSize="16" FontWeight="Bold"
+                   Foreground="{DynamicResource Accent.Fill}" Margin="0,0,0,12"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Entradas (+ bias) / Saídas" Style="{StaticResource MetricaRotulo}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricaValor}">
+                        <Run Text="{Binding EntradasDaRede, Mode=OneWay}"/><Run Text=" + 1 / "/><Run Text="{Binding SaidasDaRede, Mode=OneWay}"/>
+                    </TextBlock>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Conexões diretas entrada→saída" Style="{StaticResource MetricaRotulo}"
+                               ToolTip="Conexões que pulam os ocultos — comuns no NEAT, impossíveis na rede em camadas anterior."/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ConexoesDiretasEntradaSaida, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Genoma / nascimento" Style="{StaticResource MetricaRotulo}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource MetricaValor}">
+                        <Run Text="{Binding IdDoCampeao, StringFormat={}#{0}, Mode=OneWay}"/>
+                        <Run Text="{Binding GeracaoDeNascimentoDoCampeao, StringFormat={} · ger. {0:N0}, Mode=OneWay}"/>
+                    </TextBlock>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Ativação" Style="{StaticResource MetricaRotulo}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding FuncaoAtivacaoTexto}" Style="{StaticResource MetricaValor}"/>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Topologia" Style="{StaticResource MetricaRotulo}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TopologiaTexto}" Style="{StaticResource MetricaValor}"/>
+                </Grid>
+
+                <TextBlock Text="ESPÉCIES DA POPULAÇÃO" Style="{StaticResource CardTitle}" FontSize="12" Margin="0,12,0,4"/>
+                <ItemsControl ItemsSource="{Binding Especies}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,4" ToolTip="{Binding DescricaoCompleta}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Rotulo}" Style="{StaticResource MetricaRotulo}"
+                                           FontFamily="{DynamicResource Font.Mono}" Foreground="{Binding Cor}"/>
+                                <Rectangle Grid.Column="1" Height="10" HorizontalAlignment="Left" RadiusX="2" RadiusY="2"
+                                           Width="{Binding LarguraBarraPx}" Fill="{Binding Cor}" Opacity="0.75"/>
+                                <TextBlock Grid.Column="2" Style="{StaticResource MetricaValor}">
+                                    <Run Text="{Binding Tamanho, Mode=OneWay}"/>
+                                    <Run Text="{Binding FitnessMedio, StringFormat={} · {0:0.0}, Mode=OneWay}"/>
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="PARÂMETROS EM USO" Style="{StaticResource CardTitle}" FontSize="12" Margin="0,12,0,4"/>
+                <ItemsControl ItemsSource="{Binding ParametrosEmUso}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,3" ToolTip="{Binding Explicacao}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Nome}" Style="{StaticResource MetricaRotulo}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Valor}" Style="{StaticResource MetricaValor}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Fechar" IsCancel="True" Click="BotaoFechar_Click" Padding="12,7"
+                    Background="{DynamicResource Border.Control}" Foreground="{DynamicResource Text.Primary}"
+                    BorderThickness="0" Cursor="Hand"/>
+        </StackPanel>
+    </Grid>
+</Window>
