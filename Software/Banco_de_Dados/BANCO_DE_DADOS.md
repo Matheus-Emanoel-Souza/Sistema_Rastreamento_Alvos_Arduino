@@ -366,7 +366,21 @@ em episódios nunca vistos no treino (fitness, abatidos, escapados, tiros errado
 resposta, trocas de alvo penalizadas, cooperações concedidas/negadas), mais `FonteDados` —
 proveniência do número, nunca deixada em branco. Só inserção.
 
-## 5. Migração CSV → SQLite (histórico)
+## 5. Views de leitura (`schema.sql`)
+
+Cinco views, só no schema acadêmico/idealizado (`schema.sql`, mesma ressalva do fim de §1): não são
+criadas pelo app nem usadas por nenhum `Sqlite*Repository` (que já faz os joins em memória no C#) —
+existem só para facilitar consulta/auditoria em ferramentas de modelagem (SQL Developer, DBeaver).
+
+| View | Tabelas combinadas | Para que serve |
+|---|---|---|
+| `vw_ocorrencias_atuais` | `objetos_detectados` + última linha de `ocorrencia_estados` + `modo_atual_torre` | Estado atual de cada ocorrência com a última transição e o modo da torre vigente nesse instante (`ocorrencia_estados.Estado` referencia `modo_atual_torre.ID_MODO`, não o enum Detectado/Abatido — ver §4 `ocorrencia_estados`). |
+| `vw_acoes_com_contexto` | `acoes_realizadas` + `objetos_detectados` + `cameras` + `sessoes_usuario` + `usuarios` | Cada acionamento com o alvo, a câmera e o nome/login do usuário por trás, numa linha só. |
+| `vw_auditoria_modo_torre` | `modo_atual_torre` + `usuarios` + `sessoes_usuario` | Histórico de troca de modo com nome/login em vez de só `ID_USER`, e a janela da sessão que confirmou a troca. |
+| `vw_classificacoes_com_contexto` | `classificacoes_alvo` + `objetos_detectados` + `sessoes_usuario` + `usuarios` | Mudanças de grau de perigosidade (§4 `classificacoes_alvo`) com o alvo e o operador que estava com ele em tela. |
+| `vw_treinamento_resumo` | `UNION ALL` de `historico_treinamento_geracoes` e `marcos_fitness_treinamento` | Linha do tempo única do treinamento, com coluna `Origem` (`Geracao` ou `Marco`) distinguindo o buffer recente (limitado a 300 linhas) dos marcos agregados (nunca descartados). |
+
+## 6. Migração CSV → SQLite (histórico)
 
 Esta seção documenta, em retrospecto, a migração que era descrita em versões anteriores como
 "proposta futura" e que **já foi concluída**. O modelo de dados em si não mudou de estrutura entre
