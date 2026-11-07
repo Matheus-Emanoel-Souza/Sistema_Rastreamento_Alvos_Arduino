@@ -140,6 +140,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// 1000...) colidiam no índice único da tabela e o INSERT falhava ("UNIQUE constraint failed").
     /// </summary>
     private string _execucaoId = Guid.NewGuid().ToString("N");
+
+    /// <summary>
+    /// Momento em que a execução atual começou — usado só para derivar <see cref="CodigoSessaoTexto"/>
+    /// (identificador curto exibido na tela). Sempre reatribuído junto de <see cref="_execucaoId"/>
+    /// (mesmo "nascimento" de sessão), nunca lido sozinho para outra finalidade — o cronômetro da
+    /// sessão (<see cref="TempoDecorrido"/>) é medido por <see cref="_cronometroSessao"/>, não por
+    /// este campo.
+    /// </summary>
+    private DateTime _inicioExecucao = DateTime.Now;
+
     private CancellationTokenSource? _cts;
     private Task? _tarefaTreinamento;
 
@@ -660,6 +670,18 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     public string TempoDecorridoTexto => TempoDecorrido.ToString(TempoDecorrido.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
 
+    /// <summary>
+    /// Código curto (5 dígitos) da sessão de treinamento atual, para exibição — distinto do
+    /// <see cref="_execucaoId"/> interno (Guid usado para vincular dados no banco), que é longo
+    /// demais para mostrar na tela. Combina a DATA (dígito das unidades do dia do mês) com o
+    /// HORÁRIO de início (hora e minuto, sempre 2 dígitos cada): dia 7 às 14:37 vira "71437". Não
+    /// é garantidamente único entre todas as sessões já rodadas (só entre sessões do MESMO dia do
+    /// mês no mesmo minuto) — é um identificador de leitura rápida para diferenciar "esta sessão"
+    /// de "uma sessão anterior" na tela, não uma chave de banco (essa continua sendo
+    /// <see cref="_execucaoId"/>, ver <see cref="EventoTreinamento.ExecucaoId"/>).
+    /// </summary>
+    public string CodigoSessaoTexto => $"{_inicioExecucao.Day % 10}{_inicioExecucao:HHmm}";
+
     /// <summary>Gerações por minuto medidas no relógio de parede — complementa <see cref="AvaliacoesPorSegundo"/>, que é a vazão interna do framework.</summary>
     public double GeracoesPorMinuto =>
         TempoDecorrido.TotalMinutes > 0 ? _geracoesNestaSessao / TempoDecorrido.TotalMinutes : 0.0;
@@ -797,6 +819,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         // coleção, e não seria reavaliado quando _execucaoId muda de novo.
         foreach (EventoTreinamento eventoAnterior in EventosExecucao) eventoAnterior.EhSessaoAtual = false;
         _execucaoId = Guid.NewGuid().ToString("N");
+        _inicioExecucao = DateTime.Now;
+        OnPropertyChanged(nameof(CodigoSessaoTexto));
         _treinador = new TreinadorNeat(
             _ambiente,
             tamanhoPopulacao: parametros.TamanhoPopulacao,
