@@ -155,7 +155,20 @@
 
         <!-- ============================== TÍTULO ============================== -->
         <StackPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock Text="TREINAMENTO DO CONTROLADOR (NEAT)" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="TREINAMENTO DO CONTROLADOR (NEAT)" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
+                <!-- Código curto de identificação da sessão em curso (ver
+                     TreinamentoControladorViewModel.CodigoSessaoTexto) — distingue "esta sessão"
+                     de uma sessão anterior sem precisar expor o Guid interno (ExecucaoId), que é
+                     longo demais para mostrar aqui. Muda a cada "Iniciar". -->
+                <Border Background="{DynamicResource Bg.Card}" CornerRadius="12" Padding="10,4"
+                        Margin="12,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Código curto desta sessão de treinamento (dígito do dia + hora:minuto em que foi iniciada) — diferencia os eventos/dados desta execução dos de execuções anteriores.">
+                    <TextBlock FontFamily="{DynamicResource Font.Mono}" FontSize="12" Foreground="{DynamicResource Text.Secondary}">
+                        <Run Text="Sessão #"/><Run Text="{Binding CodigoSessaoTexto, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
             <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
                        Text="Evolução da topologia e dos pesos da rede neural com heurística de cooperação entre torres. Acompanhe a simulação, a topologia do genoma e a evolução do desempenho em tempo real."/>
         </StackPanel>
