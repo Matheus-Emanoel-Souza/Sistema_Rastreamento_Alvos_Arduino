@@ -241,6 +241,12 @@ public sealed class ShellViewModel : ViewModelBase, IDisposable
         // TreinamentoControladorView.BotaoEstatisticasEAnalises_Click), num painel modal com
         // abas (Visão geral / Experimentos / Marcos) em vez de tela própria.
         (MenuItem.Configuracoes, "Sidebar.Configuracoes", "Icon.Configuracoes", null),
+
+        // Grupo novo: gráficos montados pelo usuário sobre dados já persistidos pelo app (ver
+        // DashboardsView/IFontesDeDadosDashboardService) — distinto de "Estatísticas de
+        // Treinamento" (fixo, só sobre o treinamento) por deixar o usuário escolher fonte/eixo/
+        // métrica livremente, inclusive cruzando experimentos.
+        (MenuItem.Dashboards, "Sidebar.Dashboards", "Icon.Dashboards", "Sidebar.Group.Dados"),
     ];
 
     private void RebuildMenu()

@@ -86,6 +86,16 @@
         <RectangleGeometry Rect="16,3,4,18" RadiusX="1" RadiusY="1"/>
     </GeometryGroup>
 
+    <!-- Grade 2x2 (dashboard clássico) — distinto do Icon.EstatisticasTreinamento (barras), que é
+         especificamente sobre a evolução do treinamento; este é sobre QUALQUER dado montado em
+         gráfico pelo usuário. -->
+    <GeometryGroup x:Key="Icon.Dashboards">
+        <RectangleGeometry Rect="3,3,8,8" RadiusX="1.5" RadiusY="1.5"/>
+        <RectangleGeometry Rect="13,3,8,8" RadiusX="1.5" RadiusY="1.5"/>
+        <RectangleGeometry Rect="3,13,8,8" RadiusX="1.5" RadiusY="1.5"/>
+        <RectangleGeometry Rect="13,13,8,8" RadiusX="1.5" RadiusY="1.5"/>
+    </GeometryGroup>
+
     <GeometryGroup x:Key="Icon.Configuracoes">
         <EllipseGeometry Center="12,12" RadiusX="3" RadiusY="3"/>
         <PathGeometry Figures="M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M5,5 L7,7 M17,17 L19,19 M19,5 L17,7 M7,17 L5,19"/>

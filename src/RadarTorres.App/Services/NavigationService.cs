@@ -43,6 +43,7 @@ public sealed class NavigationService : INavigationService
             [MenuItem.Configuracoes] = () => _serviceProvider.GetRequiredService<ConfiguracoesView>(),
             [MenuItem.TreinamentoControlador] = () => _serviceProvider.GetRequiredService<TreinamentoControladorView>(),
             [MenuItem.EstatisticasTreinamento] = () => _serviceProvider.GetRequiredService<EstatisticasTreinamentoView>(),
+            [MenuItem.Dashboards] = () => _serviceProvider.GetRequiredService<DashboardsView>(),
         };
     }
 

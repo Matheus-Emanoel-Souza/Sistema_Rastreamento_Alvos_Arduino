@@ -117,6 +117,18 @@ public sealed class SegurancaAcessoTests
         Assert.Null(navegacao.UltimoItemNavegado);
     }
 
+    [Fact]
+    public void Visualizador_NaoConsegueNavegarParaDashboards()
+    {
+        var visualizador = new Usuario { Id = 4, Nome = "Visualizador", Login = "visualizador2", Perfil = PerfilUsuario.Visualizador, Ativo = true };
+        var auth = new AuthServiceStub(visualizador);
+        ShellViewModel shell = CriarShell(auth, out NavigationServiceEspiao navegacao);
+
+        shell.NavigateCommand.Execute(MenuItem.Dashboards);
+
+        Assert.Null(navegacao.UltimoItemNavegado);
+    }
+
     // ---------------------------------------------------------------- Regra de permissão isolada (PermissionService)
 
     [Theory]
@@ -127,6 +139,16 @@ public sealed class SegurancaAcessoTests
     {
         var permissao = new PermissionService();
         Assert.Equal(esperado, permissao.PodeVerMenu(perfil, MenuItem.Usuarios));
+    }
+
+    [Theory]
+    [InlineData(PerfilUsuario.Administrador, true)]
+    [InlineData(PerfilUsuario.Operador, false)]
+    [InlineData(PerfilUsuario.Visualizador, false)]
+    public void PodeVerMenu_TelaDeDashboards_SomenteAdministrador(PerfilUsuario perfil, bool esperado)
+    {
+        var permissao = new PermissionService();
+        Assert.Equal(esperado, permissao.PodeVerMenu(perfil, MenuItem.Dashboards));
     }
 }
 

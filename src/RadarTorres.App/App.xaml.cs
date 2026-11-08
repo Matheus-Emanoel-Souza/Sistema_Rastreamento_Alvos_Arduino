@@ -321,6 +321,13 @@ public partial class App : Application
         services.AddTransient<EstatisticasAnaliseWindow>();
         services.AddTransient<Func<EstatisticasAnaliseWindow>>(sp => () => sp.GetRequiredService<EstatisticasAnaliseWindow>());
 
+        // Tela "Dashboards" (seção "Dados"): gráficos montados pelo usuário sobre fontes de dados
+        // já existentes — ver DashboardsViewModel/IFontesDeDadosDashboardService.
+        services.AddSingleton<IDashboardGraficoRepository, SqliteDashboardGraficoRepository>();
+        services.AddSingleton<IFontesDeDadosDashboardService, FontesDeDadosDashboardService>();
+        services.AddTransient<DashboardsViewModel>();
+        services.AddScoped<DashboardsView>();
+
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginView>();
 
