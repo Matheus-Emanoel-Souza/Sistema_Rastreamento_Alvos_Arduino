@@ -366,6 +366,16 @@ em episódios nunca vistos no treino (fitness, abatidos, escapados, tiros errado
 resposta, trocas de alvo penalizadas, cooperações concedidas/negadas), mais `FonteDados` —
 proveniência do número, nunca deixada em branco. Só inserção.
 
+### `dashboard_graficos`
+Gráficos montados pelo usuário na tela "Dashboards" (seção "Dados" da barra lateral, exclusiva do
+Administrador) — qual fonte de dados (`FonteChave`, ex. `"MarcosFitness"`), qual campo vira eixo X
+(`CampoEixoXChave`) e qual vira a métrica plotada (`CampoMetricaChave`), mais o tipo de gráfico
+(`TipoGrafico`, linha ou barra) e a ordem de exibição. Não guarda os PONTOS do gráfico — esses são
+recalculados a cada abertura da tela, lendo ao vivo das tabelas de origem (`marcos_fitness_treinamento`,
+`instantaneos_comportamento_melhor_gene`, `historico_treinamento_geracoes`,
+`experimentos_hiperparametros`, `experimento_rede_neural` — ver `IFontesDeDadosDashboardService`),
+então um gráfico salvo ontem já mostra os dados de hoje sem precisar ser reconfigurado.
+
 ## 5. Views de leitura (`schema.sql`)
 
 Cinco views, só no schema acadêmico/idealizado (`schema.sql`, mesma ressalva do fim de §1): não são
