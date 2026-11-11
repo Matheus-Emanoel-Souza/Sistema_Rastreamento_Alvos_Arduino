@@ -1,0 +1,14 @@
+# Input and output node counts.
+8	2
+
+# Cyclic/acyclic indicator.
+acyclic
+
+# Connections (source target weight).
+0	10	3.103680594099644
+4	9	-3.6679893195224285
+10	9	3.6955223350852315
+
+# Activation functions (functionId functionCode).
+0	TanH
+

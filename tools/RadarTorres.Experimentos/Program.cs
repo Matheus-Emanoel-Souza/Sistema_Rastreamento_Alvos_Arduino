@@ -35,8 +35,10 @@ public static class Program
             case "ablacao": Ablacao(args); return 0;
             case "hiperparametros": Hiperparametros(); return 0;
             case "sobrevivencia": Sobrevivencia(args); return 0;
+            case "comparacao": Comparacao(args); return 0;
+            case "dificuldade": Dificuldade(args); return 0;
             default:
-                Console.WriteLine("Comandos: teto | ga | ablacao | hiperparametros | sobrevivencia");
+                Console.WriteLine("Comandos: teto | ga | ablacao | hiperparametros | sobrevivencia | comparacao | dificuldade");
                 return 1;
         }
     }
@@ -490,6 +492,222 @@ public static class Program
         string jsonPath = Path.Combine(PastaResultados(), "experimentos_hiperparametros_7entradas.json");
         File.WriteAllText(jsonPath, JsonSerializer.Serialize(resultados, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine($"JSON exportado: {jsonPath} ({resultados.Count} linhas)");
+    }
+
+    // ------------------------------------------- comparacao pareada (protocolo do artigo)
+
+    /// <summary>Primeira seed do conjunto de TESTE: acima de qualquer seed de treino (geração×1000+i, com i &lt; 12) para até 4999 gerações, e fora das seeds 90000..90049 de <see cref="RodarGa"/>, que colidem com as da geração 90.</summary>
+    private const int BaseSeedsTeste = 5_000_000;
+
+    private sealed record ResumoComparacao(
+        string Rotulo, string Modo, int Execucao, int Geracoes, double MelhorFitnessTreino, int GeracaoDoPico,
+        double SegundosTreino, int Conexoes, double Media, double Desvio, double IcInf, double IcSup,
+        double DifMediaVsHeuristica, double DifIcInf, double DifIcSup, double WilcoxonZ, double WilcoxonP,
+        int Oportunidades, int Recusados, double TaxaRecusa, double[] FitnessPorSeed);
+
+    /// <summary>
+    /// Protocolo de avaliação do artigo: treina <c>--execucoes</c> controladores independentes por
+    /// modo (Hibrido e RedePura) com os parâmetros de fábrica de <see cref="ParametrosTreinamento"/>
+    /// (os mesmos da tela de treinamento), escolhe o campeão de cada execução SÓ pelo fitness de
+    /// treino e o avalia uma única vez em <c>--teste</c> seeds reservadas (nunca usadas no treino nem
+    /// na escolha do campeão). A heurística pura é avaliada nas MESMAS seeds, o que permite teste
+    /// pareado seed a seed (Wilcoxon) e IC 95% da diferença.
+    /// </summary>
+    private static void Comparacao(string[] args)
+    {
+        int execucoes = (int)Arg(args, "execucoes", 5);
+        int geracoes = (int)Arg(args, "ger", 1000);
+        int nTeste = (int)Arg(args, "teste", 200);
+        int[] seedsTeste = Enumerable.Range(BaseSeedsTeste, nTeste).ToArray();
+
+        var parametros = new ParametrosTreinamento();
+        var ambienteTeste = new AmbienteTreinamento(parametros);
+        RedeNeat nulo = RedeNula();
+
+        double[] heur = seedsTeste
+            .Select(s => ambienteTeste.ExecutarEpisodioRapido(nulo, s, TipoCenarioTreinamento.Aleatorio, ControladorHibrido.ModoDecisao.HeuristicaPura).FitnessTotal)
+            .ToArray();
+        var resumos = new List<ResumoComparacao>
+        {
+            Resumir("heuristica", "HeuristicaPura", 0, 0, 0, 0, 0, 0, heur, heur, 0, 0)
+        };
+        Console.WriteLine($"[heuristica] media={heur.Average():0.00} desvio={Desvio(heur):0.00} (n={nTeste})");
+
+        foreach (ControladorHibrido.ModoDecisao modo in new[] { ControladorHibrido.ModoDecisao.Hibrido, ControladorHibrido.ModoDecisao.RedePura })
+        {
+            for (int e = 1; e <= execucoes; e++)
+            {
+                var ambiente = new AmbienteTreinamento(parametros);
+                var ag = new TreinadorNeat(
+                    ambiente,
+                    tamanhoPopulacao: parametros.TamanhoPopulacao,
+                    quantidadeEspecies: parametros.QuantidadeEspecies,
+                    tetoComplexidade: parametros.TetoComplexidade,
+                    probabilidadeAdicionarNo: parametros.ProbabilidadeAdicionarNo);
+
+                var cronometro = Stopwatch.StartNew();
+                double melhor = double.NegativeInfinity;
+                int geracaoPico = 0;
+                NeatGenome<double>? campeao = null;
+                for (int g = 0; g < geracoes; g++)
+                {
+                    int[] seeds = Enumerable.Range(0, parametros.EpisodiosPorAvaliacao).Select(i => ag.GeracaoAtual * 1000 + i).ToArray();
+                    ResultadoGeracao r = ag.EvoluirGeracao(seeds, null, modo);
+                    if (r.MelhorFitness > melhor)
+                    {
+                        melhor = r.MelhorFitness;
+                        geracaoPico = r.Geracao;
+                        campeao = r.MelhorGenoma;
+                    }
+                }
+                cronometro.Stop();
+
+                RedeNeat rede = campeao is null ? nulo : ag.Decodificar(campeao);
+                var fit = new double[nTeste];
+                int oportunidades = 0, recusados = 0;
+                for (int i = 0; i < nTeste; i++)
+                {
+                    EpisodioResultado res = ambienteTeste.ExecutarEpisodioRapido(rede, seedsTeste[i], TipoCenarioTreinamento.Aleatorio, modo);
+                    fit[i] = res.FitnessTotal;
+                    oportunidades += res.OportunidadesDeDisparo;
+                    recusados += res.DisparosRecusadosPelaRede;
+                }
+
+                string rotulo = $"cmp-{modo}-e{e}";
+                ResumoComparacao resumo = Resumir(rotulo, modo.ToString(), e, geracoes, melhor, geracaoPico,
+                    cronometro.Elapsed.TotalSeconds, campeao?.ConnectionGenes.Length ?? 0, fit, heur, oportunidades, recusados);
+                resumos.Add(resumo);
+                if (campeao is not null) SalvarRede(rotulo, campeao);
+                Console.WriteLine($"[{rotulo}] treino: pico={melhor:0.00} (g{geracaoPico}) {cronometro.Elapsed.TotalSeconds:0}s conexoes={resumo.Conexoes} | TESTE media={resumo.Media:0.00} IC95=[{resumo.IcInf:0.00};{resumo.IcSup:0.00}] dif vs heur={resumo.DifMediaVsHeuristica:+0.00;-0.00} [{resumo.DifIcInf:0.00};{resumo.DifIcSup:0.00}] Wilcoxon p={resumo.WilcoxonP:0.0000} recusa={resumo.TaxaRecusa:P1}");
+            }
+        }
+
+        // Comparação entre modos: média por seed sobre as execuções de cada modo, pareada por seed.
+        double[] MediaPorSeed(string m) => Enumerable.Range(0, nTeste)
+            .Select(i => resumos.Where(r => r.Modo == m).Average(r => r.FitnessPorSeed[i])).ToArray();
+        double[] hib = MediaPorSeed("Hibrido");
+        double[] pura = MediaPorSeed("RedePura");
+        var entreModos = new[]
+        {
+            Resumir("agregado-Hibrido", "Hibrido(media execucoes)", 0, geracoes, 0, 0, 0, 0, hib, heur, 0, 0),
+            Resumir("agregado-RedePura", "RedePura(media execucoes)", 0, geracoes, 0, 0, 0, 0, pura, heur, 0, 0),
+            Resumir("RedePura-vs-Hibrido", "RedePura-Hibrido", 0, geracoes, 0, 0, 0, 0, pura, hib, 0, 0),
+        };
+        resumos.AddRange(entreModos);
+        foreach (ResumoComparacao r in entreModos)
+        {
+            Console.WriteLine($"[{r.Rotulo}] media={r.Media:0.00} dif={r.DifMediaVsHeuristica:+0.00;-0.00} IC95=[{r.DifIcInf:0.00};{r.DifIcSup:0.00}] Wilcoxon z={r.WilcoxonZ:0.00} p={r.WilcoxonP:0.0000}");
+        }
+
+        string caminho = Path.Combine(PastaResultados(), "comparacao_pareada.json");
+        File.WriteAllText(caminho, JsonSerializer.Serialize(new
+        {
+            Protocolo = new
+            {
+                Execucoes = execucoes, Geracoes = geracoes, SeedsTeste = $"{BaseSeedsTeste}..{BaseSeedsTeste + nTeste - 1}",
+                parametros.TamanhoPopulacao, parametros.TetoComplexidade, parametros.ProbabilidadeAdicionarNo,
+                parametros.EpisodiosPorAvaliacao, parametros.DuracaoEpisodioSegundos, parametros.PenalidadeRecusaDisparo,
+                Maquina = Environment.MachineName, Nucleos = Environment.ProcessorCount,
+                Data = DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+            },
+            Resultados = resumos
+        }, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine($"JSON: {caminho}");
+    }
+
+    /// <summary>
+    /// Diagnóstico da grade de hiperparâmetros: mede, com um controlador FIXO (heurística pura), a
+    /// dificuldade do conjunto de seeds de cada geração (as mesmas para toda configuração da grade).
+    /// Se a geração de pico da grade coincidir com a geração de seeds mais fáceis, o "pico" mede o
+    /// sorteio de cenários, não a configuração.
+    /// </summary>
+    private static void Dificuldade(string[] args)
+    {
+        int geracoes = (int)Arg(args, "ger", 300);
+        var parametros = new ParametrosTreinamento();
+        var amb = new AmbienteTreinamento(parametros);
+        RedeNeat nulo = RedeNula();
+        var porGeracao = new List<(int Geracao, double Fitness)>();
+        for (int g = 0; g < geracoes; g++)
+        {
+            int[] seeds = Enumerable.Range(0, parametros.EpisodiosPorAvaliacao).Select(i => g * 1000 + i).ToArray();
+            porGeracao.Add((g, amb.AvaliarFitness(nulo, seeds, CatalogoCenarios.TodosComScript, ControladorHibrido.ModoDecisao.HeuristicaPura)));
+        }
+        var ordenado = porGeracao.OrderByDescending(x => x.Fitness).ToList();
+        int posicao222 = ordenado.FindIndex(x => x.Geracao == 222) + 1;
+        Console.WriteLine($"--- DIFICULDADE das seeds por geracao (heuristica pura, {geracoes} geracoes) ---");
+        Console.WriteLine($"media={porGeracao.Average(x => x.Fitness):0.00} desvio={Desvio(porGeracao.Select(x => x.Fitness).ToArray()):0.00} min={porGeracao.Min(x => x.Fitness):0.00} max={porGeracao.Max(x => x.Fitness):0.00}");
+        Console.WriteLine("5 geracoes com seeds mais faceis: " + string.Join(", ", ordenado.Take(5).Select(x => $"g{x.Geracao}={x.Fitness:0.00}")));
+        Console.WriteLine($"geracao 222: fitness={porGeracao[Math.Min(222, geracoes - 1)].Fitness:0.00}, posicao {posicao222} de {geracoes}");
+        File.WriteAllText(Path.Combine(PastaResultados(), "dificuldade_seeds_por_geracao.json"),
+            JsonSerializer.Serialize(porGeracao.Select(x => new { x.Geracao, x.Fitness }), new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private static ResumoComparacao Resumir(string rotulo, string modo, int execucao, int geracoes, double melhor, int pico,
+        double segundos, int conexoes, double[] fit, double[] referencia, int oportunidades, int recusados)
+    {
+        double[] dif = fit.Zip(referencia, (a, b) => a - b).ToArray();
+        (double icInf, double icSup) = IntervaloConfianca95(fit);
+        (double difInf, double difSup) = IntervaloConfianca95(dif);
+        (double z, double p) = Wilcoxon(dif);
+        return new ResumoComparacao(rotulo, modo, execucao, geracoes, melhor, pico, segundos, conexoes,
+            fit.Average(), Desvio(fit), icInf, icSup, dif.Average(), difInf, difSup, z, p,
+            oportunidades, recusados, oportunidades > 0 ? (double)recusados / oportunidades : 0, fit);
+    }
+
+    /// <summary>Desvio padrão amostral (n-1).</summary>
+    private static double Desvio(double[] x)
+    {
+        if (x.Length < 2) return 0;
+        double m = x.Average();
+        return Math.Sqrt(x.Sum(v => (v - m) * (v - m)) / (x.Length - 1));
+    }
+
+    /// <summary>IC 95% da média pela distribuição t (n &gt;= 30 usa 1,96).</summary>
+    private static (double, double) IntervaloConfianca95(double[] x)
+    {
+        double[] t = [12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201, 2.179, 2.160, 2.145, 2.131, 2.120, 2.110, 2.101, 2.093, 2.086, 2.080, 2.074, 2.069, 2.064, 2.060, 2.056, 2.052, 2.048, 2.045];
+        int gl = x.Length - 1;
+        if (gl < 1) return (x.Average(), x.Average());
+        double crit = gl <= t.Length ? t[gl - 1] : 1.96;
+        double meia = crit * Desvio(x) / Math.Sqrt(x.Length);
+        return (x.Average() - meia, x.Average() + meia);
+    }
+
+    /// <summary>Teste de postos sinalizados de Wilcoxon (bicaudal), aproximação normal com correção de empates e de continuidade; diferenças nulas são descartadas.</summary>
+    private static (double Z, double P) Wilcoxon(double[] dif)
+    {
+        double[] d = dif.Where(v => Math.Abs(v) > 1e-9).ToArray();
+        int n = d.Length;
+        if (n == 0) return (0, 1);
+        var ordem = d.Select((v, i) => (Abs: Math.Abs(v), I: i)).OrderBy(x => x.Abs).ToArray();
+        var postos = new double[n];
+        double correcaoEmpates = 0;
+        for (int i = 0; i < n;)
+        {
+            int j = i;
+            while (j + 1 < n && Math.Abs(ordem[j + 1].Abs - ordem[i].Abs) < 1e-9) j++;
+            double posto = (i + j + 2) / 2.0;
+            for (int k = i; k <= j; k++) postos[ordem[k].I] = posto;
+            int tamanho = j - i + 1;
+            correcaoEmpates += tamanho * tamanho * tamanho - tamanho;
+            i = j + 1;
+        }
+        double wMais = d.Select((v, i) => v > 0 ? postos[i] : 0).Sum();
+        double media = n * (n + 1) / 4.0;
+        double variancia = n * (n + 1) * (2 * n + 1) / 24.0 - correcaoEmpates / 48.0;
+        if (variancia <= 0) return (0, 1);
+        double z = (wMais - media - Math.Sign(wMais - media) * 0.5) / Math.Sqrt(variancia);
+        double p = 2 * (1 - Phi(Math.Abs(z)));
+        return (z, Math.Clamp(p, 0, 1));
+    }
+
+    /// <summary>CDF da normal padrão (Abramowitz e Stegun 7.1.26, erro &lt; 1,5e-7).</summary>
+    private static double Phi(double x)
+    {
+        double t = 1 / (1 + 0.3275911 * Math.Abs(x) / Math.Sqrt(2));
+        double erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.Exp(-x * x / 2);
+        return x >= 0 ? 0.5 * (1 + erf) : 0.5 * (1 - erf);
     }
 
     // ----------------------------------------------------------- resultados
