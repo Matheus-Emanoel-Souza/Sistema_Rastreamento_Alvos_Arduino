@@ -12,4 +12,8 @@ public sealed record EpisodioResultado(
     double TempoDeRespostaMedioSegundos = 0,
     int TrocasDeAlvoPenalizadas = 0,
     int CooperacoesConcedidas = 0,
-    int CooperacoesNegadasPorConcentracao = 0);
+    int CooperacoesNegadasPorConcentracao = 0,
+    int AlvosEscapadosPelaBase = 0,
+    int AlvosQueInvadiramTorre = 0,
+    MotivoFimEpisodio MotivoFim = MotivoFimEpisodio.AindaEmAndamento,
+    double PenalidadeSobrecargaAplicada = 0);

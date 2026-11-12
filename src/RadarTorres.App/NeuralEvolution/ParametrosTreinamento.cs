@@ -6,6 +6,19 @@ namespace RadarTorres.App.NeuralEvolution;
 /// <summary>Parâmetros ajustáveis de um episódio de treinamento — expostos na tela para o usuário experimentar.</summary>
 public sealed record ParametrosTreinamento
 {
+    /// <summary>
+    /// Identifica a versão do CÁLCULO de fitness usada por este ambiente — metadado para
+    /// relatório/análise, não afeta nenhuma conta. Bump sempre que o cálculo de fitness mudar de
+    /// forma que valores antigos deixem de ser diretamente comparáveis (ver nota de versão em
+    /// <c>Artigo/Apresentacao/ApoioDoArtigo.md</c>). "v1" é a fórmula anterior a esta revisão
+    /// (recusa de disparo contada por tick, desequilíbrio de torres por desigualdade bruta).
+    /// "v1.1" corrige: recusa de disparo contada uma vez por janela contínua de oportunidade (não
+    /// mais recontada a cada passo de 0,2s), e a penalidade de desequilíbrio passa a usar o
+    /// resíduo contra a demanda do próprio quadrante da torre em vez da desigualdade bruta entre
+    /// torres (não penaliza mais concentração de trabalho justificada pela posição dos alvos).
+    /// </summary>
+    public string VersaoFormulaFitness { get; init; } = "v1.1-recusa-por-janela-sobrecarga-por-demanda";
+
     public double RaioMundoMetros { get; init; } = 10.0;
     public double DistanciaEngajamentoMetros { get; init; } = 3.0;
     public double VelocidadeMinimaAlvoMetrosPorSegundo { get; init; } = 0.5;

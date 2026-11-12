@@ -35,6 +35,17 @@ public sealed class TorreTreinamento
     public double TempoComprometidoSegundos { get; set; }
 
     /// <summary>
+    /// Soma do tempo (s) em que existiu pelo menos um alvo ATIVO no PRÓPRIO quadrante desta torre
+    /// — proxy de demanda, independente de qual torre de fato engajou cada alvo. Usada para
+    /// distinguir "sobrecarga evitável" (torre comprometida muito mais do que a própria demanda
+    /// local justificaria) de concentração de trabalho justificada pela posição dos alvos (ver
+    /// <see cref="AmbienteTreinamento.AplicarPenalidadeDesequilibrioTorres"/>) — uma torre cujo
+    /// quadrante nasceu mais alvos tem demanda maior e, por isso, comprometimento maior sem que
+    /// isso seja, por si só, desequilíbrio evitável.
+    /// </summary>
+    public double TempoDemandaSegundos { get; set; }
+
+    /// <summary>
     /// Instante (<see cref="EstadoEpisodio.TempoDecorridoSegundos"/>) de cada novo compromisso
     /// desta torre com um alvo — usado só pelo controlador V2 (<see cref="ControladorHibridoV2"/>)
     /// para alimentar a entrada "trocas recentes de alvo" (ver <see cref="ContarTrocasRecentes"/>).

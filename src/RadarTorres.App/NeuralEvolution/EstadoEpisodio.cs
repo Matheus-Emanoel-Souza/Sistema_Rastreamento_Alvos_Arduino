@@ -19,7 +19,21 @@ public sealed class EstadoEpisodio
     public double FitnessAcumulado { get; set; }
 
     public int AlvosAbatidos { get; set; }
+
+    /// <summary>Soma de <see cref="AlvosEscapadosPelaBase"/> e <see cref="AlvosQueInvadiramTorre"/> — mantido por compatibilidade com código/telas/BD existentes que só conheciam um único contador de "fuga". Use os dois contadores específicos para diagnóstico; este aqui não diz qual dos dois motivos ocorreu.</summary>
     public int AlvosEscapados { get; set; }
+
+    /// <summary>Alvos que passaram pela base (raio de 0,4 m) sem ser abatidos — ver <see cref="AmbienteTreinamento.TratarAlvosNaBase"/>. Subconjunto de <see cref="AlvosEscapados"/>.</summary>
+    public int AlvosEscapadosPelaBase { get; set; }
+
+    /// <summary>Alvos que romperam a defesa chegando perto demais de alguma torre (ver <see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>) — sempre 0 ou 1 por episódio, já que isso encerra o episódio imediatamente. Subconjunto de <see cref="AlvosEscapados"/>.</summary>
+    public int AlvosQueInvadiramTorre { get; set; }
+
+    /// <summary>Por que o episódio terminou (ver <see cref="MotivoFimEpisodio"/>) — diagnóstico, não influencia o fitness.</summary>
+    public MotivoFimEpisodio MotivoFim { get; set; } = MotivoFimEpisodio.AindaEmAndamento;
+
+    /// <summary>Valor (positivo) efetivamente descontado do fitness pela penalidade de sobrecarga evitável ao fim do episódio — ver <see cref="AmbienteTreinamento.AplicarPenalidadeDesequilibrioTorres"/>.</summary>
+    public double PenalidadeSobrecargaAplicada { get; set; }
 
     /// <summary>Disparos autorizados pela heurística/rede que erraram por sorte (ver CalculadoraErroDisparo) — distinto de fuga (nem chegou a disparar) e de abate.</summary>
     public int TirosErrados { get; set; }

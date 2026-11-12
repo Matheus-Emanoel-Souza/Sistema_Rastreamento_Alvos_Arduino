@@ -139,7 +139,9 @@ public sealed class AmbienteTreinamento
 
         return new EpisodioResultado(
             estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
-            estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos);
+            estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos,
+            AlvosEscapadosPelaBase: estado.AlvosEscapadosPelaBase, AlvosQueInvadiramTorre: estado.AlvosQueInvadiramTorre,
+            MotivoFim: estado.MotivoFim, PenalidadeSobrecargaAplicada: estado.PenalidadeSobrecargaAplicada);
     }
 
     /// <summary>
@@ -209,50 +211,66 @@ public sealed class AmbienteTreinamento
         // (TratarInvasaoDeTorre) ou ao atingir o teto de segurança contra loop infinito.
         if (estado.TempoDecorridoSegundos >= _parametros.DuracaoMaximaSegurancaSegundos)
         {
-            FinalizarEpisodio(estado);
+            FinalizarEpisodio(estado, MotivoFimEpisodio.TetoDeSeguranca);
         }
     }
 
-    /// <summary>Única porta de saída de um episódio (fim natural por tempo OU fim antecipado por invasão de torre) — garante que a penalidade de desequilíbrio (ver <see cref="AplicarPenalidadeDesequilibrioTorres"/>) seja aplicada exatamente uma vez.</summary>
-    private void FinalizarEpisodio(EstadoEpisodio estado)
+    /// <summary>Única porta de saída de um episódio (fim natural por tempo OU fim antecipado por invasão de torre) — garante que a penalidade de sobrecarga (ver <see cref="AplicarPenalidadeDesequilibrioTorres"/>) seja aplicada exatamente uma vez, e registra o motivo do fim para diagnóstico (ver <see cref="EstadoEpisodio.MotivoFim"/>).</summary>
+    private void FinalizarEpisodio(EstadoEpisodio estado, MotivoFimEpisodio motivo)
     {
         if (estado.Finalizado) return;
 
         estado.Finalizado = true;
+        estado.MotivoFim = motivo;
         AplicarPenalidadeDesequilibrioTorres(estado);
     }
 
-    /// <summary>Soma, a cada passo, o tempo em que cada torre esteve ocupada — ver <see cref="TorreTreinamento.TempoComprometidoSegundos"/>.</summary>
+    /// <summary>Soma, a cada passo, o tempo em que cada torre esteve ocupada (<see cref="TorreTreinamento.TempoComprometidoSegundos"/>) e o tempo em que havia demanda no PRÓPRIO quadrante dela (<see cref="TorreTreinamento.TempoDemandaSegundos"/>), independente de qual torre engajou — a segunda é o que permite distinguir sobrecarga EVITÁVEL de concentração justificada pela posição dos alvos (ver <see cref="AplicarPenalidadeDesequilibrioTorres"/>).</summary>
     private static void AcumularTempoComprometido(EstadoEpisodio estado, double dt)
     {
         foreach (TorreTreinamento torre in estado.Torres.Where(t => !t.Livre))
         {
             torre.TempoComprometidoSegundos += dt;
         }
+
+        foreach (TorreTreinamento torre in estado.Torres)
+        {
+            bool haDemandaNoProprioQuadrante = estado.Alvos.Any(a => a.Ativo && a.Quadrante == torre.QuadrantePreferido);
+            if (haDemandaNoProprioQuadrante) torre.TempoDemandaSegundos += dt;
+        }
     }
 
     /// <summary>
-    /// Penaliza, ao fim do episódio, a desigualdade de uso entre as torres — um desvio padrão
-    /// alto significa que uma torre carregou praticamente tudo enquanto outra ficou ociosa,
-    /// indicando má gestão de recursos mesmo que o total de abates tenha sido bom (ver
-    /// <see cref="ParametrosTreinamento.PenalidadeDesequilibrioTorresPorSegundo"/>).
+    /// Penaliza, ao fim do episódio, a SOBRECARGA EVITÁVEL entre torres: o quanto o tempo
+    /// comprometido de cada torre se desvia do que a demanda do PRÓPRIO quadrante dela (ver
+    /// <see cref="TorreTreinamento.TempoDemandaSegundos"/>) justificaria — não mais a desigualdade
+    /// bruta entre torres. Uma torre cujo quadrante recebeu mais alvos tem demanda maior e, por
+    /// isso, comprometimento maior sem que isso seja, por si só, desequilíbrio evitável; só o
+    /// RESÍDUO (comprometida muito além — ou muito aquém — do que a própria demanda pedia) é
+    /// penalizado (ver <see cref="ParametrosTreinamento.PenalidadeDesequilibrioTorresPorSegundo"/>).
     /// </summary>
     private void AplicarPenalidadeDesequilibrioTorres(EstadoEpisodio estado)
     {
         if (estado.Torres.Count == 0) return;
 
-        double media = estado.Torres.Average(t => t.TempoComprometidoSegundos);
-        double variancia = estado.Torres.Sum(t => Math.Pow(t.TempoComprometidoSegundos - media, 2)) / estado.Torres.Count;
+        double[] residuos = estado.Torres.Select(t => t.TempoComprometidoSegundos - t.TempoDemandaSegundos).ToArray();
+        double media = residuos.Average();
+        double variancia = residuos.Sum(r => Math.Pow(r - media, 2)) / residuos.Length;
         double desvioPadrao = Math.Sqrt(variancia);
 
-        estado.FitnessAcumulado -= desvioPadrao * _parametros.PenalidadeDesequilibrioTorresPorSegundo;
+        double penalidade = desvioPadrao * _parametros.PenalidadeDesequilibrioTorresPorSegundo;
+        estado.FitnessAcumulado -= penalidade;
+        estado.PenalidadeSobrecargaAplicada = penalidade;
     }
 
     /// <summary>
     /// Alvo ainda ativo que chega perto demais de QUALQUER torre rompe a defesa — diferente da
     /// fuga pela base (<see cref="TratarAlvosNaBase"/>, que só penaliza): aqui o episódio acaba
     /// ali mesmo, descartando qualquer pontuação futura possível (ver
-    /// <see cref="ParametrosTreinamento.DistanciaInvasaoTorreMetros"/>).
+    /// <see cref="ParametrosTreinamento.DistanciaInvasaoTorreMetros"/>). Contabilizado em
+    /// <see cref="EstadoEpisodio.AlvosQueInvadiramTorre"/>, separado de
+    /// <see cref="EstadoEpisodio.AlvosEscapadosPelaBase"/> — os dois incrementam também o total
+    /// combinado <see cref="EstadoEpisodio.AlvosEscapados"/>, mantido por compatibilidade.
     /// </summary>
     private void TratarInvasaoDeTorre(EstadoEpisodio estado)
     {
@@ -264,9 +282,10 @@ public sealed class AmbienteTreinamento
 
             alvo.Ativo = false;
             estado.AlvosEscapados++;
+            estado.AlvosQueInvadiramTorre++;
             estado.FitnessAcumulado -= _parametros.PenalidadeInvasaoTorre;
             LiberarTorreDe(estado, alvo);
-            FinalizarEpisodio(estado);
+            FinalizarEpisodio(estado, MotivoFimEpisodio.InvasaoDeTorre);
             return; // episódio já terminou — nenhum outro alvo deste passo precisa ser avaliado
         }
     }
@@ -487,6 +506,7 @@ public sealed class AmbienteTreinamento
 
             alvo.Ativo = false;
             estado.AlvosEscapados++;
+            estado.AlvosEscapadosPelaBase++;
             estado.FitnessAcumulado -= _parametros.PenalidadeEscape;
             LiberarTorreDe(estado, alvo);
         }
@@ -577,7 +597,11 @@ public sealed class AmbienteTreinamento
             // morta e certeza suficiente (mesma regra de Services.FireControlService.Authorize).
             // estado.ZonaMortaForcadaQuadrante soma mais um quadrante só para este episódio (ver
             // CatalogoCenarios.AlvoEmZonaMorta), sem alterar a configuração global do ambiente.
-            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante) continue;
+            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante)
+            {
+                alvo.OportunidadeDeDisparoContabilizada = false; // janela fechada — a próxima vez que abrir é NOVA
+                continue;
+            }
 
             TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
             if (torre is null) continue;
@@ -585,7 +609,11 @@ public sealed class AmbienteTreinamento
             // Veto físico: os motores de passo ainda não giraram até o alvo (ver
             // AtualizarMiraDasTorres) — sem isto um alvo rápido demais seria "abatido" por uma
             // torre que, fisicamente, ainda estaria apontando para outro lugar.
-            if (!torre.MiraAlinhada) continue;
+            if (!torre.MiraAlinhada)
+            {
+                alvo.OportunidadeDeDisparoContabilizada = false;
+                continue;
+            }
 
             // Certeza EFETIVA (não a bruta): dentro do alcance de confirmação garantida (ver
             // AlvoTreinamento.CertezaEfetiva) a certeza bruta deixa de ser teto — um alvo recém-
@@ -594,18 +622,30 @@ public sealed class AmbienteTreinamento
             // distância" não vale mais: a distância precisa ser calculada sempre.
             double distanciaTorre = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
             double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros, _parametros.DistanciaCertezaMaximaMetros);
-            if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao) continue;
+            if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao)
+            {
+                alvo.OportunidadeDeDisparoContabilizada = false;
+                continue;
+            }
 
             // Só conta "oportunidade" DEPOIS do tempo mínimo de mira já ter passado (veto
             // compartilhado, igual na heurística pura), para isolar exatamente o ponto em que
             // Hibrido e HeuristicaPura discordam (ver EstadoEpisodio.DisparosRecusadosPelaRede) —
-            // contar antes misturaria o veto compartilhado com a decisão exclusiva da rede.
+            // contar antes misturaria o veto compartilhado com a decisão exclusiva da rede. Conta
+            // (e, se recusada, penaliza) só uma vez por JANELA CONTÍNUA de oportunidade — enquanto
+            // a rede continuar recusando a MESMA oportunidade a cada passo de 0,2s, não é uma
+            // oportunidade nova a cada passo (ver AlvoTreinamento.OportunidadeDeDisparoContabilizada).
             bool passouTempoMinimoDeMira = alvo.TempoDesdeSelecao >= ControladorHibrido.TempoMinimoDeMiraSegundos;
-            if (passouTempoMinimoDeMira) estado.OportunidadesDeDisparo++;
+            bool oportunidadeNovaNestePasso = passouTempoMinimoDeMira && !alvo.OportunidadeDeDisparoContabilizada;
+            if (oportunidadeNovaNestePasso)
+            {
+                estado.OportunidadesDeDisparo++;
+                alvo.OportunidadeDeDisparoContabilizada = true;
+            }
 
             if (!controlador.DecidirDisparo(alvo, torre))
             {
-                if (passouTempoMinimoDeMira)
+                if (oportunidadeNovaNestePasso)
                 {
                     estado.DisparosRecusadosPelaRede++;
                     estado.FitnessAcumulado -= _parametros.PenalidadeRecusaDisparo;
@@ -613,6 +653,7 @@ public sealed class AmbienteTreinamento
                 continue;
             }
 
+            alvo.OportunidadeDeDisparoContabilizada = false; // disparou: fecha a janela atual
             Disparar(estado, torre, alvo);
             if (!alvo.Ativo) continue; // abatido pela torre principal — não precisa de ajuda
 
@@ -733,7 +774,9 @@ public sealed class AmbienteTreinamento
         return new EpisodioResultado(
             estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
             estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos,
-            estado.TrocasDeAlvoPenalizadas, estado.CooperacoesConcedidas, estado.CooperacoesNegadasPorConcentracao);
+            estado.TrocasDeAlvoPenalizadas, estado.CooperacoesConcedidas, estado.CooperacoesNegadasPorConcentracao,
+            AlvosEscapadosPelaBase: estado.AlvosEscapadosPelaBase, AlvosQueInvadiramTorre: estado.AlvosQueInvadiramTorre,
+            MotivoFim: estado.MotivoFim, PenalidadeSobrecargaAplicada: estado.PenalidadeSobrecargaAplicada);
     }
 
     /// <summary>Episódio completo com o controlador V2 e rede RECORRENTE com estado isolado por torre — ver observações de escopo em <see cref="RedeNeatRecorrente"/> (usado para replay/avaliação isolada de um genoma já escolhido, não dentro do laço evolutivo).</summary>
@@ -752,7 +795,9 @@ public sealed class AmbienteTreinamento
         return new EpisodioResultado(
             estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
             estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos,
-            estado.TrocasDeAlvoPenalizadas, estado.CooperacoesConcedidas, estado.CooperacoesNegadasPorConcentracao);
+            estado.TrocasDeAlvoPenalizadas, estado.CooperacoesConcedidas, estado.CooperacoesNegadasPorConcentracao,
+            AlvosEscapadosPelaBase: estado.AlvosEscapadosPelaBase, AlvosQueInvadiramTorre: estado.AlvosQueInvadiramTorre,
+            MotivoFim: estado.MotivoFim, PenalidadeSobrecargaAplicada: estado.PenalidadeSobrecargaAplicada);
     }
 
     /// <summary>Fitness médio sobre várias seeds — mesmo papel de <see cref="AvaliarFitness"/>, controlador V2, rede sem estado entre ativações.</summary>
@@ -807,7 +852,7 @@ public sealed class AmbienteTreinamento
         // (TratarInvasaoDeTorre) ou ao atingir o teto de segurança contra loop infinito.
         if (estado.TempoDecorridoSegundos >= _parametros.DuracaoMaximaSegurancaSegundos)
         {
-            FinalizarEpisodio(estado);
+            FinalizarEpisodio(estado, MotivoFimEpisodio.TetoDeSeguranca);
         }
     }
 
@@ -841,28 +886,51 @@ public sealed class AmbienteTreinamento
         foreach (AlvoTreinamento alvo in estado.Alvos.Where(a => a.Ativo && a.TorreSelecionadaId is not null))
         {
             // Mesmos vetos inegociáveis da V1 — ver DecidirDisparos.
-            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante) continue;
-            if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao) continue;
+            if (_parametros.ZonasMortasQuadrantes.Contains(alvo.Quadrante) || alvo.Quadrante == estado.ZonaMortaForcadaQuadrante)
+            {
+                alvo.OportunidadeDeDisparoContabilizada = false;
+                continue;
+            }
+            if (alvo.Certeza < _parametros.LimiarConfiancaDisparoFracao)
+            {
+                alvo.OportunidadeDeDisparoContabilizada = false;
+                continue;
+            }
 
             TorreTreinamento? torre = estado.Torres.FirstOrDefault(t => t.Id == alvo.TorreSelecionadaId);
             if (torre is null) continue;
 
             // Mesmo veto físico da V1 (ver DecidirDisparos/AtualizarMiraDasTorres): motores de
             // passo ainda não giraram até o alvo.
-            if (!torre.MiraAlinhada) continue;
+            if (!torre.MiraAlinhada)
+            {
+                alvo.OportunidadeDeDisparoContabilizada = false;
+                continue;
+            }
 
             double distanciaTorre = DistanceCalculator.Euclidean(alvo.X, alvo.Y, torre.X, torre.Y);
             double certezaEfetiva = alvo.CertezaEfetiva(distanciaTorre, _parametros.DistanciaMinimaBoaCertezaMetros, _parametros.DistanciaCertezaMaximaMetros);
-            if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao) continue;
+            if (certezaEfetiva < _parametros.LimiarConfiancaDisparoFracao)
+            {
+                alvo.OportunidadeDeDisparoContabilizada = false;
+                continue;
+            }
 
+            // Mesma correção da V1: conta (e, se recusada, penaliza) só uma vez por JANELA
+            // CONTÍNUA de oportunidade — ver DecidirDisparos.
             bool passouTempoMinimoDeMira = alvo.TempoDesdeSelecao >= ControladorHibridoV2.TempoMinimoDeMiraSegundos;
-            if (passouTempoMinimoDeMira) estado.OportunidadesDeDisparo++;
+            bool oportunidadeNovaNestePasso = passouTempoMinimoDeMira && !alvo.OportunidadeDeDisparoContabilizada;
+            if (oportunidadeNovaNestePasso)
+            {
+                estado.OportunidadesDeDisparo++;
+                alvo.OportunidadeDeDisparoContabilizada = true;
+            }
 
             (bool disparar, double prioridadeCooperacao) = controlador.DecidirDisparo(alvo, torre, estado.Torres);
 
             if (!disparar)
             {
-                if (passouTempoMinimoDeMira)
+                if (oportunidadeNovaNestePasso)
                 {
                     estado.DisparosRecusadosPelaRede++;
                     estado.FitnessAcumulado -= _parametros.PenalidadeRecusaDisparo;
@@ -870,6 +938,7 @@ public sealed class AmbienteTreinamento
                 continue;
             }
 
+            alvo.OportunidadeDeDisparoContabilizada = false; // disparou: fecha a janela atual
             Disparar(estado, torre, alvo);
             if (!alvo.Ativo) continue; // abatido pela torre principal — não precisa de ajuda
 
