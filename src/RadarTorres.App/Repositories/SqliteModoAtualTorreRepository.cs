@@ -76,7 +76,14 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
         }
     }
 
-    private static void EnsureTable(SqliteConnection connection) =>
+    /// <summary>
+    /// Internal (não <c>private</c>) de propósito: <see cref="SqliteObjetoDetectadoRepository.RegistrarTransicao"/>
+    /// lê desta tabela (<c>modo_atual_torre</c>) num <c>SELECT</c> embutido, então precisa
+    /// garantir que ela exista antes de gravar uma transição — sem depender da ordem incidental
+    /// em que os repositórios são usados pela primeira vez (ver <c>GarantirUmaVez</c>, que já
+    /// deduplica chamadas repetidas sem custo).
+    /// </summary>
+    internal static void EnsureTable(SqliteConnection connection) =>
         SqliteSchema.GarantirUmaVez(connection, nameof(SqliteModoAtualTorreRepository), CriarEsquema);
 
     /// <summary>Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.</summary>

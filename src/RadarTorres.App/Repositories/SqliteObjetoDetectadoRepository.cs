@@ -292,8 +292,21 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
         command.ExecuteNonQuery();
     }
 
-    private static void EnsureTable(SqliteConnection connection) =>
+    /// <summary>
+    /// Também garante <c>modo_atual_torre</c> (ver <see cref="SqliteModoAtualTorreRepository.EnsureTable"/>):
+    /// <see cref="RegistrarTransicao"/> lê dessa tabela, de outro repositório, num <c>SELECT</c>
+    /// embutido — sem garanti-la aqui, a transição só funciona se ALGUMA outra parte do app já
+    /// tiver usado <see cref="SqliteModoAtualTorreRepository"/> antes, ordem que não é garantida
+    /// (e não acontecia nos testes isolados deste repositório, onde o INSERT em
+    /// <c>OcorrenciaEstados</c> falhava com "no such table: modo_atual_torre" DEPOIS da linha
+    /// principal já ter sido gravada — o catch genérico tratava isso como falha total da
+    /// operação, devolvendo um Id offline incorreto para uma linha que na verdade já existia).
+    /// </summary>
+    private static void EnsureTable(SqliteConnection connection)
+    {
         SqliteSchema.GarantirUmaVez(connection, nameof(SqliteObjetoDetectadoRepository), CriarEsquema);
+        SqliteModoAtualTorreRepository.EnsureTable(connection);
+    }
 
     /// <summary>Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.</summary>
     private static void CriarEsquema(SqliteConnection connection)
