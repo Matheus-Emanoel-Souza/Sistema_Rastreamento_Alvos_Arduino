@@ -34,16 +34,13 @@ public sealed record ParametrosTreinamento
     /// Reproduzível: usa o <see cref="EstadoEpisodio.Rng"/> do episódio, igual a todo o resto do
     /// sorteio — a MESMA seed sempre produz a MESMA sequência de curvas.
     /// </summary>
-    public double VariacaoMaximaDirecaoGrausPorSegundo { get; init; } = 15.0;
+    public double VariacaoMaximaDirecaoGrausPorSegundo { get; init; } = 35.0;
 
     /// <summary>Intervalo mínimo de nascimento no FIM do episódio — <see cref="IntervaloSpawnMinSegundos"/> é o do início; a interpolação linear entre os dois ao longo de <see cref="DuracaoEpisodioSegundos"/> é a escalada de dificuldade (mais alvos quanto mais o episódio avança), ver <see cref="AmbienteTreinamento"/>.</summary>
     public double IntervaloSpawnMinFinalSegundos { get; init; } = 0.6;
 
     /// <summary>Intervalo máximo de nascimento no FIM do episódio — ver <see cref="IntervaloSpawnMinFinalSegundos"/>.</summary>
     public double IntervaloSpawnMaxFinalSegundos { get; init; } = 1.8;
-
-    /// <summary>Teto de alvos ATIVOS simultaneamente no MESMO quadrante — não é mais um teto global: quadrantes diferentes podem estar cada um no próprio limite ao mesmo tempo, forçando o controlador a lidar com concentração local em vez de só a contagem total.</summary>
-    public int MaxAlvosPorQuadrante { get; init; } = 5;
 
     /// <summary>
     /// Liga a terceira dimensão: com <c>true</c>, cada alvo nasce com uma altura entre 0 e
@@ -162,18 +159,11 @@ public sealed record ParametrosTreinamento
     public double PenalidadeRecusaDisparo { get; init; } = 3.0;
 
     /// <summary>
-    /// Quando <c>true</c>, o episódio IGNORA <see cref="DuracaoEpisodioSegundos"/> como fim normal
-    /// — só termina por invasão de torre (<see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>)
-    /// ou ao atingir <see cref="DuracaoMaximaSegurancaSegundos"/> (salvaguarda contra um genoma tão
-    /// bom que nunca seria invadido). <see cref="DuracaoEpisodioSegundos"/> continua sendo usado
-    /// como referência da escalada de dificuldade (ver <see cref="AmbienteTreinamento.ProximoIntervaloSpawn"/>) —
-    /// só o corte por tempo decorrido é desligado. Existe para testar a hipótese de que o teto de
-    /// fitness observado vem do episódio ser curto demais (poucos alvos nascem), não da qualidade
-    /// do controlador.
+    /// Salvaguarda contra loop efetivamente infinito — nenhum episódio passa disto, mesmo que
+    /// nenhum alvo jamais invada uma torre. Único corte por tempo que resta: o episódio não tem
+    /// mais fim "normal" por duração, só termina por invasão de torre
+    /// (<see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>) ou ao atingir este teto.
     /// </summary>
-    public bool SemLimiteDeDuracao { get; init; } = false;
-
-    /// <summary>Salvaguarda contra loop efetivamente infinito quando <see cref="SemLimiteDeDuracao"/> está ativo — nenhum episódio passa disto, mesmo que nenhum alvo jamais invada uma torre.</summary>
     public double DuracaoMaximaSegurancaSegundos { get; init; } = 1800.0;
 
     /// <summary>Piso absoluto do limiar de certeza — mesma regra do sistema real (ver <see cref="Configuration.ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual"/>).</summary>

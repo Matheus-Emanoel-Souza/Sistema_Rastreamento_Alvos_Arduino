@@ -20,7 +20,7 @@ public enum TipoCenarioTreinamento
     /// <summary>Sorteio padrão (ângulo/velocidade/certeza aleatórios) — comportamento histórico, sem script.</summary>
     Aleatorio,
 
-    /// <summary>Carga/saturação: 6 alvos nascem quase juntos, testando o limite de <see cref="ParametrosTreinamento.MaxAlvosPorQuadrante"/>.</summary>
+    /// <summary>Carga/saturação: 6 alvos nascem quase juntos, testando se as torres se distribuem bem entre eles sem teto de quantidade por quadrante.</summary>
     EnxameDeSaturacao,
 
     /// <summary>Disputa de torre: dois alvos nascem ao mesmo tempo, próximos um do outro, forçando a escolha de qual uma única torre deve comprometer primeiro.</summary>
@@ -65,7 +65,7 @@ public static class CatalogoCenarios
         TipoCenarioTreinamento.Aleatorio =>
             "Sorteio padrão de nascimento — ângulo, velocidade e certeza aleatórios, sem script.",
         TipoCenarioTreinamento.EnxameDeSaturacao =>
-            "6 alvos nascem quase juntos — testa o limite de alvos simultâneos e se as torres se distribuem bem entre eles.",
+            "6 alvos nascem quase juntos — testa se as torres se distribuem bem entre eles sob carga.",
         TipoCenarioTreinamento.DisputaPorMesmaTorre =>
             "2 alvos nascem ao mesmo tempo, próximos um do outro — testa qual a rede escolhe comprometer primeiro.",
         TipoCenarioTreinamento.AlvoRapidoDeAltaVelocidade =>

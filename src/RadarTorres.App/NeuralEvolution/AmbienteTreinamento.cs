@@ -205,11 +205,9 @@ public sealed class AmbienteTreinamento
 
         estado.Alvos.RemoveAll(a => !a.Ativo);
 
-        double tetoDeTempo = _parametros.SemLimiteDeDuracao
-            ? _parametros.DuracaoMaximaSegurancaSegundos
-            : _parametros.DuracaoEpisodioSegundos;
-
-        if (estado.TempoDecorridoSegundos >= tetoDeTempo)
+        // Episódio não tem mais fim "normal" por duração — só termina por invasão de torre
+        // (TratarInvasaoDeTorre) ou ao atingir o teto de segurança contra loop infinito.
+        if (estado.TempoDecorridoSegundos >= _parametros.DuracaoMaximaSegurancaSegundos)
         {
             FinalizarEpisodio(estado);
         }
@@ -309,11 +307,7 @@ public sealed class AmbienteTreinamento
         double y = _parametros.RaioMundoMetros * Math.Sin(anguloNascimento);
         Quadrant quadranteNascimento = QuadrantHelper.Determine(x, y);
 
-        // Teto POR QUADRANTE (não mais global): só descarta o nascimento se o quadrante sorteado
-        // já estiver no limite — outro quadrante com folga continua recebendo alvos normalmente.
-        if (estado.Alvos.Count(a => a.Ativo && a.Quadrante == quadranteNascimento) >= _parametros.MaxAlvosPorQuadrante) return;
-
-        double desvioRadianos = (estado.Rng.NextDouble() - 0.5) * (Math.PI / 6); // até ±30°
+        double desvioRadianos = (estado.Rng.NextDouble() - 0.5) * (Math.PI * 5.0 / 9.0); // até ±50°
         double anguloMovimento = anguloNascimento + Math.PI + desvioRadianos;
 
         double velocidade = _parametros.VelocidadeMinimaAlvoMetrosPorSegundo +
@@ -365,9 +359,6 @@ public sealed class AmbienteTreinamento
             double x = raio * Math.Cos(anguloNascimentoRad);
             double y = raio * Math.Sin(anguloNascimentoRad);
             Quadrant quadranteNascimento = QuadrantHelper.Determine(x, y);
-
-            // Teto POR QUADRANTE — ver TalvezNascerAlvo.
-            if (estado.Alvos.Count(a => a.Ativo && a.Quadrante == quadranteNascimento) >= _parametros.MaxAlvosPorQuadrante) continue;
 
             double anguloMovimento = anguloNascimentoRad + Math.PI;
 
@@ -812,11 +803,9 @@ public sealed class AmbienteTreinamento
 
         estado.Alvos.RemoveAll(a => !a.Ativo);
 
-        double tetoDeTempo = _parametros.SemLimiteDeDuracao
-            ? _parametros.DuracaoMaximaSegurancaSegundos
-            : _parametros.DuracaoEpisodioSegundos;
-
-        if (estado.TempoDecorridoSegundos >= tetoDeTempo)
+        // Episódio não tem mais fim "normal" por duração — só termina por invasão de torre
+        // (TratarInvasaoDeTorre) ou ao atingir o teto de segurança contra loop infinito.
+        if (estado.TempoDecorridoSegundos >= _parametros.DuracaoMaximaSegurancaSegundos)
         {
             FinalizarEpisodio(estado);
         }

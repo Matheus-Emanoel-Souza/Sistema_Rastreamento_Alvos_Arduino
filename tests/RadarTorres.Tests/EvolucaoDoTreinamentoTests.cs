@@ -25,7 +25,9 @@ public sealed class EvolucaoDoTreinamentoTests
         var parametros = new ParametrosTreinamento
         {
             DuracaoEpisodioSegundos = 15,
-            MaxAlvosPorQuadrante = 10,
+            // Episódio não tem mais fim por duração — só por invasão de torre ou por este teto de
+            // segurança. Reduzido de 1800s (padrão) para o teste continuar rápido.
+            DuracaoMaximaSegurancaSegundos = 15,
             VelocidadeMinimaAlvoMetrosPorSegundo = 2.0,
             VelocidadeMaximaAlvoMetrosPorSegundo = 4.0,
             IntervaloSpawnMinSegundos = 0.3,

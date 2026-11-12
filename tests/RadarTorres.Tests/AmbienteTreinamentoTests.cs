@@ -173,7 +173,6 @@ public sealed class AmbienteTreinamentoTests
             // exatamente o desvio que livra a torre principal e aproxima a adjacente, sem precisar
             // rodar centenas de seeds.
             VariacaoMaximaDirecaoGrausPorSegundo = 60.0,
-            MaxAlvosPorQuadrante = 1,
         };
         var ambiente = new AmbienteTreinamento(parametros, torresProximas);
         RedeNeat redeSempreAtiraEColabora = RedesDeTeste.ComPesosParaSaidasV2(pesoAjuste: 0.0, pesoConfianca: 1.0, pesoCooperacao: 1.0);

@@ -91,11 +91,9 @@ public static class Program
     /// </summary>
     private static void Teto(string[] args)
     {
-        int maxAlvos = (int)Arg(args, "maxalvos", 5);
         int episodios = (int)Arg(args, "episodios", 200);
         var p = new ParametrosTreinamento
         {
-            MaxAlvosPorQuadrante = maxAlvos,
             DuracaoEpisodioSegundos = Arg(args, "dur", 45),
             IntervaloSpawnMinSegundos = Arg(args, "spawnmin", 1.5),
             IntervaloSpawnMaxSegundos = Arg(args, "spawnmax", 4.0)
@@ -121,7 +119,7 @@ public static class Program
             fitnessHeuristico.Add(h.FitnessTotal);
         }
 
-        Console.WriteLine($"--- TETO (MaxAlvosPorQuadrante={maxAlvos}, duracao={p.DuracaoEpisodioSegundos}s, spawn={p.IntervaloSpawnMinSegundos}-{p.IntervaloSpawnMaxSegundos}s, {episodios} episodios, seeds 0..{episodios - 1}) ---");
+        Console.WriteLine($"--- TETO (duracao={p.DuracaoEpisodioSegundos}s, spawn={p.IntervaloSpawnMinSegundos}-{p.IntervaloSpawnMaxSegundos}s, {episodios} episodios, seeds 0..{episodios - 1}) ---");
         Console.WriteLine($"nascidos (passivo)         : media={nascidosPassivo.Average():0.00} min={nascidosPassivo.Min()} max={nascidosPassivo.Max()}");
         Console.WriteLine($"nascidos (heuristica pura) : media={nascidosHeuristico.Average():0.00} min={nascidosHeuristico.Min()} max={nascidosHeuristico.Max()}");
         Console.WriteLine($"TETO ABSOLUTO (todos abatidos na borda, 10/alvo): media={nascidosHeuristico.Average() * 10:0.0} max={nascidosHeuristico.Max() * 10:0.0}");
@@ -172,11 +170,9 @@ public static class Program
             TamanhoPopulacao = populacao,
             ProbabilidadeAdicionarNo = mutacao,
             TetoComplexidade = tetoComplexidade,
-            MaxAlvosPorQuadrante = maxAlvos,
             DuracaoEpisodioSegundos = duracao,
             IntervaloSpawnMinSegundos = spawnMin,
-            IntervaloSpawnMaxSegundos = spawnMax,
-            SemLimiteDeDuracao = semLimiteDeDuracao
+            IntervaloSpawnMaxSegundos = spawnMax
         };
         var ambiente = new AmbienteTreinamento(parametros);
         var ag = new TreinadorNeat(
@@ -272,7 +268,7 @@ public static class Program
 
         // Heurística pura não tem o que evoluir (ignora a rede): basta avaliá-la nas mesmas
         // seeds de validação, com a rede nula.
-        var parametros = new ParametrosTreinamento { MaxAlvosPorQuadrante = maxAlvos };
+        var parametros = new ParametrosTreinamento();
         var amb = new AmbienteTreinamento(parametros);
         RedeNeat nulo = RedeNula();
         var fit = new List<double>(); var nasc = new List<int>(); var ab = new List<int>(); var esc = new List<int>();
@@ -292,28 +288,24 @@ public static class Program
 
     /// <summary>
     /// Carrega uma rede já treinada (formato .net salvo por <see cref="SalvarRede"/> OU pela
-    /// tela "Treinamento do Controlador") e avalia quanto ele realmente
-    /// aguenta quando o episódio não é mais cortado em <see cref="ParametrosTreinamento.DuracaoEpisodioSegundos"/>
-    /// -- só termina quando um alvo de fato rompe uma torre
-    /// (<see cref="ParametrosTreinamento.SemLimiteDeDuracao"/>). Responde diretamente à pergunta
-    /// "o teto é da rede ou do ambiente?": se o fitness médio aqui for muito maior que o teto
-    /// observado com episódios de 45 s, o ambiente (duração curta) é o limitador, não o genoma.
+    /// tela "Treinamento do Controlador") e avalia quanto ele realmente aguenta — o episódio não
+    /// tem mais corte por duração, só termina quando um alvo de fato rompe uma torre ou ao
+    /// atingir <see cref="ParametrosTreinamento.DuracaoMaximaSegurancaSegundos"/>.
     /// </summary>
     private static void Sobrevivencia(string[] args)
     {
         string caminho = ArgS(args, "genoma", "");
         if (caminho.Length == 0 || !File.Exists(caminho))
         {
-            Console.WriteLine("Uso: sobrevivencia --genoma=<caminho.net> [--episodios=20] [--semlimite=sim]");
+            Console.WriteLine("Uso: sobrevivencia --genoma=<caminho.net> [--episodios=20]");
             return;
         }
 
         RedeNeat redeCarregada = CarregarRede(caminho);
         int episodios = (int)Arg(args, "episodios", 20);
-        bool semLimite = ArgS(args, "semlimite", "sim") == "sim";
         var modo = Enum.Parse<ControladorHibrido.ModoDecisao>(ArgS(args, "modo", "Hibrido"));
 
-        var parametros = new ParametrosTreinamento { SemLimiteDeDuracao = semLimite };
+        var parametros = new ParametrosTreinamento();
         var ambiente = new AmbienteTreinamento(parametros);
 
         var fit = new List<double>();
@@ -348,7 +340,7 @@ public static class Program
         int totalOportunidades = oportunidades.Sum();
         int totalRecusados = recusados.Sum();
 
-        Console.WriteLine($"--- SOBREVIVENCIA ({episodios} episodios, semlimite={semLimite}, modo={modo}, genoma de {caminho}) ---");
+        Console.WriteLine($"--- SOBREVIVENCIA ({episodios} episodios, modo={modo}, genoma de {caminho}) ---");
         Console.WriteLine($"fitness   : media={fit.Average():0.00} desvio={desvioPadrao:0.00} min={fit.Min():0.00} max={fit.Max():0.00}");
         Console.WriteLine($"nascidos  : media={nasc.Average():0.00} min={nasc.Min()} max={nasc.Max()}");
         Console.WriteLine($"abatidos  : media={ab.Average():0.00}");

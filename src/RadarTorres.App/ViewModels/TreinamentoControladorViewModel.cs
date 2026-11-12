@@ -336,13 +336,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _taxaMutacao, value);
     }
 
-    private int _maxAlvosPorQuadrante = 5;
-    public int MaxAlvosPorQuadrante
-    {
-        get => _maxAlvosPorQuadrante;
-        set => SetProperty(ref _maxAlvosPorQuadrante, value);
-    }
-
     private bool _eixoZHabilitado;
     /// <summary>
     /// Liga a terceira dimensão na simulação — ver <see cref="ParametrosTreinamento.EixoZHabilitado"/>.
@@ -405,7 +398,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         TamanhoPopulacao = Math.Max(4, _tamanhoPopulacao),
         ProbabilidadeAdicionarNo = Math.Clamp(_taxaMutacao, 0.0, 1.0),
         TetoComplexidade = Math.Max(4, _neuroniosOcultosSelecionado),
-        MaxAlvosPorQuadrante = Math.Max(1, _maxAlvosPorQuadrante),
         EixoZHabilitado = _eixoZHabilitado,
         DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
         LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0,
@@ -1519,14 +1511,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             "Entradas e saídas são fixas (é o contrato com o controlador); tudo entre elas é evoluído.");
         Adicionar("Ativação", $"{TreinadorNeat.FuncaoAtivacao} · {(TreinadorNeat.Aciclica ? "acíclica" : "cíclica")}",
             "TanH mantém as saídas entre -1 e 1, a faixa que o controlador híbrido assume. Acíclica = sem memória entre ativações.");
-        Adicionar("Máx. alvos por quadrante", parametros.MaxAlvosPorQuadrante.ToString("N0"),
-            "Teto de alvos ativos simultâneos no mesmo quadrante.");
         Adicionar("Alcance de mira", $"{parametros.DistanciaEngajamentoMetros:0.##} m",
             "Vem de Configurações → Radar e mira. Vale a partir do próximo Iniciar/Resetar.");
         Adicionar("Certeza mínima", parametros.LimiarConfiancaDisparoFracao.ToString("P0"),
             "Vem de Configurações → Disparo. Veto inegociável: abaixo disso nenhum disparo é autorizado, decida a rede o que decidir.");
-        Adicionar("Duração do episódio", parametros.SemLimiteDeDuracao ? "sem limite" : $"{parametros.DuracaoEpisodioSegundos:0.#} s",
-            "Tempo simulado de cada episódio de avaliação.");
+        Adicionar("Duração do episódio", "sem limite",
+            "Episódio só termina por invasão de torre ou pelo teto de segurança contra loop infinito (DuracaoMaximaSegurancaSegundos).");
     }
 
     /// <summary>

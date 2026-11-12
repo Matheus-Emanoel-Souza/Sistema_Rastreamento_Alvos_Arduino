@@ -19,7 +19,14 @@ public sealed class TreinadorNeatTests
 
     /// <summary>Ambiente minúsculo — o que se testa aqui é a integração, não a qualidade evolutiva.</summary>
     private static AmbienteTreinamento AmbienteRapido() =>
-        new(new ParametrosTreinamento { DuracaoEpisodioSegundos = 5, EpisodiosPorAvaliacao = 1 }, SemTorresConfiguradas);
+        new(new ParametrosTreinamento
+        {
+            DuracaoEpisodioSegundos = 5,
+            // Episódio não tem mais fim por duração — só por invasão de torre ou por este teto de
+            // segurança. Reduzido de 1800s (padrão) para o teste continuar rápido.
+            DuracaoMaximaSegurancaSegundos = 5,
+            EpisodiosPorAvaliacao = 1
+        }, SemTorresConfiguradas);
 
     private static TreinadorNeat TreinadorRapido(AmbienteTreinamento ambiente) =>
         new(ambiente, tamanhoPopulacao: 12, quantidadeEspecies: 3, grauParalelismo: 1);

@@ -9,13 +9,13 @@
 
     <!--
         Parâmetros do PRÓXIMO "Iniciar"/"Resetar" do treinamento (população, teto de
-        complexidade, mutação estrutural, meta de gerações, alvos por quadrante, eixo Z) —
+        complexidade, mutação estrutural, meta de gerações, eixo Z) —
         antes eram campos inline na barra lateral da tela de Treinamento do Controlador;
         movidos para esta janela modal para liberar espaço útil na tela principal (pedido do
         usuário). Reaproveita a MESMA ViewModel da tela (DataContext setado no code-behind):
         nenhuma lógica nova, nenhum parâmetro renomeado, só uma apresentação diferente das
         mesmas propriedades (TamanhoPopulacao, NeuroniosOcultosSelecionado, TaxaMutacao,
-        MetaGeracoes, MaxAlvosPorQuadrante, EixoZHabilitado). Os parâmetros de experimento
+        MetaGeracoes, EixoZHabilitado). Os parâmetros de experimento
         (aqui) continuam separados das heurísticas operacionais, que ficam em Configurações.
     -->
     <Window.Resources>
@@ -65,9 +65,6 @@
                 <TextBlock Text="Mutação estrutural (0-1)" Style="{StaticResource ParametroLabel}"/>
                 <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Probabilidade de um descendente ganhar um NEURÔNIO novo. Mutação de peso e mutação de estrutura são eventos distintos; o que sobra é redistribuído entre as outras mutações. Valores do plano experimental: 0,005 · 0,01 (padrão) · 0,02."/>
-
-                <TextBlock Text="Máximo de alvos por quadrante" Style="{StaticResource ParametroLabel}"/>
-                <TextBox Text="{Binding MaxAlvosPorQuadrante, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <CheckBox Content="Considerar a altura dos alvos (eixo Z)" Margin="0,16,0,0"
                           IsChecked="{Binding EixoZHabilitado}"
