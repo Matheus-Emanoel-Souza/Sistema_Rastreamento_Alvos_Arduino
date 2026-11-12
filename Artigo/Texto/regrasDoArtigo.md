@@ -7,44 +7,29 @@ verificado contra o `.tex`/`.pdf` atual, não a intenção.
 
 ## 1. Máximo de 20 páginas
 
-**Status: ⚠️ violada, mas melhorando.** `Artigo.pdf` compilado hoje (30/10/2026) tem **27 páginas**
-— 7 acima do limite (era 30 antes da rodada de cortes de hoje).
+**Status: ✅ cumprida.** `Artigo.pdf` compilado em 09/11/2026 tem **17 páginas** (eram 27).
+A reescrita da revisão de 09/11 condensou o resumo (~170 palavras), resumiu os requisitos,
+converteu as regras heurísticas em tabela e substituiu a narrativa experimental por uma seção
+de Resultados e Discussão com a comparação pareada.
 
-Cortes já aplicados:
-- [x] Seção "Análise experimental de hiperparâmetros" -- 4 parágrafos longos condensados em 1.
-- [x] Parágrafo "Impacto de acrescentar uma entrada" -- 4 impactos resumidos em lista enxuta.
-- [x] "Modelo de dados" -- 3 figuras de página cheia reduzidas a 1; prosa de relacionamento FK a FK
-  e o histórico do modelo CSV antigo removidos (já cobertos em `Modelo_Banco_de_Dados.md`).
+## 2. Imagens e tabelas padronizadas
 
-Ainda pendente (candidatos restantes):
-- [ ] Seções de investigação da hesitação no gatilho (certeza estática, penalização de recusa,
-  comparação com `RedePura`) têm sobreposição narrativa; são a contribuição mais original do
-  artigo, então condensar com cuidado, não cortar o achado.
-- [ ] Conclusão não menciona a investigação de hesitação/recusa de disparo (mais rica que o achado
-  da certeza estática que ela cita) -- atualizar, não só cortar.
-- [ ] Verificar se o diagrama de pacotes pode ir para apêndice ou ter o tamanho reduzido.
+**Status: ✅ cumprida.**
 
-## 2. Imagens padronizadas
+- Tabelas são todas tabelas LaTeX reais (`booktabs`, legenda acima), nenhuma é imagem. As antigas
+  `Tabela1_Fitness.png` e `Tabela2_Ambiente.png` não são mais usadas.
+- Figuras em português ("Figura"/"Tabela", via `babel`), com legenda abaixo e fonte "(dos autores)".
+- Diagramas próprios (implantação e fluxo operacional) desenhados em TikZ, vetoriais.
+- Figuras e tabelas usam posição `[H]` (pacote `float`) para ficarem dentro da seção a que
+  pertencem — pedido do orientador para o modelo de dados.
 
-**Status: ⚠️ violada.** `Artigo.tex` hoje mistura convenções de tamanho entre figuras
-(`\includegraphics`):
+## 3. Compilação
 
-| Figura | Convenção atual |
-|---|---|
-| `Fluxo_Operacional.png` | `height=0.82\textheight,width=\textwidth,keepaspectratio` |
-| `Diagrama_de_Pacotes.png` | `width=\textwidth` |
-| `DER_Usuarios_Modo_Preferencias.png` | `width=0.85\textwidth` |
-| `DER_Cameras_Objetos_Detectados.png` | `width=\textwidth` |
-| `DER_Tabelas_Treinamento.png` | `width=\textwidth` |
-
-Padrão a adotar (pendente de confirmação do autor): todas as figuras de corpo (exceto o logotipo
-da capa) usam `width=\textwidth` sozinho, sem `height`/`keepaspectratio` misto, para manter
-legenda e proporção consistentes entre si. `Fluxo_Operacional.png` e `DER_Usuarios_Modo_Preferencias.png`
-precisam ser ajustadas para esse padrão (ou o padrão escolhido precisa ser outro, formato de
-largura fixa em cm, por exemplo).
+`pdflatex` → `bibtex` → `pdflatex` ×2, a partir desta pasta (as imagens vêm de `../../assets/`).
+Requer os pacotes `abntex2cite`, `tikz`, `booktabs`, `tabularx`, `float`, `caption` e `babel`
+(português); o MiKTeX instala sob demanda.
 
 ## Ver também
 
 - [[Melhoria_de_artigo]] — checklist geral de revisão do artigo.
-- [[ApoioDeApresentacao]] — material de apoio retirado do corpo do artigo para manter o texto
-  objetivo (relevante para a regra 1).
+- [[ApoioDeApresentacao]] — material de apoio retirado do corpo do artigo.
