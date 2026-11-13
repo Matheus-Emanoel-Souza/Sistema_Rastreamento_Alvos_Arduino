@@ -104,4 +104,16 @@ public sealed class TorreTreinamento
     /// estão girando até o alvo, por mais que a rede/heurística "queira" disparar.
     /// </summary>
     public bool MiraAlinhada { get; set; }
+
+    /// <summary>
+    /// Se esta torre está disponível para ser selecionada neste episódio — ver
+    /// <see cref="ParametrosTreinamento.TorresDesativadasIds"/>. Uma torre desativada nunca entra
+    /// como candidata em <see cref="ControladorHibrido.SelecionarTorre"/>/<see cref="ControladorHibridoV2.SelecionarTorre"/>
+    /// nem como torre de ajuda (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>), então
+    /// <see cref="AlvoComprometidoId"/> nunca chega a ser atribuído a ela — continua fisicamente
+    /// presente (ainda pode ser invadida, ver <see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>),
+    /// só não participa da defesa. Serve para estudar o comportamento do sistema com menos
+    /// recursos (menos torres ativas), sem precisar remover a torre do layout físico.
+    /// </summary>
+    public bool Ativa { get; set; } = true;
 }

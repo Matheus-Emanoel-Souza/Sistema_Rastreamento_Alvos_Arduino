@@ -312,4 +312,54 @@ public sealed record ParametrosTreinamento
     /// de redes acíclicas).
     /// </summary>
     public bool RedeRecorrente { get; init; } = false;
+
+    // ---------------------------------------------------------------------------------------
+    // Regras adicionais do ambiente (2026-11-13) — cada uma independente das demais e das
+    // seções acima, desligada por padrão pelo mesmo motivo de EixoZHabilitado/UsarFitnessV2:
+    // não mudar em silêncio o significado de uma comparação com resultados já registrados.
+    // Funcionam em QUALQUER modo (V1/DecidirDisparos e V2/DecidirDisparosV2), já que descrevem
+    // o AMBIENTE (regra de pontuação e disponibilidade de torre), não o controlador.
+    // ---------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Liga a pontuação extra de "ataque conjunto": quando a torre adjacente mais próxima do
+    /// alvo (regra 6 de ajuda, ver <see cref="AmbienteTreinamento.DecidirDisparos"/>) dispara
+    /// JUNTO com a torre principal comprometida e esse segundo disparo é quem efetivamente abate
+    /// o alvo (a torre principal já havia errado), soma-se <see cref="RecompensaAtaqueConjunto"/>
+    /// ao fitness. Não soma nada quando a torre principal sozinha já abate o alvo (não houve
+    /// cooperação nenhuma) nem quando a torre de ajuda também erra.
+    /// </summary>
+    public bool HabilitarBonusAtaqueConjunto { get; init; } = false;
+
+    /// <summary>Bônus de fitness por um abate cooperativo bem-sucedido — ver <see cref="HabilitarBonusAtaqueConjunto"/>.</summary>
+    public double RecompensaAtaqueConjunto { get; init; } = 5.0;
+
+    /// <summary>
+    /// Liga a troca dinâmica de alvo por proximidade: enquanto uma torre já comprometida
+    /// persegue um alvo, se surgir outro alvo LIVRE (sem torre nenhuma) mais próximo dela do que
+    /// o alvo atual, a torre troca de alvo na hora — mesmo que o alvo anterior continue vivo e
+    /// ativo. O alvo abandonado não é descartado: só perde o compromisso (<see cref="AlvoTreinamento.TorreSelecionadaId"/>
+    /// volta a <c>null</c>) e volta a concorrer normalmente pela seleção de torres livres (ver
+    /// <see cref="AmbienteTreinamento.SelecionarTorresParaAlvosLivres"/>) — inclusive pela MESMA
+    /// torre, depois que ela resolver o alvo novo, se ele ainda estiver vivo e nenhuma outra
+    /// torre tiver assumido. Desligado por padrão: o comportamento histórico é compromisso fixo
+    /// até o alvo ser abatido, escapar pela base ou invadir uma torre.
+    /// </summary>
+    /// <remarks>
+    /// Sem histerese de propósito: a troca acontece sempre que existir um alvo mais próximo,
+    /// mesmo por uma margem pequena — é exatamente o comportamento pedido ("se outro alvo se
+    /// aproximar mais, deve trocar"). Isso pode fazer a torre oscilar entre dois alvos quase
+    /// equidistantes em episódios específicos (cada troca reinicia <see cref="AlvoTreinamento.TempoDesdeSelecao"/>
+    /// e <see cref="TorreTreinamento.MiraAlinhada"/>), o que é por si só um comportamento
+    /// observável/estudável, não um bug a esconder.
+    /// </remarks>
+    public bool PermitirTrocaDeAlvoPorProximidade { get; init; } = false;
+
+    /// <summary>
+    /// Ids de torres (<see cref="TorreTreinamento.Id"/>) desativadas manualmente neste episódio —
+    /// vazio por padrão (todas ativas). Uma torre desativada nunca é selecionada para um alvo
+    /// nem atua como torre de ajuda (ver <see cref="TorreTreinamento.Ativa"/>), simulando o
+    /// sistema operando com menos recursos sem precisar mudar o layout físico das torres.
+    /// </summary>
+    public IReadOnlySet<int> TorresDesativadasIds { get; init; } = new HashSet<int>();
 }

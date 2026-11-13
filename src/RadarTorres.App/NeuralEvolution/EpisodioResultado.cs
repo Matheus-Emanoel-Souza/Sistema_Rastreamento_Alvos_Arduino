@@ -16,4 +16,6 @@ public sealed record EpisodioResultado(
     int AlvosEscapadosPelaBase = 0,
     int AlvosQueInvadiramTorre = 0,
     MotivoFimEpisodio MotivoFim = MotivoFimEpisodio.AindaEmAndamento,
-    double PenalidadeSobrecargaAplicada = 0);
+    double PenalidadeSobrecargaAplicada = 0,
+    int AtaquesConjuntosBemSucedidos = 0,
+    int TrocasDeAlvoPorProximidade = 0);

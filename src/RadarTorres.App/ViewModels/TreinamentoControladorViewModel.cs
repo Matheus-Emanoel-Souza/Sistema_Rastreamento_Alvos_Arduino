@@ -205,6 +205,14 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Linhas do cenário desenhado à mão pelo usuário (ver <see cref="SimularCenarioPersonalizado"/>) — cada uma é um alvo com posição e velocidade fixadas, sem sorteio nenhum.</summary>
     public ObservableCollection<SpawnPersonalizadoEditavel> SpawnsPersonalizados { get; } = new();
 
+    /// <summary>
+    /// Uma linha por torre do layout físico, com um toggle "desativada" — ver
+    /// <see cref="ParametrosTreinamento.TorresDesativadasIds"/>. Preenchida uma única vez no
+    /// construtor a partir de <see cref="AmbienteTreinamento.TorresBase"/>: o layout físico
+    /// (posições das torres) não muda em tempo de execução, só quais delas participam.
+    /// </summary>
+    public ObservableCollection<TorreConfiguravelTreinamento> TorresConfiguraveis { get; } = new();
+
     /// <summary>Disparado quando o cenário personalizado começa a rodar de fato (ver <see cref="SimularCenarioPersonalizado"/>) — a janela modal de configuração usa isso para se fechar sozinha após confirmar.</summary>
     public event EventHandler? CenarioPersonalizadoIniciado;
 
@@ -240,6 +248,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _eventoRepository = eventoRepository;
         _configuracoes = configuracoes;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
+        foreach (TorreTreinamento torre in _ambiente.TorresBase)
+        {
+            TorresConfiguraveis.Add(new TorreConfiguravelTreinamento { Id = torre.Id, Nome = $"Torre {torre.Id}" });
+        }
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
         _cenarioOpcaoSelecionada = CenariosDisponiveis[0];
@@ -362,6 +374,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Altura a partir da qual todas as torres enxergam o alvo.</summary>
     public double AlturaVisivelPorTodasAsTorresMetros => _ambiente.Parametros.AlturaVisivelPorTodasAsTorresMetros;
 
+    private bool _habilitarBonusAtaqueConjunto;
+    /// <summary>Liga o bônus de "ataque conjunto" — ver <see cref="ParametrosTreinamento.HabilitarBonusAtaqueConjunto"/>. Mesma regra de "vale a partir do próximo Iniciar/Resetar" dos demais parâmetros do ambiente.</summary>
+    public bool HabilitarBonusAtaqueConjunto
+    {
+        get => _habilitarBonusAtaqueConjunto;
+        set => SetProperty(ref _habilitarBonusAtaqueConjunto, value);
+    }
+
+    private bool _permitirTrocaDeAlvoPorProximidade;
+    /// <summary>Liga a troca dinâmica de alvo por proximidade — ver <see cref="ParametrosTreinamento.PermitirTrocaDeAlvoPorProximidade"/>.</summary>
+    public bool PermitirTrocaDeAlvoPorProximidade
+    {
+        get => _permitirTrocaDeAlvoPorProximidade;
+        set => SetProperty(ref _permitirTrocaDeAlvoPorProximidade, value);
+    }
+
     /// <summary>
     /// Tetos de complexidade (em número de conexões) disponíveis na tela — os mesmos três
     /// valores do plano experimental da tela "Estatísticas de Treinamento" (ver
@@ -401,7 +429,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         EixoZHabilitado = _eixoZHabilitado,
         DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
         LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0,
-        VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo
+        VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo,
+        HabilitarBonusAtaqueConjunto = _habilitarBonusAtaqueConjunto,
+        PermitirTrocaDeAlvoPorProximidade = _permitirTrocaDeAlvoPorProximidade,
+        TorresDesativadasIds = TorresConfiguraveis.Where(t => t.Desativada).Select(t => t.Id).ToHashSet()
     };
 
     // ---------------------------------------------------------------- Status (mensagem transitória)

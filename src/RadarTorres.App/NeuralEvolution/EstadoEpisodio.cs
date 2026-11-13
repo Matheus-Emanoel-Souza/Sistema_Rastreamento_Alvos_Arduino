@@ -73,6 +73,12 @@ public sealed class EstadoEpisodio
     /// <summary>Quantas vezes uma torre foi penalizada por trocar de alvo demais num intervalo curto (ver <see cref="ParametrosTreinamento.LimiteTrocasAntesDePenalizar"/>) — só contabilizado com <see cref="ParametrosTreinamento.UsarFitnessV2"/>, exclusivo do controlador V2.</summary>
     public int TrocasDeAlvoPenalizadas { get; set; }
 
+    /// <summary>Quantos abates foram cooperativos (torre adjacente de ajuda terminou o que a torre principal errou) — só contabilizado com <see cref="ParametrosTreinamento.HabilitarBonusAtaqueConjunto"/>.</summary>
+    public int AtaquesConjuntosBemSucedidos { get; set; }
+
+    /// <summary>Quantas vezes uma torre trocou de alvo por proximidade (alvo novo mais próximo que o atual) — só contabilizado com <see cref="ParametrosTreinamento.PermitirTrocaDeAlvoPorProximidade"/>.</summary>
+    public int TrocasDeAlvoPorProximidade { get; set; }
+
     /// <summary>Instante (em <see cref="TempoDecorridoSegundos"/>) do próximo surgimento de alvo.</summary>
     public double ProximoSpawnSegundos { get; set; }
 

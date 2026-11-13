@@ -113,7 +113,8 @@ public sealed class AmbienteTreinamento
                 X = baseTorre.X,
                 Y = baseTorre.Y,
                 QuadrantePreferido = baseTorre.QuadrantePreferido,
-                AnguloAzimuteAtualGraus = azimuteInicial
+                AnguloAzimuteAtualGraus = azimuteInicial,
+                Ativa = !_parametros.TorresDesativadasIds.Contains(baseTorre.Id)
             });
         }
 
@@ -141,7 +142,8 @@ public sealed class AmbienteTreinamento
             estado.FitnessAcumulado, estado.AlvosAbatidos, estado.AlvosEscapados, estado.TirosErrados, estado.AlvosNascidos,
             estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos,
             AlvosEscapadosPelaBase: estado.AlvosEscapadosPelaBase, AlvosQueInvadiramTorre: estado.AlvosQueInvadiramTorre,
-            MotivoFim: estado.MotivoFim, PenalidadeSobrecargaAplicada: estado.PenalidadeSobrecargaAplicada);
+            MotivoFim: estado.MotivoFim, PenalidadeSobrecargaAplicada: estado.PenalidadeSobrecargaAplicada,
+            AtaquesConjuntosBemSucedidos: estado.AtaquesConjuntosBemSucedidos, TrocasDeAlvoPorProximidade: estado.TrocasDeAlvoPorProximidade);
     }
 
     /// <summary>
@@ -201,6 +203,7 @@ public sealed class AmbienteTreinamento
         AplicarPenalidadeDeProximidade(estado);
         TratarAlvosNaBase(estado);
         TratarInvasaoDeTorre(estado);
+        ReavaliarTrocaDeAlvoPorProximidade(estado);
         SelecionarTorresParaAlvosLivres(estado, controlador);
         AtualizarMiraDasTorres(estado, dt);
         DecidirDisparos(estado, controlador);
@@ -512,13 +515,65 @@ public sealed class AmbienteTreinamento
         }
     }
 
+    /// <summary>
+    /// Regra opcional (ver <see cref="ParametrosTreinamento.PermitirTrocaDeAlvoPorProximidade"/>):
+    /// para cada torre já comprometida, troca para outro alvo LIVRE se ele estiver mais próximo
+    /// dela do que o alvo atual — mesmo que o atual continue vivo. O alvo abandonado só perde o
+    /// compromisso (<see cref="AlvoTreinamento.TorreSelecionadaId"/> volta a <c>null</c>); ele
+    /// continua ativo e volta a concorrer pela seleção normal de torres livres (ver
+    /// <see cref="SelecionarTorresParaAlvosLivres"/>/<see cref="SelecionarTorresParaAlvosLivresV2"/>),
+    /// chamada logo depois no mesmo passo — o que cobre tanto "outra torre livre assume o alvo
+    /// abandonado agora" quanto, mais tarde, "a MESMA torre volta a ele depois de resolver o novo,
+    /// se ele ainda estiver vivo e livre". Roda ANTES da seleção normal de alvos livres, e por
+    /// isso só move torres já comprometidas — alvos sem torre nenhuma continuam resolvidos só
+    /// pela seleção normal.
+    /// </summary>
+    private void ReavaliarTrocaDeAlvoPorProximidade(EstadoEpisodio estado)
+    {
+        if (!_parametros.PermitirTrocaDeAlvoPorProximidade) return;
+
+        foreach (TorreTreinamento torre in estado.Torres.Where(t => t.Ativa && !t.Livre))
+        {
+            AlvoTreinamento? alvoAtual = estado.Alvos.FirstOrDefault(a => a.Id == torre.AlvoComprometidoId);
+            if (alvoAtual is null) continue; // alvo já saiu da lista de ativos neste mesmo passo — nada a trocar
+
+            double distanciaAtual = DistanceCalculator.Euclidean(alvoAtual.X, alvoAtual.Y, torre.X, torre.Y);
+
+            AlvoTreinamento? maisProximo = null;
+            double menorDistancia = distanciaAtual;
+
+            foreach (AlvoTreinamento candidato in estado.Alvos.Where(a => a.Ativo && a.Id != alvoAtual.Id && a.TorreSelecionadaId is null))
+            {
+                double distanciaCandidato = DistanceCalculator.Euclidean(candidato.X, candidato.Y, torre.X, torre.Y);
+                if (distanciaCandidato < menorDistancia)
+                {
+                    menorDistancia = distanciaCandidato;
+                    maisProximo = candidato;
+                }
+            }
+
+            if (maisProximo is null) continue;
+
+            alvoAtual.TorreSelecionadaId = null;
+            alvoAtual.OportunidadeDeDisparoContabilizada = false;
+
+            torre.AlvoComprometidoId = maisProximo.Id;
+            maisProximo.TorreSelecionadaId = torre.Id;
+            maisProximo.TempoDesdeSelecao = 0;
+            torre.MiraAlinhada = false; // alvo novo — a torre ainda não girou na direção dele
+
+            estado.TrocasDeAlvoPorProximidade++;
+        }
+    }
+
     private void SelecionarTorresParaAlvosLivres(EstadoEpisodio estado, ControladorHibrido controlador)
     {
         List<AlvoTreinamento> ativos = estado.Alvos.Where(a => a.Ativo).ToList();
+        List<TorreTreinamento> torresDisponiveis = estado.Torres.Where(t => t.Ativa).ToList();
 
         foreach (AlvoTreinamento alvo in ativos.Where(a => a.TorreSelecionadaId is null))
         {
-            TorreTreinamento? torre = controlador.SelecionarTorre(alvo, estado.Torres, ativos);
+            TorreTreinamento? torre = controlador.SelecionarTorre(alvo, torresDisponiveis, ativos);
             if (torre is null) continue;
 
             torre.AlvoComprometidoId = alvo.Id;
@@ -667,14 +722,35 @@ public sealed class AmbienteTreinamento
                 // Com o eixo Z ligado e o alvo alto o bastante, a restrição de quadrante adjacente
                 // cai pelo mesmo motivo de ControladorHibrido.SelecionarTorre: todas as torres o
                 // enxergam. O raio de proximidade continua valendo — visibilidade não é alcance.
-                TorreTreinamento? ajuda = estado.Torres.FirstOrDefault(t =>
-                    t.Id != torre.Id &&
-                    (alvo.VisivelPorTodasAsTorres || QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante)) &&
-                    DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= RaioAjudaTorreAdjacenteMetros);
+                // Entre as candidatas, a MAIS PRÓXIMA do alvo é quem ajuda.
+                TorreTreinamento? ajuda = estado.Torres
+                    .Where(t => t.Ativa && t.Id != torre.Id &&
+                        (alvo.VisivelPorTodasAsTorres || QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante)) &&
+                        DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= RaioAjudaTorreAdjacenteMetros)
+                    .OrderBy(t => DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y))
+                    .FirstOrDefault();
 
-                if (ajuda is not null) Disparar(estado, ajuda, alvo);
+                if (ajuda is not null)
+                {
+                    Disparar(estado, ajuda, alvo);
+                    RegistrarAtaqueConjuntoSeAbateu(estado, alvo);
+                }
             }
         }
+    }
+
+    /// <summary>
+    /// Pontuação extra de "ataque conjunto" (ver <see cref="ParametrosTreinamento.HabilitarBonusAtaqueConjunto"/>):
+    /// chamado DEPOIS do disparo da torre de ajuda — se o alvo morreu só agora (a torre principal
+    /// já havia errado antes de chamar a ajuda, ver os chamadores), o segundo disparo foi quem de
+    /// fato cooperou para o abate.
+    /// </summary>
+    private void RegistrarAtaqueConjuntoSeAbateu(EstadoEpisodio estado, AlvoTreinamento alvo)
+    {
+        if (!_parametros.HabilitarBonusAtaqueConjunto || alvo.Ativo) return;
+
+        estado.FitnessAcumulado += _parametros.RecompensaAtaqueConjunto;
+        estado.AtaquesConjuntosBemSucedidos++;
     }
 
     /// <summary>
@@ -776,7 +852,8 @@ public sealed class AmbienteTreinamento
             estado.OportunidadesDeDisparo, estado.DisparosRecusadosPelaRede, estado.TempoDeRespostaMedioSegundos,
             estado.TrocasDeAlvoPenalizadas, estado.CooperacoesConcedidas, estado.CooperacoesNegadasPorConcentracao,
             AlvosEscapadosPelaBase: estado.AlvosEscapadosPelaBase, AlvosQueInvadiramTorre: estado.AlvosQueInvadiramTorre,
-            MotivoFim: estado.MotivoFim, PenalidadeSobrecargaAplicada: estado.PenalidadeSobrecargaAplicada);
+            MotivoFim: estado.MotivoFim, PenalidadeSobrecargaAplicada: estado.PenalidadeSobrecargaAplicada,
+            AtaquesConjuntosBemSucedidos: estado.AtaquesConjuntosBemSucedidos, TrocasDeAlvoPorProximidade: estado.TrocasDeAlvoPorProximidade);
     }
 
     /// <summary>Episódio completo com o controlador V2 e rede RECORRENTE com estado isolado por torre — ver observações de escopo em <see cref="RedeNeatRecorrente"/> (usado para replay/avaliação isolada de um genoma já escolhido, não dentro do laço evolutivo).</summary>
@@ -842,6 +919,7 @@ public sealed class AmbienteTreinamento
         AplicarPenalidadeDeProximidade(estado);
         TratarAlvosNaBase(estado);
         TratarInvasaoDeTorre(estado);
+        ReavaliarTrocaDeAlvoPorProximidade(estado);
         SelecionarTorresParaAlvosLivresV2(estado, controlador);
         AtualizarMiraDasTorres(estado, dt);
         DecidirDisparosV2(estado, controlador);
@@ -859,10 +937,11 @@ public sealed class AmbienteTreinamento
     private void SelecionarTorresParaAlvosLivresV2(EstadoEpisodio estado, ControladorHibridoV2 controlador)
     {
         List<AlvoTreinamento> ativos = estado.Alvos.Where(a => a.Ativo).ToList();
+        List<TorreTreinamento> torresDisponiveis = estado.Torres.Where(t => t.Ativa).ToList();
 
         foreach (AlvoTreinamento alvo in ativos.Where(a => a.TorreSelecionadaId is null))
         {
-            TorreTreinamento? torre = controlador.SelecionarTorre(alvo, estado.Torres, ativos);
+            TorreTreinamento? torre = controlador.SelecionarTorre(alvo, torresDisponiveis, ativos);
             if (torre is null) continue;
 
             bool trocaExcessiva = _parametros.UsarFitnessV2 &&
@@ -959,16 +1038,19 @@ public sealed class AmbienteTreinamento
                 continue;
             }
 
-            TorreTreinamento? ajuda = estado.Torres.FirstOrDefault(t =>
-                t.Id != torre.Id &&
-                (alvo.VisivelPorTodasAsTorres || QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante)) &&
-                DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= RaioAjudaTorreAdjacenteMetros);
+            TorreTreinamento? ajuda = estado.Torres
+                .Where(t => t.Ativa && t.Id != torre.Id &&
+                    (alvo.VisivelPorTodasAsTorres || QuadrantHelper.AreAdjacent(t.QuadrantePreferido, alvo.Quadrante)) &&
+                    DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y) <= RaioAjudaTorreAdjacenteMetros)
+                .OrderBy(t => DistanceCalculator.Euclidean(alvo.X, alvo.Y, t.X, t.Y))
+                .FirstOrDefault();
 
             if (ajuda is null) continue;
 
             estado.CooperacoesConcedidas++;
             Disparar(estado, ajuda, alvo);
             RecompensarCooperacaoSeConcedida(estado, alvo, cooperacaoFoiConcedida: true);
+            RegistrarAtaqueConjuntoSeAbateu(estado, alvo);
         }
     }
 

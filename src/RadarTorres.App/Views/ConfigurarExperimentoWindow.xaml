@@ -73,6 +73,27 @@
                 <TextBlock Text="{Binding DescricaoEixoZ}" Style="{StaticResource ParametroLabel}"
                            Margin="0,4,0,0" FontStyle="Italic" TextWrapping="Wrap"/>
 
+                <CheckBox Content="Bônus por ataque conjunto" Margin="0,16,0,0"
+                          IsChecked="{Binding HabilitarBonusAtaqueConjunto}"
+                          Foreground="{DynamicResource Text.Primary}" FontSize="12"
+                          ToolTip="Soma pontuação extra quando a torre adjacente mais próxima do alvo dispara JUNTO com a torre principal e é esse segundo disparo quem abate o alvo (a principal já havia errado) — recompensa a cooperação, não só o disparo em si."/>
+
+                <CheckBox Content="Permitir troca de alvo por proximidade" Margin="0,12,0,0"
+                          IsChecked="{Binding PermitirTrocaDeAlvoPorProximidade}"
+                          Foreground="{DynamicResource Text.Primary}" FontSize="12"
+                          ToolTip="Uma torre já comprometida com um alvo troca para outro alvo livre se ele estiver mais próximo dela — mesmo que o alvo anterior continue vivo. O alvo abandonado não é descartado: volta a concorrer pela seleção normal (inclusive pela mesma torre, depois)."/>
+
+                <TextBlock Text="Torres desativadas (simula menos recursos)" Style="{StaticResource ParametroLabel}" Margin="0,16,0,0"/>
+                <ItemsControl ItemsSource="{Binding TorresConfiguraveis}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Content="{Binding Nome}" IsChecked="{Binding Desativada}"
+                                      Foreground="{DynamicResource Text.Primary}" FontSize="12" Margin="0,2,0,0"
+                                      ToolTip="Torre desativada nunca é selecionada para um alvo nem atua como torre de ajuda — continua fisicamente presente (ainda pode ser invadida), só não participa da defesa."/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <TextBlock Style="{StaticResource ParametroLabel}" TextWrapping="Wrap" FontStyle="Italic" Margin="0,16,0,0">
                     <Run Text="Alcance de mira e certeza mínima de disparo usados aqui são os mesmos ajustados em "/>
                     <Run Text="Configurações → Controlador" FontWeight="SemiBold"/>
