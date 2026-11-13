@@ -22,8 +22,8 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "INSERT INTO instantaneos_comportamento_melhor_gene " +
-            "(GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId) " +
-            "VALUES ($geracaoMarco, $fitness, $abatidos, $escapados, $errados, $taxaAcerto, $taxaCobertura, $genoma, $dataHora, $execucaoId)";
+            "(GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId, ConfiguracaoFitness) " +
+            "VALUES ($geracaoMarco, $fitness, $abatidos, $escapados, $errados, $taxaAcerto, $taxaCobertura, $genoma, $dataHora, $execucaoId, $configuracaoFitness)";
         command.Parameters.AddWithValue("$geracaoMarco", instantaneo.GeracaoMarco);
         command.Parameters.AddWithValue("$fitness", instantaneo.Fitness);
         command.Parameters.AddWithValue("$abatidos", instantaneo.AlvosAbatidos);
@@ -34,6 +34,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         command.Parameters.AddWithValue("$genoma", instantaneo.GenomaJson);
         command.Parameters.AddWithValue("$dataHora", instantaneo.DataHora.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$execucaoId", instantaneo.ExecucaoId);
+        command.Parameters.AddWithValue("$configuracaoFitness", instantaneo.ConfiguracaoFitness);
         command.ExecuteNonQuery();
     }
 
@@ -45,7 +46,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         var resultado = new List<InstantaneoComportamentoMelhorGene>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Id, GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId " +
+            "SELECT Id, GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId, ConfiguracaoFitness " +
             "FROM instantaneos_comportamento_melhor_gene ORDER BY GeracaoMarco";
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -64,6 +65,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
                 GenomaJson = reader.GetString(8),
                 DataHora = DateTime.Parse(reader.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
                 ExecucaoId = reader.GetString(10),
+                ConfiguracaoFitness = reader.GetString(11),
             });
         }
         return resultado;
@@ -100,6 +102,11 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         }
 
         SqliteSchema.EnsureColumn(connection, "instantaneos_comportamento_melhor_gene", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
+
+        // Mesmo princípio da migração de ExecucaoId acima: nenhum registro existente é apagado,
+        // os gravados antes desta coluna existir recebem 'desconhecida' (ver
+        // ParametrosTreinamento.DescricaoConfiguracaoFitness).
+        SqliteSchema.EnsureColumn(connection, "instantaneos_comportamento_melhor_gene", "ConfiguracaoFitness", "TEXT NOT NULL DEFAULT 'desconhecida'");
 
         using (SqliteCommand dropIndex = connection.CreateCommand())
         {

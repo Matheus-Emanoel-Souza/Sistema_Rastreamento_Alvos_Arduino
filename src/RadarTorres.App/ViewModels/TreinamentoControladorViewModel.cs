@@ -1577,7 +1577,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             FitnessMedioDoBloco = _somaFitnessMedioBloco / Math.Max(1, _contagemGeracoesNoBloco),
             MelhorFitnessDoBloco = _melhorFitnessBloco,
             DataHora = DateTime.Now,
-            ExecucaoId = _execucaoId
+            ExecucaoId = _execucaoId,
+            ConfiguracaoFitness = _ambiente.Parametros.DescricaoConfiguracaoFitness()
         };
 
         try
@@ -1630,7 +1631,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // da rede, então é ele que guardamos — em texto, na mesma coluna.
             GenomaJson = SerializarRede(resultado.MelhorGenoma),
             DataHora = DateTime.Now,
-            ExecucaoId = _execucaoId
+            ExecucaoId = _execucaoId,
+            ConfiguracaoFitness = _ambiente.Parametros.DescricaoConfiguracaoFitness()
         };
 
         try

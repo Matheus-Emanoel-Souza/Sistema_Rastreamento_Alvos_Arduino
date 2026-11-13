@@ -22,13 +22,14 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO marcos_fitness_treinamento (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId) " +
-            "VALUES ($geracaoMarco, $fitnessMedio, $melhorFitness, $dataHora, $execucaoId)";
+            "INSERT INTO marcos_fitness_treinamento (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId, ConfiguracaoFitness) " +
+            "VALUES ($geracaoMarco, $fitnessMedio, $melhorFitness, $dataHora, $execucaoId, $configuracaoFitness)";
         command.Parameters.AddWithValue("$geracaoMarco", marco.GeracaoMarco);
         command.Parameters.AddWithValue("$fitnessMedio", marco.FitnessMedioDoBloco);
         command.Parameters.AddWithValue("$melhorFitness", marco.MelhorFitnessDoBloco);
         command.Parameters.AddWithValue("$dataHora", marco.DataHora.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$execucaoId", marco.ExecucaoId);
+        command.Parameters.AddWithValue("$configuracaoFitness", marco.ConfiguracaoFitness);
         command.ExecuteNonQuery();
     }
 
@@ -40,7 +41,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
         var resultado = new List<MarcoFitnessTreinamento>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Id, GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId " +
+            "SELECT Id, GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId, ConfiguracaoFitness " +
             "FROM marcos_fitness_treinamento ORDER BY GeracaoMarco";
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -54,6 +55,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
                 MelhorFitnessDoBloco = reader.GetDouble(3),
                 DataHora = DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
                 ExecucaoId = reader.GetString(5),
+                ConfiguracaoFitness = reader.GetString(6),
             });
         }
         return resultado;
@@ -102,6 +104,11 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
         }
 
         SqliteSchema.EnsureColumn(connection, "marcos_fitness_treinamento", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
+
+        // Mesmo princípio da migração de ExecucaoId acima: nenhum registro existente é apagado,
+        // os gravados antes desta coluna existir recebem 'desconhecida' (ver
+        // ParametrosTreinamento.DescricaoConfiguracaoFitness).
+        SqliteSchema.EnsureColumn(connection, "marcos_fitness_treinamento", "ConfiguracaoFitness", "TEXT NOT NULL DEFAULT 'desconhecida'");
 
         using (SqliteCommand dropIndex = connection.CreateCommand())
         {

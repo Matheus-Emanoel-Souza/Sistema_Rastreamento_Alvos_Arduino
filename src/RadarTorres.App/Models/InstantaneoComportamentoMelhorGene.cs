@@ -43,4 +43,13 @@ public class InstantaneoComportamentoMelhorGene
     /// sessão, então duas sessões podem produzir o mesmo <see cref="GeracaoMarco"/> legitimamente.
     /// </summary>
     public string ExecucaoId { get; set; } = "legada";
+
+    /// <summary>
+    /// Rótulo da fórmula de fitness e das regras adicionais (ataque conjunto, troca de alvo por
+    /// proximidade, torres desativadas) vigentes NESTA sessão — ver
+    /// <see cref="NeuralEvolution.ParametrosTreinamento.DescricaoConfiguracaoFitness"/>. Permite
+    /// distinguir, marco a marco, dados de sessões com regras diferentes ligadas sem depender só
+    /// de data/hora. <c>"desconhecida"</c> para instantâneos gravados antes desta coluna existir.
+    /// </summary>
+    public string ConfiguracaoFitness { get; set; } = "desconhecida";
 }

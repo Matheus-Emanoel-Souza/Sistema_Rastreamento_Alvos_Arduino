@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using RadarTorres.App.Models;
 
 namespace RadarTorres.App.NeuralEvolution;
@@ -362,4 +363,23 @@ public sealed record ParametrosTreinamento
     /// sistema operando com menos recursos sem precisar mudar o layout físico das torres.
     /// </summary>
     public IReadOnlySet<int> TorresDesativadasIds { get; init; } = new HashSet<int>();
+
+    /// <summary>
+    /// Junta <see cref="VersaoFormulaFitness"/> com o estado das três regras adicionais acima
+    /// (independentes da fórmula — não a alteram, só somam/filtram por cima dela) num único
+    /// rótulo de texto. Gravado junto com cada marco/instantâneo de treinamento (ver
+    /// <see cref="Models.MarcoFitnessTreinamento.ConfiguracaoFitness"/>/
+    /// <see cref="Models.InstantaneoComportamentoMelhorGene.ConfiguracaoFitness"/>) para permitir
+    /// comparar depois dados de sessões com regras diferentes ligadas — sem isto, o único jeito
+    /// de diferenciar seria por data/hora ou por <c>ExecucaoId</c>, sem dizer O QUE mudou.
+    /// </summary>
+    public string DescricaoConfiguracaoFitness()
+    {
+        var extras = new List<string>();
+        if (HabilitarBonusAtaqueConjunto) extras.Add("ataque-conjunto");
+        if (PermitirTrocaDeAlvoPorProximidade) extras.Add("troca-por-proximidade");
+        if (TorresDesativadasIds.Count > 0) extras.Add($"torres-desativadas={string.Join(",", TorresDesativadasIds.OrderBy(id => id))}");
+
+        return extras.Count == 0 ? VersaoFormulaFitness : $"{VersaoFormulaFitness}+{string.Join("+", extras)}";
+    }
 }
