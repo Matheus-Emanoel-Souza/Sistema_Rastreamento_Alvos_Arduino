@@ -364,6 +364,31 @@ public sealed record ParametrosTreinamento
     /// </summary>
     public IReadOnlySet<int> TorresDesativadasIds { get; init; } = new HashSet<int>();
 
+    // ---------------------------------------------------------------------------------------
+    // Curriculum de dificuldade progressiva (ver CurriculoTreinamento/EtapaCurriculo) — opt-in,
+    // mesmo motivo das demais regras desta seção: desligado por padrão para não mudar em
+    // silêncio o significado de uma comparação com treinos já registrados.
+    // ---------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Liga o curriculum de dificuldade progressiva: o treino começa na etapa
+    /// <see cref="EtapaCurriculo.Facil"/> e avança para <see cref="EtapaCurriculo.Medio"/> e
+    /// <see cref="EtapaCurriculo.Dificil"/> conforme <see cref="CurriculoTreinamento"/> decide —
+    /// ver <see cref="LimiarFitnessParaAvancarCurriculo"/>, <see cref="GeracoesEstaveisParaAvancarCurriculo"/>
+    /// e <see cref="TetoGeracoesPorEtapaCurriculo"/>. Desligado por padrão: o comportamento
+    /// histórico é treinar sempre na dificuldade de fábrica (etapa <see cref="EtapaCurriculo.Medio"/>).
+    /// </summary>
+    public bool HabilitarCurriculoDificuldade { get; init; } = false;
+
+    /// <summary>Fitness médio da geração a partir do qual uma etapa do curriculum é considerada dominada — ajuste este valor à escala de fitness da sua configuração (recompensas/penalidades acima); não há um valor universal.</summary>
+    public double LimiarFitnessParaAvancarCurriculo { get; init; } = 400.0;
+
+    /// <summary>Gerações CONSECUTIVAS acima do limiar exigidas para avançar de etapa — protege contra promover por um pico isolado (sorte de seed fácil), ver <see cref="CurriculoTreinamento"/>.</summary>
+    public int GeracoesEstaveisParaAvancarCurriculo { get; init; } = 10;
+
+    /// <summary>Teto de gerações numa mesma etapa antes de avançar de qualquer forma — evita travar o treino indefinidamente se o limiar nunca for atingido.</summary>
+    public int TetoGeracoesPorEtapaCurriculo { get; init; } = 60;
+
     /// <summary>
     /// Junta <see cref="VersaoFormulaFitness"/> com o estado das três regras adicionais acima
     /// (independentes da fórmula — não a alteram, só somam/filtram por cima dela) num único
@@ -379,6 +404,7 @@ public sealed record ParametrosTreinamento
         if (HabilitarBonusAtaqueConjunto) extras.Add("ataque-conjunto");
         if (PermitirTrocaDeAlvoPorProximidade) extras.Add("troca-por-proximidade");
         if (TorresDesativadasIds.Count > 0) extras.Add($"torres-desativadas={string.Join(",", TorresDesativadasIds.OrderBy(id => id))}");
+        if (HabilitarCurriculoDificuldade) extras.Add("curriculo-progressivo");
 
         return extras.Count == 0 ? VersaoFormulaFitness : $"{VersaoFormulaFitness}+{string.Join("+", extras)}";
     }

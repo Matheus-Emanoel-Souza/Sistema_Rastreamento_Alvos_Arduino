@@ -20,7 +20,7 @@ namespace RadarTorres.App.NeuralEvolution;
 public sealed class AmbienteTreinamento
 {
     private readonly List<TorreTreinamento> _torresBase;
-    private readonly ParametrosTreinamento _parametros;
+    private ParametrosTreinamento _parametros;
 
     public ParametrosTreinamento Parametros => _parametros;
 
@@ -31,6 +31,19 @@ public sealed class AmbienteTreinamento
     {
         _parametros = parametros ?? new ParametrosTreinamento();
         _torresBase = CarregarTorres(torres ?? AppConfig.Current.Towers);
+    }
+
+    /// <summary>
+    /// Troca os parâmetros do ambiente em tempo de execução — usado pelo curriculum de
+    /// dificuldade progressiva (ver <see cref="CurriculoTreinamento"/>) para variar o mundo entre
+    /// gerações sem recriar o ambiente (preserva as torres já carregadas). Só afeta episódios
+    /// futuros (<see cref="NovoEpisodio"/>/<see cref="ExecutarEpisodioRapido"/> seguintes) —
+    /// nenhum episódio em andamento é alterado.
+    /// </summary>
+    public void AtualizarParametros(ParametrosTreinamento novos)
+    {
+        ArgumentNullException.ThrowIfNull(novos);
+        _parametros = novos;
     }
 
     private static List<TorreTreinamento> CarregarTorres(IReadOnlyList<TowerDefinition> definicoes)

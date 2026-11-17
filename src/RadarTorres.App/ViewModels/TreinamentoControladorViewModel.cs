@@ -132,6 +132,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private TreinadorNeat? _treinador;
 
     /// <summary>
+    /// Parâmetros de dificuldade de FÁBRICA da sessão atual (a tela, sem curriculum) — guardado à
+    /// parte porque, com <see cref="ParametrosTreinamento.HabilitarCurriculoDificuldade"/> ligado,
+    /// <see cref="_ambiente"/> passa a usar parâmetros TROCADOS a cada etapa
+    /// (<see cref="ParametrosTreinamentoCurriculo.AplicarEtapa"/>); precisamos da base original
+    /// para recalcular a etapa seguinte sem acumular os ajustes de etapas anteriores.
+    /// </summary>
+    private ParametrosTreinamento _parametrosBaseCurriculo = new();
+
+    /// <summary><c>null</c> quando <see cref="ParametrosTreinamento.HabilitarCurriculoDificuldade"/> está desligado — não decide nada, <see cref="_ambiente"/> fica sempre na dificuldade de fábrica.</summary>
+    private CurriculoTreinamento? _curriculo;
+
+    private EtapaCurriculo _etapaCurriculoAtual = EtapaCurriculo.Medio;
+    /// <summary>Etapa do curriculum de dificuldade em uso agora — fica em <see cref="EtapaCurriculo.Medio"/> (dificuldade de fábrica) quando o curriculum está desligado.</summary>
+    public EtapaCurriculo EtapaCurriculoAtual { get => _etapaCurriculoAtual; private set => SetProperty(ref _etapaCurriculoAtual, value); }
+
+    /// <summary>
     /// Identifica esta sessão de treinamento para os marcos/instantâneos gravados por ela (ver
     /// <see cref="RegistrarMarcoFitnessSeCompletouBloco"/>/<see cref="RegistrarInstantaneoDeComportamentoSeCompletouBloco"/>)
     /// — gerado de novo toda vez que um <see cref="TreinadorNeat"/> novo é criado (<see cref="Iniciar"/>
@@ -833,7 +849,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         if (EmExecucao) return;
 
         ParametrosTreinamento parametros = ParametrosAtuais;
-        _ambiente = new AmbienteTreinamento(parametros);
+        _parametrosBaseCurriculo = parametros;
+        _curriculo = CriarCurriculoSeHabilitado(parametros);
+        EtapaCurriculoAtual = _curriculo?.EtapaAtual ?? EtapaCurriculo.Medio;
+        _ambiente = new AmbienteTreinamento(_curriculo is null ? parametros : parametros.AplicarEtapa(_curriculo.EtapaAtual));
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
         // Os eventos já na tela (desta sessão de app, de "Iniciar"s anteriores ou carregados do
@@ -997,7 +1016,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         EmExecucao = false;
 
         ParametrosTreinamento parametros = ParametrosAtuais;
-        _ambiente = new AmbienteTreinamento(parametros);
+        _parametrosBaseCurriculo = parametros;
+        _curriculo = CriarCurriculoSeHabilitado(parametros);
+        EtapaCurriculoAtual = _curriculo?.EtapaAtual ?? EtapaCurriculo.Medio;
+        _ambiente = new AmbienteTreinamento(_curriculo is null ? parametros : parametros.AplicarEtapa(_curriculo.EtapaAtual));
         _treinador = null;
         _melhorGenomaAtual = null;
         _melhorRedeAtual = null;
@@ -1261,6 +1283,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary><c>null</c> quando <see cref="ParametrosTreinamento.HabilitarCurriculoDificuldade"/> está desligado — comportamento histórico preservado sem instanciar nada.</summary>
+    private static CurriculoTreinamento? CriarCurriculoSeHabilitado(ParametrosTreinamento parametros)
+        => parametros.HabilitarCurriculoDificuldade
+            ? new CurriculoTreinamento(
+                parametros.LimiarFitnessParaAvancarCurriculo,
+                parametros.GeracoesEstaveisParaAvancarCurriculo,
+                parametros.TetoGeracoesPorEtapaCurriculo)
+            : null;
+
     private void Evoluir(CancellationToken token)
     {
         TreinadorNeat algoritmo = _treinador!;
@@ -1280,6 +1311,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // margem para um genoma "sortudo" vencer um melhor só por calhar de um cenário mais
             // fácil. As seeds mudam de geração para geração para a rede não ficar especializada
             // num punhado fixo de cenários.
+            // Curriculum de dificuldade progressiva: a etapa decidida pela geração ANTERIOR (ver
+            // RegistrarGeracao abaixo) é aplicada antes desta geração ser avaliada — nenhum
+            // indivíduo desta geração é avaliado sob uma dificuldade decidida pelo próprio
+            // resultado dele.
             int[] seedsDaGeracao = Enumerable.Range(0, Math.Max(1, _ambiente.Parametros.EpisodiosPorAvaliacao))
                 .Select(i => algoritmo.GeracaoAtual * 1000 + i)
                 .ToArray();
@@ -1300,6 +1335,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             RegistrarHistorico(resultado, comportamento);
             RegistrarMarcoFitnessSeCompletouBloco(resultado);
             RegistrarInstantaneoDeComportamentoSeCompletouBloco(resultado, comportamento);
+
+            if (_curriculo is not null)
+            {
+                EtapaCurriculo etapaAnterior = _curriculo.EtapaAtual;
+                EtapaCurriculo etapaParaProximaGeracao = _curriculo.RegistrarGeracao(resultado.FitnessMedio);
+
+                if (etapaParaProximaGeracao != etapaAnterior)
+                {
+                    _ambiente.AtualizarParametros(_parametrosBaseCurriculo.AplicarEtapa(etapaParaProximaGeracao));
+                    RunOnUi(() => EtapaCurriculoAtual = etapaParaProximaGeracao);
+                    RegistrarEvento(
+                        $"Curriculum avançou de dificuldade: {etapaAnterior} → {etapaParaProximaGeracao}.",
+                        resultado.Geracao,
+                        TipoEventoTreinamento.Informacao);
+                }
+            }
 
             RunOnUi(() => AplicarResultadoNaTela(resultado, comportamento));
 
