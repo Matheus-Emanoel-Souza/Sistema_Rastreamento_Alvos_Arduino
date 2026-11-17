@@ -4,15 +4,9 @@ Funcionalidade: documenta a origem e o escopo do diagrama de implantação do Ra
 
 - **Branch analisada:** `banco-dados`
 - **Commit analisado:** `fea50b813534235344dbdcf5665c03c81c3a0a26`
-- **Arquivos:** `Diagrama_Implantacao_RadarTorres.tex` (fonte editável, LaTeX + TikZ) e `Diagrama_Implantacao_RadarTorres.pdf` (A3 paisagem, 2 páginas).
+- **Arquivos:** `Diagrama_Implantacao_RadarTorres.pdf` (A3 paisagem, 2 páginas, versão final usada na apresentação).
 
-## Como recompilar
-
-```
-pdflatex Diagrama_Implantacao_RadarTorres.tex
-```
-
-(MiKTeX com pacote `tikz` e bibliotecas `fit`, `backgrounds`, `arrows.meta`, `positioning`, `calc`.)
+> **Nota:** o PDF atual foi substituído por uma versão com acabamento visual revisado. O arquivo `Diagrama_Implantacao_RadarTorres.tex` mantido neste diretório corresponde à versão anterior (gerada via LaTeX/TikZ) e **não é mais a fonte editável do PDF vigente**. Caso a fonte editável da versão atual seja disponibilizada, ela deve substituir este `.tex`.
 
 ## Principais arquivos do repositório usados para confirmar a arquitetura
 
