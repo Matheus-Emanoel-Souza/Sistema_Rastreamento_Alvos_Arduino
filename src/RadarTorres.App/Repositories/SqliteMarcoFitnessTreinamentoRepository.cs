@@ -8,7 +8,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>marcos_fitness_treinamento</c>) de
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABMFT</c>) de
 /// <see cref="IMarcoFitnessTreinamentoRepository"/>. Mesmo padrão de conexão/criação de tabela de
 /// <see cref="SqliteHistoricoTreinamentoRepository"/>, mas sem o descarte por limite — um marco
 /// por 500 gerações nunca acumula volume relevante.
@@ -22,7 +22,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO marcos_fitness_treinamento (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId, ConfiguracaoFitness) " +
+            "INSERT INTO TABMFT (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId, ConfiguracaoFitness) " +
             "VALUES ($geracaoMarco, $fitnessMedio, $melhorFitness, $dataHora, $execucaoId, $configuracaoFitness)";
         command.Parameters.AddWithValue("$geracaoMarco", marco.GeracaoMarco);
         command.Parameters.AddWithValue("$fitnessMedio", marco.FitnessMedioDoBloco);
@@ -42,7 +42,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "SELECT Id, GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora, ExecucaoId, ConfiguracaoFitness " +
-            "FROM marcos_fitness_treinamento ORDER BY GeracaoMarco";
+            "FROM TABMFT ORDER BY GeracaoMarco";
 
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
@@ -67,7 +67,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
         EnsureTable(connection);
 
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM marcos_fitness_treinamento";
+        command.CommandText = "DELETE FROM TABMFT";
         command.ExecuteNonQuery();
     }
 
@@ -94,7 +94,7 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.CommandText =
-                "CREATE TABLE IF NOT EXISTS marcos_fitness_treinamento (" +
+                "CREATE TABLE IF NOT EXISTS TABMFT (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "GeracaoMarco INTEGER NOT NULL, " +
                 "FitnessMedioDoBloco REAL NOT NULL, " +
@@ -103,12 +103,12 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
             command.ExecuteNonQuery();
         }
 
-        SqliteSchema.EnsureColumn(connection, "marcos_fitness_treinamento", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
+        SqliteSchema.EnsureColumn(connection, "TABMFT", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
 
         // Mesmo princípio da migração de ExecucaoId acima: nenhum registro existente é apagado,
         // os gravados antes desta coluna existir recebem 'desconhecida' (ver
         // ParametrosTreinamento.DescricaoConfiguracaoFitness).
-        SqliteSchema.EnsureColumn(connection, "marcos_fitness_treinamento", "ConfiguracaoFitness", "TEXT NOT NULL DEFAULT 'desconhecida'");
+        SqliteSchema.EnsureColumn(connection, "TABMFT", "ConfiguracaoFitness", "TEXT NOT NULL DEFAULT 'desconhecida'");
 
         using (SqliteCommand dropIndex = connection.CreateCommand())
         {
@@ -118,6 +118,6 @@ public sealed class SqliteMarcoFitnessTreinamentoRepository : IMarcoFitnessTrein
             dropIndex.ExecuteNonQuery();
         }
 
-        SqliteSchema.EnsureIndex(connection, "idx_marcos_fitness_execucao_geracao", "ON marcos_fitness_treinamento (ExecucaoId, GeracaoMarco)", unico: true);
+        SqliteSchema.EnsureIndex(connection, "idx_marcos_fitness_execucao_geracao", "ON TABMFT (ExecucaoId, GeracaoMarco)", unico: true);
     }
 }

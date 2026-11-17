@@ -11,7 +11,7 @@
 // Colunas "FK por texto" (Login em vez de Id) refletem uma limitação real da implementação
 // atual em CSV (sem integridade referencial) — comentadas abaixo em vez de um Ref formal.
 
-Table usuarios {
+Table TABUSU {
   id integer [primary key]
   nome varchar
   login varchar [unique, note: 'Login único usado para autenticação']
@@ -22,21 +22,21 @@ Table usuarios {
   data_criacao timestamp
   ultimo_acesso timestamp [note: 'NULL = nunca acessou']
 
-  Note: 'usuarios.csv — CsvUsuarioRepository'
+  Note: 'TABUSU.csv — CsvUsuarioRepository'
 }
 
-Table preferencias_usuario {
-  usuario_id integer [primary key, note: 'FK 1:1 para usuarios.id']
+Table TABPRU {
+  usuario_id integer [primary key, note: 'FK 1:1 para TABUSU.id']
   idioma varchar [default: 'pt-BR']
   tema varchar [default: 'Escuro', note: 'Claro | Escuro | Sistema']
   sidebar_recolhida boolean [default: false]
   tela_inicial varchar [note: 'NULL = padrão do sistema']
   registros_por_pagina integer [default: 25]
 
-  Note: 'preferencias_usuario.csv — CsvPreferenciasUsuarioRepository (1:1 com usuarios)'
+  Note: 'TABPRU.csv — CsvPreferenciasUsuarioRepository (1:1 com TABUSU)'
 }
 
-Table objetos_detectados {
+Table TABOBJ {
   id integer [primary key]
   tipo varchar [note: 'hoje sempre "Alvo genérico"']
   x float
@@ -58,9 +58,9 @@ Table objetos_detectados {
   Note: 'Tabela ObjetosDetectados (SQLite) — SqliteObjetoDetectadoRepository. Uma linha por OCORRÊNCIA: único por (rastreamento_id, quadrante).'
 }
 
-Table ocorrencia_estados {
+Table TABOCE {
   id integer [primary key]
-  objeto_detectado_id integer [note: 'FK para objetos_detectados.id']
+  objeto_detectado_id integer [note: 'FK para TABOBJ.id']
   estado varchar [note: 'Detectado | AbatePendente | Abatido']
   data_hora timestamp
   usuario varchar [note: 'login do responsável, quando a transição partiu de ação humana']
@@ -69,7 +69,7 @@ Table ocorrencia_estados {
   Note: 'Histórico de transições de estado da ocorrência (auditoria do ciclo de abate).'
 }
 
-Table cameras {
+Table TABCAM {
   id integer [primary key]
   dispositivo_id varchar [note: 'único — moniker DirectShow da câmera']
   nome varchar
@@ -79,26 +79,26 @@ Table cameras {
   Note: 'Qual câmera monitora qual quadrante — SqliteCameraQuadranteRepository.'
 }
 
-Ref: ocorrencia_estados.objeto_detectado_id > objetos_detectados.id
+Ref: TABOCE.objeto_detectado_id > TABOBJ.id
 
-Table acoes_realizadas {
+Table TABACA {
   id_acao integer [primary key]
   id_torre integer [note: 'identifica a torre que executou a ação (1..4)']
-  id_objeto integer [note: 'FK para objetos_detectados.id — NULL se não houver objeto detectado associado']
+  id_objeto integer [note: 'FK para TABOBJ.id — NULL se não houver objeto detectado associado']
   dh_acao timestamp
   observacao varchar
 
-  Note: 'acoes_realizadas.csv — CsvAcaoRealizadaRepository. Só inserção (auditoria).'
+  Note: 'TABACA.csv — CsvAcaoRealizadaRepository. Só inserção (auditoria).'
 }
 
-Table modo_atual_torre {
+Table TABMOD {
   id_modo integer [primary key]
   modoatual varchar
   modoanterior varchar
-  id_user integer [note: 'FK para usuarios.id — usuário que fez a alteração deste modo']
+  id_user integer [note: 'FK para TABUSU.id — usuário que fez a alteração deste modo']
   dhalteracao timestamp
 
-  Note: 'modo_atual_torre.csv — CsvModoAtualTorreRepository. Só inserção (auditoria).'
+  Note: 'TABMOD.csv — CsvModoAtualTorreRepository. Só inserção (auditoria).'
 }
 
 Table zona_mortas {
@@ -132,7 +132,7 @@ Table dashboard_card_layout {
   Note: 'dashboard-layout-{tela}-{usuário}.json — DashboardLayoutRepository. Hoje é um arquivo JSON por tela+usuário.'
 }
 
-Table historico_treinamento_geracoes {
+Table TABHTG {
   id integer [primary key]
   geracao integer
   melhor_fitness float
@@ -144,17 +144,17 @@ Table historico_treinamento_geracoes {
   Note: 'Tabela HistoricoTreinamentoGeracoes (SQLite) — SqliteHistoricoTreinamentoRepository. Buffer circular limitado a 300 linhas (descarta o ID mais antigo ao estourar); uma linha por geração treinada na tela "Treinamento do Controlador" (neuroevolução, ver src/RadarTorres.App/NeuralEvolution/).'
 }
 
-Table marcos_fitness_treinamento {
+Table TABMFT {
   id integer [primary key]
   geracao_marco integer [unique, note: 'a cada 500 gerações — 500, 1000, 1500...']
   fitness_medio_do_bloco float
   melhor_fitness_do_bloco float
   data_hora timestamp
 
-  Note: 'Tabela MarcosFitnessTreinamento (SQLite) — SqliteMarcoFitnessTreinamentoRepository. Só inserção, sem limite de linhas (diferente de historico_treinamento_geracoes).'
+  Note: 'Tabela MarcosFitnessTreinamento (SQLite) — SqliteMarcoFitnessTreinamentoRepository. Só inserção, sem limite de linhas (diferente de TABHTG).'
 }
 
-Table instantaneos_comportamento_melhor_gene {
+Table TABICG {
   id integer [primary key]
   geracao_marco integer [unique, note: 'a cada 1.000 gerações — 1000, 2000, 3000...']
   fitness float
@@ -169,14 +169,36 @@ Table instantaneos_comportamento_melhor_gene {
   Note: 'Tabela InstantaneosComportamentoMelhorGene (SQLite) — SqliteInstantaneoComportamentoRepository. Retrato completo do melhor genoma a cada 1.000 gerações; só inserção, nunca sobrescrito — histórico comparativo marco a marco.'
 }
 
-Table classificacoes_alvo {
+Table TABCLA {
   id integer [primary key]
-  objeto_detectado_id integer [note: 'FK para objetos_detectados.id; NULL antes da primeira detecção ser gravada']
+  objeto_detectado_id integer [note: 'FK para TABOBJ.id; NULL antes da primeira detecção ser gravada']
   velocidade_metros_por_segundo float
   grau varchar [note: 'Baixo | Medio | Alto | Critico — ver Helpers/ClassificadorPerigoAlvo.cs']
   data_hora timestamp
 
   Note: 'Tabela ClassificacoesAlvo (SQLite) — SqliteClassificacaoPerigoRepository. Só inserção (auditoria); uma linha por MUDANÇA de grau, não por leitura.'
+}
+
+Table TABDIC {
+  id integer [primary key]
+  nometab varchar [unique, note: 'sigla de 6 letras, ex.: TABOBJ']
+  nometabcompleta varchar [note: 'nome completo, ex.: "Tabela de Objetos Detectados"']
+
+  Note: 'Dicionário de tabelas — nome completo por trás de cada sigla TABxxx usada no banco.'
+}
+
+Table TABOPC {
+  id integer [primary key]
+  nometab varchar [note: 'sigla da tabela do campo, ex.: TABCLA']
+  nomecampo varchar [note: 'nome da coluna, ex.: Grau']
+  opcao varchar [note: 'valor válido da coluna, ex.: Critico']
+  descricao varchar [note: 'descrição em português da opção']
+
+  indexes {
+    (nometab, nomecampo, opcao) [unique, name: 'idx_tabopc_campo_opcao']
+  }
+
+  Note: 'Opções válidas de campos que antes só tinham CHECK(... IN (...)) — uma linha por opção.'
 }
 
 Table arduino_settings {
@@ -190,15 +212,15 @@ Table arduino_settings {
   Note: 'arduino-settings.json — ArduinoSettingsRepository. Configuração única por instalação.'
 }
 
-Ref: preferencias_usuario.usuario_id - usuarios.id // one-to-one
+Ref: TABPRU.usuario_id - TABUSU.id // one-to-one
 
-Ref: dashboard_card_layout.usuario_id > usuarios.id // many-to-one
+Ref: dashboard_card_layout.usuario_id > TABUSU.id // many-to-one
 
-Ref: acoes_realizadas.id_objeto > objetos_detectados.id // many-to-one, opcional
+Ref: TABACA.id_objeto > TABOBJ.id // many-to-one, opcional
 
-Ref: modo_atual_torre.id_user > usuarios.id // many-to-one, opcional
+Ref: TABMOD.id_user > TABUSU.id // many-to-one, opcional
 
-Ref: classificacoes_alvo.objeto_detectado_id > objetos_detectados.id // many-to-one, opcional
+Ref: TABCLA.objeto_detectado_id > TABOBJ.id // many-to-one, opcional
 
 // Fora deste espelho — objetos só em memória, nunca persistidos em disco:
 //   Target, Tower, SensorReading, LogEntry, CameraDevice,

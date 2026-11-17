@@ -9,7 +9,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>modo_atual_torre</c> — nomes de
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABMOD</c> — nomes de
 /// tabela/colunas espelham exatamente <c>Software/Banco_de_Dados/schema.sql</c>)
 /// de <see cref="IModoAtualTorreRepository"/> — único armazenamento; sem fallback para CSV, com
 /// fila de reenvio via <see cref="PendingWriteQueue"/> se o banco estiver momentaneamente
@@ -26,7 +26,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "SELECT ID_MODO, MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId " +
-            "FROM modo_atual_torre ORDER BY ID_MODO";
+            "FROM TABMOD ORDER BY ID_MODO";
 
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
@@ -53,7 +53,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO modo_atual_torre (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId) " +
+                "INSERT INTO TABMOD (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId) " +
                 "VALUES ($modoAtual, $modoAnterior, $idUser, $dhAlteracao, $sessaoId); " +
                 "SELECT last_insert_rowid();";
             command.Parameters.AddWithValue("$modoAtual", alteracao.NovoModo);
@@ -69,7 +69,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
         {
             alteracao.Id = PendingWriteQueue.NextOfflineId();
             PendingWriteQueue.Enqueue(
-                "INSERT INTO modo_atual_torre (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId) VALUES (" +
+                "INSERT INTO TABMOD (MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO, SessaoId) VALUES (" +
                 $"{SqlLiteral.Text(alteracao.NovoModo)}, {SqlLiteral.Text(alteracao.ModoAnterior)}, {SqlLiteral.Number(alteracao.UsuarioId)}, " +
                 $"{SqlLiteral.DateTime(alteracao.DataHora)}, {SqlLiteral.Text(alteracao.SessaoId)})");
             return alteracao;
@@ -78,7 +78,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
 
     /// <summary>
     /// Internal (não <c>private</c>) de propósito: <see cref="SqliteObjetoDetectadoRepository.RegistrarTransicao"/>
-    /// lê desta tabela (<c>modo_atual_torre</c>) num <c>SELECT</c> embutido, então precisa
+    /// lê desta tabela (<c>TABMOD</c>) num <c>SELECT</c> embutido, então precisa
     /// garantir que ela exista antes de gravar uma transição — sem depender da ordem incidental
     /// em que os repositórios são usados pela primeira vez (ver <c>GarantirUmaVez</c>, que já
     /// deduplica chamadas repetidas sem custo).
@@ -91,7 +91,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "CREATE TABLE IF NOT EXISTS modo_atual_torre (" +
+            "CREATE TABLE IF NOT EXISTS TABMOD (" +
             "ID_MODO INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "MODOATUAL TEXT NOT NULL, " +
             "MODOANTERIOR TEXT NOT NULL, " +
@@ -99,7 +99,7 @@ public sealed class SqliteModoAtualTorreRepository : IModoAtualTorreRepository
             "DHALTERACAO TEXT NOT NULL)";
         command.ExecuteNonQuery();
 
-        // Código de sessão (sessoes_usuario.ID_SESSAO) de quem confirmou a troca de modo.
-        SqliteSchema.EnsureColumn(connection, "modo_atual_torre", "SessaoId", "TEXT NULL");
+        // Código de sessão (TABSES.ID_SESSAO) de quem confirmou a troca de modo.
+        SqliteSchema.EnsureColumn(connection, "TABMOD", "SessaoId", "TEXT NULL");
     }
 }

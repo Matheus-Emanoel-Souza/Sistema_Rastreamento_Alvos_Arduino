@@ -9,7 +9,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>Usuarios</c>) de
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABUSU</c>) de
 /// <see cref="IUsuarioRepository"/> — único armazenamento; sem fallback para CSV.
 /// </summary>
 public sealed class SqliteUsuarioRepository : IUsuarioRepository
@@ -66,7 +66,7 @@ public sealed class SqliteUsuarioRepository : IUsuarioRepository
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO Usuarios (Nome, Email, Idade, Login, SenhaHash, SenhaSalt, Perfil, Ativo, DataCriacao, UltimoAcesso) " +
+                "INSERT INTO TABUSU (Nome, Email, Idade, Login, SenhaHash, SenhaSalt, Perfil, Ativo, DataCriacao, UltimoAcesso) " +
                 "VALUES ($nome, $email, $idade, $login, $senhaHash, $senhaSalt, $perfil, $ativo, $dataCriacao, $ultimoAcesso); " +
                 "SELECT last_insert_rowid();";
             AddCommonParameters(command, usuario);
@@ -91,7 +91,7 @@ public sealed class SqliteUsuarioRepository : IUsuarioRepository
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "UPDATE Usuarios SET Nome = $nome, Email = $email, Idade = $idade, Login = $login, " +
+                "UPDATE TABUSU SET Nome = $nome, Email = $email, Idade = $idade, Login = $login, " +
                 "SenhaHash = $senhaHash, SenhaSalt = $senhaSalt, Perfil = $perfil, Ativo = $ativo, " +
                 "DataCriacao = $dataCriacao, UltimoAcesso = $ultimoAcesso WHERE Id = $id";
             AddCommonParameters(command, usuario);
@@ -105,13 +105,13 @@ public sealed class SqliteUsuarioRepository : IUsuarioRepository
     }
 
     private static string BuildInsertSql(Usuario usuario) =>
-        "INSERT INTO Usuarios (Nome, Email, Idade, Login, SenhaHash, SenhaSalt, Perfil, Ativo, DataCriacao, UltimoAcesso) VALUES (" +
+        "INSERT INTO TABUSU (Nome, Email, Idade, Login, SenhaHash, SenhaSalt, Perfil, Ativo, DataCriacao, UltimoAcesso) VALUES (" +
         $"{SqlLiteral.Text(usuario.Nome)}, {SqlLiteral.Text(usuario.Email)}, {SqlLiteral.Number(usuario.Idade)}, {SqlLiteral.Text(usuario.Login)}, " +
         $"{SqlLiteral.Text(usuario.SenhaHash)}, {SqlLiteral.Text(usuario.SenhaSalt)}, {SqlLiteral.Text(usuario.Perfil.ToString())}, {SqlLiteral.Bool(usuario.Ativo)}, " +
         $"{SqlLiteral.DateTime(usuario.DataCriacao)}, {SqlLiteral.DateTime(usuario.UltimoAcesso)})";
 
     private static string BuildUpdateSql(Usuario usuario) =>
-        "UPDATE Usuarios SET " +
+        "UPDATE TABUSU SET " +
         $"Nome = {SqlLiteral.Text(usuario.Nome)}, Email = {SqlLiteral.Text(usuario.Email)}, Idade = {SqlLiteral.Number(usuario.Idade)}, " +
         $"Login = {SqlLiteral.Text(usuario.Login)}, SenhaHash = {SqlLiteral.Text(usuario.SenhaHash)}, SenhaSalt = {SqlLiteral.Text(usuario.SenhaSalt)}, " +
         $"Perfil = {SqlLiteral.Text(usuario.Perfil.ToString())}, Ativo = {SqlLiteral.Bool(usuario.Ativo)}, " +
@@ -133,7 +133,7 @@ public sealed class SqliteUsuarioRepository : IUsuarioRepository
     }
 
     private const string SelectAllSql =
-        "SELECT Id, Nome, Email, Idade, Login, SenhaHash, SenhaSalt, Perfil, Ativo, DataCriacao, UltimoAcesso FROM Usuarios";
+        "SELECT Id, Nome, Email, Idade, Login, SenhaHash, SenhaSalt, Perfil, Ativo, DataCriacao, UltimoAcesso FROM TABUSU";
 
     private static Usuario ReadUsuario(SqliteDataReader reader) => new()
     {
@@ -158,7 +158,7 @@ public sealed class SqliteUsuarioRepository : IUsuarioRepository
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "CREATE TABLE IF NOT EXISTS Usuarios (" +
+            "CREATE TABLE IF NOT EXISTS TABUSU (" +
             "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "Nome TEXT NOT NULL, " +
             "Email TEXT NOT NULL, " +

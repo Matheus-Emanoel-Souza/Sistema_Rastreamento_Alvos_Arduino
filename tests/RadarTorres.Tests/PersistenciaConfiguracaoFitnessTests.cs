@@ -61,14 +61,14 @@ public sealed class PersistenciaConfiguracaoFitnessTests : IDisposable
             // um banco de antes das duas migrações — a mesma situação de quem atualiza o app.
             using SqliteCommand criar = connection.CreateCommand();
             criar.CommandText =
-                "CREATE TABLE marcos_fitness_treinamento (" +
+                "CREATE TABLE TABMFT (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, GeracaoMarco INTEGER NOT NULL, " +
                 "FitnessMedioDoBloco REAL NOT NULL, MelhorFitnessDoBloco REAL NOT NULL, DataHora TEXT NOT NULL)";
             criar.ExecuteNonQuery();
 
             using SqliteCommand inserir = connection.CreateCommand();
             inserir.CommandText =
-                "INSERT INTO marcos_fitness_treinamento (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora) " +
+                "INSERT INTO TABMFT (GeracaoMarco, FitnessMedioDoBloco, MelhorFitnessDoBloco, DataHora) " +
                 "VALUES (500, 42.0, 50.0, '2026-01-01T00:00:00.0000000')";
             inserir.ExecuteNonQuery();
         }
@@ -104,7 +104,7 @@ public sealed class PersistenciaConfiguracaoFitnessTests : IDisposable
         {
             using SqliteCommand criar = connection.CreateCommand();
             criar.CommandText =
-                "CREATE TABLE instantaneos_comportamento_melhor_gene (" +
+                "CREATE TABLE TABICG (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, GeracaoMarco INTEGER NOT NULL, Fitness REAL NOT NULL, " +
                 "AlvosAbatidos INTEGER NOT NULL, AlvosEscapados INTEGER NOT NULL, TirosErrados INTEGER NOT NULL, " +
                 "TaxaDeAcerto REAL NULL, TaxaDeCobertura REAL NULL, GenomaJson TEXT NOT NULL, DataHora TEXT NOT NULL)";
@@ -112,7 +112,7 @@ public sealed class PersistenciaConfiguracaoFitnessTests : IDisposable
 
             using SqliteCommand inserir = connection.CreateCommand();
             inserir.CommandText =
-                "INSERT INTO instantaneos_comportamento_melhor_gene " +
+                "INSERT INTO TABICG " +
                 "(GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora) " +
                 "VALUES (1000, 70.0, 10, 2, 1, 0.9, 0.83, '{}', '2026-01-01T00:00:00.0000000')";
             inserir.ExecuteNonQuery();

@@ -1,12 +1,12 @@
 erDiagram
-    USUARIOS ||--o{ MODO_ATUAL_TORRE : "solicita"
-    USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
-    OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (quando houver)"
-    OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
-    CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
-    OBJETOS_DETECTADOS ||--o{ CLASSIFICACOES_ALVO : "classificou (velocidade/perigo)"
+    TABUSU ||--o{ TABMOD : "solicita"
+    TABUSU ||--o| TABPRU : "tem"
+    TABOBJ ||--o{ TABACA : "originou (quando houver)"
+    TABOBJ ||--o{ TABOCE : "transita"
+    TABCAM ||--o{ TABOBJ : "detectou (quadrante)"
+    TABOBJ ||--o{ TABCLA : "classificou (velocidade/perigo)"
 
-    USUARIOS {
+    TABUSU {
         int Id PK
         string Nome
         string Login UK
@@ -18,7 +18,7 @@ erDiagram
         datetime UltimoAcesso "nullable"
     }
 
-    OBJETOS_DETECTADOS {
+    TABOBJ {
         int Id PK
         string Tipo
         double X
@@ -38,7 +38,7 @@ erDiagram
         datetime DataHoraUltimaDeteccao "nullable"
     }
 
-    OCORRENCIA_ESTADOS {
+    TABOCE {
         int Id PK
         int ObjetoDetectadoId FK
         string Estado "Detectado|AbatePendente|Abatido"
@@ -47,7 +47,7 @@ erDiagram
         string Observacao "nullable"
     }
 
-    CAMERAS {
+    TABCAM {
         int Id PK
         string DispositivoId UK "moniker DirectShow"
         string Nome
@@ -55,7 +55,7 @@ erDiagram
         datetime AtualizadoEm
     }
 
-    ACOES_REALIZADAS {
+    TABACA {
         int ID_ACAO PK
         int ID_TORRE
         int ID_OBJETO FK "nullable"
@@ -63,7 +63,7 @@ erDiagram
         string OBSERVACAO "nullable"
     }
 
-    MODO_ATUAL_TORRE {
+    TABMOD {
         int ID_MODO PK
         string MODOATUAL
         string MODOANTERIOR
@@ -71,7 +71,7 @@ erDiagram
         datetime DHALTERACAO
     }
 
-    PREFERENCIAS_USUARIO {
+    TABPRU {
         int UsuarioId PK, FK
         string Idioma
         string Tema "Claro | Escuro | Sistema"
@@ -80,7 +80,7 @@ erDiagram
         int RegistrosPorPagina
     }
 
-    CLASSIFICACOES_ALVO {
+    TABCLA {
         int Id PK
         int ObjetoDetectadoId FK "nullable"
         double VelocidadeMetrosPorSegundo
@@ -88,7 +88,7 @@ erDiagram
         datetime DataHora
     }
 
-    HISTORICO_TREINAMENTO_GERACOES {
+    TABHTG {
         int ID PK
         int GERACAO
         double MELHOR_FITNESS
@@ -98,7 +98,7 @@ erDiagram
         datetime DH_REGISTRO
     }
 
-    MARCOS_FITNESS_TREINAMENTO {
+    TABMFT {
         int Id PK
         int GeracaoMarco UK "marco a cada N geracoes"
         double FitnessMedioDoBloco
@@ -106,7 +106,7 @@ erDiagram
         datetime DataHora
     }
 
-    INSTANTANEOS_COMPORTAMENTO_MELHOR_GENE {
+    TABICG {
         int Id PK
         int GeracaoMarco UK
         double Fitness
@@ -117,4 +117,18 @@ erDiagram
         double TaxaDeCobertura "nullable"
         string GenomaJson "vetor de pesos/vieses evoluido"
         datetime DataHora
+    }
+
+    TABDIC {
+        int id PK
+        string nometab UK "sigla de 6 letras, ex. TABOBJ"
+        string nometabcompleta "ex. Tabela de Objetos Detectados"
+    }
+
+    TABOPC {
+        int id PK
+        string nometab "sigla da tabela, ex. TABCLA"
+        string nomecampo "ex. Grau"
+        string opcao "ex. Critico"
+        string descricao "descricao em portugues da opcao"
     }

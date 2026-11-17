@@ -430,7 +430,7 @@ public partial class App : Application
     /// <remarks>
     /// Chama <see cref="IAuthService.Logout"/> antes de descartar o escopo — cobre o caso de a
     /// aba ser fechada pelo "✕" (<see cref="FecharAba"/>) sem passar pelo botão "Sair": sem isto,
-    /// <c>sessoes_usuario.DataHoraFim</c> ficaria aberta para sempre. <c>Logout</c> já é
+    /// <c>TABSES.DataHoraFim</c> ficaria aberta para sempre. <c>Logout</c> já é
     /// idempotente (não faz nada se ninguém estiver logado), então chamá-lo de novo depois de um
     /// logout explícito (ver <see cref="ShowShellInTab"/>) é seguro.
     /// </remarks>

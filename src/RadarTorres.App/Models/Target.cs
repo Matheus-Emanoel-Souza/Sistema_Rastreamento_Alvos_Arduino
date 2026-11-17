@@ -132,7 +132,7 @@ public class Target : INotifyPropertyChanged
     /// <summary>
     /// Grau de perigosidade conforme a velocidade atual (ver <see cref="Helpers.ClassificadorPerigoAlvo"/>),
     /// recalculado a cada leitura por <see cref="Services.TargetTrackingService"/>. Mudanças de
-    /// valor são gravadas em <c>classificacoes_alvo</c> por <see cref="ViewModels.MainViewModel"/>.
+    /// valor são gravadas em <c>TABCLA</c> por <see cref="ViewModels.MainViewModel"/>.
     /// </summary>
     public GrauPerigoAlvo GrauPerigo
     {

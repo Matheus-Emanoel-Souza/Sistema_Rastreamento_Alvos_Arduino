@@ -23,14 +23,14 @@ public interface IFireControlService
     /// Executa (ou simula) o acionamento demonstrativo de <paramref name="tower"/>: valida
     /// segurança, envia o comando <c>FIRE;TOWER=x;TARGET=y</c> pela serial (ou apenas registra em
     /// modo de simulação) e atualiza o estado visual da torre para "Firing" temporariamente. Só
-    /// grava em <c>acoes_realizadas</c> (Requisito 5) quando o comando é efetivamente enviado com
+    /// grava em <c>TABACA</c> (Requisito 5) quando o comando é efetivamente enviado com
     /// sucesso — tentativas bloqueadas ou com erro de envio só geram log
     /// (<see cref="ILoggingService"/>), sem linha na tabela (schema acadêmico não tem coluna
     /// de resultado para distingui-las).
     /// </summary>
     /// <param name="sessaoId">
     /// Código da sessão (<see cref="IAuthService.SessaoId"/>) de quem desencadeou este
-    /// acionamento — carimbado em <c>acoes_realizadas.SessaoId</c> e propagado também para a
+    /// acionamento — carimbado em <c>TABACA.SessaoId</c> e propagado também para a
     /// transição de <c>AbatePendente</c> que este disparo pode gerar. <c>null</c> para disparos
     /// sem um operador específico por trás (não deveria ocorrer em uso normal, já que o acesso
     /// exige login, mas o parâmetro aceita por segurança).

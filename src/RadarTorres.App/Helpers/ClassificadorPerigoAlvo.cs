@@ -6,7 +6,7 @@ namespace RadarTorres.App.Helpers;
 /// Classifica o grau de perigosidade de um alvo pela velocidade estimada — mesma tabela usada
 /// pelo sistema real (<see cref="Target.SpeedMetersPerSecond"/>) e pelo treinamento
 /// (<see cref="NeuralEvolution.AlvoTreinamento.VelocidadeMetrosPorSegundo"/>), persistida em
-/// <c>classificacoes_alvo</c> (ver <see cref="Repositories.IClassificacaoPerigoRepository"/>).
+/// <c>TABCLA</c> (ver <see cref="Repositories.IClassificacaoPerigoRepository"/>).
 /// </summary>
 /// <remarks>
 /// Tabela de referência (velocidade do alvo, m/s → grau):
