@@ -75,9 +75,6 @@ internal static class RedesDeTeste
     }
 
     private static RedeNeat Construir(List<ConnectionLine> conexoes)
-        => Construir(conexoes, RedeNeat.QuantidadeEntradasComBias, ControladorHibrido.QuantidadeSaidas);
-
-    private static RedeNeat Construir(List<ConnectionLine> conexoes, int entradasComBias, int saidas)
     {
         // O construtor de grafo do SharpNEAT assume a lista ordenada por (origem, destino) —
         // é a ordem em que o próprio NeatGenomeSaver grava.
@@ -85,7 +82,11 @@ internal static class RedesDeTeste
             ? a.SourceId.CompareTo(b.SourceId)
             : a.TargetId.CompareTo(b.TargetId));
 
-        NetFileModel modelo = NetFileModel.CreateAcyclic(entradasComBias, saidas, conexoes, AtivacaoTanH);
+        NetFileModel modelo = NetFileModel.CreateAcyclic(
+            RedeNeat.QuantidadeEntradasComBias,
+            ControladorHibrido.QuantidadeSaidas,
+            conexoes,
+            AtivacaoTanH);
 
         IBlackBox<double> caixaPreta = NeuralNetConverter.ToAcyclicNeuralNet(
             modelo,
@@ -93,48 +94,5 @@ internal static class RedesDeTeste
             enableHardwareAcceleratedActivationFunctions: false);
 
         return new RedeNeat(caixaPreta);
-    }
-
-    // ------------------------------------------------------------- V2 (ControladorHibridoV2)
-
-    private static int PrimeiroIdSaidaV2 => ControladorHibridoV2.QuantidadeEntradas + 1;
-
-    /// <summary>Equivalente V2 de <see cref="Zerada"/>: todas as 3 saídas em 0.</summary>
-    public static RedeNeat ZeradaV2()
-    {
-        var conexoes = new List<ConnectionLine>
-        {
-            new(0, PrimeiroIdSaidaV2, 0.0),
-            new(0, PrimeiroIdSaidaV2 + 1, 0.0),
-            new(0, PrimeiroIdSaidaV2 + 2, 0.0),
-        };
-
-        return Construir(conexoes, ControladorHibridoV2.QuantidadeEntradas + 1, ControladorHibridoV2.QuantidadeSaidas);
-    }
-
-    /// <summary>Equivalente V2 de <see cref="ComPesosParaSaidas"/>, com a terceira saída (prioridade de cooperação) também fixa por peso de bias.</summary>
-    public static RedeNeat ComPesosParaSaidasV2(double pesoAjuste, double pesoConfianca, double pesoCooperacao)
-    {
-        var conexoes = new List<ConnectionLine>
-        {
-            new(0, PrimeiroIdSaidaV2, pesoAjuste),
-            new(0, PrimeiroIdSaidaV2 + 1, pesoConfianca),
-            new(0, PrimeiroIdSaidaV2 + 2, pesoCooperacao),
-        };
-
-        return Construir(conexoes, ControladorHibridoV2.QuantidadeEntradas + 1, ControladorHibridoV2.QuantidadeSaidas);
-    }
-
-    /// <summary>Equivalente V2 de <see cref="DeUmaEntradaParaUmaSaida"/> — as outras duas saídas ficam neutras (peso 0 do bias).</summary>
-    public static RedeNeat DeUmaEntradaParaUmaSaidaV2(int indiceEntrada, int indiceSaida, double peso)
-    {
-        var conexoes = new List<ConnectionLine> { new(indiceEntrada + 1, PrimeiroIdSaidaV2 + indiceSaida, peso) };
-        for (int i = 0; i < ControladorHibridoV2.QuantidadeSaidas; i++)
-        {
-            if (i == indiceSaida) continue;
-            conexoes.Add(new ConnectionLine(0, PrimeiroIdSaidaV2 + i, 0.0));
-        }
-
-        return Construir(conexoes, ControladorHibridoV2.QuantidadeEntradas + 1, ControladorHibridoV2.QuantidadeSaidas);
     }
 }

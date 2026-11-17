@@ -138,14 +138,6 @@ public sealed class AlvoTreinamento
     public bool PenalidadeProximidadeAplicada { get; set; }
 
     /// <summary>
-    /// Já contabilizado no "tempo de resposta" médio do episódio (ver
-    /// <see cref="EstadoEpisodio.SomaTemposRespostaSegundos"/>) — marcado no PRIMEIRO disparo
-    /// contra este alvo (acerto ou erro, tanto faz: o que importa é quanto tempo levou para a
-    /// torre reagir), nunca de novo depois disso.
-    /// </summary>
-    public bool TempoDeRespostaRegistrado { get; set; }
-
-    /// <summary>
     /// Se a oportunidade de disparo CONTÍNUA atual já foi contabilizada (em
     /// <see cref="EstadoEpisodio.OportunidadesDeDisparo"/> e, se recusada, em
     /// <see cref="EstadoEpisodio.DisparosRecusadosPelaRede"/>) — evita que uma mesma janela de

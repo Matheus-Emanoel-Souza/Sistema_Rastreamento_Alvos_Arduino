@@ -8,22 +8,77 @@
 \bibitem[Alshiekh et al. 2017]{alshiekh2017shielding}
 \abntrefinfo{Alshiekh et al.}{ALSHIEKH et al.}{2017}
 {ALSHIEKH, M. et al. \emph{Safe Reinforcement Learning via Shielding}. 2017.
+  ArXiv:1708.08611.
 Disponível em: \url{https://arxiv.org/abs/1708.08611}. Acesso em: 30 out.
   2026.}
 
 \bibitem[Baek et al. 2020]{curbscan}
 \abntrefinfo{Baek et al.}{BAEK et al.}{2020}
 {BAEK, I. et al. \emph{CurbScan: Curb Detection and Tracking Using Multi-Sensor
-  Fusion}. 2020.
-Disponível em: \url{https://arxiv.org/abs/2010.04837}. Acesso em: 30 out.
+  Fusion}. 2020. ArXiv:2010.04837.
+Disponível em: \url{https://arxiv.org/abs/2010.04837}. Acesso em: 9 nov.
   2026.}
+
+\bibitem[Colas, Sigaud e Oudeyer 2018]{colas2018howmanyseeds}
+\abntrefinfo{Colas, Sigaud e Oudeyer}{COLAS; SIGAUD; OUDEYER}{2018}
+{COLAS, C.; SIGAUD, O.; OUDEYER, P.-Y. \emph{How Many Random Seeds? Statistical
+  Power Analysis in Deep Reinforcement Learning Experiments}. 2018.
+  ArXiv:1806.08295.
+Disponível em: \url{https://arxiv.org/abs/1806.08295}. Acesso em: 9 nov.
+  2026.}
+
+\bibitem[Derrac et al. 2011]{derrac2011nonparametric}
+\abntrefinfo{Derrac et al.}{DERRAC et al.}{2011}
+{DERRAC, J. et al. A practical tutorial on the use of nonparametric statistical
+  tests as a methodology for comparing evolutionary and swarm intelligence
+  algorithms.
+\emph{Swarm and Evolutionary Computation}, v.~1, n.~1, p. 3--18, 2011.}
+
+\bibitem[{ElecFreaks} 2011]{hcsr04}
+\abntrefinfo{{ElecFreaks}}{{ElecFreaks}}{2011}
+{{ElecFreaks}. \emph{Ultrasonic Ranging Module HC-SR04: datasheet}.
+[S.l.], 2011. Disponível em:
+  \url{https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf}.
+  Acesso em: 9 nov. 2026.}
+
+\bibitem[Green 2024]{sharpneat}
+\abntrefinfo{Green}{GREEN}{2024}
+{GREEN, C.~D. \emph{SharpNEAT: evolution of neural networks}. 2024. Versão
+  4.1.0.
+Disponível em: \url{https://github.com/colgreen/sharpneat}. Acesso em: 9 nov.
+  2026.}
+
+\bibitem[Henderson et al. 2018]{henderson2018drlthatmatters}
+\abntrefinfo{Henderson et al.}{HENDERSON et al.}{2018}
+{HENDERSON, P. et al. Deep reinforcement learning that matters. In:
+  \emph{Proceedings of the 32nd AAAI Conference on Artificial Intelligence}.
+  [S.l.: s.n.], 2018. p. 3207--3214.}
 
 \bibitem[Huang e Onta{\~n}{\'o}n 2020]{huang2020actionmasking}
 \abntrefinfo{Huang e Onta{\~n}{\'o}n}{HUANG; ONTA{\~N}{\'O}N}{2020}
 {HUANG, S.; ONTA{\~N}{\'O}N, S. \emph{A Closer Look at Invalid Action Masking
-  in Policy Gradient Algorithms}. 2020.
+  in Policy Gradient Algorithms}. 2020. ArXiv:2006.14171.
 Disponível em: \url{https://arxiv.org/abs/2006.14171}. Acesso em: 30 out.
   2026.}
+
+\bibitem[{International Electrotechnical Commission} 2014]{iec60825}
+\abntrefinfo{{International Electrotechnical Commission}}{{International
+  Electrotechnical Commission}}{2014}
+{{International Electrotechnical Commission}. \emph{IEC 60825-1: Safety of
+  laser products -- Part 1: Equipment classification and requirements}.
+3. ed. Genebra, 2014.}
+
+\bibitem[Kalman 1960]{kalman1960}
+\abntrefinfo{Kalman}{KALMAN}{1960}
+{KALMAN, R.~E. A new approach to linear filtering and prediction problems.
+\emph{Journal of Basic Engineering}, v.~82, n.~1, p. 35--45, 1960.}
+
+\bibitem[{Kiatronics}]{motor28byj48}
+\abntrefinfo{{Kiatronics}}{{Kiatronics}}{}
+{{Kiatronics}. \emph{28BYJ-48 -- 5V Stepper Motor: datasheet}.
+[S.l.]. Disponível em:
+  \url{https://microcontroller-course.web.cern.ch/Project_Material/resources/stepd-01-data-sheet-1143075.pdf}.
+  Acesso em: 9 nov. 2026.}
 
 \bibitem[Majoni et al. 2025]{majoni2025}
 \abntrefinfo{Majoni et al.}{MAJONI et al.}{2025}
@@ -33,28 +88,62 @@ Disponível em: \url{https://arxiv.org/abs/2006.14171}. Acesso em: 30 out.
 Disponível em: \url{https://doi.org/10.1051/matecconf/202541710005}. Acesso
   em: 30 out. 2026.}
 
-\bibitem[Naeem et al. 2009]{tewa_multiameaca2009}
+\bibitem[Naeem et al. 2009a]{tewa_multiameaca2009}
 \abntrefinfo{Naeem et al.}{NAEEM et al.}{2009a}
 {NAEEM, H. et al. \emph{A Novel Two-Stage Dynamic Decision Support based
   Optimal Threat Evaluation and Defensive Resource Scheduling Algorithm for
-  Multi Air-borne threats}. 2009.
+  Multi Air-borne threats}. 2009a. ArXiv:0906.5038.
 Disponível em: \url{https://arxiv.org/abs/0906.5038}. Acesso em: 30 out.
   2026.}
 
-\bibitem[Naeem et al. 2009]{tewa2009}
+\bibitem[Naeem et al. 2009b]{tewa2009}
 \abntrefinfo{Naeem et al.}{NAEEM et al.}{2009b}
 {NAEEM, H. et al. \emph{A Novel Two-Staged Decision Support based Threat
   Evaluation and Weapon Assignment Algorithm, Asset-based Dynamic Weapon
-  Scheduling using Artificial Intelligence Techniques}. 2009.
+  Scheduling using Artificial Intelligence Techniques}. 2009b. ArXiv:0907.0067.
 Disponível em: \url{https://arxiv.org/abs/0907.0067}. Acesso em: 30 out.
   2026.}
+
+\bibitem[Redmon et al. 2016]{redmon2016yolo}
+\abntrefinfo{Redmon et al.}{REDMON et al.}{2016}
+{REDMON, J. et al. You only look once: Unified, real-time object detection. In:
+   \emph{Proceedings of the IEEE Conference on Computer Vision and Pattern
+  Recognition (CVPR)}. [S.l.: s.n.], 2016. p. 779--788.}
+
+\bibitem[Roux e Vuuren 2007]{roux2007tewa}
+\abntrefinfo{Roux e Vuuren}{ROUX; VUUREN}{2007}
+{ROUX, J.~N.; VUUREN, J.~H. van. Threat evaluation and weapon assignment
+  decision support: a review of the state of the art.
+\emph{ORiON}, v.~23, n.~2, p. 151--187, 2007.}
+
+\bibitem[Stanley e Miikkulainen 2002]{stanley2002neat}
+\abntrefinfo{Stanley e Miikkulainen}{STANLEY; MIIKKULAINEN}{2002}
+{STANLEY, K.~O.; MIIKKULAINEN, R. Evolving neural networks through augmenting
+  topologies.
+\emph{Evolutionary Computation}, v.~10, n.~2, p. 99--127, 2002.}
 
 \bibitem[Such et al. 2017]{such2017deepneuroevolution}
 \abntrefinfo{Such et al.}{SUCH et al.}{2017}
 {SUCH, F.~P. et al. \emph{Deep Neuroevolution: Genetic Algorithms Are a
   Competitive Alternative for Training Deep Neural Networks for Reinforcement
-  Learning}. 2017.
+  Learning}. 2017. ArXiv:1712.06567.
 Disponível em: \url{https://arxiv.org/abs/1712.06567}. Acesso em: 30 out.
   2026.}
+
+\bibitem[Swain e Ballard 1991]{swain1991colorindexing}
+\abntrefinfo{Swain e Ballard}{SWAIN; BALLARD}{1991}
+{SWAIN, M.~J.; BALLARD, D.~H. Color indexing.
+\emph{International Journal of Computer Vision}, v.~7, n.~1, p. 11--32, 1991.}
+
+\bibitem[{Ultralytics} 2025]{ultralytics_yolo26}
+\abntrefinfo{{Ultralytics}}{{Ultralytics}}{2025}
+{{Ultralytics}. \emph{{YOLO26}: model documentation}. 2025.
+Disponível em: \url{https://docs.ultralytics.com/models/yolo26/}. Acesso em:
+  28 out. 2026.}
+
+\bibitem[Wilcoxon 1945]{wilcoxon1945}
+\abntrefinfo{Wilcoxon}{WILCOXON}{1945}
+{WILCOXON, F. Individual comparisons by ranking methods.
+\emph{Biometrics Bulletin}, v.~1, n.~6, p. 80--83, 1945.}
 
 \end{thebibliography}

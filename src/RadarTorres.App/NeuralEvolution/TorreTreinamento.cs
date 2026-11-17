@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using RadarTorres.App.Models;
 
 namespace RadarTorres.App.NeuralEvolution;
@@ -46,38 +45,6 @@ public sealed class TorreTreinamento
     public double TempoDemandaSegundos { get; set; }
 
     /// <summary>
-    /// Instante (<see cref="EstadoEpisodio.TempoDecorridoSegundos"/>) de cada novo compromisso
-    /// desta torre com um alvo — usado só pelo controlador V2 (<see cref="ControladorHibridoV2"/>)
-    /// para alimentar a entrada "trocas recentes de alvo" (ver <see cref="ContarTrocasRecentes"/>).
-    /// Fila (não lista) porque só a ponta mais antiga é descartada, nunca o meio.
-    /// </summary>
-    public Queue<double> InstantesDeNovoCompromisso { get; } = new();
-
-    /// <summary>
-    /// Registra que esta torre acabou de assumir um alvo NOVO neste instante — chamado pela
-    /// seleção de torre (V2) toda vez que <see cref="AlvoComprometidoId"/> passa a apontar para um
-    /// alvo diferente do anterior. Não existe no fluxo V1: a thrash de troca de alvo por torre é
-    /// uma entrada nova da V2 (ver <see cref="ControladorHibridoV2.RotulosEntradas"/>), então só o
-    /// código do ambiente V2 escreve aqui — o controlador V1, intocado, nunca lê nem escreve isto.
-    /// </summary>
-    public void RegistrarNovoCompromisso(double tempoAtualSegundos) => InstantesDeNovoCompromisso.Enqueue(tempoAtualSegundos);
-
-    /// <summary>
-    /// Quantos novos compromissos esta torre assumiu dentro de <paramref name="janelaSegundos"/>
-    /// até <paramref name="tempoAtualSegundos"/> — descarta (de vez, não é só leitura) os instantes
-    /// fora da janela, então chamar isto já funciona como a limpeza periódica da fila.
-    /// </summary>
-    public int ContarTrocasRecentes(double tempoAtualSegundos, double janelaSegundos)
-    {
-        while (InstantesDeNovoCompromisso.Count > 0 && tempoAtualSegundos - InstantesDeNovoCompromisso.Peek() > janelaSegundos)
-        {
-            InstantesDeNovoCompromisso.Dequeue();
-        }
-
-        return InstantesDeNovoCompromisso.Count;
-    }
-
-    /// <summary>
     /// Para onde a torre está FISICAMENTE apontada agora, no eixo horizontal (azimute, 0-360°,
     /// mesma convenção de <see cref="Models.Tower.AimAngleDegrees"/>) — distinto do ângulo de
     /// mira IDEAL (onde o alvo está agora), que a torre persegue a uma velocidade angular limitada
@@ -108,7 +75,7 @@ public sealed class TorreTreinamento
     /// <summary>
     /// Se esta torre está disponível para ser selecionada neste episódio — ver
     /// <see cref="ParametrosTreinamento.TorresDesativadasIds"/>. Uma torre desativada nunca entra
-    /// como candidata em <see cref="ControladorHibrido.SelecionarTorre"/>/<see cref="ControladorHibridoV2.SelecionarTorre"/>
+    /// como candidata em <see cref="ControladorHibrido.SelecionarTorre"/>
     /// nem como torre de ajuda (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>), então
     /// <see cref="AlvoComprometidoId"/> nunca chega a ser atribuído a ela — continua fisicamente
     /// presente (ainda pode ser invadida, ver <see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>),
