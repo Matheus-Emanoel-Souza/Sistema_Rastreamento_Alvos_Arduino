@@ -327,48 +327,7 @@ lê os sensores, move os 17 eixos e troca mensagens de texto com a aplicação.
 
 \begin{figure}[H]
   \centering
-  \begin{tikzpicture}[
-      font=\footnotesize,
-      art/.style={draw, fill=orange!12, rounded corners=1pt, align=center, minimum height=10mm, text width=30mm},
-      per/.style={draw, fill=gray!10, align=center, minimum height=9mm, text width=38mm},
-      lbl/.style={font=\scriptsize\itshape, align=center},
-      link/.style={thick},
-      db/.style={cylinder, shape border rotate=90, draw, fill=blue!12, aspect=0.2, align=center, minimum height=11mm, text width=22mm},
-      res/.style={draw, fill=green!10, rounded corners=1pt, align=center, minimum height=8mm, text width=26mm, font=\scriptsize}
-    ]
-    % Artefatos do processo desktop (grade 2x2)
-    \node[art] (ui)    at (0, 0)     {«artifact»\\Interface\\(MVVM)};
-    \node[art] (srv)   at (3.6, 0)   {«artifact»\\Decisão (heurística\\+ NEAT) e rastreamento};
-    \node[art] (vis)   at (0, -1.9) {«artifact»\\Visão\\(YOLO26n, ONNX)};
-    \node[art] (dados) at (3.6, -1.9){«artifact»\\Persistência\\(SQLite)};
-    \node[db]  (bd)    at (3.6, -3.75) {radartorres.db};
-    \node[res] (rede)  at (0, -3.65) {rede-controlador.net\\(genoma NEAT embutido)};
-    % Arduino
-    \node[art, text width=38mm] (fw) at (10.3, 0) {«artifact»\\Firmware do\\Arduino};
-    % Periféricos
-    \node[per] (us) at (10.3, -2.0) {2 sensores HC-SR04};
-    \node[per] (m1) at (10.3, -3.3) {9 motores 28BYJ-48\\(mastro e torres)};
-    \node[per] (m2) at (10.3, -4.6) {8 motores NEMA17\\(mira das câmeras)};
-    \node[per, text width=27mm] (cam) at (0, -5.55) {«device»\\4 câmeras USB};
-
-    \node[fit=(ui)(srv)(vis)(dados), inner sep=4pt] (procarea) {};
-    \begin{scope}[on background layer]
-      \node[draw, thick, fill=blue!5, inner xsep=6pt, inner ysep=5pt, fit={(procarea)(bd)(rede)($(procarea.north)+(0,9mm)$)},
-            label={[font=\scriptsize\bfseries, anchor=north west, inner sep=3pt]north west:«device» Computador do usuário}] (pc) {};
-      \node[draw, dashed, fill=white, inner sep=0pt, fit=(procarea),
-            label={[font=\scriptsize, anchor=south west, inner sep=1pt]north west:«executionEnvironment» RadarTorres.App (.NET 9)}] (proc) {};
-      \node[draw, thick, fill=blue!5, inner xsep=10pt, inner ysep=6pt, fit={(fw)($(fw.north)+(0,5mm)$)},
-            label={[font=\scriptsize\bfseries, anchor=north west, inner sep=3pt]north west:«device» Arduino Mega 2560}] (ard) {};
-    \end{scope}
-
-    \draw[link, -{Stealth}] (dados) -- node[right, lbl]{lê/grava} (bd);
-    \draw[link, -{Stealth}] (rede) -- node[left, lbl]{carrega} (srv |- rede);
-    \draw[link] (srv.east -| pc.east) -- node[above, lbl]{USB/serial}node[below, lbl]{9600 bps} (srv.east -| ard.west);
-    \draw[link] (cam.north) -- node[right, lbl]{USB} (cam.north |- pc.south);
-    \draw[link] (ard.south) -- node[right, lbl]{GPIO} (us.north);
-    \draw[link] (us.south) -- (m1.north);
-    \draw[link] (m1.south) -- (m2.north);
-  \end{tikzpicture}
+  \includegraphics[width=\textwidth]{Diagrama_Implantacao.png}
   \caption{Diagrama de implantação do RadarTorres (dos autores). O genoma NEAT treinado
     (\texttt{rede-controlador.net}) é embutido no executável em tempo de compilação e carregado
     pelo serviço de decisão na inicialização -- não há treinamento em tempo de execução.}
