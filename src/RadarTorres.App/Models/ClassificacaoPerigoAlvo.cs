@@ -5,7 +5,7 @@ namespace RadarTorres.App.Models;
 /// <summary>
 /// Registro de auditoria de uma mudança de <see cref="GrauPerigoAlvo"/> de um alvo. Gravado por
 /// <see cref="ViewModels.MainViewModel"/> só quando o grau MUDA (não a cada leitura) — espelha a
-/// tabela <c>classificacoes_alvo</c> descrita em
+/// tabela <c>TABCLA</c> descrita em
 /// <c>Software/Banco_de_Dados/schema.sql</c>.
 /// </summary>
 public class ClassificacaoPerigoAlvo

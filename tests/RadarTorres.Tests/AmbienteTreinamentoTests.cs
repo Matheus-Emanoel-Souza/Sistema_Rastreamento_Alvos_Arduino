@@ -133,4 +133,5 @@ public sealed class AmbienteTreinamentoTests
 
         Assert.Equal(0, resultado.AlvosAbatidos);
     }
+
 }

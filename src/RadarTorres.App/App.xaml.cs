@@ -240,6 +240,11 @@ public partial class App : Application
         services.AddSingleton<IEventoTreinamentoRepository, SqliteEventoTreinamentoRepository>();
         services.AddSingleton<IInstantaneoComportamentoRepository, SqliteInstantaneoComportamentoRepository>();
         services.AddSingleton<IExperimentoHiperparametrosRepository, SqliteExperimentoHiperparametrosRepository>();
+        // Registro de versões da rede neural do controlador e das baterias de comparação táticas
+        // entre elas (ver Software/Qualidade/REDESENHO_CONTROLADOR_V2.md) — sem tela própria ainda,
+        // registrado aqui por consistência com os demais repositórios de experimento.
+        services.AddSingleton<IRedeNeuralRepository, SqliteRedeNeuralRepository>();
+        services.AddSingleton<IExperimentoRedeNeuralRepository, SqliteExperimentoRedeNeuralRepository>();
 
         // Singleton (não transient): a trava de execução simultânea da bateria de experimentos
         // vive na instância — ver IExecutorExperimentosHiperparametros.EmExecucao.
@@ -315,6 +320,13 @@ public partial class App : Application
         // saiu do menu lateral. Fábrica (Func<T>) no mesmo padrão de Func<TermosDeUsoWindow>.
         services.AddTransient<EstatisticasAnaliseWindow>();
         services.AddTransient<Func<EstatisticasAnaliseWindow>>(sp => () => sp.GetRequiredService<EstatisticasAnaliseWindow>());
+
+        // Tela "Dashboards" (seção "Dados"): gráficos montados pelo usuário sobre fontes de dados
+        // já existentes — ver DashboardsViewModel/IFontesDeDadosDashboardService.
+        services.AddSingleton<IDashboardGraficoRepository, SqliteDashboardGraficoRepository>();
+        services.AddSingleton<IFontesDeDadosDashboardService, FontesDeDadosDashboardService>();
+        services.AddTransient<DashboardsViewModel>();
+        services.AddScoped<DashboardsView>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginView>();
@@ -418,7 +430,7 @@ public partial class App : Application
     /// <remarks>
     /// Chama <see cref="IAuthService.Logout"/> antes de descartar o escopo — cobre o caso de a
     /// aba ser fechada pelo "✕" (<see cref="FecharAba"/>) sem passar pelo botão "Sair": sem isto,
-    /// <c>sessoes_usuario.DataHoraFim</c> ficaria aberta para sempre. <c>Logout</c> já é
+    /// <c>TABSES.DataHoraFim</c> ficaria aberta para sempre. <c>Logout</c> já é
     /// idempotente (não faz nada se ninguém estiver logado), então chamá-lo de novo depois de um
     /// logout explícito (ver <see cref="ShowShellInTab"/>) é seguro.
     /// </remarks>

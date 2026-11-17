@@ -29,14 +29,15 @@ public sealed class SqliteEventoTreinamentoRepository : IEventoTreinamentoReposi
         using (SqliteCommand insert = connection.CreateCommand())
         {
             insert.CommandText =
-                "INSERT INTO eventos_treinamento (GERACAO, TIPO, MENSAGEM, DH_REGISTRO) " +
-                "VALUES ($geracao, $tipo, $mensagem, $dh)";
+                "INSERT INTO eventos_treinamento (GERACAO, TIPO, MENSAGEM, DH_REGISTRO, EXECUCAO_ID) " +
+                "VALUES ($geracao, $tipo, $mensagem, $dh, $execucaoId)";
             insert.Parameters.AddWithValue("$geracao", (object?)evento.Geracao ?? DBNull.Value);
             // Gravado pelo NOME do membro, não pelo número: assim reordenar o enum não reinterpreta
             // registros antigos (um "Falha" virando "Informacao" seria um erro silencioso e grave).
             insert.Parameters.AddWithValue("$tipo", evento.Tipo.ToString());
             insert.Parameters.AddWithValue("$mensagem", evento.Mensagem);
             insert.Parameters.AddWithValue("$dh", evento.DataHora.ToString("O", CultureInfo.InvariantCulture));
+            insert.Parameters.AddWithValue("$execucaoId", evento.ExecucaoId);
             insert.ExecuteNonQuery();
         }
 
@@ -56,7 +57,7 @@ public sealed class SqliteEventoTreinamentoRepository : IEventoTreinamentoReposi
         var resultado = new List<EventoTreinamento>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT ID, GERACAO, TIPO, MENSAGEM, DH_REGISTRO " +
+            "SELECT ID, GERACAO, TIPO, MENSAGEM, DH_REGISTRO, EXECUCAO_ID " +
             "FROM eventos_treinamento ORDER BY ID DESC LIMIT $quantidade";
         command.Parameters.AddWithValue("$quantidade", quantidade);
 
@@ -70,6 +71,7 @@ public sealed class SqliteEventoTreinamentoRepository : IEventoTreinamentoReposi
                 Tipo = InterpretarTipo(reader.GetString(2)),
                 Mensagem = reader.GetString(3),
                 DataHora = DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                ExecucaoId = reader.GetString(5),
             });
         }
 
@@ -117,5 +119,10 @@ public sealed class SqliteEventoTreinamentoRepository : IEventoTreinamentoReposi
         using SqliteCommand indice = connection.CreateCommand();
         indice.CommandText = "CREATE INDEX IF NOT EXISTS idx_eventos_treinamento_dh ON eventos_treinamento (DH_REGISTRO)";
         indice.ExecuteNonQuery();
+
+        // Migração aditiva: registros gravados antes deste campo existir recebem 'legada' (mesma
+        // convenção de MarcoFitnessTreinamento.ExecucaoId) — nenhum evento antigo é apagado ou
+        // reinterpretado, só passa a não contar como "sessão atual" de propósito.
+        SqliteSchema.EnsureColumn(connection, "eventos_treinamento", "EXECUCAO_ID", "TEXT NOT NULL DEFAULT 'legada'");
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Microsoft.Data.Sqlite;
 using RadarTorres.App.Data;
 using RadarTorres.App.Models;
@@ -35,12 +36,14 @@ public sealed class SqliteEventoTreinamentoRepositoryTests : IDisposable
     private static EventoTreinamento Evento(
         string mensagem,
         int? geracao = 1,
-        TipoEventoTreinamento tipo = TipoEventoTreinamento.Informacao) => new()
+        TipoEventoTreinamento tipo = TipoEventoTreinamento.Informacao,
+        string? execucaoId = null) => new()
         {
             Mensagem = mensagem,
             Geracao = geracao,
             Tipo = tipo,
-            DataHora = DateTime.Now
+            DataHora = DateTime.Now,
+            ExecucaoId = execucaoId ?? "legada",
         };
 
     [Fact]
@@ -99,6 +102,23 @@ public sealed class SqliteEventoTreinamentoRepositoryTests : IDisposable
         Assert.Equal(1000, eventos.Count);
         Assert.Equal(1005, eventos[0].Geracao);  // mais recente no topo
         Assert.Equal(6, eventos[^1].Geracao);    // os 5 primeiros foram descartados
+    }
+
+    /// <summary>
+    /// ExecucaoId diferencia eventos da sessão de treinamento atual dos de uma execução anterior
+    /// (ver EventoTreinamento.EhSessaoAtual, computado pela ViewModel, não pelo repositório). Sem
+    /// valor explícito, usa "legada" (registros gravados antes deste campo existir).
+    /// </summary>
+    [Fact]
+    public void Registrar_PreservaExecucaoId_OuUsaLegadaPorPadrao()
+    {
+        _repositorio.Registrar(Evento("com execucao", execucaoId: "abc123"));
+        _repositorio.Registrar(Evento("sem execucao"));
+
+        var eventos = _repositorio.ObterUltimos();
+
+        Assert.Equal("abc123", eventos.Single(e => e.Mensagem == "com execucao").ExecucaoId);
+        Assert.Equal("legada", eventos.Single(e => e.Mensagem == "sem execucao").ExecucaoId);
     }
 
     [Fact]

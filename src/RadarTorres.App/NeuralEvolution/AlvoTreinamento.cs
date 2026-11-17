@@ -136,4 +136,16 @@ public sealed class AlvoTreinamento
 
     /// <summary>Já aplicada a penalidade de "perda de ponto da geração" por ter chegado perto demais da base sem ser abatido nem ter escapado de fato — evita descontar a cada passo enquanto o alvo continua dentro do raio.</summary>
     public bool PenalidadeProximidadeAplicada { get; set; }
+
+    /// <summary>
+    /// Se a oportunidade de disparo CONTÍNUA atual já foi contabilizada (em
+    /// <see cref="EstadoEpisodio.OportunidadesDeDisparo"/> e, se recusada, em
+    /// <see cref="EstadoEpisodio.DisparosRecusadosPelaRede"/>) — evita que uma mesma janela de
+    /// oportunidade (todos os vetos liberados, mas a rede ainda não decidiu disparar) seja
+    /// recontada e repenalizada a cada passo de simulação (ver
+    /// <see cref="AmbienteTreinamento.DecidirDisparos"/>). Reiniciada (<c>false</c>) sempre que
+    /// algum veto volta a bloquear o disparo (zona morta, mira ainda não alinhada, certeza
+    /// insuficiente) — a PRÓXIMA vez que a janela abrir de novo é uma oportunidade NOVA.
+    /// </summary>
+    public bool OportunidadeDeDisparoContabilizada { get; set; }
 }

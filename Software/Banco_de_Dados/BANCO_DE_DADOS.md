@@ -11,9 +11,13 @@ técnica interna e visão acadêmica/entregável, consolidadas em um único docu
 
 O projeto usa **SQLite** como único mecanismo de persistência. A migração CSV → SQL, descrita em
 versões anteriores deste documento como plano futuro, **já foi implementada**: o contêiner de DI
-em `App.xaml.cs:141-146` registra `Sqlite*Repository` diretamente para as 5 tabelas (`Usuario`,
-`ObjetoDetectado`, `AcaoRealizada`, `ModoAtualTorre`, `PreferenciasUsuario`). Não existem mais
+em `App.xaml.cs:141-146` registra `Sqlite*Repository` diretamente para as 5 tabelas (`TABUSU`,
+`TABOBJ`, `TABACA`, `TABMOD`, `TABPRU`). Não existem mais
 classes `Csv*Repository`/`Resilient*Repository` de persistência no repositório.
+
+> **Nomenclatura**: todas as tabelas usam siglas de 6 letras (`TABxxx`). `TABDIC` documenta o
+> nome completo por trás de cada sigla e `TABOPC` documenta cada opção válida das colunas que
+> antes só tinham `CHECK(... IN (...))` — ver §4.
 
 Local do arquivo (por usuário do Windows, sem precisar de administrador — ver
 `src/RadarTorres.App/Data/AppDataPaths.cs`, escolhido em vez de `C:\Program Files\...`, somente
@@ -38,10 +42,10 @@ do usuário para gerar um arquivo à parte, não persistência (`CsvTableStore<T
 
 **Integridade referencial** NÃO é garantida pelo app real. Nenhum `Sqlite*Repository.cs` em
 `src/RadarTorres.App/Repositories/` executa `PRAGMA foreign_keys = ON`, e a maioria das colunas
-que funcionam como chave lógica — `ID_OBJETO` (`acoes_realizadas`) e `ID_USER`
-(`modo_atual_torre`) — são declaradas como `INTEGER NULL` simples, sem cláusula `REFERENCES`
-alguma. As únicas exceções são `OcorrenciaEstados.ObjetoDetectadoId` e
-`classificacoes_alvo.ObjetoDetectadoId`, que declaram `REFERENCES objetos_detectados (Id)`
+que funcionam como chave lógica — `ID_OBJETO` (`TABACA`) e `ID_USER`
+(`TABMOD`) — são declaradas como `INTEGER NULL` simples, sem cláusula `REFERENCES`
+alguma. As únicas exceções são `TABOCE.ObjetoDetectadoId` e
+`TABCLA.ObjetoDetectadoId`, que declaram `REFERENCES TABOBJ (Id)`
 inline — mas, sem `PRAGMA foreign_keys = ON`, o SQLite não aplica essa restrição mesmo assim; é só
 documentação embutida no DDL, não enforcement. Chaves estrangeiras reais e com
 `PRAGMA foreign_keys = ON` existem apenas no schema **acadêmico/idealizado**
@@ -62,7 +66,7 @@ cada repositório declara o que passou a precisar e `Data/SqliteSchema.cs` aplic
 (`PRAGMA table_info` + `ALTER TABLE ADD COLUMN` / `CREATE INDEX IF NOT EXISTS`), de forma
 idempotente, a cada abertura de conexão. Nenhum dado é descartado: linhas antigas ficam com as
 colunas novas nulas e com o valor padrão (`Estado = 'Detectado'`). É o caminho usado pelas colunas
-de vínculo/ciclo de vida de `objetos_detectados` e pelas tabelas `ocorrencia_estados` e `cameras`.
+de vínculo/ciclo de vida de `TABOBJ` e pelas tabelas `TABOCE` e `TABCAM`.
 
 O JSON dos perfis de alvo (`perfis-alvo.json`) tem o equivalente em
 `PerfilAlvoRepository.MigrarFotoUnica`: perfis gravados quando havia **uma** foto de referência
@@ -73,9 +77,9 @@ até a próxima alteração, de modo que voltar à versão anterior do aplicativ
 
 O SQLite local é a fonte da verdade para operação em tempo real (nunca depende de rede). A etapa
 seguinte adiciona uma tabela de outbox (`sync_outbox`) e um serviço em segundo plano que envia em
-lote, de forma assíncrona, os registros de auditoria (`objetos_detectados`, `acoes_realizadas`,
-`modo_atual_torre`) para um banco gerenciado na nuvem via API HTTPS — `usuarios` e
-`preferencias_usuario` permanecem só locais.
+lote, de forma assíncrona, os registros de auditoria (`TABOBJ`, `TABACA`,
+`TABMOD`) para um banco gerenciado na nuvem via API HTTPS — `TABUSU` e
+`TABPRU` permanecem só locais.
 
 ## 2. Especificações técnicas do SGBD
 
@@ -94,31 +98,31 @@ lote, de forma assíncrona, os registros de auditoria (`objetos_detectados`, `ac
 
 | Índice | Tabela | Coluna(s) | Tipo |
 |---|---|---|---|
-| `idx_acoes_realizadas_torre` | `acoes_realizadas` | `ID_TORRE` | normal |
-| `idx_objetos_detectados_datahora` | `objetos_detectados` | `DataHora` | normal |
-| `idx_acoes_realizadas_datahora` | `acoes_realizadas` | `DH_ACAO` | normal |
-| `idx_modo_atual_torre_usuario` | `modo_atual_torre` | `ID_USER` | normal |
-| `idx_objetos_detectados_perfil` | `objetos_detectados` | `PerfilAlvoId` | normal |
-| `idx_ocorrencia_estados_objeto` | `ocorrencia_estados` | `ObjetoDetectadoId` | normal |
-| `idx_objetos_detectados_rastreamento` | `objetos_detectados` | `RastreamentoId, Quadrante` | único, parcial (`WHERE RastreamentoId IS NOT NULL`) |
-| `idx_cameras_dispositivo` | `cameras` | `DispositivoId` | único |
-| `idx_cameras_quadrante` | `cameras` | `Quadrante` | único |
+| `idx_acoes_realizadas_torre` | `TABACA` | `ID_TORRE` | normal |
+| `idx_objetos_detectados_datahora` | `TABOBJ` | `DataHora` | normal |
+| `idx_acoes_realizadas_datahora` | `TABACA` | `DH_ACAO` | normal |
+| `idx_modo_atual_torre_usuario` | `TABMOD` | `ID_USER` | normal |
+| `idx_objetos_detectados_perfil` | `TABOBJ` | `PerfilAlvoId` | normal |
+| `idx_ocorrencia_estados_objeto` | `TABOCE` | `ObjetoDetectadoId` | normal |
+| `idx_objetos_detectados_rastreamento` | `TABOBJ` | `RastreamentoId, Quadrante` | único, parcial (`WHERE RastreamentoId IS NOT NULL`) |
+| `idx_cameras_dispositivo` | `TABCAM` | `DispositivoId` | único |
+| `idx_cameras_quadrante` | `TABCAM` | `Quadrante` | único |
 
-Além desses, `Login` (`usuarios`) e `UsuarioId` (`preferencias_usuario`, PK) já têm índice
+Além desses, `Login` (`TABUSU`) e `UsuarioId` (`TABPRU`, PK) já têm índice
 implícito por `UNIQUE`/`PRIMARY KEY`.
 
 ## 3. Diagrama de relacionamento (DER)
 
 ```mermaid
 erDiagram
-    OBJETOS_DETECTADOS ||--o{ ACOES_REALIZADAS : "originou (coordenadas)"
-    OBJETOS_DETECTADOS ||--o{ OCORRENCIA_ESTADOS : "transita"
-    CAMERAS ||--o{ OBJETOS_DETECTADOS : "detectou (quadrante)"
-    USUARIOS ||--o{ MODO_ATUAL_TORRE : "confirma"
-    USUARIOS ||--o| PREFERENCIAS_USUARIO : "tem"
-    OBJETOS_DETECTADOS ||--o{ CLASSIFICACOES_ALVO : "classifica"
+    TABOBJ ||--o{ TABACA : "originou (coordenadas)"
+    TABOBJ ||--o{ TABOCE : "transita"
+    TABCAM ||--o{ TABOBJ : "detectou (quadrante)"
+    TABUSU ||--o{ TABMOD : "confirma"
+    TABUSU ||--o| TABPRU : "tem"
+    TABOBJ ||--o{ TABCLA : "classifica"
 
-    USUARIOS {
+    TABUSU {
         int Id PK
         string Nome
         string Login UK
@@ -130,7 +134,7 @@ erDiagram
         datetime UltimoAcesso "nullable"
     }
 
-    OBJETOS_DETECTADOS {
+    TABOBJ {
         int Id PK
         string Tipo
         double X
@@ -150,7 +154,7 @@ erDiagram
         datetime DataHoraUltimaDeteccao "nullable"
     }
 
-    OCORRENCIA_ESTADOS {
+    TABOCE {
         int Id PK
         int ObjetoDetectadoId FK
         string Estado "Detectado|AbatePendente|Abatido"
@@ -159,7 +163,7 @@ erDiagram
         string Observacao "nullable"
     }
 
-    CAMERAS {
+    TABCAM {
         int Id PK
         string DispositivoId UK "moniker DirectShow"
         string Nome
@@ -167,15 +171,15 @@ erDiagram
         datetime AtualizadoEm
     }
 
-    ACOES_REALIZADAS {
+    TABACA {
         int ID_ACAO PK
         int ID_TORRE "Id da torre (ver appsettings.json > Towers)"
-        int ID_OBJETO FK "nullable — chave para as coordenadas em OBJETOS_DETECTADOS"
+        int ID_OBJETO FK "nullable — chave para as coordenadas em TABOBJ"
         datetime DH_ACAO
         string OBSERVACAO "nullable"
     }
 
-    MODO_ATUAL_TORRE {
+    TABMOD {
         int ID_MODO PK
         string MODOATUAL
         string MODOANTERIOR
@@ -183,7 +187,7 @@ erDiagram
         datetime DHALTERACAO
     }
 
-    HISTORICO_TREINAMENTO_GERACOES {
+    TABHTG {
         int ID PK
         int GERACAO
         double MELHOR_FITNESS
@@ -193,7 +197,7 @@ erDiagram
         datetime DH_REGISTRO
     }
 
-    PREFERENCIAS_USUARIO {
+    TABPRU {
         int UsuarioId PK-FK
         string Idioma
         string Tema "Claro | Escuro | Sistema"
@@ -202,7 +206,7 @@ erDiagram
         int RegistrosPorPagina
     }
 
-    MARCOS_FITNESS_TREINAMENTO {
+    TABMFT {
         int ID PK
         int GERACAO_MARCO UK "a cada 500 geracoes"
         double MELHOR_FITNESS
@@ -210,7 +214,7 @@ erDiagram
         datetime DH_REGISTRO
     }
 
-    INSTANTANEOS_COMPORTAMENTO_MELHOR_GENE {
+    TABICG {
         int ID PK
         int GERACAO_MARCO UK "a cada 1000 geracoes"
         double PONTUACAO
@@ -223,7 +227,7 @@ erDiagram
         datetime DH_REGISTRO
     }
 
-    CLASSIFICACOES_ALVO {
+    TABCLA {
         int ID PK
         int ObjetoDetectadoId FK "nullable - pode nao existir ainda no radar"
         string GrauPerigosidade "Baixo | Medio | Alto | Critico"
@@ -238,7 +242,7 @@ erDiagram
 
 ## 4. Detalhe de cada tabela
 
-### `usuarios`
+### `TABUSU`
 Contas de acesso ao aplicativo (login independente da conta do Windows).
 - **Perfil**: `Administrador` | `Operador` | `Visualizador` (ver Requisito 7).
 - **SenhaHash/SenhaSalt**: PBKDF2-HMACSHA256, 100.000 iterações, salt de 128 bits por usuário
@@ -247,7 +251,7 @@ Contas de acesso ao aplicativo (login independente da conta do Windows).
   (`src/RadarTorres.App/Data/DataSeeder.cs`) — **troque a senha padrão em produção** via
   "Perfil > Alterar senha".
 
-### `objetos_detectados`
+### `TABOBJ`
 Histórico de **ocorrências** de detecção (Requisito 4). Uma linha por ocorrência — nunca por
 quadro de vídeo nem por alvo cadastrado:
 
@@ -280,19 +284,19 @@ Colunas de vínculo e ciclo de vida:
 - **Z**: sempre `null` hoje — os sensores do Arduino são 2D (ângulo + distância). Campo mantido
   para sensores 3D futuros (decisão confirmada com o usuário).
 
-### `ocorrencia_estados`
-Histórico de transições de `objetos_detectados.Estado` — somente inserção. Existe para o estado
+### `TABOCE`
+Histórico de transições de `TABOBJ.Estado` — somente inserção. Existe para o estado
 atual nunca ser a única informação disponível: a auditoria precisa de quando a ocorrência foi
 aberta, quando o acionamento a deixou pendente e quem confirmou ou descartou o abate (`Usuario`).
 
-### `cameras`
+### `TABCAM`
 Qual câmera monitora qual quadrante (tela "Câmeras"). `DispositivoId` é o moniker DirectShow —
 estável para o mesmo dispositivo na mesma máquina, que é o escopo do banco. Dois índices **únicos**
 (`DispositivoId` e `Quadrante`) impõem a regra "uma câmera, um quadrante; um quadrante, uma
 câmera"; atribuir um quadrante já ocupado transfere a responsabilidade na mesma transação, em vez
 de falhar.
 
-### `acoes_realizadas`
+### `TABACA`
 Auditoria de acionamentos (Requisito 5) — **somente inserção**: o repositório
 (`IAcaoRealizadaRepository`) não expõe Update/Delete de propósito. Gravado em
 `FireControlService.TryFireAsync` (`:105`), o único ponto do sistema por onde todo acionamento
@@ -302,13 +306,13 @@ aqui: o schema simplificado (alinhado com o orientador, ver `schema.sql` nesta m
 tem coluna de resultado para distingui-las de um acionamento real. `ID_TORRE` é o Id da torre
 (`Tower.Id`, ver `appsettings.json > Towers`), não mais um texto combinando torre+ação.
 
-### `modo_atual_torre`
+### `TABMOD`
 Auditoria de troca de modo (Requisito 6) — também somente inserção, mas só da troca confirmada:
 cancelamento na caixa de confirmação gera apenas log (`MainViewModel.CurrentMode` setter, em torno
 da linha 291), sem coluna de resultado no schema simplificado para diferenciar de uma troca real.
-`ID_USER` referencia `usuarios.Id` (antes era o `Login` em texto).
+`ID_USER` referencia `TABUSU.Id` (antes era o `Login` em texto).
 
-### `historico_treinamento_geracoes`
+### `TABHTG`
 Comportamento do melhor indivíduo de cada geração treinada na tela "Treinamento do Controlador"
 (neuroevolução do controlador híbrido heurística+rede neural —
 `src/RadarTorres.App/NeuralEvolution/`). Diferente das demais tabelas desta lista, é um **buffer
@@ -319,14 +323,14 @@ Uma linha por **geração** (não por indivíduo da população), com `ALVOS_ABA
 `ALVOS_ESCAPADOS` do melhor genoma daquela geração. Índice normal em `GERACAO`
 (`idx_historico_treinamento_geracao`).
 
-### `marcos_fitness_treinamento`
+### `TABMFT`
 Fitness agregado (médio e melhor) de cada bloco de 500 gerações de treinamento — complementar a
-`historico_treinamento_geracoes`, mas SEM limite de linhas: um marco a cada 500 gerações nunca
+`TABHTG`, mas SEM limite de linhas: um marco a cada 500 gerações nunca
 acumula volume relevante, e é exatamente a tendência de longo prazo (sem o ruído geração a geração)
 que o painel "Estatísticas de Treinamento" (exclusivo do Administrador) precisa. Só inserção;
 `GeracaoMarco` é único (`idx_marcos_fitness_geracao`).
 
-### `instantaneos_comportamento_melhor_gene`
+### `TABICG`
 Retrato completo do melhor genoma a cada 1.000 gerações — pontuação, decisões (abatidos/
 escapados/tiros errados), taxas derivadas (acerto, cobertura) e o **genoma inteiro serializado** em
 `GenomaJson`, para poder recarregar e reproduzir exatamente aquele comportamento depois. Só
@@ -335,21 +339,81 @@ nunca sobrescrito por gerações seguintes, de propósito: é o histórico compa
 que permite estudar caso a caso se a evolução do treinamento é real ou só oscilação de ruído (ver
 `TreinamentoControladorViewModel.RegistrarInstantaneoDeComportamentoSeCompletouBloco`).
 
-### `classificacoes_alvo`
+### `TABCLA`
 Auditoria de mudança de grau de perigosidade (`Baixo`/`Medio`/`Alto`/`Critico`) conforme a
 velocidade estimada do alvo — `Helpers/ClassificadorPerigoAlvo.cs`. Só inserção, e só quando o
 grau MUDA (`MainViewModel.RegistrarClassificacaoDePerigoSeMudou`), não a cada leitura do sensor —
-senão seria uma linha por quadro. `ObjetoDetectadoId` referencia `objetos_detectados.Id`
-(`INTEGER NULL REFERENCES objetos_detectados (Id)` — declarado no DDL mas não aplicado, já que o
+senão seria uma linha por quadro. `ObjetoDetectadoId` referencia `TABOBJ.Id`
+(`INTEGER NULL REFERENCES TABOBJ (Id)` — declarado no DDL mas não aplicado, já que o
 app não ativa `PRAGMA foreign_keys`), podendo ser `NULL` nas primeiras leituras do radar, antes do
 primeiro registro.
 
-### `preferencias_usuario`
+### `TABPRU`
 Uma linha por usuário (Requisito 8) — idioma, tema, sidebar recolhida/expandida. Colunas de
 personalização mais granular (ordem dos cartões, colunas por tabela) ficam reservadas para a
 Etapa 2.
 
-## 5. Migração CSV → SQLite (histórico)
+### `TABDIC`
+Dicionário de tabelas: uma linha por sigla de 6 letras usada no banco (`nometab`, ex. `TABOBJ`)
+com o nome completo correspondente (`nometabcompleta`, ex. `"Tabela de Objetos Detectados"`).
+Existe porque siglas de 6 letras não são autoexplicativas — qualquer pessoa consultando o banco
+direto (SQL Developer, DBeaver) pode fazer `SELECT * FROM TABDIC` para descobrir o que cada
+tabela representa sem precisar abrir este documento. `nometab` é único.
+
+### `TABOPC`
+Opções válidas de campos que antes só tinham `CHECK(coluna IN ('A', 'B', ...))` no DDL — uma linha
+por opção, com `nometab` + `nomecampo` identificando o campo e `opcao` + `descricao` documentando
+cada valor possível (ex.: `TABUSU` / `Perfil` / `Administrador` / "Acesso total ao sistema,
+incluindo gestão de usuários."). Índice único composto `idx_tabopc_campo_opcao` em
+`(nometab, nomecampo, opcao)` evita duplicar a mesma opção para o mesmo campo. Os `CHECK`
+originais continuam nas colunas (não foram removidos) — `TABOPC` é documentação consultável via
+SQL, não substitui a validação.
+
+Exemplo de uso: `SELECT opcao, descricao FROM TABOPC WHERE nometab = 'TABCLA' AND nomecampo =
+'Grau'` lista os quatro graus de perigosidade possíveis com a descrição de cada um.
+
+### `rede_neural`
+Registro das versões/variações da rede neural do `ControladorHibrido` efetivamente implementadas
+ou testadas (não hipotéticas) — identificador de versão (texto, ex. `"3b"`), entradas, saídas,
+tipo de camada oculta (`Fixa`/`Variavel` — no NEAT a contagem de neurônios ocultos do campeão é
+resultado da evolução, por isso fica `NULL` quando variável), biblioteca e observações. Só
+inserção, índice único em `Versao`. Ver
+`Software/Qualidade/REDESENHO_CONTROLADOR_V2.md` seção 5 para as versões registradas e o
+raciocínio por trás de cada uma.
+
+### `experimento_rede_neural`
+Resultado REAL (nunca estimado) de uma repetição de uma bateria de treino+validação comparando
+versões de `rede_neural` — `RedeNeuralId` referencia `rede_neural.Id`. Guarda parâmetros da
+bateria (população, gerações, teto de complexidade, recorrente?) e métricas táticas de validação
+em episódios nunca vistos no treino (fitness, abatidos, escapados, tiros errados, tempo de
+resposta, trocas de alvo penalizadas, cooperações concedidas/negadas), mais `FonteDados` —
+proveniência do número, nunca deixada em branco. Só inserção.
+
+### `dashboard_graficos`
+Gráficos montados pelo usuário na tela "Dashboards" (seção "Dados" da barra lateral, exclusiva do
+Administrador) — qual fonte de dados (`FonteChave`, ex. `"MarcosFitness"`), qual campo vira eixo X
+(`CampoEixoXChave`) e qual vira a métrica plotada (`CampoMetricaChave`), mais o tipo de gráfico
+(`TipoGrafico`, linha ou barra) e a ordem de exibição. Não guarda os PONTOS do gráfico — esses são
+recalculados a cada abertura da tela, lendo ao vivo das tabelas de origem (`TABMFT`,
+`TABICG`, `TABHTG`,
+`experimentos_hiperparametros`, `experimento_rede_neural` — ver `IFontesDeDadosDashboardService`),
+então um gráfico salvo ontem já mostra os dados de hoje sem precisar ser reconfigurado.
+
+## 5. Views de leitura (`schema.sql`)
+
+Cinco views, só no schema acadêmico/idealizado (`schema.sql`, mesma ressalva do fim de §1): não são
+criadas pelo app nem usadas por nenhum `Sqlite*Repository` (que já faz os joins em memória no C#) —
+existem só para facilitar consulta/auditoria em ferramentas de modelagem (SQL Developer, DBeaver).
+
+| View | Tabelas combinadas | Para que serve |
+|---|---|---|
+| `vw_ocorrencias_atuais` | `TABOBJ` + última linha de `TABOCE` + `TABMOD` | Estado atual de cada ocorrência com a última transição e o modo da torre vigente nesse instante (`TABOCE.Estado` referencia `TABMOD.ID_MODO`, não o enum Detectado/Abatido — ver §4 `TABOCE`). |
+| `vw_acoes_com_contexto` | `TABACA` + `TABOBJ` + `TABCAM` + `TABSES` + `TABUSU` | Cada acionamento com o alvo, a câmera e o nome/login do usuário por trás, numa linha só. |
+| `vw_auditoria_modo_torre` | `TABMOD` + `TABUSU` + `TABSES` | Histórico de troca de modo com nome/login em vez de só `ID_USER`, e a janela da sessão que confirmou a troca. |
+| `vw_classificacoes_com_contexto` | `TABCLA` + `TABOBJ` + `TABSES` + `TABUSU` | Mudanças de grau de perigosidade (§4 `TABCLA`) com o alvo e o operador que estava com ele em tela. |
+| `vw_treinamento_resumo` | `UNION ALL` de `TABHTG` e `TABMFT` | Linha do tempo única do treinamento, com coluna `Origem` (`Geracao` ou `Marco`) distinguindo o buffer recente (limitado a 300 linhas) dos marcos agregados (nunca descartados). |
+
+## 6. Migração CSV → SQLite (histórico)
 
 Esta seção documenta, em retrospecto, a migração que era descrita em versões anteriores como
 "proposta futura" e que **já foi concluída**. O modelo de dados em si não mudou de estrutura entre
@@ -376,7 +440,7 @@ Passos efetivamente executados (refletidos no código atual):
    antes da conclusão desta etapa — por isso não há tabela `chamados_ajuda` no schema atual.
 
 Com o SGBD relacional, as referências que antes eram por texto (`Login`) passaram a ser chaves
-estrangeiras reais por `Id` (`ID_OBJETO` → `objetos_detectados.Id`, `ID_USER` → `usuarios.Id`),
+estrangeiras reais por `Id` (`ID_OBJETO` → `TABOBJ.Id`, `ID_USER` → `TABUSU.Id`),
 com integridade garantida pelo próprio banco (`PRAGMA foreign_keys = ON`) no schema acadêmico — ver
 aviso de integridade referencial em §1.
 

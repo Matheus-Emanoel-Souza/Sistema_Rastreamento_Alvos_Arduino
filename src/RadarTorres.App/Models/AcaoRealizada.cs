@@ -7,7 +7,7 @@ namespace RadarTorres.App.Models;
 /// <see cref="Services.FireControlService"/> só quando o comando chega a ser enviado com
 /// sucesso (tentativas bloqueadas/com erro só geram log, não linha aqui — ver
 /// <see cref="Repositories.IAcaoRealizadaRepository"/>, que propositalmente não expõe
-/// Update/Delete). Espelha a tabela acadêmica <c>acoes_realizadas</c> (ID_ACAO, ID_TORRE,
+/// Update/Delete). Espelha a tabela acadêmica <c>TABACA</c> (ID_ACAO, ID_TORRE,
 /// ID_OBJETO, DH_ACAO, OBSERVACAO) descrita em
 /// <c>Software/Banco_de_Dados/schema.sql</c>.
 /// </summary>

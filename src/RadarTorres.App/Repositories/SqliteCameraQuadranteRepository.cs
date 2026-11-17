@@ -8,7 +8,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>Cameras</c>) de
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABCAM</c>) de
 /// <see cref="ICameraQuadranteRepository"/>.
 /// </summary>
 /// <remarks>
@@ -36,7 +36,7 @@ public sealed class SqliteCameraQuadranteRepository : ICameraQuadranteRepository
         var result = new List<CameraQuadrante>();
 
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, DispositivoId, Nome, Quadrante, AtualizadoEm FROM Cameras ORDER BY Quadrante";
+        command.CommandText = "SELECT Id, DispositivoId, Nome, Quadrante, AtualizadoEm FROM TABCAM ORDER BY Quadrante";
 
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
@@ -69,11 +69,11 @@ public sealed class SqliteCameraQuadranteRepository : ICameraQuadranteRepository
         {
             command.Transaction = transaction;
             command.CommandText =
-                "INSERT INTO Cameras (DispositivoId, Nome, Quadrante, AtualizadoEm) " +
+                "INSERT INTO TABCAM (DispositivoId, Nome, Quadrante, AtualizadoEm) " +
                 "VALUES ($dispositivo, $nome, $quadrante, $atualizadoEm) " +
                 "ON CONFLICT(DispositivoId) DO UPDATE SET Nome = excluded.Nome, " +
                 "Quadrante = excluded.Quadrante, AtualizadoEm = excluded.AtualizadoEm; " +
-                "SELECT Id FROM Cameras WHERE DispositivoId = $dispositivo";
+                "SELECT Id FROM TABCAM WHERE DispositivoId = $dispositivo";
             command.Parameters.AddWithValue("$dispositivo", camera.DispositivoId);
             command.Parameters.AddWithValue("$nome", camera.Nome);
             command.Parameters.AddWithValue("$quadrante", camera.Quadrante.ToString());
@@ -92,7 +92,7 @@ public sealed class SqliteCameraQuadranteRepository : ICameraQuadranteRepository
         EnsureTable(connection);
 
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM Cameras WHERE DispositivoId = $dispositivo";
+        command.CommandText = "DELETE FROM TABCAM WHERE DispositivoId = $dispositivo";
         command.Parameters.AddWithValue("$dispositivo", dispositivoId);
         command.ExecuteNonQuery();
     }
@@ -106,7 +106,7 @@ public sealed class SqliteCameraQuadranteRepository : ICameraQuadranteRepository
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.CommandText =
-                "CREATE TABLE IF NOT EXISTS Cameras (" +
+                "CREATE TABLE IF NOT EXISTS TABCAM (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "DispositivoId TEXT NOT NULL, " +
                 "Nome TEXT NOT NULL, " +
@@ -115,7 +115,7 @@ public sealed class SqliteCameraQuadranteRepository : ICameraQuadranteRepository
             command.ExecuteNonQuery();
         }
 
-        SqliteSchema.EnsureIndex(connection, "IX_Cameras_Dispositivo", "ON Cameras(DispositivoId)", unico: true);
-        SqliteSchema.EnsureIndex(connection, "IX_Cameras_Quadrante", "ON Cameras(Quadrante)", unico: true);
+        SqliteSchema.EnsureIndex(connection, "IX_TABCAM_Dispositivo", "ON TABCAM(DispositivoId)", unico: true);
+        SqliteSchema.EnsureIndex(connection, "IX_TABCAM_Quadrante", "ON TABCAM(Quadrante)", unico: true);
     }
 }

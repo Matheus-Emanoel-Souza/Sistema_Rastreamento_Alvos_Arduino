@@ -7,7 +7,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>PreferenciasUsuario</c>) de
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABPRU</c>) de
 /// <see cref="IPreferenciasUsuarioRepository"/> — único armazenamento; sem fallback para CSV.
 /// </summary>
 public sealed class SqlitePreferenciasUsuarioRepository : IPreferenciasUsuarioRepository
@@ -20,7 +20,7 @@ public sealed class SqlitePreferenciasUsuarioRepository : IPreferenciasUsuarioRe
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "SELECT UsuarioId, Idioma, Tema, SidebarRecolhida, TelaInicial, RegistrosPorPagina " +
-            "FROM PreferenciasUsuario WHERE UsuarioId = $usuarioId";
+            "FROM TABPRU WHERE UsuarioId = $usuarioId";
         command.Parameters.AddWithValue("$usuarioId", usuarioId);
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -46,7 +46,7 @@ public sealed class SqlitePreferenciasUsuarioRepository : IPreferenciasUsuarioRe
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO PreferenciasUsuario (UsuarioId, Idioma, Tema, SidebarRecolhida, TelaInicial, RegistrosPorPagina) " +
+                "INSERT INTO TABPRU (UsuarioId, Idioma, Tema, SidebarRecolhida, TelaInicial, RegistrosPorPagina) " +
                 "VALUES ($usuarioId, $idioma, $tema, $sidebarRecolhida, $telaInicial, $registrosPorPagina) " +
                 "ON CONFLICT(UsuarioId) DO UPDATE SET " +
                 "Idioma = excluded.Idioma, Tema = excluded.Tema, SidebarRecolhida = excluded.SidebarRecolhida, " +
@@ -62,7 +62,7 @@ public sealed class SqlitePreferenciasUsuarioRepository : IPreferenciasUsuarioRe
         catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
         {
             PendingWriteQueue.Enqueue(
-                "INSERT INTO PreferenciasUsuario (UsuarioId, Idioma, Tema, SidebarRecolhida, TelaInicial, RegistrosPorPagina) VALUES (" +
+                "INSERT INTO TABPRU (UsuarioId, Idioma, Tema, SidebarRecolhida, TelaInicial, RegistrosPorPagina) VALUES (" +
                 $"{SqlLiteral.Number(preferencias.UsuarioId)}, {SqlLiteral.Text(preferencias.Idioma)}, {SqlLiteral.Text(preferencias.Tema.ToString())}, " +
                 $"{SqlLiteral.Bool(preferencias.SidebarRecolhida)}, {SqlLiteral.Text(preferencias.TelaInicial)}, {SqlLiteral.Number(preferencias.RegistrosPorPagina)}) " +
                 "ON CONFLICT(UsuarioId) DO UPDATE SET " +
@@ -79,8 +79,8 @@ public sealed class SqlitePreferenciasUsuarioRepository : IPreferenciasUsuarioRe
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "CREATE TABLE IF NOT EXISTS PreferenciasUsuario (" +
-            "UsuarioId INTEGER PRIMARY KEY REFERENCES Usuarios(Id) ON DELETE CASCADE, " +
+            "CREATE TABLE IF NOT EXISTS TABPRU (" +
+            "UsuarioId INTEGER PRIMARY KEY REFERENCES TABUSU(Id) ON DELETE CASCADE, " +
             "Idioma TEXT NOT NULL, " +
             "Tema TEXT NOT NULL, " +
             "SidebarRecolhida INTEGER NOT NULL, " +

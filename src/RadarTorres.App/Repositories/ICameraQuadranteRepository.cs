@@ -4,7 +4,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Persistência da associação câmera → quadrante (tabela <c>Cameras</c>). Diferente dos demais
+/// Persistência da associação câmera → quadrante (tabela <c>TABCAM</c>). Diferente dos demais
 /// repositórios de histórico (somente inserção), este é um cadastro: a mesma câmera pode ser
 /// reatribuída quantas vezes o operador quiser, então a gravação é um "upsert" pela câmera.
 /// </summary>

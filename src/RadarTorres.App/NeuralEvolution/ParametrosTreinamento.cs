@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using RadarTorres.App.Models;
 
 namespace RadarTorres.App.NeuralEvolution;
@@ -6,6 +7,19 @@ namespace RadarTorres.App.NeuralEvolution;
 /// <summary>Parâmetros ajustáveis de um episódio de treinamento — expostos na tela para o usuário experimentar.</summary>
 public sealed record ParametrosTreinamento
 {
+    /// <summary>
+    /// Identifica a versão do CÁLCULO de fitness usada por este ambiente — metadado para
+    /// relatório/análise, não afeta nenhuma conta. Bump sempre que o cálculo de fitness mudar de
+    /// forma que valores antigos deixem de ser diretamente comparáveis (ver nota de versão em
+    /// <c>Artigo/Apresentacao/ApoioDoArtigo.md</c>). "v1" é a fórmula anterior a esta revisão
+    /// (recusa de disparo contada por tick, desequilíbrio de torres por desigualdade bruta).
+    /// "v1.1" corrige: recusa de disparo contada uma vez por janela contínua de oportunidade (não
+    /// mais recontada a cada passo de 0,2s), e a penalidade de desequilíbrio passa a usar o
+    /// resíduo contra a demanda do próprio quadrante da torre em vez da desigualdade bruta entre
+    /// torres (não penaliza mais concentração de trabalho justificada pela posição dos alvos).
+    /// </summary>
+    public string VersaoFormulaFitness { get; init; } = "v1.1-recusa-por-janela-sobrecarga-por-demanda";
+
     public double RaioMundoMetros { get; init; } = 10.0;
     public double DistanciaEngajamentoMetros { get; init; } = 3.0;
     public double VelocidadeMinimaAlvoMetrosPorSegundo { get; init; } = 0.5;
@@ -34,16 +48,13 @@ public sealed record ParametrosTreinamento
     /// Reproduzível: usa o <see cref="EstadoEpisodio.Rng"/> do episódio, igual a todo o resto do
     /// sorteio — a MESMA seed sempre produz a MESMA sequência de curvas.
     /// </summary>
-    public double VariacaoMaximaDirecaoGrausPorSegundo { get; init; } = 15.0;
+    public double VariacaoMaximaDirecaoGrausPorSegundo { get; init; } = 35.0;
 
     /// <summary>Intervalo mínimo de nascimento no FIM do episódio — <see cref="IntervaloSpawnMinSegundos"/> é o do início; a interpolação linear entre os dois ao longo de <see cref="DuracaoEpisodioSegundos"/> é a escalada de dificuldade (mais alvos quanto mais o episódio avança), ver <see cref="AmbienteTreinamento"/>.</summary>
     public double IntervaloSpawnMinFinalSegundos { get; init; } = 0.6;
 
     /// <summary>Intervalo máximo de nascimento no FIM do episódio — ver <see cref="IntervaloSpawnMinFinalSegundos"/>.</summary>
     public double IntervaloSpawnMaxFinalSegundos { get; init; } = 1.8;
-
-    /// <summary>Teto de alvos ATIVOS simultaneamente no MESMO quadrante — não é mais um teto global: quadrantes diferentes podem estar cada um no próprio limite ao mesmo tempo, forçando o controlador a lidar com concentração local em vez de só a contagem total.</summary>
-    public int MaxAlvosPorQuadrante { get; init; } = 5;
 
     /// <summary>
     /// Liga a terceira dimensão: com <c>true</c>, cada alvo nasce com uma altura entre 0 e
@@ -162,18 +173,11 @@ public sealed record ParametrosTreinamento
     public double PenalidadeRecusaDisparo { get; init; } = 3.0;
 
     /// <summary>
-    /// Quando <c>true</c>, o episódio IGNORA <see cref="DuracaoEpisodioSegundos"/> como fim normal
-    /// — só termina por invasão de torre (<see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>)
-    /// ou ao atingir <see cref="DuracaoMaximaSegurancaSegundos"/> (salvaguarda contra um genoma tão
-    /// bom que nunca seria invadido). <see cref="DuracaoEpisodioSegundos"/> continua sendo usado
-    /// como referência da escalada de dificuldade (ver <see cref="AmbienteTreinamento.ProximoIntervaloSpawn"/>) —
-    /// só o corte por tempo decorrido é desligado. Existe para testar a hipótese de que o teto de
-    /// fitness observado vem do episódio ser curto demais (poucos alvos nascem), não da qualidade
-    /// do controlador.
+    /// Salvaguarda contra loop efetivamente infinito — nenhum episódio passa disto, mesmo que
+    /// nenhum alvo jamais invada uma torre. Único corte por tempo que resta: o episódio não tem
+    /// mais fim "normal" por duração, só termina por invasão de torre
+    /// (<see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>) ou ao atingir este teto.
     /// </summary>
-    public bool SemLimiteDeDuracao { get; init; } = false;
-
-    /// <summary>Salvaguarda contra loop efetivamente infinito quando <see cref="SemLimiteDeDuracao"/> está ativo — nenhum episódio passa disto, mesmo que nenhum alvo jamais invada uma torre.</summary>
     public double DuracaoMaximaSegurancaSegundos { get; init; } = 1800.0;
 
     /// <summary>Piso absoluto do limiar de certeza — mesma regra do sistema real (ver <see cref="Configuration.ConfiguracoesAplicativo.ConfiancaMinimaDisparoPercentual"/>).</summary>
@@ -210,7 +214,7 @@ public sealed record ParametrosTreinamento
     /// <summary>Velocidade (m/s) a partir da qual um alvo aciona ajuda de torre adjacente — mesma regra e mesmo valor de fábrica de <see cref="Configuration.ConfiguracoesAplicativo.VelocidadeRapidaMetrosPorSegundo"/> (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>).</summary>
     public double VelocidadeRapidaMetrosPorSegundo { get; init; } = 1.2;
 
-    public int TamanhoPopulacao { get; init; } = 60;
+    public int TamanhoPopulacao { get; init; } = 100;
 
     /// <summary>
     /// Probabilidade de um descendente ganhar um neurônio novo (mutação estrutural do NEAT).
@@ -218,7 +222,15 @@ public sealed record ParametrosTreinamento
     /// aqui: o SharpNEAT trata mutação de PESO e mutação de ESTRUTURA como eventos distintos, e
     /// é a segunda que define o quanto a rede pode mudar de forma ao longo da evolução.
     /// </summary>
-    public double ProbabilidadeAdicionarNo { get; init; } = 0.01;
+    /// <remarks>
+    /// Elevado de 0,01 para 0,03 em 2026-11-07: baterias V2 em escala grande (ver
+    /// <c>REDESENHO_CONTROLADOR_V2.md</c>, seção "Bateria 3") mostraram desempenho tático
+    /// levemente abaixo de V1 mesmo com 300 gerações — hipótese de que o valor de fábrica,
+    /// combinado com população pequena dividida em poucas espécies, satura a busca num ótimo
+    /// local de topologia cedo demais. Não é conclusão fechada, é tentativa de reabrir o espaço
+    /// de busca estrutural.
+    /// </remarks>
+    public double ProbabilidadeAdicionarNo { get; init; } = 0.03;
 
     /// <summary>
     /// Número de conexões a partir do qual a evolução passa a SIMPLIFICAR em vez de crescer
@@ -229,7 +241,8 @@ public sealed record ParametrosTreinamento
     public int TetoComplexidade { get; init; } = 60;
 
     /// <summary>Em quantas espécies a população é dividida. Mecanismo central do NEAT: protege uma topologia recém-criada de competir de igual para igual com redes já otimizadas antes de ter tempo de ser ajustada.</summary>
-    public int QuantidadeEspecies { get; init; } = 6;
+    /// <remarks>Elevado de 6 para 10 em 2026-11-07 junto com <see cref="TamanhoPopulacao"/> e <see cref="ProbabilidadeAdicionarNo"/> — mesma hipótese: mais espécies simultâneas sustentam diversidade de topologia por mais tempo antes de uma dominar a população.</remarks>
+    public int QuantidadeEspecies { get; init; } = 10;
 
     /// <summary>
     /// Quantos episódios independentes (seeds diferentes) são rodados e tirada a MÉDIA para
@@ -248,4 +261,98 @@ public sealed record ParametrosTreinamento
     /// essa amostra é ruído demais para a seleção distinguir genoma melhor de genoma sortudo.
     /// </remarks>
     public int EpisodiosPorAvaliacao { get; init; } = 12;
+
+    // ---------------------------------------------------------------------------------------
+    // Regras adicionais do ambiente (2026-11-13) — cada uma independente das demais, desligada
+    // por padrão pelo mesmo motivo de EixoZHabilitado: não mudar em silêncio o significado de
+    // uma comparação com resultados já registrados. Descrevem o AMBIENTE (regra de pontuação e
+    // disponibilidade de torre), não o controlador.
+    // ---------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Liga a pontuação extra de "ataque conjunto": quando a torre adjacente mais próxima do
+    /// alvo (regra 6 de ajuda, ver <see cref="AmbienteTreinamento.DecidirDisparos"/>) dispara
+    /// JUNTO com a torre principal comprometida e esse segundo disparo é quem efetivamente abate
+    /// o alvo (a torre principal já havia errado), soma-se <see cref="RecompensaAtaqueConjunto"/>
+    /// ao fitness. Não soma nada quando a torre principal sozinha já abate o alvo (não houve
+    /// cooperação nenhuma) nem quando a torre de ajuda também erra.
+    /// </summary>
+    public bool HabilitarBonusAtaqueConjunto { get; init; } = false;
+
+    /// <summary>Bônus de fitness por um abate cooperativo bem-sucedido — ver <see cref="HabilitarBonusAtaqueConjunto"/>.</summary>
+    public double RecompensaAtaqueConjunto { get; init; } = 5.0;
+
+    /// <summary>
+    /// Liga a troca dinâmica de alvo por proximidade: enquanto uma torre já comprometida
+    /// persegue um alvo, se surgir outro alvo LIVRE (sem torre nenhuma) mais próximo dela do que
+    /// o alvo atual, a torre troca de alvo na hora — mesmo que o alvo anterior continue vivo e
+    /// ativo. O alvo abandonado não é descartado: só perde o compromisso (<see cref="AlvoTreinamento.TorreSelecionadaId"/>
+    /// volta a <c>null</c>) e volta a concorrer normalmente pela seleção de torres livres (ver
+    /// <see cref="AmbienteTreinamento.SelecionarTorresParaAlvosLivres"/>) — inclusive pela MESMA
+    /// torre, depois que ela resolver o alvo novo, se ele ainda estiver vivo e nenhuma outra
+    /// torre tiver assumido. Desligado por padrão: o comportamento histórico é compromisso fixo
+    /// até o alvo ser abatido, escapar pela base ou invadir uma torre.
+    /// </summary>
+    /// <remarks>
+    /// Sem histerese de propósito: a troca acontece sempre que existir um alvo mais próximo,
+    /// mesmo por uma margem pequena — é exatamente o comportamento pedido ("se outro alvo se
+    /// aproximar mais, deve trocar"). Isso pode fazer a torre oscilar entre dois alvos quase
+    /// equidistantes em episódios específicos (cada troca reinicia <see cref="AlvoTreinamento.TempoDesdeSelecao"/>
+    /// e <see cref="TorreTreinamento.MiraAlinhada"/>), o que é por si só um comportamento
+    /// observável/estudável, não um bug a esconder.
+    /// </remarks>
+    public bool PermitirTrocaDeAlvoPorProximidade { get; init; } = false;
+
+    /// <summary>
+    /// Ids de torres (<see cref="TorreTreinamento.Id"/>) desativadas manualmente neste episódio —
+    /// vazio por padrão (todas ativas). Uma torre desativada nunca é selecionada para um alvo
+    /// nem atua como torre de ajuda (ver <see cref="TorreTreinamento.Ativa"/>), simulando o
+    /// sistema operando com menos recursos sem precisar mudar o layout físico das torres.
+    /// </summary>
+    public IReadOnlySet<int> TorresDesativadasIds { get; init; } = new HashSet<int>();
+
+    // ---------------------------------------------------------------------------------------
+    // Curriculum de dificuldade progressiva (ver CurriculoTreinamento/EtapaCurriculo) — opt-in,
+    // mesmo motivo das demais regras desta seção: desligado por padrão para não mudar em
+    // silêncio o significado de uma comparação com treinos já registrados.
+    // ---------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Liga o curriculum de dificuldade progressiva: o treino começa na etapa
+    /// <see cref="EtapaCurriculo.Facil"/> e avança para <see cref="EtapaCurriculo.Medio"/> e
+    /// <see cref="EtapaCurriculo.Dificil"/> conforme <see cref="CurriculoTreinamento"/> decide —
+    /// ver <see cref="LimiarFitnessParaAvancarCurriculo"/>, <see cref="GeracoesEstaveisParaAvancarCurriculo"/>
+    /// e <see cref="TetoGeracoesPorEtapaCurriculo"/>. Desligado por padrão: o comportamento
+    /// histórico é treinar sempre na dificuldade de fábrica (etapa <see cref="EtapaCurriculo.Medio"/>).
+    /// </summary>
+    public bool HabilitarCurriculoDificuldade { get; init; } = false;
+
+    /// <summary>Fitness médio da geração a partir do qual uma etapa do curriculum é considerada dominada — ajuste este valor à escala de fitness da sua configuração (recompensas/penalidades acima); não há um valor universal.</summary>
+    public double LimiarFitnessParaAvancarCurriculo { get; init; } = 400.0;
+
+    /// <summary>Gerações CONSECUTIVAS acima do limiar exigidas para avançar de etapa — protege contra promover por um pico isolado (sorte de seed fácil), ver <see cref="CurriculoTreinamento"/>.</summary>
+    public int GeracoesEstaveisParaAvancarCurriculo { get; init; } = 10;
+
+    /// <summary>Teto de gerações numa mesma etapa antes de avançar de qualquer forma — evita travar o treino indefinidamente se o limiar nunca for atingido.</summary>
+    public int TetoGeracoesPorEtapaCurriculo { get; init; } = 60;
+
+    /// <summary>
+    /// Junta <see cref="VersaoFormulaFitness"/> com o estado das três regras adicionais acima
+    /// (independentes da fórmula — não a alteram, só somam/filtram por cima dela) num único
+    /// rótulo de texto. Gravado junto com cada marco/instantâneo de treinamento (ver
+    /// <see cref="Models.MarcoFitnessTreinamento.ConfiguracaoFitness"/>/
+    /// <see cref="Models.InstantaneoComportamentoMelhorGene.ConfiguracaoFitness"/>) para permitir
+    /// comparar depois dados de sessões com regras diferentes ligadas — sem isto, o único jeito
+    /// de diferenciar seria por data/hora ou por <c>ExecucaoId</c>, sem dizer O QUE mudou.
+    /// </summary>
+    public string DescricaoConfiguracaoFitness()
+    {
+        var extras = new List<string>();
+        if (HabilitarBonusAtaqueConjunto) extras.Add("ataque-conjunto");
+        if (PermitirTrocaDeAlvoPorProximidade) extras.Add("troca-por-proximidade");
+        if (TorresDesativadasIds.Count > 0) extras.Add($"torres-desativadas={string.Join(",", TorresDesativadasIds.OrderBy(id => id))}");
+        if (HabilitarCurriculoDificuldade) extras.Add("curriculo-progressivo");
+
+        return extras.Count == 0 ? VersaoFormulaFitness : $"{VersaoFormulaFitness}+{string.Join("+", extras)}";
+    }
 }

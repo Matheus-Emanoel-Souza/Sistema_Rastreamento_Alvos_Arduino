@@ -9,7 +9,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>classificacoes_alvo</c> — nomes
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABCLA</c> — nomes
 /// espelham <c>Software/Banco_de_Dados/schema.sql</c>) de
 /// <see cref="IClassificacaoPerigoRepository"/>. Mesmo padrão de <see cref="SqliteAcaoRealizadaRepository"/>:
 /// só inserção, com fila de reenvio via <see cref="PendingWriteQueue"/> se o banco estiver
@@ -26,7 +26,7 @@ public sealed class SqliteClassificacaoPerigoRepository : IClassificacaoPerigoRe
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "SELECT Id, ObjetoDetectadoId, VelocidadeMetrosPorSegundo, Grau, DataHora, SessaoId " +
-            "FROM classificacoes_alvo ORDER BY Id";
+            "FROM TABCLA ORDER BY Id";
 
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
@@ -53,7 +53,7 @@ public sealed class SqliteClassificacaoPerigoRepository : IClassificacaoPerigoRe
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO classificacoes_alvo (ObjetoDetectadoId, VelocidadeMetrosPorSegundo, Grau, DataHora, SessaoId) " +
+                "INSERT INTO TABCLA (ObjetoDetectadoId, VelocidadeMetrosPorSegundo, Grau, DataHora, SessaoId) " +
                 "VALUES ($idObjeto, $velocidade, $grau, $dataHora, $sessaoId); " +
                 "SELECT last_insert_rowid();";
             command.Parameters.AddWithValue("$idObjeto", (object?)classificacao.ObjetoDetectadoId ?? DBNull.Value);
@@ -69,7 +69,7 @@ public sealed class SqliteClassificacaoPerigoRepository : IClassificacaoPerigoRe
         {
             classificacao.Id = PendingWriteQueue.NextOfflineId();
             PendingWriteQueue.Enqueue(
-                "INSERT INTO classificacoes_alvo (ObjetoDetectadoId, VelocidadeMetrosPorSegundo, Grau, DataHora, SessaoId) VALUES (" +
+                "INSERT INTO TABCLA (ObjetoDetectadoId, VelocidadeMetrosPorSegundo, Grau, DataHora, SessaoId) VALUES (" +
                 $"{SqlLiteral.Number(classificacao.ObjetoDetectadoId)}, {SqlLiteral.Number(classificacao.VelocidadeMetrosPorSegundo)}, " +
                 $"{SqlLiteral.Text(classificacao.Grau.ToString())}, {SqlLiteral.DateTime(classificacao.DataHora)}, {SqlLiteral.Text(classificacao.SessaoId)})");
             return classificacao;
@@ -84,16 +84,16 @@ public sealed class SqliteClassificacaoPerigoRepository : IClassificacaoPerigoRe
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "CREATE TABLE IF NOT EXISTS classificacoes_alvo (" +
+            "CREATE TABLE IF NOT EXISTS TABCLA (" +
             "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "ObjetoDetectadoId INTEGER NULL REFERENCES objetos_detectados (Id), " +
+            "ObjetoDetectadoId INTEGER NULL REFERENCES TABOBJ (Id), " +
             "VelocidadeMetrosPorSegundo REAL NOT NULL, " +
             "Grau TEXT NOT NULL, " +
             "DataHora TEXT NOT NULL); " +
-            "CREATE INDEX IF NOT EXISTS idx_classificacoes_alvo_objeto ON classificacoes_alvo (ObjetoDetectadoId);";
+            "CREATE INDEX IF NOT EXISTS idx_TABCLA_objeto ON TABCLA (ObjetoDetectadoId);";
         command.ExecuteNonQuery();
 
-        // Código de sessão (sessoes_usuario.ID_SESSAO) de quem tinha o alvo na tela quando o grau mudou.
-        SqliteSchema.EnsureColumn(connection, "classificacoes_alvo", "SessaoId", "TEXT NULL");
+        // Código de sessão (TABSES.ID_SESSAO) de quem tinha o alvo na tela quando o grau mudou.
+        SqliteSchema.EnsureColumn(connection, "TABCLA", "SessaoId", "TEXT NULL");
     }
 }

@@ -9,8 +9,8 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabelas <c>ObjetosDetectados</c> e
-/// <c>OcorrenciaEstados</c>) de <see cref="IObjetoDetectadoRepository"/> — único armazenamento;
+/// Implementação em SQLite (<c>radartorres.db</c>, tabelas <c>TABOBJ</c> e
+/// <c>TABOCE</c>) de <see cref="IObjetoDetectadoRepository"/> — único armazenamento;
 /// sem fallback para CSV (o CSV que a tela "Objetos Detectados" ainda gera é exportação manual,
 /// ver <see cref="CsvObjetoDetectadoColumns"/>).
 /// </summary>
@@ -34,7 +34,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
 
         var result = new List<ObjetoDetectado>();
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = $"SELECT {ColunasSelecao} FROM ObjetosDetectados ORDER BY Id";
+        command.CommandText = $"SELECT {ColunasSelecao} FROM TABOBJ ORDER BY Id";
 
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
@@ -50,7 +50,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
         EnsureTable(connection);
 
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = $"SELECT {ColunasSelecao} FROM ObjetosDetectados WHERE Id = $id";
+        command.CommandText = $"SELECT {ColunasSelecao} FROM TABOBJ WHERE Id = $id";
         command.Parameters.AddWithValue("$id", id);
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -114,7 +114,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
 
             using SqliteCommand select = connection.CreateCommand();
             select.CommandText =
-                $"SELECT {ColunasSelecao} FROM ObjetosDetectados " +
+                $"SELECT {ColunasSelecao} FROM TABOBJ " +
                 "WHERE RastreamentoId = $rastreamentoId AND Quadrante = $quadrante";
             select.Parameters.AddWithValue("$rastreamentoId", objeto.RastreamentoId);
             select.Parameters.AddWithValue("$quadrante", objeto.Quadrante);
@@ -148,7 +148,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
             EnsureTable(connection);
 
             using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "UPDATE ObjetosDetectados SET DataHoraUltimaDeteccao = $quando WHERE Id = $id";
+            command.CommandText = "UPDATE TABOBJ SET DataHoraUltimaDeteccao = $quando WHERE Id = $id";
             command.Parameters.AddWithValue("$quando", quando.ToString("O", CultureInfo.InvariantCulture));
             command.Parameters.AddWithValue("$id", id);
             command.ExecuteNonQuery();
@@ -168,7 +168,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
 
         using (SqliteCommand command = connection.CreateCommand())
         {
-            command.CommandText = "UPDATE ObjetosDetectados SET Estado = $estado WHERE Id = $id AND Estado <> $estado";
+            command.CommandText = "UPDATE TABOBJ SET Estado = $estado WHERE Id = $id AND Estado <> $estado";
             command.Parameters.AddWithValue("$estado", estado.ToString());
             command.Parameters.AddWithValue("$id", id);
 
@@ -188,7 +188,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Id, ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao, SessaoId FROM OcorrenciaEstados " +
+            "SELECT Id, ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao, SessaoId FROM TABOCE " +
             "WHERE ObjetoDetectadoId = $id ORDER BY Id";
         command.Parameters.AddWithValue("$id", objetoDetectadoId);
 
@@ -214,7 +214,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
 
     /// <summary>Corpo do INSERT, SEM ponto e vírgula final — quem chama acrescenta o que precisa depois (<c>ON CONFLICT…</c> ou <c>; SELECT last_insert_rowid()</c>).</summary>
     private const string Insert =
-        "INSERT INTO ObjetosDetectados (Tipo, X, Y, Z, Quadrante, DataHora, Dispositivo, NivelConfianca, Observacao, " +
+        "INSERT INTO TABOBJ (Tipo, X, Y, Z, Quadrante, DataHora, Dispositivo, NivelConfianca, Observacao, " +
         "ReferenciaImagem, PerfilAlvoId, CameraDispositivoId, CameraNome, RastreamentoId, Estado, DataHoraUltimaDeteccao) " +
         "VALUES ($tipo, $x, $y, $z, $quadrante, $dataHora, $dispositivo, $nivelConfianca, $observacao, " +
         "$referenciaImagem, $perfilAlvoId, $cameraDispositivoId, $cameraNome, $rastreamentoId, $estado, NULL)";
@@ -239,7 +239,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
     }
 
     private static string InsertLiteral(ObjetoDetectado o) =>
-        "INSERT INTO ObjetosDetectados (Tipo, X, Y, Z, Quadrante, DataHora, Dispositivo, NivelConfianca, Observacao, " +
+        "INSERT INTO TABOBJ (Tipo, X, Y, Z, Quadrante, DataHora, Dispositivo, NivelConfianca, Observacao, " +
         "ReferenciaImagem, PerfilAlvoId, CameraDispositivoId, CameraNome, RastreamentoId, Estado) VALUES (" +
         $"{SqlLiteral.Text(o.Tipo)}, {SqlLiteral.Number(o.X)}, {SqlLiteral.Number(o.Y)}, {SqlLiteral.Number(o.Z)}, " +
         $"{SqlLiteral.Text(o.Quadrante)}, {SqlLiteral.DateTime(o.DataHora)}, {SqlLiteral.Text(o.Dispositivo)}, " +
@@ -275,15 +275,15 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
     /// <summary>
     /// Registra uma transição. <c>Estado</c> deixou de guardar o nome do
     /// <see cref="EstadoOcorrencia"/> (ver <see cref="OcorrenciaEstadoTransicao"/>) e passou a
-    /// guardar o ID_MODO vigente em <c>modo_atual_torre</c> no instante da transição — o mais
+    /// guardar o ID_MODO vigente em <c>TABMOD</c> no instante da transição — o mais
     /// recente registrado até agora, ou <c>NULL</c> se nenhum modo foi registrado ainda.
     /// </summary>
     private static void RegistrarTransicao(SqliteConnection connection, int objetoDetectadoId, string? usuario, string? observacao, string? sessaoId)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO OcorrenciaEstados (ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao, SessaoId) " +
-            "VALUES ($objetoId, (SELECT ID_MODO FROM modo_atual_torre ORDER BY ID_MODO DESC LIMIT 1), $dataHora, $usuario, $observacao, $sessaoId)";
+            "INSERT INTO TABOCE (ObjetoDetectadoId, Estado, DataHora, Usuario, Observacao, SessaoId) " +
+            "VALUES ($objetoId, (SELECT ID_MODO FROM TABMOD ORDER BY ID_MODO DESC LIMIT 1), $dataHora, $usuario, $observacao, $sessaoId)";
         command.Parameters.AddWithValue("$objetoId", objetoDetectadoId);
         command.Parameters.AddWithValue("$dataHora", DateTime.Now.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$usuario", (object?)usuario ?? DBNull.Value);
@@ -292,8 +292,21 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
         command.ExecuteNonQuery();
     }
 
-    private static void EnsureTable(SqliteConnection connection) =>
+    /// <summary>
+    /// Também garante <c>TABMOD</c> (ver <see cref="SqliteModoAtualTorreRepository.EnsureTable"/>):
+    /// <see cref="RegistrarTransicao"/> lê dessa tabela, de outro repositório, num <c>SELECT</c>
+    /// embutido — sem garanti-la aqui, a transição só funciona se ALGUMA outra parte do app já
+    /// tiver usado <see cref="SqliteModoAtualTorreRepository"/> antes, ordem que não é garantida
+    /// (e não acontecia nos testes isolados deste repositório, onde o INSERT em
+    /// <c>TABOCE</c> falhava com "no such table: TABMOD" DEPOIS da linha
+    /// principal já ter sido gravada — o catch genérico tratava isso como falha total da
+    /// operação, devolvendo um Id offline incorreto para uma linha que na verdade já existia).
+    /// </summary>
+    private static void EnsureTable(SqliteConnection connection)
+    {
         SqliteSchema.GarantirUmaVez(connection, nameof(SqliteObjetoDetectadoRepository), CriarEsquema);
+        SqliteModoAtualTorreRepository.EnsureTable(connection);
+    }
 
     /// <summary>Criação/migração do esquema desta tabela — roda uma única vez por banco e por execução.</summary>
     private static void CriarEsquema(SqliteConnection connection)
@@ -301,7 +314,7 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.CommandText =
-                "CREATE TABLE IF NOT EXISTS ObjetosDetectados (" +
+                "CREATE TABLE IF NOT EXISTS TABOBJ (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "Tipo TEXT NOT NULL, " +
                 "X REAL NOT NULL, " +
@@ -317,12 +330,12 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
         }
 
         // Colunas acrescentadas depois da primeira versão da tabela (ver observações da classe).
-        SqliteSchema.EnsureColumn(connection, "ObjetosDetectados", "PerfilAlvoId", "INTEGER NULL");
-        SqliteSchema.EnsureColumn(connection, "ObjetosDetectados", "CameraDispositivoId", "TEXT NULL");
-        SqliteSchema.EnsureColumn(connection, "ObjetosDetectados", "CameraNome", "TEXT NULL");
-        SqliteSchema.EnsureColumn(connection, "ObjetosDetectados", "RastreamentoId", "TEXT NULL");
-        SqliteSchema.EnsureColumn(connection, "ObjetosDetectados", "Estado", "TEXT NOT NULL DEFAULT 'Detectado'");
-        SqliteSchema.EnsureColumn(connection, "ObjetosDetectados", "DataHoraUltimaDeteccao", "TEXT NULL");
+        SqliteSchema.EnsureColumn(connection, "TABOBJ", "PerfilAlvoId", "INTEGER NULL");
+        SqliteSchema.EnsureColumn(connection, "TABOBJ", "CameraDispositivoId", "TEXT NULL");
+        SqliteSchema.EnsureColumn(connection, "TABOBJ", "CameraNome", "TEXT NULL");
+        SqliteSchema.EnsureColumn(connection, "TABOBJ", "RastreamentoId", "TEXT NULL");
+        SqliteSchema.EnsureColumn(connection, "TABOBJ", "Estado", "TEXT NOT NULL DEFAULT 'Detectado'");
+        SqliteSchema.EnsureColumn(connection, "TABOBJ", "DataHoraUltimaDeteccao", "TEXT NULL");
 
         // Unicidade por (rastreamento, quadrante): é a restrição que torna impossível duplicar a
         // ocorrência do mesmo acompanhamento num mesmo quadrante, inclusive sob concorrência de
@@ -330,29 +343,29 @@ public sealed class SqliteObjetoDetectadoRepository : IObjetoDetectadoRepository
         // não têm rastreamento visual e podem repetir quadrante livremente.
         SqliteSchema.EnsureIndex(
             connection,
-            "IX_ObjetosDetectados_Rastreamento",
-            "ON ObjetosDetectados(RastreamentoId, Quadrante) WHERE RastreamentoId IS NOT NULL",
+            "IX_TABOBJ_Rastreamento",
+            "ON TABOBJ(RastreamentoId, Quadrante) WHERE RastreamentoId IS NOT NULL",
             unico: true);
 
-        SqliteSchema.EnsureIndex(connection, "IX_ObjetosDetectados_PerfilAlvo", "ON ObjetosDetectados(PerfilAlvoId)", unico: false);
+        SqliteSchema.EnsureIndex(connection, "IX_TABOBJ_PerfilAlvo", "ON TABOBJ(PerfilAlvoId)", unico: false);
 
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.CommandText =
-                "CREATE TABLE IF NOT EXISTS OcorrenciaEstados (" +
+                "CREATE TABLE IF NOT EXISTS TABOCE (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "ObjetoDetectadoId INTEGER NOT NULL REFERENCES ObjetosDetectados(Id), " +
-                "Estado INTEGER NULL REFERENCES modo_atual_torre(ID_MODO), " +
+                "ObjetoDetectadoId INTEGER NOT NULL REFERENCES TABOBJ(Id), " +
+                "Estado INTEGER NULL REFERENCES TABMOD(ID_MODO), " +
                 "DataHora TEXT NOT NULL, " +
                 "Usuario TEXT NULL, " +
                 "Observacao TEXT NULL)";
             command.ExecuteNonQuery();
         }
 
-        // Código de sessão (sessoes_usuario.ID_SESSAO) de quem desencadeou a transição — null
+        // Código de sessão (TABSES.ID_SESSAO) de quem desencadeou a transição — null
         // para transições automáticas (ocorrência aberta pela câmera, sem operador por trás).
-        SqliteSchema.EnsureColumn(connection, "OcorrenciaEstados", "SessaoId", "TEXT NULL");
+        SqliteSchema.EnsureColumn(connection, "TABOCE", "SessaoId", "TEXT NULL");
 
-        SqliteSchema.EnsureIndex(connection, "IX_OcorrenciaEstados_Objeto", "ON OcorrenciaEstados(ObjetoDetectadoId)", unico: false);
+        SqliteSchema.EnsureIndex(connection, "IX_TABOCE_Objeto", "ON TABOCE(ObjetoDetectadoId)", unico: false);
     }
 }

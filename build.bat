@@ -2,18 +2,21 @@
 setlocal EnableDelayedExpansion
 REM ============================================================
 REM Compila o RadarTorres (Release), mostrando uma animacao de
-REM progresso durante o restore/build, e abre o aplicativo ao final.
+REM progresso durante o restore/build, abre o aplicativo ao final e
+REM fecha a janela sozinha -- sem esperar ENTER quando tudo deu certo.
 REM
 REM Uso:
-REM   build.bat            compila em Release (dotnet restore + build)
-REM                         e ja roda o app compilado (via run.bat)
+REM   build.bat            compila em Release (dotnet restore + build),
+REM                         ja roda o app compilado (via run.bat) e
+REM                         fecha a janela do build automaticamente
 REM
 REM A "%%" mostrada durante a compilacao e uma ANIMACAO/estimativa, nao
 REM o progresso real do MSBuild (a CLI do dotnet nao expoe isso de
 REM forma simples em texto puro) -- serve so pra indicar visualmente
-REM que o processo esta rodando. O log completo de cada etapa e
-REM mostrado no final, antes do "Pressione ENTER" -- pra dar tempo de
-REM ler o que foi compilado sem a janela fechar sozinha.
+REM que o processo esta rodando. Em caso de ERRO (restore ou build),
+REM a janela continua mostrando o log completo e espera "Pressione
+REM ENTER" antes de fechar -- so o caminho de SUCESSO fecha sozinho,
+REM depois de abrir o aplicativo.
 REM
 REM Para publicar um instalador distribuivel (self-contained +
 REM Inno Setup), use build\publish.ps1 em vez deste script:
@@ -68,6 +71,7 @@ echo ----------------------------------------------------------------------
 echo.
 echo ==^> Abrindo o aplicativo...
 call "%~dp0run.bat"
+exit /b 0
 
 :fim
 echo.

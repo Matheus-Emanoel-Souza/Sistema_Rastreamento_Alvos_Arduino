@@ -31,7 +31,10 @@ public enum MenuItem
     TreinamentoControlador,
 
     /// <summary>Tela "Estatísticas de Treinamento" — exclusiva do Administrador: evolução do fitness médio a cada 500 gerações (ver EstatisticasTreinamentoView).</summary>
-    EstatisticasTreinamento
+    EstatisticasTreinamento,
+
+    /// <summary>Tela "Dashboards" (seção "Dados") — gráficos montados pelo usuário sobre dados já persistidos (treinamento, experimentos), ver DashboardsView.</summary>
+    Dashboards
 }
 
 /// <summary>

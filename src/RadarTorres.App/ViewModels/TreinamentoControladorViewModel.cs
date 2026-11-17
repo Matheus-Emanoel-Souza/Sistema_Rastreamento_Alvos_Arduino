@@ -132,6 +132,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private TreinadorNeat? _treinador;
 
     /// <summary>
+    /// Parâmetros de dificuldade de FÁBRICA da sessão atual (a tela, sem curriculum) — guardado à
+    /// parte porque, com <see cref="ParametrosTreinamento.HabilitarCurriculoDificuldade"/> ligado,
+    /// <see cref="_ambiente"/> passa a usar parâmetros TROCADOS a cada etapa
+    /// (<see cref="ParametrosTreinamentoCurriculo.AplicarEtapa"/>); precisamos da base original
+    /// para recalcular a etapa seguinte sem acumular os ajustes de etapas anteriores.
+    /// </summary>
+    private ParametrosTreinamento _parametrosBaseCurriculo = new();
+
+    /// <summary><c>null</c> quando <see cref="ParametrosTreinamento.HabilitarCurriculoDificuldade"/> está desligado — não decide nada, <see cref="_ambiente"/> fica sempre na dificuldade de fábrica.</summary>
+    private CurriculoTreinamento? _curriculo;
+
+    private EtapaCurriculo _etapaCurriculoAtual = EtapaCurriculo.Medio;
+    /// <summary>Etapa do curriculum de dificuldade em uso agora — fica em <see cref="EtapaCurriculo.Medio"/> (dificuldade de fábrica) quando o curriculum está desligado.</summary>
+    public EtapaCurriculo EtapaCurriculoAtual { get => _etapaCurriculoAtual; private set => SetProperty(ref _etapaCurriculoAtual, value); }
+
+    /// <summary>
     /// Identifica esta sessão de treinamento para os marcos/instantâneos gravados por ela (ver
     /// <see cref="RegistrarMarcoFitnessSeCompletouBloco"/>/<see cref="RegistrarInstantaneoDeComportamentoSeCompletouBloco"/>)
     /// — gerado de novo toda vez que um <see cref="TreinadorNeat"/> novo é criado (<see cref="Iniciar"/>
@@ -140,6 +156,16 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// 1000...) colidiam no índice único da tabela e o INSERT falhava ("UNIQUE constraint failed").
     /// </summary>
     private string _execucaoId = Guid.NewGuid().ToString("N");
+
+    /// <summary>
+    /// Momento em que a execução atual começou — usado só para derivar <see cref="CodigoSessaoTexto"/>
+    /// (identificador curto exibido na tela). Sempre reatribuído junto de <see cref="_execucaoId"/>
+    /// (mesmo "nascimento" de sessão), nunca lido sozinho para outra finalidade — o cronômetro da
+    /// sessão (<see cref="TempoDecorrido"/>) é medido por <see cref="_cronometroSessao"/>, não por
+    /// este campo.
+    /// </summary>
+    private DateTime _inicioExecucao = DateTime.Now;
+
     private CancellationTokenSource? _cts;
     private Task? _tarefaTreinamento;
 
@@ -195,6 +221,14 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// <summary>Linhas do cenário desenhado à mão pelo usuário (ver <see cref="SimularCenarioPersonalizado"/>) — cada uma é um alvo com posição e velocidade fixadas, sem sorteio nenhum.</summary>
     public ObservableCollection<SpawnPersonalizadoEditavel> SpawnsPersonalizados { get; } = new();
 
+    /// <summary>
+    /// Uma linha por torre do layout físico, com um toggle "desativada" — ver
+    /// <see cref="ParametrosTreinamento.TorresDesativadasIds"/>. Preenchida uma única vez no
+    /// construtor a partir de <see cref="AmbienteTreinamento.TorresBase"/>: o layout físico
+    /// (posições das torres) não muda em tempo de execução, só quais delas participam.
+    /// </summary>
+    public ObservableCollection<TorreConfiguravelTreinamento> TorresConfiguraveis { get; } = new();
+
     /// <summary>Disparado quando o cenário personalizado começa a rodar de fato (ver <see cref="SimularCenarioPersonalizado"/>) — a janela modal de configuração usa isso para se fechar sozinha após confirmar.</summary>
     public event EventHandler? CenarioPersonalizadoIniciado;
 
@@ -230,6 +264,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _eventoRepository = eventoRepository;
         _configuracoes = configuracoes;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
+        foreach (TorreTreinamento torre in _ambiente.TorresBase)
+        {
+            TorresConfiguraveis.Add(new TorreConfiguravelTreinamento { Id = torre.Id, Nome = $"Torre {torre.Id}" });
+        }
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
         _cenarioOpcaoSelecionada = CenariosDisponiveis[0];
@@ -269,6 +307,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             EventosExecucao.Clear();
             foreach (EventoTreinamento evento in _eventoRepository.ObterUltimos(LimiteEventosExecucao))
             {
+                // _execucaoId já está definido aqui (inicializado no field initializer — ver
+                // declaração do campo), então compara com o Guid da sessão que esta tela abriu
+                // agora, mesmo antes de qualquer "Iniciar" ser clicado nesta sessão.
+                evento.EhSessaoAtual = evento.ExecucaoId == _execucaoId;
                 EventosExecucao.Add(evento);
             }
         }
@@ -322,13 +364,6 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _taxaMutacao, value);
     }
 
-    private int _maxAlvosPorQuadrante = 5;
-    public int MaxAlvosPorQuadrante
-    {
-        get => _maxAlvosPorQuadrante;
-        set => SetProperty(ref _maxAlvosPorQuadrante, value);
-    }
-
     private bool _eixoZHabilitado;
     /// <summary>
     /// Liga a terceira dimensão na simulação — ver <see cref="ParametrosTreinamento.EixoZHabilitado"/>.
@@ -354,6 +389,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     /// <summary>Altura a partir da qual todas as torres enxergam o alvo.</summary>
     public double AlturaVisivelPorTodasAsTorresMetros => _ambiente.Parametros.AlturaVisivelPorTodasAsTorresMetros;
+
+    private bool _habilitarBonusAtaqueConjunto;
+    /// <summary>Liga o bônus de "ataque conjunto" — ver <see cref="ParametrosTreinamento.HabilitarBonusAtaqueConjunto"/>. Mesma regra de "vale a partir do próximo Iniciar/Resetar" dos demais parâmetros do ambiente.</summary>
+    public bool HabilitarBonusAtaqueConjunto
+    {
+        get => _habilitarBonusAtaqueConjunto;
+        set => SetProperty(ref _habilitarBonusAtaqueConjunto, value);
+    }
+
+    private bool _permitirTrocaDeAlvoPorProximidade;
+    /// <summary>Liga a troca dinâmica de alvo por proximidade — ver <see cref="ParametrosTreinamento.PermitirTrocaDeAlvoPorProximidade"/>.</summary>
+    public bool PermitirTrocaDeAlvoPorProximidade
+    {
+        get => _permitirTrocaDeAlvoPorProximidade;
+        set => SetProperty(ref _permitirTrocaDeAlvoPorProximidade, value);
+    }
 
     /// <summary>
     /// Tetos de complexidade (em número de conexões) disponíveis na tela — os mesmos três
@@ -391,11 +442,13 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         TamanhoPopulacao = Math.Max(4, _tamanhoPopulacao),
         ProbabilidadeAdicionarNo = Math.Clamp(_taxaMutacao, 0.0, 1.0),
         TetoComplexidade = Math.Max(4, _neuroniosOcultosSelecionado),
-        MaxAlvosPorQuadrante = Math.Max(1, _maxAlvosPorQuadrante),
         EixoZHabilitado = _eixoZHabilitado,
         DistanciaEngajamentoMetros = _configuracoes.Atual.AlcanceMiraMetros,
         LimiarConfiancaDisparoFracao = _configuracoes.Atual.LimiarConfiancaDisparoPercentual / 100.0,
-        VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo
+        VelocidadeRapidaMetrosPorSegundo = _configuracoes.Atual.VelocidadeRapidaMetrosPorSegundo,
+        HabilitarBonusAtaqueConjunto = _habilitarBonusAtaqueConjunto,
+        PermitirTrocaDeAlvoPorProximidade = _permitirTrocaDeAlvoPorProximidade,
+        TorresDesativadasIds = TorresConfiguraveis.Where(t => t.Desativada).Select(t => t.Id).ToHashSet()
     };
 
     // ---------------------------------------------------------------- Status (mensagem transitória)
@@ -656,6 +709,18 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
 
     public string TempoDecorridoTexto => TempoDecorrido.ToString(TempoDecorrido.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
 
+    /// <summary>
+    /// Código curto (5 dígitos) da sessão de treinamento atual, para exibição — distinto do
+    /// <see cref="_execucaoId"/> interno (Guid usado para vincular dados no banco), que é longo
+    /// demais para mostrar na tela. Combina a DATA (dígito das unidades do dia do mês) com o
+    /// HORÁRIO de início (hora e minuto, sempre 2 dígitos cada): dia 7 às 14:37 vira "71437". Não
+    /// é garantidamente único entre todas as sessões já rodadas (só entre sessões do MESMO dia do
+    /// mês no mesmo minuto) — é um identificador de leitura rápida para diferenciar "esta sessão"
+    /// de "uma sessão anterior" na tela, não uma chave de banco (essa continua sendo
+    /// <see cref="_execucaoId"/>, ver <see cref="EventoTreinamento.ExecucaoId"/>).
+    /// </summary>
+    public string CodigoSessaoTexto => $"{_inicioExecucao.Day % 10}{_inicioExecucao:HHmm}";
+
     /// <summary>Gerações por minuto medidas no relógio de parede — complementa <see cref="AvaliacoesPorSegundo"/>, que é a vazão interna do framework.</summary>
     public double GeracoesPorMinuto =>
         TempoDecorrido.TotalMinutes > 0 ? _geracoesNestaSessao / TempoDecorrido.TotalMinutes : 0.0;
@@ -784,10 +849,20 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         if (EmExecucao) return;
 
         ParametrosTreinamento parametros = ParametrosAtuais;
-        _ambiente = new AmbienteTreinamento(parametros);
+        _parametrosBaseCurriculo = parametros;
+        _curriculo = CriarCurriculoSeHabilitado(parametros);
+        EtapaCurriculoAtual = _curriculo?.EtapaAtual ?? EtapaCurriculo.Medio;
+        _ambiente = new AmbienteTreinamento(_curriculo is null ? parametros : parametros.AplicarEtapa(_curriculo.EtapaAtual));
         DesenharTorresFixas();
         LimparDiagramaRedeNeural();
+        // Os eventos já na tela (desta sessão de app, de "Iniciar"s anteriores ou carregados do
+        // banco ao abrir a tela) passam a pertencer a uma execução PASSADA a partir daqui — sem
+        // isto, EhSessaoAtual ficaria com o valor computado na hora em que cada evento entrou na
+        // coleção, e não seria reavaliado quando _execucaoId muda de novo.
+        foreach (EventoTreinamento eventoAnterior in EventosExecucao) eventoAnterior.EhSessaoAtual = false;
         _execucaoId = Guid.NewGuid().ToString("N");
+        _inicioExecucao = DateTime.Now;
+        OnPropertyChanged(nameof(CodigoSessaoTexto));
         _treinador = new TreinadorNeat(
             _ambiente,
             tamanhoPopulacao: parametros.TamanhoPopulacao,
@@ -941,7 +1016,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         EmExecucao = false;
 
         ParametrosTreinamento parametros = ParametrosAtuais;
-        _ambiente = new AmbienteTreinamento(parametros);
+        _parametrosBaseCurriculo = parametros;
+        _curriculo = CriarCurriculoSeHabilitado(parametros);
+        EtapaCurriculoAtual = _curriculo?.EtapaAtual ?? EtapaCurriculo.Medio;
+        _ambiente = new AmbienteTreinamento(_curriculo is null ? parametros : parametros.AplicarEtapa(_curriculo.EtapaAtual));
         _treinador = null;
         _melhorGenomaAtual = null;
         _melhorRedeAtual = null;
@@ -1205,6 +1283,15 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary><c>null</c> quando <see cref="ParametrosTreinamento.HabilitarCurriculoDificuldade"/> está desligado — comportamento histórico preservado sem instanciar nada.</summary>
+    private static CurriculoTreinamento? CriarCurriculoSeHabilitado(ParametrosTreinamento parametros)
+        => parametros.HabilitarCurriculoDificuldade
+            ? new CurriculoTreinamento(
+                parametros.LimiarFitnessParaAvancarCurriculo,
+                parametros.GeracoesEstaveisParaAvancarCurriculo,
+                parametros.TetoGeracoesPorEtapaCurriculo)
+            : null;
+
     private void Evoluir(CancellationToken token)
     {
         TreinadorNeat algoritmo = _treinador!;
@@ -1224,6 +1311,10 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // margem para um genoma "sortudo" vencer um melhor só por calhar de um cenário mais
             // fácil. As seeds mudam de geração para geração para a rede não ficar especializada
             // num punhado fixo de cenários.
+            // Curriculum de dificuldade progressiva: a etapa decidida pela geração ANTERIOR (ver
+            // RegistrarGeracao abaixo) é aplicada antes desta geração ser avaliada — nenhum
+            // indivíduo desta geração é avaliado sob uma dificuldade decidida pelo próprio
+            // resultado dele.
             int[] seedsDaGeracao = Enumerable.Range(0, Math.Max(1, _ambiente.Parametros.EpisodiosPorAvaliacao))
                 .Select(i => algoritmo.GeracaoAtual * 1000 + i)
                 .ToArray();
@@ -1244,6 +1335,22 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             RegistrarHistorico(resultado, comportamento);
             RegistrarMarcoFitnessSeCompletouBloco(resultado);
             RegistrarInstantaneoDeComportamentoSeCompletouBloco(resultado, comportamento);
+
+            if (_curriculo is not null)
+            {
+                EtapaCurriculo etapaAnterior = _curriculo.EtapaAtual;
+                EtapaCurriculo etapaParaProximaGeracao = _curriculo.RegistrarGeracao(resultado.FitnessMedio);
+
+                if (etapaParaProximaGeracao != etapaAnterior)
+                {
+                    _ambiente.AtualizarParametros(_parametrosBaseCurriculo.AplicarEtapa(etapaParaProximaGeracao));
+                    RunOnUi(() => EtapaCurriculoAtual = etapaParaProximaGeracao);
+                    RegistrarEvento(
+                        $"Curriculum avançou de dificuldade: {etapaAnterior} → {etapaParaProximaGeracao}.",
+                        resultado.Geracao,
+                        TipoEventoTreinamento.Informacao);
+                }
+            }
 
             RunOnUi(() => AplicarResultadoNaTela(resultado, comportamento));
 
@@ -1432,7 +1539,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     /// </remarks>
     private void RegistrarEvento(string mensagem, int? geracao, TipoEventoTreinamento tipo)
     {
-        var evento = new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo };
+        // ExecucaoId/EhSessaoAtual: todo evento registrado AGORA pertence, por definição, à
+        // sessão em curso (mesmo Guid usado em MarcoFitnessTreinamento/InstantaneoComportamento
+        // para esta execução — ver _execucaoId). Eventos de execuções passadas só chegam via
+        // CarregarEventos, que marca EhSessaoAtual comparando o ExecucaoId lido do banco.
+        var evento = new EventoTreinamento { Mensagem = mensagem, Geracao = geracao, Tipo = tipo, ExecucaoId = _execucaoId, EhSessaoAtual = true };
 
         try
         {
@@ -1482,14 +1593,12 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             "Entradas e saídas são fixas (é o contrato com o controlador); tudo entre elas é evoluído.");
         Adicionar("Ativação", $"{TreinadorNeat.FuncaoAtivacao} · {(TreinadorNeat.Aciclica ? "acíclica" : "cíclica")}",
             "TanH mantém as saídas entre -1 e 1, a faixa que o controlador híbrido assume. Acíclica = sem memória entre ativações.");
-        Adicionar("Máx. alvos por quadrante", parametros.MaxAlvosPorQuadrante.ToString("N0"),
-            "Teto de alvos ativos simultâneos no mesmo quadrante.");
         Adicionar("Alcance de mira", $"{parametros.DistanciaEngajamentoMetros:0.##} m",
             "Vem de Configurações → Radar e mira. Vale a partir do próximo Iniciar/Resetar.");
         Adicionar("Certeza mínima", parametros.LimiarConfiancaDisparoFracao.ToString("P0"),
             "Vem de Configurações → Disparo. Veto inegociável: abaixo disso nenhum disparo é autorizado, decida a rede o que decidir.");
-        Adicionar("Duração do episódio", parametros.SemLimiteDeDuracao ? "sem limite" : $"{parametros.DuracaoEpisodioSegundos:0.#} s",
-            "Tempo simulado de cada episódio de avaliação.");
+        Adicionar("Duração do episódio", "sem limite",
+            "Episódio só termina por invasão de torre ou pelo teto de segurança contra loop infinito (DuracaoMaximaSegurancaSegundos).");
     }
 
     /// <summary>
@@ -1519,7 +1628,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             FitnessMedioDoBloco = _somaFitnessMedioBloco / Math.Max(1, _contagemGeracoesNoBloco),
             MelhorFitnessDoBloco = _melhorFitnessBloco,
             DataHora = DateTime.Now,
-            ExecucaoId = _execucaoId
+            ExecucaoId = _execucaoId,
+            ConfiguracaoFitness = _ambiente.Parametros.DescricaoConfiguracaoFitness()
         };
 
         try
@@ -1572,7 +1682,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             // da rede, então é ele que guardamos — em texto, na mesma coluna.
             GenomaJson = SerializarRede(resultado.MelhorGenoma),
             DataHora = DateTime.Now,
-            ExecucaoId = _execucaoId
+            ExecucaoId = _execucaoId,
+            ConfiguracaoFitness = _ambiente.Parametros.DescricaoConfiguracaoFitness()
         };
 
         try

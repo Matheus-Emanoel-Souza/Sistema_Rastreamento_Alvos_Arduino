@@ -148,8 +148,43 @@ public partial class TreinamentoControladorView : UserControl
     private void BotaoSecaoExecucao_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoExecucao, "Execução");
     private void BotaoSecaoCenario_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoCenario, "Cenário");
     private void BotaoSecaoExperimento_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoExperimento, "Experimento e dados");
-    private void BotaoSecaoDesempenho_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoDesempenho, "Desempenho do treinamento");
-    private void BotaoSecaoArquitetura_Click(object sender, RoutedEventArgs e) => AlternarSecao((Button)sender, SecaoArquitetura, "Arquitetura e aprendizado");
+
+    // ---------------------------------------------------------------- Janelas não-modais (ex-seções 4 e 5)
+    //
+    // "Desempenho do treinamento" e "Arquitetura e aprendizado" eram seções recolhíveis inline
+    // (accordion acima) — viraram janelas próprias para liberar espaço na barra lateral, mesmo
+    // padrão de BotaoEstatisticasEAnalises_Click: reaproveita a janela já aberta em vez de abrir
+    // uma segunda, só trazendo-a para frente.
+
+    private DesempenhoTreinamentoWindow? _janelaDesempenhoAberta;
+
+    private void BotaoDesempenhoTreinamento_Click(object sender, RoutedEventArgs e)
+    {
+        if (_janelaDesempenhoAberta is not null)
+        {
+            _janelaDesempenhoAberta.Activate();
+            return;
+        }
+
+        _janelaDesempenhoAberta = new DesempenhoTreinamentoWindow(_viewModel) { Owner = Window.GetWindow(this) };
+        _janelaDesempenhoAberta.Closed += (_, _) => _janelaDesempenhoAberta = null;
+        _janelaDesempenhoAberta.Show();
+    }
+
+    private ArquiteturaAprendizadoWindow? _janelaArquiteturaAberta;
+
+    private void BotaoArquiteturaAprendizado_Click(object sender, RoutedEventArgs e)
+    {
+        if (_janelaArquiteturaAberta is not null)
+        {
+            _janelaArquiteturaAberta.Activate();
+            return;
+        }
+
+        _janelaArquiteturaAberta = new ArquiteturaAprendizadoWindow(_viewModel) { Owner = Window.GetWindow(this) };
+        _janelaArquiteturaAberta.Closed += (_, _) => _janelaArquiteturaAberta = null;
+        _janelaArquiteturaAberta.Show();
+    }
 
     /// <summary>Largura reservada à esquerda para os rótulos de valor do eixo Y.</summary>
     private const double LarguraEixoY = 34.0;

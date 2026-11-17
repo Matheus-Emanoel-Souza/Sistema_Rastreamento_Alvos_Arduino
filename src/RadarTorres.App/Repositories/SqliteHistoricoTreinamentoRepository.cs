@@ -8,7 +8,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>historico_treinamento_geracoes</c>)
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABHTG</c>)
 /// de <see cref="IHistoricoTreinamentoRepository"/>. Buffer circular por <c>ID</c> crescente: a
 /// cada inserção, remove o excedente a partir do <c>ID</c> mais antigo — não é um TTL por data,
 /// é estritamente "os <see cref="LimiteMaximoRegistros"/> registros mais recentes".
@@ -25,7 +25,7 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         using (SqliteCommand insert = connection.CreateCommand())
         {
             insert.CommandText =
-                "INSERT INTO historico_treinamento_geracoes " +
+                "INSERT INTO TABHTG " +
                 "(GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, " +
                 "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO) " +
                 "VALUES ($geracao, $melhorFitness, $fitnessMedio, $alvosAbatidos, $alvosEscapados, " +
@@ -43,8 +43,8 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
 
         using SqliteCommand limitar = connection.CreateCommand();
         limitar.CommandText =
-            "DELETE FROM historico_treinamento_geracoes WHERE ID NOT IN (" +
-            "SELECT ID FROM historico_treinamento_geracoes ORDER BY ID DESC LIMIT $limite)";
+            "DELETE FROM TABHTG WHERE ID NOT IN (" +
+            "SELECT ID FROM TABHTG ORDER BY ID DESC LIMIT $limite)";
         limitar.Parameters.AddWithValue("$limite", LimiteMaximoRegistros);
         limitar.ExecuteNonQuery();
     }
@@ -59,7 +59,7 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         command.CommandText =
             "SELECT ID, GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, " +
             "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO " +
-            "FROM historico_treinamento_geracoes ORDER BY ID DESC LIMIT $quantidade";
+            "FROM TABHTG ORDER BY ID DESC LIMIT $quantidade";
         command.Parameters.AddWithValue("$quantidade", quantidade);
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -89,7 +89,7 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         EnsureTable(connection);
 
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM historico_treinamento_geracoes";
+        command.CommandText = "DELETE FROM TABHTG";
         command.ExecuteNonQuery();
     }
 
@@ -101,7 +101,7 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "CREATE TABLE IF NOT EXISTS historico_treinamento_geracoes (" +
+            "CREATE TABLE IF NOT EXISTS TABHTG (" +
             "ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "GERACAO INTEGER NOT NULL, " +
             "MELHOR_FITNESS REAL NOT NULL, " +
@@ -114,11 +114,11 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         // Migração aditiva (bancos criados antes da troca do algoritmo genético pelo NEAT não têm
         // estas duas): complexidade e nº de espécies só passam a existir com uma topologia que
         // evolui. NULL nas linhas antigas é informação correta — ali a métrica não existia.
-        SqliteSchema.EnsureColumn(connection, "historico_treinamento_geracoes", "COMPLEXIDADE_MELHOR", "REAL NULL");
-        SqliteSchema.EnsureColumn(connection, "historico_treinamento_geracoes", "QUANTIDADE_ESPECIES", "INTEGER NULL");
+        SqliteSchema.EnsureColumn(connection, "TABHTG", "COMPLEXIDADE_MELHOR", "REAL NULL");
+        SqliteSchema.EnsureColumn(connection, "TABHTG", "QUANTIDADE_ESPECIES", "INTEGER NULL");
 
         using SqliteCommand indice = connection.CreateCommand();
-        indice.CommandText = "CREATE INDEX IF NOT EXISTS idx_historico_treinamento_geracao ON historico_treinamento_geracoes (GERACAO)";
+        indice.CommandText = "CREATE INDEX IF NOT EXISTS idx_historico_treinamento_geracao ON TABHTG (GERACAO)";
         indice.ExecuteNonQuery();
     }
 }

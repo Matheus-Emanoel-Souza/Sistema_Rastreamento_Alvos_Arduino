@@ -1,0 +1,276 @@
+% Diagrama de implantação e componentes — RadarTorres
+% Branch: banco-dados | Commit: fea50b813534235344dbdcf5665c03c81c3a0a26
+% Gerado para apresentação de TCC (Engenharia da Computação)
+\documentclass[a3paper,landscape]{article}
+\usepackage[a3paper,landscape,margin=1cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,backgrounds,arrows.meta,calc}
+\pgfdeclarelayer{background}
+\pgfsetlayers{background,main}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\definecolor{envComp}{RGB}{219,234,254}
+\definecolor{envExt}{RGB}{255,237,213}
+\definecolor{envStor}{RGB}{220,245,220}
+\definecolor{envInst}{RGB}{237,233,254}
+\definecolor{boxImpl}{RGB}{255,255,255}
+\definecolor{colTelemetria}{RGB}{37,99,235}
+\definecolor{colComando}{RGB}{217,83,20}
+\definecolor{colPersist}{RGB}{34,139,34}
+\definecolor{colSimul}{RGB}{128,0,128}
+\definecolor{colInstall}{RGB}{90,70,160}
+
+\tikzset{
+  comp/.style={rectangle, rounded corners=2pt, draw=black!60, fill=boxImpl, align=center, font=\small, minimum height=1.5cm, minimum width=4.4cm, text width=4.1cm, line width=0.6pt, inner sep=5pt},
+  env/.style={rectangle, rounded corners=8pt, draw=black!50, line width=1.1pt, align=center, inner sep=16pt},
+  telem/.style={-{Latex[length=2.6mm]}, color=colTelemetria, line width=1.0pt},
+  cmd/.style={-{Latex[length=2.6mm]}, color=colComando, line width=1.0pt},
+  pers/.style={-{Latex[length=2.6mm]}, color=colPersist, line width=1.0pt},
+  simul/.style={-{Latex[length=2.6mm]}, color=colSimul, line width=1.0pt, dash pattern=on 4pt off 2.5pt},
+  install/.style={-{Latex[length=2.6mm]}, color=colInstall, line width=1.0pt, dash pattern=on 1pt off 2.5pt},
+  lbl/.style={font=\footnotesize, fill=white, inner sep=1.5pt},
+  envtitle/.style={font=\bfseries\large, anchor=south west, inner sep=2pt}
+}
+% título de ambiente ancorado no canto superior-esquerdo da caixa (evita colidir com linhas/labels centrais)
+\newcommand{\envtitle}[2]{\node[envtitle] at ($(#1.north west)+(0.25,0.12)$) {#2};}
+
+\begin{document}
+
+% ========================= PÁGINA 1 — VISÃO GERAL DE IMPLANTAÇÃO =========================
+\begin{tikzpicture}[remember picture]
+
+\node[font=\LARGE\bfseries] at (16,23.6) {RadarTorres --- Diagrama de Implantação (Visão Geral)};
+\node[font=\normalsize] at (16,22.9) {Sistema de Detecção e Seleção de Torres Demonstrativas --- TCC Engenharia da Computação};
+\node[font=\small] at (16,22.4) {Branch \texttt{banco-dados} --- commit \texttt{fea50b8} (fea50b813534235344dbdcf5665c03c81c3a0a26) --- Página 1/2: Implantação};
+
+% ---------- COMPUTADOR (grade 4 colunas x 3 linhas) ----------
+% colunas x: 2.6 / 7.8 / 13.0 / 18.2    linhas y: 19.6 / 17.2 / 14.8
+\node[comp] (autent) at (2.6,19.6) {Autenticação e papéis\\\footnotesize(AuthService / PermissionService)};
+\node[comp] (serial) at (2.6,17.2) {Comunicação Serial\\\footnotesize(SerialCommunicationService)};
+\node[comp] (radar) at (2.6,14.8) {Processamento de leitura e radar\\\footnotesize(TargetTrackingService)};
+
+\node[comp] (ia) at (7.8,19.6) {Controlador híbrido + NEAT\\\footnotesize(ControladorHibrido / RedeNeat)};
+\node[comp] (treino) at (7.8,17.2) {Treinamento evolutivo\\\scriptsize(TreinamentoControladorViewModel)};
+\node[comp] (torre) at (7.8,14.8) {Seleção/controle de torre\\\footnotesize(TowerSelectionService)};
+
+\node[comp] (simulacao) at (13.0,19.6) {Modo Simulação\\\footnotesize(SimulationService)};
+\node[comp] (visao) at (13.0,17.2) {Visão computacional\\\footnotesize(Camera + OnnxYolo + AlvoVisual)};
+\node[comp] (ocorr) at (13.0,14.8) {Histórico/ocorrências\\\scriptsize(OcorrenciaDeteccaoService)};
+
+\node[comp] (provider) at (18.2,19.6) {Carregamento de genoma\\\scriptsize(ControladorTreinadoProvider)};
+\node[comp] (export) at (18.2,17.2) {Exportação CSV/XML/PDF\\\scriptsize(ObjetoDetectadoExportService)};
+\node[comp] (wpf) at (18.2,14.8) {Interface WPF\\\footnotesize(Views + ViewModels MVVM)};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(autent)(serial)(radar)(ia)(treino)(torre)(simulacao)(visao)(ocorr)(provider)(export)(wpf), fill=envComp, inner sep=24pt] (envComputador) {};
+\end{pgfonlayer}
+\envtitle{envComputador}{Computador --- Aplicativo RadarTorres (C\# 13 / WPF / .NET 9)}
+
+% ---------- DISPOSITIVOS EXTERNOS ----------
+\node[comp] (arduino) at (2.6,10.0) {Arduino + firmware\\\footnotesize(RadarTorres\_Firmware.ino)};
+\node[comp] (sensores) at (2.6,7.2) {Sensores ultrassônicos\\\footnotesize 2x HC-SR04 (ângulo+distância)};
+\node[comp] (torres4) at (7.8,7.2) {4x Torre demonstrativa\\\footnotesize Motor de passo (pan/tilt) + LED};
+\node[comp] (cameras) at (13.0,7.2) {4x Câmera USB\\\footnotesize(ligadas direto ao PC)};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(arduino)(sensores)(torres4)(cameras), fill=envExt, inner sep=18pt] (envExterno) {};
+\end{pgfonlayer}
+\envtitle{envExterno}{Dispositivos Externos}
+
+% ---------- ARMAZENAMENTO ----------
+\node[comp] (sqlite) at (18.2,10.0) {Banco SQLite\\\scriptsize\%AppData\%\textbackslash\\RadarTorres\textbackslash Data\textbackslash radartorres.db};
+\node[comp] (cfg) at (23.4,10.0) {appsettings.json\\\footnotesize(pasta de instalação)};
+\node[comp] (genomas) at (18.2,7.2) {Genomas treinados (JSON)\\\scriptsize\%AppData\%\textbackslash RadarTorres\textbackslash\\Treinamento};
+\node[comp] (exportados) at (23.4,7.2) {Arquivos exportados\\\footnotesize CSV / XML / PDF (local do usuário)};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(sqlite)(cfg)(genomas)(exportados), fill=envStor, inner sep=18pt] (envArmaz) {};
+\end{pgfonlayer}
+\envtitle{envArmaz}{Armazenamento}
+
+% ---------- INSTALAÇÃO ----------
+\node[comp] (inno) at (28.6,19.6) {Instalador\\\footnotesize Inno Setup (.iss)};
+\node[comp] (instalado) at (28.6,16.8) {App instalado\\\footnotesize\{autopf\}\textbackslash RadarTorres};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(inno)(instalado), fill=envInst, inner sep=18pt] (envInstall) {};
+\end{pgfonlayer}
+\envtitle{envInstall}{Instalação}
+
+% ===================== LIGAÇÕES =====================
+% Arduino <-> Sensores / Torres
+\draw[telem] (sensores.north) -- (arduino.south) node[lbl, midway] {leitura ângulo+distância};
+\draw[cmd] (arduino.east) -- (torres4.west) node[lbl, midway] {pan/tilt + acende LED};
+
+% Arduino <-> Serial (telemetria sobe, comando desce)
+\draw[telem] ([xshift=-0.9cm]arduino.north) -- ([xshift=-0.9cm]serial.south) node[lbl, pos=0.35] {TARGET/STATUS/ACK};
+\draw[cmd] ([xshift=0.9cm]serial.south) -- ([xshift=0.9cm]arduino.north) node[lbl, pos=0.7] {MODE/FIRE/AIM};
+
+% Leitura processada -> seleção de torre
+\draw[telem] (serial) -- (radar) node[lbl,midway] {leitura real};
+\draw[telem] (radar) -- (torre) node[lbl,midway] {quadrante do alvo};
+
+% Controlador <-> torre, roteado pelo corredor entre colunas (evita cruzar "Treinamento evolutivo")
+\draw[cmd] (ia.east) -- (10.4,19.6) -- (10.4,14.8) -- (torre.east);
+\node[lbl] at (10.7,16.3) {ajuste de rede};
+
+% Carregamento de genoma <-> controlador, roteado por cima da linha (evita cruzar "Modo Simulação")
+\draw[pers] (provider.north) -- (18.2,20.8) -- (7.8,20.8) -- (ia.north);
+\node[lbl] at (13.0,20.8) {injeta rede};
+
+% Treino salva genoma em disco; carregamento lê do disco (corredores separados à direita, evita cruzar Exportação/Interface WPF)
+\draw[pers] (treino) -- (genomas) node[lbl, midway, sloped] {salva genoma};
+\draw[pers] (genomas.east) -- (20.9,7.2) -- (20.9,19.6) -- (provider.east);
+\node[lbl] at (20.9,15.0) {carrega genoma};
+\draw[pers] (sqlite.east) -- (20.4,10.0) -- (20.4,17.2) -- (export.south);
+\node[lbl] at (20.4,13.0) {lê histórico};
+
+% Visão computacional (desvia da caixa "Histórico/ocorrências" pelo corredor à direita do bloco)
+\draw[telem] (cameras.east) -- (15.85,7.2) -- (15.85,17.2) -- (visao.east);
+\node[lbl] at (15.85,13.0) {captura de imagem};
+\draw[telem] (visao) -- (ocorr) node[lbl, midway] {detecção classificada};
+
+% Persistência de ocorrências e consultas ao SQLite
+\draw[pers] (ocorr.south) to[out=280,in=120] (sqlite.west);
+\node[lbl] at (14.1,10.9) {grava ocorrência};
+% Autenticação -> SQLite: contorna todo o bloco de Dispositivos Externos por fora (esquerda e por baixo)
+\draw[pers] (autent.west) -- (0.0,19.6) -- (0.0,4.9) -- (15.4,4.9) -- (15.4,10.0) -- (sqlite.west);
+\node[lbl] at (3.0,4.9) {consulta usuário/sessão};
+% Exportação gera arquivo: desvia à esquerda do Banco SQLite, depois segue por baixo da faixa de Armazenamento
+\draw[pers] (export.west) -- (15.5,17.2) -- (15.5,8.6) -- (23.4,8.6) -- (exportados.north);
+\node[lbl] at (19.6,8.6) {gera arquivo};
+\draw[pers] (wpf.east) -- (cfg.west -| wpf.east);
+\node[lbl] at (23.4,11.6) {lê config};
+
+% Simulação alimenta o radar sem hardware
+\draw[simul] (simulacao.south) -- (radar.north -| simulacao.south) node[lbl, pos=0.4] {leitura sintética (sem Arduino)};
+
+% Instalação (fluxo separado da execução)
+\draw[install] (inno.south) -- (instalado.north) node[lbl, midway] {instala};
+\draw[install] (instalado.south) to[out=250,in=20] node[lbl, pos=0.4] {primeira execução} (wpf.east);
+
+% ===================== LEGENDA =====================
+\node[env, fill=white, inner sep=10pt, text width=26cm, align=left, font=\normalsize] (legenda) at (16,3.0) {
+\textbf{\large Legenda}\\[3pt]
+{\color{colTelemetria}\rule{0.7cm}{2pt}} Telemetria/leitura \qquad
+{\color{colComando}\rule{0.7cm}{2pt}} Comando \qquad
+{\color{colPersist}\rule{0.7cm}{2pt}} Persistência/dados \qquad
+{\color{colSimul}\rule{0.7cm}{2pt}} Simulação (sem hardware) \qquad
+{\color{colInstall}\rule{0.7cm}{2pt}} Fluxo de instalação (não é execução)\\[6pt]
+Todas as caixas desta página representam componentes \textbf{implementados} no código desta branch/commit --- nenhuma funcionalidade apenas planejada foi incluída.
+Treinamento (gera genoma NEAT) e inferência (carrega genoma para decidir torre) usam \textbf{caminhos diferentes} --- ver página 2.
+};
+
+\end{tikzpicture}
+
+\newpage
+
+% ========================= PÁGINA 2 — DETALHAMENTO DE COMPONENTES INTERNOS =========================
+\begin{tikzpicture}[remember picture]
+
+\node[font=\LARGE\bfseries] at (16,23.6) {RadarTorres --- Detalhamento de Componentes Internos};
+\node[font=\normalsize] at (16,22.9) {Arquitetura MVVM e caminhos de treinamento vs. inferência do controlador};
+\node[font=\small] at (16,22.4) {Branch \texttt{banco-dados} --- commit \texttt{fea50b8} --- Página 2/2: Componentes};
+
+% ---------- Camadas MVVM (coluna esquerda, 4 linhas) ----------
+\node[comp, minimum width=4.8cm, text width=4.5cm] (views) at (2.8,19.6) {Views (WPF/XAML)\\\footnotesize Login, Painel, Câmeras, Perfis de Alvo, Objetos, Treinamento, Estatísticas, Usuários};
+\node[comp, minimum width=4.8cm, text width=4.5cm] (vms) at (2.8,17.2) {ViewModels\\\footnotesize(1 por tela, padrão MVVM)};
+\node[comp, minimum width=4.8cm, text width=4.5cm] (repos) at (2.8,14.8) {Repositories\\\footnotesize Sqlite*Repository};
+\node[comp, minimum width=4.8cm, text width=4.5cm] (connfactory) at (2.8,12.4) {SqliteConnectionFactory\\\footnotesize(WAL + busy\_timeout)};
+
+\draw[pers] (views) -- (vms) node[lbl,midway] {binding};
+\draw[pers] (vms) -- (repos) node[lbl,midway] {via Services};
+\draw[pers] (repos) -- (connfactory) node[lbl,midway] {SQL};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(views)(vms)(repos)(connfactory), fill=envComp, inner sep=18pt] (envMVVM) {};
+\end{pgfonlayer}
+\envtitle{envMVVM}{Camadas MVVM}
+
+% ---------- Caminho de TREINAMENTO ----------
+\node[comp] (treinoVM) at (10.2,19.6) {\scriptsize TreinamentoControladorViewModel\\\footnotesize(tela exclusiva do Administrador)};
+\node[comp] (treinador) at (10.2,17.2) {TreinadorNeat / RedeNeat\\\footnotesize SharpNEAT --- topologia variável, especiação};
+\node[comp] (genomaOut) at (10.2,14.8) {Genoma vencedor (JSON)\\\footnotesize salvo em disco};
+
+\draw[pers] (treinoVM) -- (treinador) node[lbl,midway] {executa gerações};
+\draw[pers] (treinador) -- (genomaOut) node[lbl,midway] {persiste melhor genoma};
+\draw[pers] (repos.east) -- (5.2,17.2) -- (treinador.west);
+\node[lbl] at (6.2,18.0) {grava métricas/geração};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(treinoVM)(treinador)(genomaOut), fill=envComp, dashed, inner sep=18pt] (envTreino) {};
+\end{pgfonlayer}
+\envtitle{envTreino}{Treinamento (offline)}
+
+% ---------- Caminho de INFERÊNCIA ----------
+\node[comp] (provider2) at (17.6,19.6) {\scriptsize ControladorTreinadoProvider\\\footnotesize(carrega genoma na inicialização)};
+\node[comp] (hibrido) at (17.6,17.2) {ControladorHibrido / V2\\\footnotesize heurística de quadrante + ajuste de rede NEAT (7 ou 15 entradas $\rightarrow$ 2 ou 3 saídas)};
+\node[comp] (towerSvc) at (17.6,14.8) {TowerSelectionService\\\footnotesize decide torre em tempo real};
+
+\draw[pers] (provider2) -- (hibrido) node[lbl,midway] {injeta rede carregada};
+\draw[telem] (hibrido) -- (towerSvc) node[lbl,midway] {decisão por alvo};
+\draw[pers] (genomaOut.east) -- (14.0,14.8) -- (14.0,19.6) -- (provider2.west);
+\node[lbl] at (14.0,17.4) {arquivo lido\\na inicialização};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(provider2)(hibrido)(towerSvc), fill=envComp, inner sep=18pt] (envInfer) {};
+\end{pgfonlayer}
+\envtitle{envInfer}{Inferência (tempo real)}
+
+% ---------- Aquisição de leitura ----------
+\node[comp] (serialParser) at (10.2,9.0) {SerialCommunicationService + SerialProtocolParser\\\footnotesize TIPO;CHAVE=VALOR, 9600--115200 baud};
+\node[comp] (simSvc) at (2.8,6.2) {SimulationService\\\footnotesize mesmo DTO SensorReading, gerado por timer};
+\node[comp] (trackSvc) at (10.2,6.2) {TargetTrackingService\\\footnotesize SensorReading $\rightarrow$ posição cartesiana $\rightarrow$ quadrante};
+
+\draw[telem] (serialParser) -- (trackSvc) node[lbl,midway] {SensorReading real};
+\draw[simul] (simSvc) -- (trackSvc) node[lbl,midway] {SensorReading simulado};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(serialParser)(trackSvc)(simSvc), fill=envExt, inner sep=18pt] (envAquis) {};
+\end{pgfonlayer}
+\envtitle{envAquis}{Aquisição de Leitura (real ou simulada)}
+
+% ---------- Visão computacional ----------
+\node[comp] (camSvc) at (17.6,9.0) {CameraCaptureService\\\footnotesize AForge/DirectShow, 4 painéis};
+\node[comp] (yoloSvc) at (17.6,6.2) {\scriptsize OnnxYoloDetectionService\\\footnotesize yolo26n.onnx via Microsoft.ML.OnnxRuntime};
+
+\draw[telem] (camSvc) -- (yoloSvc) node[lbl,midway] {frame};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(camSvc)(yoloSvc), fill=envExt, inner sep=18pt] (envVisao) {};
+\end{pgfonlayer}
+\envtitle{envVisao}{Visão Computacional}
+
+% ---------- Persistência e exportação ----------
+\node[comp] (ocorrSvc) at (25.2,9.0) {\scriptsize OcorrenciaDeteccaoService\\\footnotesize grava TABOBJ/TABOCE, multi-thread por câmera};
+\node[comp] (exportSvc) at (25.2,6.2) {\scriptsize ObjetoDetectadoExportService\\\footnotesize CsvTableStore / XmlSerializer / PdfSharp};
+
+\draw[telem] (yoloSvc) -- (ocorrSvc) node[lbl,midway,sloped] {detecção classificada};
+\draw[pers] (ocorrSvc.north) -- (25.2,13.5) -- (5.2,13.5) -- (repos.east) node[lbl, pos=0.5, yshift=0.3cm] {insere ocorrência};
+\draw[pers] (repos.east) -- (29.5,14.8) -- (29.5,6.2) -- (exportSvc.east);
+\node[lbl] at (29.5,9.5) {consulta histórico};
+
+\begin{pgfonlayer}{background}
+\node[env, fit=(ocorrSvc)(exportSvc), fill=envStor, inner sep=18pt] (envExp) {};
+\end{pgfonlayer}
+\envtitle{envExp}{Persistência / Exportação}
+
+% Notas explicativas
+\node[env, fill=white, text width=19cm, align=left, font=\normalsize, inner sep=10pt] (nota) at (10.0,2.6) {
+\textbf{\large Treinamento $\times$ Inferência (caminhos distintos)}\\[3pt]
+O treinamento evolutivo (NEAT/SharpNEAT) roda sob demanda dentro da tela de Treinamento do Administrador, consumindo milhares de gerações simuladas e gravando o melhor genoma em JSON. A inferência em tempo real (operação real ou simulada) \textbf{não treina} --- apenas carrega esse genoma já congelado via \texttt{ControladorTreinadoProvider} e o usa, combinado à camada heurística, para decidir a torre de cada alvo. Os dois caminhos só se tocam no arquivo JSON do genoma.
+};
+
+\node[env, fill=white, text width=11.5cm, align=left, font=\small, inner sep=8pt] (legenda2) at (24.0,2.6) {
+\textbf{Legenda} (mesmas cores da página 1): {\color{colTelemetria}\textbf{telemetria}}, {\color{colComando}\textbf{comando}}, {\color{colPersist}\textbf{persistência}}, {\color{colSimul}\textbf{simulação}}. Borda tracejada = caminho de treinamento (offline/sob demanda), distinto do caminho de inferência (tempo real).
+};
+
+\end{tikzpicture}
+
+\end{document}

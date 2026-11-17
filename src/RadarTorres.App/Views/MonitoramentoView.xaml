@@ -209,7 +209,7 @@
                  troca os modos que NÃO são o atual — MainViewModel.OutrosModos recalcula a lista
                  toda vez que CurrentMode muda. Cada botão passa o SystemMode clicado como
                  CommandParameter para SetModeCommand, que reaproveita a mesma confirmação e
-                 auditoria (modo_atual_torre) já existentes no setter de CurrentMode. As cores
+                 auditoria (TABMOD) já existentes no setter de CurrentMode. As cores
                  (Accent.Fill/Target.Fill/Danger.Fill) são as mesmas já usadas no resto do app
                  para verde/amarelo/vermelho — trocam automaticamente com o tema. -->
             <shared:DashboardCard x:Name="CardModoOperacao" CardId="ModoOperacao" Title="MODO DE OPERAÇÃO"

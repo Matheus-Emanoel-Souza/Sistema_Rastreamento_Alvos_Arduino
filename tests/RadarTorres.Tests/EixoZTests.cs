@@ -37,7 +37,14 @@ public sealed class EixoZTests
     ];
 
     private static AmbienteTreinamento Ambiente(bool eixoZ) =>
-        new(new ParametrosTreinamento { EixoZHabilitado = eixoZ, DuracaoEpisodioSegundos = 30 }, QuatroTorres);
+        new(new ParametrosTreinamento
+        {
+            EixoZHabilitado = eixoZ,
+            DuracaoEpisodioSegundos = 30,
+            // Episódio não tem mais fim por duração — só por invasão de torre ou por este teto de
+            // segurança. Reduzido de 1800s (padrão) para o teste continuar rápido.
+            DuracaoMaximaSegurancaSegundos = 30
+        }, QuatroTorres);
 
     /// <summary>Roda um episódio inteiro passo a passo e devolve todos os alvos que chegaram a existir.</summary>
     private static List<AlvoTreinamento> AlvosDeUmEpisodio(bool eixoZ, int seed)
@@ -209,7 +216,8 @@ public sealed class EixoZTests
                     EixoZHabilitado = false,
                     AlturaMaximaAlvoMetros = alturaMaxima,
                     AlturaVisivelPorTodasAsTorresMetros = limiar,
-                    DuracaoEpisodioSegundos = 30
+                    DuracaoEpisodioSegundos = 30,
+                    DuracaoMaximaSegurancaSegundos = 30
                 },
                 QuatroTorres);
 
@@ -234,7 +242,8 @@ public sealed class EixoZTests
                 {
                     EixoZHabilitado = true,
                     AlturaVisivelPorTodasAsTorresMetros = limiar,
-                    DuracaoEpisodioSegundos = 30
+                    DuracaoEpisodioSegundos = 30,
+                    DuracaoMaximaSegurancaSegundos = 30
                 },
                 QuatroTorres);
 
