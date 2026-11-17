@@ -193,7 +193,7 @@ internal sealed class RepositorioOcorrenciasEmMemoria : IObjetoDetectadoReposito
 
     /// <summary>Espelha SqliteObjetoDetectadoRepository.RegistrarTransicao: Estado (agora
     /// <see cref="OcorrenciaEstadoTransicao.ModoAtualTorreId"/>) não guarda mais o
-    /// <see cref="EstadoOcorrencia"/> — este dublê nunca tem modo_atual_torre, então fica null.</summary>
+    /// <see cref="EstadoOcorrencia"/> — este dublê nunca tem TABMOD, então fica null.</summary>
     private void RegistrarTransicao(int objetoId, string? usuario, string? observacao, string? sessaoId) =>
         _transicoes.Add(new OcorrenciaEstadoTransicao
         {

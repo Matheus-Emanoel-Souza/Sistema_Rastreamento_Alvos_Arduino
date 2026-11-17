@@ -169,11 +169,11 @@ public sealed class PersistenciaSqliteTests : IDisposable
         {
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "CREATE TABLE ObjetosDetectados (" +
+                "CREATE TABLE TABOBJ (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, Tipo TEXT NOT NULL, X REAL NOT NULL, Y REAL NOT NULL, " +
                 "Z REAL NULL, Quadrante TEXT NOT NULL, DataHora TEXT NOT NULL, Dispositivo TEXT NOT NULL, " +
                 "NivelConfianca REAL NULL, Observacao TEXT NULL, ReferenciaImagem TEXT NULL);" +
-                "INSERT INTO ObjetosDetectados (Tipo, X, Y, Quadrante, DataHora, Dispositivo) " +
+                "INSERT INTO TABOBJ (Tipo, X, Y, Quadrante, DataHora, Dispositivo) " +
                 "VALUES ('Alvo genérico', 1.0, 2.0, 'Q2', '2026-01-01T10:00:00.0000000', 'Arduino');";
             command.ExecuteNonQuery();
         }

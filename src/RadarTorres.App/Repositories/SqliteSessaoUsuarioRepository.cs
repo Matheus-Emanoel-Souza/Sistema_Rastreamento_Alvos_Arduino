@@ -8,7 +8,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>sessoes_usuario</c>) de
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABSES</c>) de
 /// <see cref="ISessaoUsuarioRepository"/> — único armazenamento; sem fallback para CSV, com fila
 /// de reenvio via <see cref="PendingWriteQueue"/> se o banco estiver momentaneamente inacessível
 /// (mesmo padrão de <see cref="SqliteAcaoRealizadaRepository"/>).
@@ -27,7 +27,7 @@ public sealed class SqliteSessaoUsuarioRepository : ISessaoUsuarioRepository
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO sessoes_usuario (ID_SESSAO, UsuarioId, DataHoraInicio, DataHoraFim) " +
+                "INSERT INTO TABSES (ID_SESSAO, UsuarioId, DataHoraInicio, DataHoraFim) " +
                 "VALUES ($id, $usuarioId, $dataHoraInicio, NULL)";
             command.Parameters.AddWithValue("$id", id);
             command.Parameters.AddWithValue("$usuarioId", usuarioId);
@@ -37,7 +37,7 @@ public sealed class SqliteSessaoUsuarioRepository : ISessaoUsuarioRepository
         catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
         {
             PendingWriteQueue.Enqueue(
-                "INSERT INTO sessoes_usuario (ID_SESSAO, UsuarioId, DataHoraInicio, DataHoraFim) VALUES (" +
+                "INSERT INTO TABSES (ID_SESSAO, UsuarioId, DataHoraInicio, DataHoraFim) VALUES (" +
                 $"{SqlLiteral.Text(id)}, {SqlLiteral.Number(usuarioId)}, {SqlLiteral.DateTime(agora)}, NULL)");
         }
 
@@ -56,7 +56,7 @@ public sealed class SqliteSessaoUsuarioRepository : ISessaoUsuarioRepository
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "UPDATE sessoes_usuario SET DataHoraFim = $dataHoraFim WHERE ID_SESSAO = $id AND DataHoraFim IS NULL";
+                "UPDATE TABSES SET DataHoraFim = $dataHoraFim WHERE ID_SESSAO = $id AND DataHoraFim IS NULL";
             command.Parameters.AddWithValue("$dataHoraFim", DateTime.Now.ToString("O", CultureInfo.InvariantCulture));
             command.Parameters.AddWithValue("$id", sessaoId);
             command.ExecuteNonQuery();
@@ -64,7 +64,7 @@ public sealed class SqliteSessaoUsuarioRepository : ISessaoUsuarioRepository
         catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
         {
             PendingWriteQueue.Enqueue(
-                "UPDATE sessoes_usuario SET DataHoraFim = " +
+                "UPDATE TABSES SET DataHoraFim = " +
                 $"{SqlLiteral.DateTime(DateTime.Now)} WHERE ID_SESSAO = {SqlLiteral.Text(sessaoId)} AND DataHoraFim IS NULL");
         }
     }
@@ -76,7 +76,7 @@ public sealed class SqliteSessaoUsuarioRepository : ISessaoUsuarioRepository
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT ID_SESSAO, UsuarioId, DataHoraInicio, DataHoraFim FROM sessoes_usuario WHERE ID_SESSAO = $id";
+            "SELECT ID_SESSAO, UsuarioId, DataHoraInicio, DataHoraFim FROM TABSES WHERE ID_SESSAO = $id";
         command.Parameters.AddWithValue("$id", sessaoId);
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -99,12 +99,12 @@ public sealed class SqliteSessaoUsuarioRepository : ISessaoUsuarioRepository
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "CREATE TABLE IF NOT EXISTS sessoes_usuario (" +
+            "CREATE TABLE IF NOT EXISTS TABSES (" +
             "ID_SESSAO TEXT PRIMARY KEY, " +
-            "UsuarioId INTEGER NOT NULL REFERENCES Usuarios(Id), " +
+            "UsuarioId INTEGER NOT NULL REFERENCES TABUSU(Id), " +
             "DataHoraInicio TEXT NOT NULL, " +
             "DataHoraFim TEXT NULL); " +
-            "CREATE INDEX IF NOT EXISTS idx_sessoes_usuario_usuario ON sessoes_usuario (UsuarioId);";
+            "CREATE INDEX IF NOT EXISTS idx_TABSES_usuario ON TABSES (UsuarioId);";
         command.ExecuteNonQuery();
     }
 }

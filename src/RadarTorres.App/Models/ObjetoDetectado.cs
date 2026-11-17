@@ -113,7 +113,7 @@ public class ObjetoDetectado
 
 /// <summary>
 /// Uma transição de <see cref="EstadoOcorrencia"/> de uma ocorrência (tabela
-/// <c>OcorrenciaEstados</c>). Existe para o estado atual nunca ser a única informação disponível:
+/// <c>TABOCE</c>). Existe para o estado atual nunca ser a única informação disponível:
 /// auditoria precisa saber quando a ocorrência foi aberta, quando o acionamento a deixou
 /// pendente de abate e quem confirmou ou descartou o abate.
 /// </summary>
@@ -124,8 +124,8 @@ public sealed class OcorrenciaEstadoTransicao
     public int ObjetoDetectadoId { get; set; }
 
     /// <summary>
-    /// ID_MODO de <c>modo_atual_torre</c> vigente no instante desta transição (coluna <c>Estado</c>
-    /// da tabela <c>OcorrenciaEstados</c>) — deixou de guardar o nome do <see cref="EstadoOcorrencia"/>
+    /// ID_MODO de <c>TABMOD</c> vigente no instante desta transição (coluna <c>Estado</c>
+    /// da tabela <c>TABOCE</c>) — deixou de guardar o nome do <see cref="EstadoOcorrencia"/>
     /// do objeto. <c>null</c> quando nenhum modo havia sido registrado ainda no momento da transição.
     /// </summary>
     public int? ModoAtualTorreId { get; set; }

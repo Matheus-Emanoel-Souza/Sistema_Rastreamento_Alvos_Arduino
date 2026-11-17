@@ -34,6 +34,17 @@ public sealed class TorreTreinamento
     public double TempoComprometidoSegundos { get; set; }
 
     /// <summary>
+    /// Soma do tempo (s) em que existiu pelo menos um alvo ATIVO no PRÓPRIO quadrante desta torre
+    /// — proxy de demanda, independente de qual torre de fato engajou cada alvo. Usada para
+    /// distinguir "sobrecarga evitável" (torre comprometida muito mais do que a própria demanda
+    /// local justificaria) de concentração de trabalho justificada pela posição dos alvos (ver
+    /// <see cref="AmbienteTreinamento.AplicarPenalidadeDesequilibrioTorres"/>) — uma torre cujo
+    /// quadrante nasceu mais alvos tem demanda maior e, por isso, comprometimento maior sem que
+    /// isso seja, por si só, desequilíbrio evitável.
+    /// </summary>
+    public double TempoDemandaSegundos { get; set; }
+
+    /// <summary>
     /// Para onde a torre está FISICAMENTE apontada agora, no eixo horizontal (azimute, 0-360°,
     /// mesma convenção de <see cref="Models.Tower.AimAngleDegrees"/>) — distinto do ângulo de
     /// mira IDEAL (onde o alvo está agora), que a torre persegue a uma velocidade angular limitada
@@ -60,4 +71,16 @@ public sealed class TorreTreinamento
     /// estão girando até o alvo, por mais que a rede/heurística "queira" disparar.
     /// </summary>
     public bool MiraAlinhada { get; set; }
+
+    /// <summary>
+    /// Se esta torre está disponível para ser selecionada neste episódio — ver
+    /// <see cref="ParametrosTreinamento.TorresDesativadasIds"/>. Uma torre desativada nunca entra
+    /// como candidata em <see cref="ControladorHibrido.SelecionarTorre"/>
+    /// nem como torre de ajuda (ver <see cref="AmbienteTreinamento.DecidirDisparos"/>), então
+    /// <see cref="AlvoComprometidoId"/> nunca chega a ser atribuído a ela — continua fisicamente
+    /// presente (ainda pode ser invadida, ver <see cref="AmbienteTreinamento.TratarInvasaoDeTorre"/>),
+    /// só não participa da defesa. Serve para estudar o comportamento do sistema com menos
+    /// recursos (menos torres ativas), sem precisar remover a torre do layout físico.
+    /// </summary>
+    public bool Ativa { get; set; } = true;
 }

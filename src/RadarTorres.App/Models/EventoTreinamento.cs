@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 
 namespace RadarTorres.App.Models;
 
@@ -41,7 +42,7 @@ public enum TipoEventoTreinamento
 /// junto com o aplicativo. O histórico por geração guarda os NÚMEROS; este guarda o que aconteceu.
 /// </para>
 /// </remarks>
-public sealed class EventoTreinamento
+public sealed class EventoTreinamento : INotifyPropertyChanged
 {
     public int Id { get; set; }
 
@@ -53,6 +54,39 @@ public sealed class EventoTreinamento
     public TipoEventoTreinamento Tipo { get; init; } = TipoEventoTreinamento.Informacao;
 
     public DateTime DataHora { get; init; } = DateTime.Now;
+
+    /// <summary>
+    /// Identificador da sessão de treinamento (um <see cref="Guid"/> novo a cada "Iniciar" — ver
+    /// <see cref="ViewModels.TreinamentoControladorViewModel"/>) que gerou este evento — mesmo
+    /// conceito já usado em <see cref="MarcoFitnessTreinamento.ExecucaoId"/>. Permite diferenciar
+    /// "o que aconteceu agora" de "o que aconteceu numa execução anterior" ao reabrir a tela.
+    /// Registros gravados antes deste campo existir usam <c>"legada"</c> (ver migração em
+    /// <see cref="Repositories.SqliteEventoTreinamentoRepository"/>).
+    /// </summary>
+    public string ExecucaoId { get; init; } = "legada";
+
+    private bool _ehSessaoAtual;
+
+    /// <summary>
+    /// Se este evento pertence à sessão de treinamento ATUALMENTE aberta na tela — calculado pela
+    /// ViewModel ao carregar/registrar (comparando com o <see cref="ExecucaoId"/> da sessão em
+    /// curso), não persistido no banco: é um estado de apresentação, não um fato histórico.
+    /// Notifica <see cref="PropertyChanged"/> porque muda DEPOIS do item já estar na tela (um novo
+    /// "Iniciar" torna os eventos anteriores "de uma sessão passada" sem recriar a lista) — mesmo
+    /// padrão já usado em <see cref="Tower"/>/<see cref="Target"/> para propriedades mutáveis.
+    /// </summary>
+    public bool EhSessaoAtual
+    {
+        get => _ehSessaoAtual;
+        set
+        {
+            if (_ehSessaoAtual == value) return;
+            _ehSessaoAtual = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EhSessaoAtual)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>Rótulo da geração para a tela — traço quando o evento não tem geração associada.</summary>
     public string GeracaoTexto => Geracao.HasValue ? Geracao.Value.ToString("N0") : "—";

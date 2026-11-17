@@ -18,6 +18,10 @@ public sealed class PermissionService : IPermissionService
         // Painel de análise de longo prazo do treinamento — mesmo critério/motivo do item acima.
         MenuItem.EstatisticasTreinamento => perfil == PerfilUsuario.Administrador,
 
+        // Expõe dados internos de treinamento/experimentos (fitness, genomas) — mesmo critério
+        // das duas telas acima, não uma operação do dia a dia.
+        MenuItem.Dashboards => perfil == PerfilUsuario.Administrador,
+
         _ => true
     };
 

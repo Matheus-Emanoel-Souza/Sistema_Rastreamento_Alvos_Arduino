@@ -17,7 +17,7 @@ namespace RadarTorres.App.Services;
 /// <remarks>
 /// Também é o único ponto do sistema por onde toda tentativa de acionamento passa — por isso
 /// é aqui, e não na ViewModel, que uma tentativa efetivamente executada é gravada no histórico
-/// de auditoria <c>acoes_realizadas</c> (Requisito 5); tentativas bloqueadas ou com erro de
+/// de auditoria <c>TABACA</c> (Requisito 5); tentativas bloqueadas ou com erro de
 /// envio só geram log.
 /// </remarks>
 public sealed class FireControlService : IFireControlService

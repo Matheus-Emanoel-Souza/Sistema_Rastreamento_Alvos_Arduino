@@ -587,9 +587,9 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     }
 
     /// <summary>
-    /// Grava a primeira detecção do alvo em <c>objetos_detectados</c> e guarda o Id gerado em
+    /// Grava a primeira detecção do alvo em <c>TABOBJ</c> e guarda o Id gerado em
     /// <see cref="Target.ObjetoDetectadoId"/> — é por esse Id que <see cref="FireControlService"/>
-    /// referencia as coordenadas do alvo em <c>acoes_realizadas</c> depois, sem duplicá-las.
+    /// referencia as coordenadas do alvo em <c>TABACA</c> depois, sem duplicá-las.
     /// </summary>
     private void RegistrarObjetoDetectado(Target target)
     {
@@ -617,7 +617,7 @@ public sealed class MainViewModel : ViewModelBase, INavigationAware, IDisposable
     }
 
     /// <summary>
-    /// Grava uma linha em <c>classificacoes_alvo</c> só quando o grau de perigosidade do alvo
+    /// Grava uma linha em <c>TABCLA</c> só quando o grau de perigosidade do alvo
     /// muda (não a cada leitura) — ver <see cref="Helpers.ClassificadorPerigoAlvo"/>.
     /// </summary>
     private void RegistrarClassificacaoDePerigoSeMudou(Target target)

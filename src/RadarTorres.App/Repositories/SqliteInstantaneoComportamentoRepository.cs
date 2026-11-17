@@ -8,7 +8,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>instantaneos_comportamento_melhor_gene</c>)
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABICG</c>)
 /// de <see cref="IInstantaneoComportamentoRepository"/>. Mesmo padrão de conexão/criação de
 /// tabela das demais tabelas de auditoria do projeto — só inserção, sem limite de linhas.
 /// </summary>
@@ -21,9 +21,9 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO instantaneos_comportamento_melhor_gene " +
-            "(GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId) " +
-            "VALUES ($geracaoMarco, $fitness, $abatidos, $escapados, $errados, $taxaAcerto, $taxaCobertura, $genoma, $dataHora, $execucaoId)";
+            "INSERT INTO TABICG " +
+            "(GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId, ConfiguracaoFitness) " +
+            "VALUES ($geracaoMarco, $fitness, $abatidos, $escapados, $errados, $taxaAcerto, $taxaCobertura, $genoma, $dataHora, $execucaoId, $configuracaoFitness)";
         command.Parameters.AddWithValue("$geracaoMarco", instantaneo.GeracaoMarco);
         command.Parameters.AddWithValue("$fitness", instantaneo.Fitness);
         command.Parameters.AddWithValue("$abatidos", instantaneo.AlvosAbatidos);
@@ -34,6 +34,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         command.Parameters.AddWithValue("$genoma", instantaneo.GenomaJson);
         command.Parameters.AddWithValue("$dataHora", instantaneo.DataHora.ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$execucaoId", instantaneo.ExecucaoId);
+        command.Parameters.AddWithValue("$configuracaoFitness", instantaneo.ConfiguracaoFitness);
         command.ExecuteNonQuery();
     }
 
@@ -45,8 +46,8 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         var resultado = new List<InstantaneoComportamentoMelhorGene>();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Id, GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId " +
-            "FROM instantaneos_comportamento_melhor_gene ORDER BY GeracaoMarco";
+            "SELECT Id, GeracaoMarco, Fitness, AlvosAbatidos, AlvosEscapados, TirosErrados, TaxaDeAcerto, TaxaDeCobertura, GenomaJson, DataHora, ExecucaoId, ConfiguracaoFitness " +
+            "FROM TABICG ORDER BY GeracaoMarco";
 
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
@@ -64,6 +65,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
                 GenomaJson = reader.GetString(8),
                 DataHora = DateTime.Parse(reader.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
                 ExecucaoId = reader.GetString(10),
+                ConfiguracaoFitness = reader.GetString(11),
             });
         }
         return resultado;
@@ -85,7 +87,7 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.CommandText =
-                "CREATE TABLE IF NOT EXISTS instantaneos_comportamento_melhor_gene (" +
+                "CREATE TABLE IF NOT EXISTS TABICG (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "GeracaoMarco INTEGER NOT NULL, " +
                 "Fitness REAL NOT NULL, " +
@@ -99,7 +101,12 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
             command.ExecuteNonQuery();
         }
 
-        SqliteSchema.EnsureColumn(connection, "instantaneos_comportamento_melhor_gene", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
+        SqliteSchema.EnsureColumn(connection, "TABICG", "ExecucaoId", "TEXT NOT NULL DEFAULT 'legada'");
+
+        // Mesmo princípio da migração de ExecucaoId acima: nenhum registro existente é apagado,
+        // os gravados antes desta coluna existir recebem 'desconhecida' (ver
+        // ParametrosTreinamento.DescricaoConfiguracaoFitness).
+        SqliteSchema.EnsureColumn(connection, "TABICG", "ConfiguracaoFitness", "TEXT NOT NULL DEFAULT 'desconhecida'");
 
         using (SqliteCommand dropIndex = connection.CreateCommand())
         {
@@ -107,6 +114,6 @@ public sealed class SqliteInstantaneoComportamentoRepository : IInstantaneoCompo
             dropIndex.ExecuteNonQuery();
         }
 
-        SqliteSchema.EnsureIndex(connection, "idx_instantaneos_comportamento_execucao_geracao", "ON instantaneos_comportamento_melhor_gene (ExecucaoId, GeracaoMarco)", unico: true);
+        SqliteSchema.EnsureIndex(connection, "idx_instantaneos_comportamento_execucao_geracao", "ON TABICG (ExecucaoId, GeracaoMarco)", unico: true);
     }
 }

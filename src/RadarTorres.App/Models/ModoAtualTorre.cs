@@ -7,7 +7,7 @@ namespace RadarTorres.App.Models;
 /// canceladas na confirmação só geram log, não linha aqui — sem uma coluna de resultado para
 /// distingui-las, ver <c>Software/Banco_de_Dados/schema.sql</c>). Gravado a
 /// partir do setter de <c>MainViewModel.CurrentMode</c>. Espelha a tabela acadêmica
-/// <c>modo_atual_torre</c> (ID_MODO, MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO).
+/// <c>TABMOD</c> (ID_MODO, MODOATUAL, MODOANTERIOR, ID_USER, DHALTERACAO).
 /// </summary>
 public class ModoAtualTorre
 {

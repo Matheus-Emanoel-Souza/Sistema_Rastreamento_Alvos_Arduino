@@ -3,7 +3,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Persistência das sessões de uso do sistema (tabela <c>sessoes_usuario</c>) — ver
+/// Persistência das sessões de uso do sistema (tabela <c>TABSES</c>) — ver
 /// <see cref="SessaoUsuario"/>.
 /// </summary>
 public interface ISessaoUsuarioRepository

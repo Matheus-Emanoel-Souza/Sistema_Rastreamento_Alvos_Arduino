@@ -25,6 +25,7 @@
     <UserControl.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolParaVisibilidade"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="BoolParaVisibilidadeInvertido"/>
         <conv:TipoEventoTreinamentoToBrushConverter x:Key="TipoEventoParaCor"/>
 
         <Style x:Key="MetricaRotulo" TargetType="TextBlock">
@@ -154,7 +155,20 @@
 
         <!-- ============================== TÍTULO ============================== -->
         <StackPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock Text="TREINAMENTO DO CONTROLADOR (NEAT)" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="TREINAMENTO DO CONTROLADOR (NEAT)" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Accent.Fill}"/>
+                <!-- Código curto de identificação da sessão em curso (ver
+                     TreinamentoControladorViewModel.CodigoSessaoTexto) — distingue "esta sessão"
+                     de uma sessão anterior sem precisar expor o Guid interno (ExecucaoId), que é
+                     longo demais para mostrar aqui. Muda a cada "Iniciar". -->
+                <Border Background="{DynamicResource Bg.Card}" CornerRadius="12" Padding="10,4"
+                        Margin="12,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Código curto desta sessão de treinamento (dígito do dia + hora:minuto em que foi iniciada) — diferencia os eventos/dados desta execução dos de execuções anteriores.">
+                    <TextBlock FontFamily="{DynamicResource Font.Mono}" FontSize="12" Foreground="{DynamicResource Text.Secondary}">
+                        <Run Text="Sessão #"/><Run Text="{Binding CodigoSessaoTexto, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource Text.Primary}"/>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
             <TextBlock Foreground="{DynamicResource Text.Secondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
                        Text="Evolução da topologia e dos pesos da rede neural com heurística de cooperação entre torres. Acompanhe a simulação, a topologia do genoma e a evolução do desempenho em tempo real."/>
         </StackPanel>
@@ -613,140 +627,19 @@
                                 Background="#7F1D1D" ToolTip="Para o treinamento (se estiver rodando) e volta tudo ao estado inicial — geração, fitness, genoma e visualizações. Não apaga o histórico já salvo no banco."/>
                     </StackPanel>
 
-                    <!-- ===== 4. DESEMPENHO DO TREINAMENTO (recolhida) ===== -->
-                    <!-- Só o que NÃO está nos indicadores do topo (geração/melhor/médio/abate/
-                         conexões/estado), para não duplicar. -->
-                    <Button Style="{StaticResource CabecalhoSecao}" Click="BotaoSecaoDesempenho_Click">
-                        <DockPanel LastChildFill="False">
-                            <TextBlock DockPanel.Dock="Left" Text="▸ Desempenho do treinamento" Foreground="{DynamicResource Text.Primary}"/>
-                        </DockPanel>
-                    </Button>
-                    <StackPanel x:Name="SecaoDesempenho" Margin="0,0,0,14" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                    <!-- ===== 4. DESEMPENHO DO TREINAMENTO ===== -->
+                    <!-- Antes era seção recolhível inline (ocupava espaço demais, pedido do
+                         usuário) — movida para janela própria, mesmo padrão já usado em
+                         "Experimento e dados" para "Configurar experimento.../Estatísticas e
+                         Análises..." (ver DesempenhoTreinamentoWindow e
+                         BotaoDesempenhoTreinamento_Click). Mesmos dados de antes, só outra
+                         apresentação. -->
+                    <Button Content="Desempenho do treinamento..." Click="BotaoDesempenhoTreinamento_Click" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Melhor da sessão" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricaValor}" Foreground="#4ADE80">
-                                <Run Text="{Binding MelhorFitnessDaSessao, StringFormat={}{0:0.0}, Mode=OneWay}"/>
-                            </TextBlock>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Média móvel (50 gerações)" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FitnessMediaMovel, StringFormat={}{0:0.0}}" Style="{StaticResource MetricaValor}"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Variação na janela" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VariacaoNaJanela, StringFormat={}{0:+0.0;-0.0;0.0}}" Style="{StaticResource MetricaValor}"/>
-
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Gerações sem campeão novo" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding GeracoesSemCampeaoNovo, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
-
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Fase da evolução" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding FaseTexto}" Style="{StaticResource MetricaValor}" Foreground="{Binding FaseCor}" FontWeight="Bold"/>
-
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Complexidade média / máxima" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource MetricaValor}">
-                                <Run Text="{Binding ComplexidadeMedia, StringFormat={}{0:0.0}, Mode=OneWay}"/>
-                                <Run Text=" / "/>
-                                <Run Text="{Binding ComplexidadeMaxima, StringFormat={}{0:0}, Mode=OneWay}"/>
-                            </TextBlock>
-
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Teto de complexidade em uso" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding TetoComplexidadeEmUso, StringFormat={}{0:0}}" Style="{StaticResource MetricaValor}"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <!-- ===== 5. ARQUITETURA E APRENDIZADO (recolhida) ===== -->
-                    <Button Style="{StaticResource CabecalhoSecao}" Click="BotaoSecaoArquitetura_Click">
-                        <DockPanel LastChildFill="False">
-                            <TextBlock DockPanel.Dock="Left" Text="▸ Arquitetura e aprendizado" Foreground="{DynamicResource Text.Primary}"/>
-                        </DockPanel>
-                    </Button>
-                    <StackPanel x:Name="SecaoArquitetura" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Entradas (+ bias) / Saídas" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricaValor}">
-                                <Run Text="{Binding EntradasDaRede, Mode=OneWay}"/><Run Text=" + 1 / "/><Run Text="{Binding SaidasDaRede, Mode=OneWay}"/>
-                            </TextBlock>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Conexões diretas entrada→saída" Style="{StaticResource MetricaRotulo}"
-                                       ToolTip="Conexões que pulam os ocultos — comuns no NEAT, impossíveis na rede em camadas anterior."/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ConexoesDiretasEntradaSaida, StringFormat={}{0:N0}}" Style="{StaticResource MetricaValor}"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Genoma / nascimento" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource MetricaValor}">
-                                <Run Text="{Binding IdDoCampeao, StringFormat={}#{0}, Mode=OneWay}"/>
-                                <Run Text="{Binding GeracaoDeNascimentoDoCampeao, StringFormat={} · ger. {0:N0}, Mode=OneWay}"/>
-                            </TextBlock>
-
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Ativação" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding FuncaoAtivacaoTexto}" Style="{StaticResource MetricaValor}"/>
-
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Topologia" Style="{StaticResource MetricaRotulo}"/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TopologiaTexto}" Style="{StaticResource MetricaValor}"/>
-                        </Grid>
-
-                        <TextBlock Text="ESPÉCIES DA POPULAÇÃO" Style="{StaticResource CardTitle}" FontSize="12" Margin="0,12,0,4"/>
-                        <ItemsControl ItemsSource="{Binding Especies}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,0,0,4" ToolTip="{Binding DescricaoCompleta}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="42"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Rotulo}" Style="{StaticResource MetricaRotulo}"
-                                                   FontFamily="{DynamicResource Font.Mono}" Foreground="{Binding Cor}"/>
-                                        <Rectangle Grid.Column="1" Height="10" HorizontalAlignment="Left" RadiusX="2" RadiusY="2"
-                                                   Width="{Binding LarguraBarraPx}" Fill="{Binding Cor}" Opacity="0.75"/>
-                                        <TextBlock Grid.Column="2" Style="{StaticResource MetricaValor}">
-                                            <Run Text="{Binding Tamanho, Mode=OneWay}"/>
-                                            <Run Text="{Binding FitnessMedio, StringFormat={} · {0:0.0}, Mode=OneWay}"/>
-                                        </TextBlock>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <TextBlock Text="PARÂMETROS EM USO" Style="{StaticResource CardTitle}" FontSize="12" Margin="0,12,0,4"/>
-                        <ItemsControl ItemsSource="{Binding ParametrosEmUso}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,0,0,3" ToolTip="{Binding Explicacao}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Nome}" Style="{StaticResource MetricaRotulo}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Valor}" Style="{StaticResource MetricaValor}"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                    <!-- ===== 5. ARQUITETURA E APRENDIZADO ===== -->
+                    <!-- Mesmo motivo/padrão da seção 4 acima (ver ArquiteturaAprendizadoWindow e
+                         BotaoArquiteturaAprendizado_Click). -->
+                    <Button Content="Arquitetura e aprendizado..." Click="BotaoArquiteturaAprendizado_Click" HorizontalAlignment="Stretch" Margin="0,0,0,14"/>
 
                 </StackPanel>
                 </ScrollViewer>
@@ -919,12 +812,25 @@
                         <ItemsControl ItemsSource="{Binding EventosExecucao}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,0,0,5">
+                                    <Grid Margin="0,0,0,5" ToolTip="{Binding ExecucaoId, StringFormat='Sessão de treinamento: {0}'}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
+                                        <Grid.Style>
+                                            <!-- Eventos de uma sessão de treinamento ANTERIOR (ExecucaoId diferente da
+                                                 atual — ver TreinamentoControladorViewModel.CarregarEventos/Iniciar)
+                                                 ficam com opacidade reduzida, para diferenciar de relance do que
+                                                 aconteceu agora, sem precisar ler o relógio de cada linha. -->
+                                            <Style TargetType="Grid">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EhSessaoAtual}" Value="False">
+                                                        <Setter Property="Opacity" Value="0.5"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
                                         <TextBlock Grid.Column="0" Text="{Binding DataHora, StringFormat={}{0:HH:mm:ss}}"
                                                    FontSize="10" FontFamily="{DynamicResource Font.Mono}"
                                                    Foreground="{DynamicResource Text.Muted}" Margin="0,0,6,0" VerticalAlignment="Top"/>
@@ -932,8 +838,13 @@
                                                    FontFamily="{DynamicResource Font.Mono}" Foreground="{DynamicResource Text.Muted}"
                                                    Margin="0,0,6,0" VerticalAlignment="Top" MinWidth="34" TextAlignment="Right"
                                                    ToolTip="Geração em que o evento ocorreu"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Mensagem}" FontSize="11" TextWrapping="Wrap"
-                                                   Foreground="{Binding Tipo, Converter={StaticResource TipoEventoParaCor}}"/>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="{Binding Mensagem}" FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{Binding Tipo, Converter={StaticResource TipoEventoParaCor}}"/>
+                                            <TextBlock Text="sessão anterior" FontSize="9" FontStyle="Italic"
+                                                       Foreground="{DynamicResource Text.Muted}"
+                                                       Visibility="{Binding EhSessaoAtual, Converter={StaticResource BoolParaVisibilidadeInvertido}}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

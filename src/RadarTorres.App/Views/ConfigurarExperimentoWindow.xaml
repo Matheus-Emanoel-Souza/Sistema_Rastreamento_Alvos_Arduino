@@ -9,13 +9,13 @@
 
     <!--
         Parâmetros do PRÓXIMO "Iniciar"/"Resetar" do treinamento (população, teto de
-        complexidade, mutação estrutural, meta de gerações, alvos por quadrante, eixo Z) —
+        complexidade, mutação estrutural, meta de gerações, eixo Z) —
         antes eram campos inline na barra lateral da tela de Treinamento do Controlador;
         movidos para esta janela modal para liberar espaço útil na tela principal (pedido do
         usuário). Reaproveita a MESMA ViewModel da tela (DataContext setado no code-behind):
         nenhuma lógica nova, nenhum parâmetro renomeado, só uma apresentação diferente das
         mesmas propriedades (TamanhoPopulacao, NeuroniosOcultosSelecionado, TaxaMutacao,
-        MetaGeracoes, MaxAlvosPorQuadrante, EixoZHabilitado). Os parâmetros de experimento
+        MetaGeracoes, EixoZHabilitado). Os parâmetros de experimento
         (aqui) continuam separados das heurísticas operacionais, que ficam em Configurações.
     -->
     <Window.Resources>
@@ -66,15 +66,33 @@
                 <TextBox Text="{Binding TaxaMutacao, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Probabilidade de um descendente ganhar um NEURÔNIO novo. Mutação de peso e mutação de estrutura são eventos distintos; o que sobra é redistribuído entre as outras mutações. Valores do plano experimental: 0,005 · 0,01 (padrão) · 0,02."/>
 
-                <TextBlock Text="Máximo de alvos por quadrante" Style="{StaticResource ParametroLabel}"/>
-                <TextBox Text="{Binding MaxAlvosPorQuadrante, UpdateSourceTrigger=PropertyChanged}"/>
-
                 <CheckBox Content="Considerar a altura dos alvos (eixo Z)" Margin="0,16,0,0"
                           IsChecked="{Binding EixoZHabilitado}"
                           Foreground="{DynamicResource Text.Primary}" FontSize="12"
                           ToolTip="Vale a partir do próximo &quot;Iniciar&quot;, &quot;Resetar&quot; ou simulação avulsa — um episódio já em curso não muda de dimensão no meio."/>
                 <TextBlock Text="{Binding DescricaoEixoZ}" Style="{StaticResource ParametroLabel}"
                            Margin="0,4,0,0" FontStyle="Italic" TextWrapping="Wrap"/>
+
+                <CheckBox Content="Bônus por ataque conjunto" Margin="0,16,0,0"
+                          IsChecked="{Binding HabilitarBonusAtaqueConjunto}"
+                          Foreground="{DynamicResource Text.Primary}" FontSize="12"
+                          ToolTip="Soma pontuação extra quando a torre adjacente mais próxima do alvo dispara JUNTO com a torre principal e é esse segundo disparo quem abate o alvo (a principal já havia errado) — recompensa a cooperação, não só o disparo em si."/>
+
+                <CheckBox Content="Permitir troca de alvo por proximidade" Margin="0,12,0,0"
+                          IsChecked="{Binding PermitirTrocaDeAlvoPorProximidade}"
+                          Foreground="{DynamicResource Text.Primary}" FontSize="12"
+                          ToolTip="Uma torre já comprometida com um alvo troca para outro alvo livre se ele estiver mais próximo dela — mesmo que o alvo anterior continue vivo. O alvo abandonado não é descartado: volta a concorrer pela seleção normal (inclusive pela mesma torre, depois)."/>
+
+                <TextBlock Text="Torres desativadas (simula menos recursos)" Style="{StaticResource ParametroLabel}" Margin="0,16,0,0"/>
+                <ItemsControl ItemsSource="{Binding TorresConfiguraveis}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Content="{Binding Nome}" IsChecked="{Binding Desativada}"
+                                      Foreground="{DynamicResource Text.Primary}" FontSize="12" Margin="0,2,0,0"
+                                      ToolTip="Torre desativada nunca é selecionada para um alvo nem atua como torre de ajuda — continua fisicamente presente (ainda pode ser invadida), só não participa da defesa."/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
                 <TextBlock Style="{StaticResource ParametroLabel}" TextWrapping="Wrap" FontStyle="Italic" Margin="0,16,0,0">
                     <Run Text="Alcance de mira e certeza mínima de disparo usados aqui são os mesmos ajustados em "/>

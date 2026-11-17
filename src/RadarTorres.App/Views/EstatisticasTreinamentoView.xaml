@@ -378,6 +378,7 @@
                                     <DataGridTextColumn Header="Fitness médio do bloco" Binding="{Binding FitnessMedioDoBloco, StringFormat={}{0:0.0}}" Width="1*" MinWidth="140"/>
                                     <DataGridTextColumn Header="Melhor fitness do bloco" Binding="{Binding MelhorFitnessDoBloco, StringFormat={}{0:0.0}}" Width="1*" MinWidth="140"/>
                                     <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="2*" MinWidth="140"/>
+                                    <DataGridTextColumn Header="Configuração" Binding="{Binding ConfiguracaoFitness}" Width="2*" MinWidth="140"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
@@ -435,6 +436,7 @@
                                     <DataGridTextColumn Header="Taxa de acerto" Binding="{Binding TaxaDeAcerto, StringFormat={}{0:P0}}" Width="1*" MinWidth="100"/>
                                     <DataGridTextColumn Header="Taxa de cobertura" Binding="{Binding TaxaDeCobertura, StringFormat={}{0:P0}}" Width="1*" MinWidth="100"/>
                                     <DataGridTextColumn Header="Data/Hora" Binding="{Binding DataHora, StringFormat={}{0:dd/MM/yyyy HH:mm:ss}}" Width="2*" MinWidth="140"/>
+                                    <DataGridTextColumn Header="Configuração" Binding="{Binding ConfiguracaoFitness}" Width="2*" MinWidth="140"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </StackPanel>

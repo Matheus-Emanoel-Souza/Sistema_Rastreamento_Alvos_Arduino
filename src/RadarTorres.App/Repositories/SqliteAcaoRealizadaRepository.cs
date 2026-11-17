@@ -9,7 +9,7 @@ using RadarTorres.App.Models;
 namespace RadarTorres.App.Repositories;
 
 /// <summary>
-/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>acoes_realizadas</c> — nomes de
+/// Implementação em SQLite (<c>radartorres.db</c>, tabela <c>TABACA</c> — nomes de
 /// tabela/colunas espelham exatamente <c>Software/Banco_de_Dados/schema.sql</c>)
 /// de <see cref="IAcaoRealizadaRepository"/> — único armazenamento; sem fallback para CSV (todo
 /// registro do sistema grava direto no banco, com fila de reenvio via
@@ -26,7 +26,7 @@ public sealed class SqliteAcaoRealizadaRepository : IAcaoRealizadaRepository
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "SELECT ID_ACAO, ID_TORRE, ID_OBJETO, DH_ACAO, OBSERVACAO, CameraDispositivoId, SessaoId " +
-            "FROM acoes_realizadas ORDER BY ID_ACAO";
+            "FROM TABACA ORDER BY ID_ACAO";
 
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
@@ -54,7 +54,7 @@ public sealed class SqliteAcaoRealizadaRepository : IAcaoRealizadaRepository
 
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO acoes_realizadas (ID_TORRE, ID_OBJETO, DH_ACAO, OBSERVACAO, CameraDispositivoId, SessaoId) " +
+                "INSERT INTO TABACA (ID_TORRE, ID_OBJETO, DH_ACAO, OBSERVACAO, CameraDispositivoId, SessaoId) " +
                 "VALUES ($idTorre, $idObjeto, $dhAcao, $observacao, $cameraDispositivoId, $sessaoId); " +
                 "SELECT last_insert_rowid();";
             command.Parameters.AddWithValue("$idTorre", acao.TorreId);
@@ -71,7 +71,7 @@ public sealed class SqliteAcaoRealizadaRepository : IAcaoRealizadaRepository
         {
             acao.Id = PendingWriteQueue.NextOfflineId();
             PendingWriteQueue.Enqueue(
-                "INSERT INTO acoes_realizadas (ID_TORRE, ID_OBJETO, DH_ACAO, OBSERVACAO, CameraDispositivoId, SessaoId) VALUES (" +
+                "INSERT INTO TABACA (ID_TORRE, ID_OBJETO, DH_ACAO, OBSERVACAO, CameraDispositivoId, SessaoId) VALUES (" +
                 $"{SqlLiteral.Number(acao.TorreId)}, {SqlLiteral.Number(acao.ObjetoDetectadoId)}, {SqlLiteral.DateTime(acao.DataHora)}, " +
                 $"{SqlLiteral.Text(acao.Observacao)}, {SqlLiteral.Text(acao.CameraDispositivoId)}, {SqlLiteral.Text(acao.SessaoId)})");
             return acao;
@@ -87,7 +87,7 @@ public sealed class SqliteAcaoRealizadaRepository : IAcaoRealizadaRepository
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.CommandText =
-                "CREATE TABLE IF NOT EXISTS acoes_realizadas (" +
+                "CREATE TABLE IF NOT EXISTS TABACA (" +
                 "ID_ACAO INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "ID_TORRE INTEGER NOT NULL, " +
                 "ID_OBJETO INTEGER NULL, " +
@@ -96,17 +96,17 @@ public sealed class SqliteAcaoRealizadaRepository : IAcaoRealizadaRepository
             command.ExecuteNonQuery();
         }
 
-        // Câmera que originou a ocorrência por trás da ação (ver ObjetosDetectados.CameraDispositivoId,
+        // Câmera que originou a ocorrência por trás da ação (ver TABOBJ.CameraDispositivoId,
         // mesma convenção de coluna documentária sem FK imposta pelo SQLite — PRAGMA foreign_keys
         // nunca é ligado nesta base, ver SqliteConnectionFactory).
-        SqliteSchema.EnsureColumn(connection, "acoes_realizadas", "CameraDispositivoId", "TEXT NULL");
+        SqliteSchema.EnsureColumn(connection, "TABACA", "CameraDispositivoId", "TEXT NULL");
 
-        // Código de sessão (sessoes_usuario.ID_SESSAO) de quem desencadeou o disparo — mesma
+        // Código de sessão (TABSES.ID_SESSAO) de quem desencadeou o disparo — mesma
         // convenção documentária sem FK imposta pelo SQLite (ver nota acima).
-        SqliteSchema.EnsureColumn(connection, "acoes_realizadas", "SessaoId", "TEXT NULL");
+        SqliteSchema.EnsureColumn(connection, "TABACA", "SessaoId", "TEXT NULL");
 
         // "AcoesRealizadas" (PascalCase) é tabela órfã de uma versão anterior do schema — nenhum
-        // código atual cria, lê ou escreve nela; "acoes_realizadas" (snake_case) é a única em uso
+        // código atual cria, lê ou escreve nela; "TABACA" (snake_case) é a única em uso
         // real (ver Software/Banco_de_Dados/schema.sql). Removida aqui para não deixar duas
         // tabelas de ações realizadas convivendo no mesmo banco.
         using (SqliteCommand drop = connection.CreateCommand())

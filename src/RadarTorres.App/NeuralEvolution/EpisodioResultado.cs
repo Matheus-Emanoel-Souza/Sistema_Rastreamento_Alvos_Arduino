@@ -8,4 +8,10 @@ public sealed record EpisodioResultado(
     int TirosErrados = 0,
     int AlvosNascidos = 0,
     int OportunidadesDeDisparo = 0,
-    int DisparosRecusadosPelaRede = 0);
+    int DisparosRecusadosPelaRede = 0,
+    int AlvosEscapadosPelaBase = 0,
+    int AlvosQueInvadiramTorre = 0,
+    MotivoFimEpisodio MotivoFim = MotivoFimEpisodio.AindaEmAndamento,
+    double PenalidadeSobrecargaAplicada = 0,
+    int AtaquesConjuntosBemSucedidos = 0,
+    int TrocasDeAlvoPorProximidade = 0);

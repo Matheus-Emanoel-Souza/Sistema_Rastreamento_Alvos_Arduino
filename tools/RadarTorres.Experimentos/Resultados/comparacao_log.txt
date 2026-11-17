@@ -1,0 +1,17 @@
+appsettings: C:\TEMP\Sistema_Rastreamento_Alvos_Arduino\src\RadarTorres.App\appsettings.json
+torres: #1(1.75;1.75) #2(-1.75;1.75) #3(-1.75;-1.75) #4(1.75;-1.75)
+[heuristica] media=120.49 desvio=74.96 (n=200)
+[cmp-Hibrido-e1] treino: pico=179.50 (g979) 99s conexoes=25 | TESTE media=120.49 IC95=[110.11;130.88] dif vs heur=+0.00 [0.00;0.00] Wilcoxon p=1.0000 recusa=0.0 %
+[cmp-Hibrido-e2] treino: pico=179.50 (g979) 91s conexoes=18 | TESTE media=120.49 IC95=[110.11;130.88] dif vs heur=+0.00 [0.00;0.00] Wilcoxon p=1.0000 recusa=0.0 %
+[cmp-Hibrido-e3] treino: pico=179.50 (g979) 82s conexoes=11 | TESTE media=120.49 IC95=[110.11;130.88] dif vs heur=+0.00 [0.00;0.00] Wilcoxon p=1.0000 recusa=0.0 %
+[cmp-Hibrido-e4] treino: pico=179.50 (g979) 84s conexoes=38 | TESTE media=120.49 IC95=[110.11;130.88] dif vs heur=+0.00 [0.00;0.00] Wilcoxon p=1.0000 recusa=0.0 %
+[cmp-Hibrido-e5] treino: pico=179.50 (g979) 81s conexoes=32 | TESTE media=120.49 IC95=[110.11;130.88] dif vs heur=+0.00 [0.00;0.00] Wilcoxon p=1.0000 recusa=0.0 %
+[cmp-RedePura-e1] treino: pico=177.48 (g334) 82s conexoes=18 | TESTE media=121.82 IC95=[111.74;131.90] dif vs heur=+1.33 [-7.83;10.49] Wilcoxon p=0.7931 recusa=0.0 %
+[cmp-RedePura-e2] treino: pico=180.64 (g334) 81s conexoes=13 | TESTE media=117.68 IC95=[107.84;127.52] dif vs heur=-2.82 [-11.98;6.35] Wilcoxon p=0.2999 recusa=0.0 %
+[cmp-RedePura-e3] treino: pico=177.24 (g53) 82s conexoes=3 | TESTE media=120.53 IC95=[110.84;130.23] dif vs heur=+0.04 [-8.90;8.97] Wilcoxon p=0.0637 recusa=0.0 %
+[cmp-RedePura-e4] treino: pico=180.64 (g334) 81s conexoes=17 | TESTE media=117.68 IC95=[107.84;127.52] dif vs heur=-2.82 [-11.98;6.35] Wilcoxon p=0.2999 recusa=0.0 %
+[cmp-RedePura-e5] treino: pico=179.68 (g452) 78s conexoes=27 | TESTE media=115.58 IC95=[105.27;125.89] dif vs heur=-4.91 [-15.94;6.11] Wilcoxon p=0.2707 recusa=0.0 %
+[agregado-Hibrido] media=120.49 dif=+0.00 IC95=[-0.00;0.00] Wilcoxon z=0.00 p=1.0000
+[agregado-RedePura] media=118.66 dif=-1.84 IC95=[-10.06;6.38] Wilcoxon z=-1.90 p=0.0572
+[RedePura-vs-Hibrido] media=118.66 dif=-1.84 IC95=[-10.06;6.38] Wilcoxon z=-1.90 p=0.0572
+JSON: C:\TEMP\Sistema_Rastreamento_Alvos_Arduino\tools\RadarTorres.Experimentos\Resultados\comparacao_pareada.json
