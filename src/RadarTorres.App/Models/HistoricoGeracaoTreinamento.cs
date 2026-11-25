@@ -23,5 +23,14 @@ public sealed class HistoricoGeracaoTreinamento
     /// <summary>Em quantas espécies a população estava dividida nesta geração — <c>null</c> nas linhas anteriores à coluna.</summary>
     public int? QuantidadeEspecies { get; set; }
 
+    /// <summary>
+    /// Execução de treinamento (clique em "Iniciar") à qual esta geração pertence — mesma chave
+    /// de <see cref="ExecucaoTreinamento.ExecucaoId"/> e das demais tabelas de neuroevolução.
+    /// Sem ela, duas execuções seguidas se misturavam no histórico, porque a numeração de
+    /// gerações do NEAT reinicia em 0 a cada "Iniciar". Linhas gravadas antes desta coluna
+    /// existir ficam com <c>'legada'</c>.
+    /// </summary>
+    public string ExecucaoId { get; set; } = "legada";
+
     public DateTime DataHora { get; set; }
 }

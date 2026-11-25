@@ -140,16 +140,25 @@ Table TABHTG {
   alvos_abatidos integer
   alvos_escapados integer
   dh_registro timestamp
+  complexidade_melhor float [note: 'conexões do campeão; NULL nas linhas anteriores ao NEAT']
+  quantidade_especies integer [note: 'NULL nas linhas anteriores ao NEAT']
+  execucao_id varchar [default: 'legada', note: 'FK para TABEXE — sem ela, duas execuções se misturam, porque a numeração de gerações do NEAT reinicia em 0 a cada "Iniciar"']
 
   Note: 'Tabela HistoricoTreinamentoGeracoes (SQLite) — SqliteHistoricoTreinamentoRepository. Buffer circular limitado a 300 linhas (descarta o ID mais antigo ao estourar); uma linha por geração treinada na tela "Treinamento do Controlador" (neuroevolução, ver src/RadarTorres.App/NeuralEvolution/).'
 }
 
 Table TABMFT {
   id integer [primary key]
-  geracao_marco integer [unique, note: 'a cada 500 gerações — 500, 1000, 1500...']
+  geracao_marco integer [note: 'a cada 500 gerações — 500, 1000, 1500...; único por (execucao_id, geracao_marco)']
   fitness_medio_do_bloco float
   melhor_fitness_do_bloco float
   data_hora timestamp
+  execucao_id varchar [default: 'legada']
+  configuracao_fitness varchar [default: 'desconhecida']
+
+  indexes {
+    (execucao_id, geracao_marco) [unique, name: 'idx_marcos_fitness_execucao_geracao']
+  }
 
   Note: 'Tabela MarcosFitnessTreinamento (SQLite) — SqliteMarcoFitnessTreinamentoRepository. Só inserção, sem limite de linhas (diferente de TABHTG).'
 }
@@ -165,6 +174,8 @@ Table TABICG {
   taxa_de_cobertura float [note: 'abatidos / (abatidos + escapados); NULL se nenhum alvo apareceu']
   genoma_json varchar [note: 'genoma completo (pesos+bias) serializado — permite recarregar e reproduzir o comportamento depois']
   data_hora timestamp
+  execucao_id varchar [default: 'legada']
+  configuracao_fitness varchar [default: 'desconhecida']
 
   Note: 'Tabela InstantaneosComportamentoMelhorGene (SQLite) — SqliteInstantaneoComportamentoRepository. Retrato completo do melhor genoma a cada 1.000 gerações; só inserção, nunca sobrescrito — histórico comparativo marco a marco.'
 }
@@ -178,6 +189,64 @@ Table TABCLA {
 
   Note: 'Tabela ClassificacoesAlvo (SQLite) — SqliteClassificacaoPerigoRepository. Só inserção (auditoria); uma linha por MUDANÇA de grau, não por leitura.'
 }
+
+Table TABEXE {
+  execucao_id varchar [primary key, note: 'Guid "N" gerado a cada "Iniciar" — a mesma chave repetida nas tabelas filhas']
+  dh_inicio timestamp
+  dh_fim timestamp [note: 'NULL = em andamento; é esta coluna que identifica a execução ativa']
+  tamanho_populacao integer
+  quantidade_especies integer
+  teto_complexidade integer
+  meta_geracoes integer [note: '0 = execução sem meta']
+  configuracao_fitness varchar [default: 'desconhecida']
+  geracoes_concluidas integer
+  melhor_fitness float
+  encerramento varchar [default: 'EmAndamento', note: 'EmAndamento | ParadaPeloUsuario | MetaAtingida | Interrompida']
+
+  Note: 'Tabela ExecucoesTreinamento (SQLite) — SqliteExecucaoTreinamentoRepository. Entidade PAI das tabelas de neuroevolução: antes dela, o execucao_id repetido em TABHTG/TABMFT/TABICG/eventos_treinamento era um Guid solto, sem nenhuma linha dizendo quando a execução começou, com quais hiperparâmetros e como terminou. A linha fictícia "legada" recebe os registros migrados.'
+}
+
+Table eventos_treinamento {
+  id integer [primary key]
+  geracao integer [note: 'NULL em eventos que não pertencem a geração nenhuma ("treinamento iniciado")']
+  tipo varchar [note: 'Informacao | Avanco | Falha — gravado pelo NOME do membro do enum']
+  mensagem varchar
+  dh_registro timestamp
+  execucao_id varchar [default: 'legada']
+
+  Note: 'Console de eventos do treinamento — SqliteEventoTreinamentoRepository. Buffer circular de 1.000 linhas, cobrindo várias execuções de propósito.'
+}
+
+Table TABESP {
+  id integer [primary key]
+  dh_espelho timestamp [note: 'instante da amostra — uma a cada 30 s (EspelhoSistemaService)']
+  id_modo integer [note: 'FK para TABMOD.id_modo — modo vigente no instante']
+  modo_atual varchar [note: 'nome do modo, repetido para ler o espelho sem join']
+  alvos_detectados integer
+  alvos_abate_pendente integer
+  alvos_abatidos integer
+  alvos_q1 integer [note: 'por quadrante, contando só o que ainda está em cena (abatido não conta)']
+  alvos_q2 integer
+  alvos_q3 integer
+  alvos_q4 integer
+  cameras_cadastradas integer
+  sessoes_abertas integer
+  acoes_no_intervalo integer [note: 'entre o espelho ANTERIOR e este, não desde o início dos tempos']
+  classificacoes_criticas integer [note: 'mudanças para grau Critico no mesmo intervalo']
+  execucao_id varchar [note: 'FK para TABEXE — execução de treinamento ativa no instante; NULL se ninguém treinava']
+  geracao_atual integer
+  melhor_fitness float
+  fitness_medio float
+
+  Note: 'Tabela EspelhosSistema (SQLite) — SqliteEspelhoSistemaRepository. Uma linha a cada 30 s com o estado AGREGADO de todas as tabelas: responde "como estava o sistema às 14:37?" sem reconstruir o estado somando o histórico inteiro. É também o ponto onde o lado operacional (modo, alvos, câmeras, sessões) e o lado de neuroevolução (execução, geração, fitness) se encontram numa linha só. Buffer circular de 50.000 linhas (~17 dias no intervalo padrão).'
+}
+
+Ref: TABHTG.execucao_id > TABEXE.execucao_id
+Ref: TABMFT.execucao_id > TABEXE.execucao_id
+Ref: TABICG.execucao_id > TABEXE.execucao_id
+Ref: eventos_treinamento.execucao_id > TABEXE.execucao_id
+Ref: TABESP.execucao_id > TABEXE.execucao_id
+Ref: TABESP.id_modo > TABMOD.id_modo
 
 Table TABDIC {
   id integer [primary key]

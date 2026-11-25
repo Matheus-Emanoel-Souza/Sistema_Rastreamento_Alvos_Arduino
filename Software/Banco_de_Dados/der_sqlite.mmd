@@ -5,6 +5,12 @@ erDiagram
     TABOBJ ||--o{ TABOCE : "transita"
     TABCAM ||--o{ TABOBJ : "detectou (quadrante)"
     TABOBJ ||--o{ TABCLA : "classificou (velocidade/perigo)"
+    TABEXE ||--o{ TABHTG : "gerou (uma linha por geracao)"
+    TABEXE ||--o{ TABMFT : "gerou (marco a cada 500 geracoes)"
+    TABEXE ||--o{ TABICG : "gerou (genoma a cada 1000 geracoes)"
+    TABEXE ||--o{ EVENTOS_TREINAMENTO : "registrou"
+    TABEXE ||--o{ TABESP : "estava ativa em"
+    TABMOD ||--o{ TABESP : "modo vigente em"
 
     TABUSU {
         int Id PK
@@ -96,14 +102,19 @@ erDiagram
         int ALVOS_ABATIDOS
         int ALVOS_ESCAPADOS
         datetime DH_REGISTRO
+        double COMPLEXIDADE_MELHOR "nullable"
+        int QUANTIDADE_ESPECIES "nullable"
+        string EXECUCAO_ID FK "legada nas linhas migradas"
     }
 
     TABMFT {
         int Id PK
-        int GeracaoMarco UK "marco a cada N geracoes"
+        int GeracaoMarco UK "unico por (ExecucaoId, GeracaoMarco)"
         double FitnessMedioDoBloco
         double MelhorFitnessDoBloco
         datetime DataHora
+        string ExecucaoId FK
+        string ConfiguracaoFitness
     }
 
     TABICG {
@@ -117,6 +128,53 @@ erDiagram
         double TaxaDeCobertura "nullable"
         string GenomaJson "vetor de pesos/vieses evoluido"
         datetime DataHora
+        string ExecucaoId FK
+        string ConfiguracaoFitness
+    }
+
+    TABEXE {
+        string EXECUCAO_ID PK "Guid de cada clique em Iniciar"
+        datetime DH_INICIO
+        datetime DH_FIM "nullable - NULL enquanto em andamento"
+        int TAMANHO_POPULACAO
+        int QUANTIDADE_ESPECIES
+        int TETO_COMPLEXIDADE
+        int META_GERACOES "0 = sem meta"
+        string CONFIGURACAO_FITNESS
+        int GERACOES_CONCLUIDAS
+        double MELHOR_FITNESS "nullable"
+        string ENCERRAMENTO "EmAndamento|ParadaPeloUsuario|MetaAtingida|Interrompida"
+    }
+
+    EVENTOS_TREINAMENTO {
+        int ID PK
+        int GERACAO "nullable - evento sem geracao propria"
+        string TIPO "Informacao|Avanco|Falha"
+        string MENSAGEM
+        datetime DH_REGISTRO
+        string EXECUCAO_ID FK
+    }
+
+    TABESP {
+        int ID PK
+        datetime DH_ESPELHO "uma amostra a cada 30 s"
+        int ID_MODO FK "nullable - modo vigente no instante"
+        string MODO_ATUAL "nullable - nome do modo, sem join"
+        int ALVOS_DETECTADOS
+        int ALVOS_ABATE_PENDENTE
+        int ALVOS_ABATIDOS
+        int ALVOS_Q1
+        int ALVOS_Q2
+        int ALVOS_Q3
+        int ALVOS_Q4
+        int CAMERAS_CADASTRADAS
+        int SESSOES_ABERTAS
+        int ACOES_NO_INTERVALO "desde o espelho anterior"
+        int CLASSIFICACOES_CRITICAS "desde o espelho anterior"
+        string EXECUCAO_ID FK "nullable - treinamento ativo no instante"
+        int GERACAO_ATUAL "nullable"
+        double MELHOR_FITNESS "nullable"
+        double FITNESS_MEDIO "nullable"
     }
 
     TABDIC {

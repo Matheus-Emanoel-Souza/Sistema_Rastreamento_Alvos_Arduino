@@ -81,6 +81,10 @@ lote, de forma assíncrona, os registros de auditoria (`TABOBJ`, `TABACA`,
 `TABMOD`) para um banco gerenciado na nuvem via API HTTPS — `TABUSU` e
 `TABPRU` permanecem só locais.
 
+`TABESP` (§4) é a candidata natural a primeira tabela sincronizada: cada linha já é um resumo
+fechado do sistema inteiro num instante, então subir uma linha a cada 30 s dá um painel remoto
+fiel sem replicar o volume das tabelas de evento.
+
 ## 2. Especificações técnicas do SGBD
 
 * **SGBD**: SQLite (embarcado, arquivo único, sem servidor).
@@ -107,6 +111,12 @@ lote, de forma assíncrona, os registros de auditoria (`TABOBJ`, `TABACA`,
 | `idx_objetos_detectados_rastreamento` | `TABOBJ` | `RastreamentoId, Quadrante` | único, parcial (`WHERE RastreamentoId IS NOT NULL`) |
 | `idx_cameras_dispositivo` | `TABCAM` | `DispositivoId` | único |
 | `idx_cameras_quadrante` | `TABCAM` | `Quadrante` | único |
+| `idx_execucoes_treinamento_inicio` | `TABEXE` | `DH_INICIO` | normal |
+| `idx_historico_treinamento_execucao` | `TABHTG` | `EXECUCAO_ID` | normal |
+| `idx_marcos_fitness_execucao_geracao` | `TABMFT` | `ExecucaoId, GeracaoMarco` | único |
+| `idx_eventos_treinamento_dh` | `eventos_treinamento` | `DH_REGISTRO` | normal |
+| `idx_espelhos_sistema_dh` | `TABESP` | `DH_ESPELHO` | normal |
+| `idx_espelhos_sistema_execucao` | `TABESP` | `EXECUCAO_ID` | normal |
 
 Além desses, `Login` (`TABUSU`) e `UsuarioId` (`TABPRU`, PK) já têm índice
 implícito por `UNIQUE`/`PRIMARY KEY`.
@@ -121,6 +131,57 @@ erDiagram
     TABUSU ||--o{ TABMOD : "confirma"
     TABUSU ||--o| TABPRU : "tem"
     TABOBJ ||--o{ TABCLA : "classifica"
+    TABEXE ||--o{ TABHTG : "gerou (uma linha por geracao)"
+    TABEXE ||--o{ TABMFT : "gerou (marco a cada 500 geracoes)"
+    TABEXE ||--o{ TABICG : "gerou (genoma a cada 1000 geracoes)"
+    TABEXE ||--o{ EVENTOS_TREINAMENTO : "registrou"
+    TABEXE ||--o{ TABESP : "estava ativa em"
+    TABMOD ||--o{ TABESP : "modo vigente em"
+
+    TABEXE {
+        string EXECUCAO_ID PK "Guid de cada clique em Iniciar"
+        datetime DH_INICIO
+        datetime DH_FIM "nullable - NULL enquanto em andamento"
+        int TAMANHO_POPULACAO
+        int QUANTIDADE_ESPECIES
+        int TETO_COMPLEXIDADE
+        int META_GERACOES "0 = sem meta"
+        string CONFIGURACAO_FITNESS
+        int GERACOES_CONCLUIDAS
+        double MELHOR_FITNESS "nullable"
+        string ENCERRAMENTO "EmAndamento|ParadaPeloUsuario|MetaAtingida|Interrompida"
+    }
+
+    TABESP {
+        int ID PK
+        datetime DH_ESPELHO "uma amostra a cada 30 s"
+        int ID_MODO FK "nullable - modo vigente no instante"
+        string MODO_ATUAL "nullable - nome do modo, sem join"
+        int ALVOS_DETECTADOS
+        int ALVOS_ABATE_PENDENTE
+        int ALVOS_ABATIDOS
+        int ALVOS_Q1
+        int ALVOS_Q2
+        int ALVOS_Q3
+        int ALVOS_Q4
+        int CAMERAS_CADASTRADAS
+        int SESSOES_ABERTAS
+        int ACOES_NO_INTERVALO "desde o espelho anterior"
+        int CLASSIFICACOES_CRITICAS "desde o espelho anterior"
+        string EXECUCAO_ID FK "nullable - treinamento ativo no instante"
+        int GERACAO_ATUAL "nullable"
+        double MELHOR_FITNESS "nullable"
+        double FITNESS_MEDIO "nullable"
+    }
+
+    EVENTOS_TREINAMENTO {
+        int ID PK
+        int GERACAO "nullable - evento sem geracao propria"
+        string TIPO "Informacao|Avanco|Falha"
+        string MENSAGEM
+        datetime DH_REGISTRO
+        string EXECUCAO_ID FK
+    }
 
     TABUSU {
         int Id PK
@@ -195,6 +256,9 @@ erDiagram
         int ALVOS_ABATIDOS
         int ALVOS_ESCAPADOS
         datetime DH_REGISTRO
+        double COMPLEXIDADE_MELHOR "nullable"
+        int QUANTIDADE_ESPECIES "nullable"
+        string EXECUCAO_ID FK "legada nas linhas migradas"
     }
 
     TABPRU {
@@ -208,10 +272,12 @@ erDiagram
 
     TABMFT {
         int ID PK
-        int GERACAO_MARCO UK "a cada 500 geracoes"
+        int GERACAO_MARCO UK "unico por (ExecucaoId, GeracaoMarco)"
         double MELHOR_FITNESS
         double FITNESS_MEDIO
         datetime DH_REGISTRO
+        string EXECUCAO_ID FK
+        string CONFIGURACAO_FITNESS
     }
 
     TABICG {
@@ -225,6 +291,8 @@ erDiagram
         double TAXA_COBERTURA
         string GENOMA_JSON "genoma inteiro serializado"
         datetime DH_REGISTRO
+        string EXECUCAO_ID FK
+        string CONFIGURACAO_FITNESS
     }
 
     TABCLA {
@@ -312,6 +380,57 @@ cancelamento na caixa de confirmação gera apenas log (`MainViewModel.CurrentMo
 da linha 291), sem coluna de resultado no schema simplificado para diferenciar de uma troca real.
 `ID_USER` referencia `TABUSU.Id` (antes era o `Login` em texto).
 
+### `TABEXE`
+Uma linha por **execução de treinamento**: tudo entre um clique em "Iniciar" e a parada
+correspondente na tela "Treinamento do Controlador". É a tabela-pai de `TABHTG`, `TABMFT`,
+`TABICG`, `eventos_treinamento` e `TABESP` — antes dela, o `EXECUCAO_ID` repetido nessas tabelas
+era um Guid solto, sem nenhuma linha dizendo quando aquela execução começou, com quais
+hiperparâmetros e como terminou (era por isso que elas apareciam isoladas no diagrama).
+
+Guarda hiperparâmetros (`TAMANHO_POPULACAO`, `QUANTIDADE_ESPECIES`, `TETO_COMPLEXIDADE`,
+`META_GERACOES`, `CONFIGURACAO_FITNESS`) e o resultado (`GERACOES_CONCLUIDAS`, `MELHOR_FITNESS`,
+`ENCERRAMENTO`). `DH_FIM` **NULL identifica a execução em andamento** — é essa coluna, e não
+`ENCERRAMENTO`, que `ObterEmAndamento` consulta, para haver uma só fonte de verdade.
+
+Dois detalhes de integridade que valem anotar:
+
+- A execução fictícia **`'legada'`** é semeada na criação do esquema e já nasce fechada: os
+  registros das tabelas filhas gravados antes da coluna `EXECUCAO_ID` existir receberam esse
+  valor por `DEFAULT` do `ALTER TABLE`, e sem ela apontariam para uma execução inexistente.
+- Execução que ficou aberta porque o aplicativo encerrou com o treinamento rodando é fechada
+  como `Interrompida` na abertura seguinte (`FecharPendentesDeExecucaoAnterior`), datada pelo
+  **último sinal de vida** (a geração mais recente em `TABHTG`) e não pela hora em que o
+  aplicativo voltou — datar a queda de ontem com a hora de hoje inventaria horas de treinamento
+  que nunca aconteceram.
+
+### `TABESP`
+O **espelho do sistema**: uma linha a cada 30 s (`EspelhoSistemaService`, iniciado no
+`App.OnStartup` e com uma última captura no `OnExit`) com o estado **agregado** de todas as
+tabelas naquele instante — modo vigente, alvos por estado e por quadrante, câmeras cadastradas,
+sessões abertas, acionamentos e classificações críticas no intervalo, e a execução de treinamento
+ativa com sua geração e fitness.
+
+Não substitui nenhuma tabela: todas continuam gravando seus eventos como sempre. O espelho
+responde a pergunta que as tabelas de evento não respondem sozinhas — *"como estava o sistema às
+14:37?"* — sem reconstruir o estado somando o histórico inteiro a cada consulta. É também o único
+lugar onde o lado operacional e o lado de neuroevolução aparecem na mesma linha.
+
+Pontos de leitura que não são óbvios pelo nome das colunas:
+
+- `ALVOS_Q1..Q4` contam só o que **ainda está em cena** (alvo `Abatido` não entra): o espelho
+  descreve o instante, não o acumulado.
+- `ACOES_NO_INTERVALO` e `CLASSIFICACOES_CRITICAS` contam o que aconteceu **entre o espelho
+  anterior e este**, não desde o início dos tempos. Na primeira captura de um banco não há
+  anterior, e a linha contabiliza tudo que já existia — de propósito, para o espelho inicial
+  descrever o banco por inteiro.
+- `MODO_ATUAL` repete o nome do modo ao lado do `ID_MODO` para ler a linha do tempo sem join.
+- A captura é **uma** instrução `INSERT ... SELECT` com subconsultas, montada conforme as
+  tabelas presentes no banco (`SqliteSchema.TableExists`): numa instalação onde a tela de
+  treinamento nunca foi aberta, `TABHTG` simplesmente não existe, e um join direto quebraria a
+  captura inteira. O que falta vira 0/NULL, que é a leitura correta — não havia nada ali.
+- Buffer circular de **50.000 linhas** (cerca de 17 dias no intervalo padrão), mesma mecânica por
+  `ID` de `TABHTG`.
+
 ### `TABHTG`
 Comportamento do melhor indivíduo de cada geração treinada na tela "Treinamento do Controlador"
 (neuroevolução do controlador híbrido heurística+rede neural —
@@ -321,14 +440,21 @@ descarta o registro de `ID` mais antigo na mesma transação (`DELETE ... WHERE 
 ... ORDER BY ID DESC LIMIT 300)`) — não é um TTL por data, é estritamente "os 300 mais recentes".
 Uma linha por **geração** (não por indivíduo da população), com `ALVOS_ABATIDOS`/
 `ALVOS_ESCAPADOS` do melhor genoma daquela geração. Índice normal em `GERACAO`
-(`idx_historico_treinamento_geracao`).
+(`idx_historico_treinamento_geracao`) e em `EXECUCAO_ID`
+(`idx_historico_treinamento_execucao`).
+
+`EXECUCAO_ID` liga cada geração à execução que a produziu (`TABEXE`). Sem ela, duas execuções
+seguidas se misturavam no histórico, porque a numeração de gerações do NEAT reinicia em 0 a cada
+"Iniciar"; linhas gravadas antes da coluna existir ficam com `'legada'`.
 
 ### `TABMFT`
 Fitness agregado (médio e melhor) de cada bloco de 500 gerações de treinamento — complementar a
 `TABHTG`, mas SEM limite de linhas: um marco a cada 500 gerações nunca
 acumula volume relevante, e é exatamente a tendência de longo prazo (sem o ruído geração a geração)
 que o painel "Estatísticas de Treinamento" (exclusivo do Administrador) precisa. Só inserção;
-`GeracaoMarco` é único (`idx_marcos_fitness_geracao`).
+único por `(ExecucaoId, GeracaoMarco)` (`idx_marcos_fitness_execucao_geracao`) — e não só por
+`GeracaoMarco`, senão a segunda execução que passasse pela geração 500 colidiria com o marco da
+primeira e teria o `INSERT` descartado.
 
 ### `TABICG`
 Retrato completo do melhor genoma a cada 1.000 gerações — pontuação, decisões (abatidos/
@@ -401,7 +527,7 @@ então um gráfico salvo ontem já mostra os dados de hoje sem precisar ser reco
 
 ## 5. Views de leitura (`schema.sql`)
 
-Cinco views, só no schema acadêmico/idealizado (`schema.sql`, mesma ressalva do fim de §1): não são
+Sete views, só no schema acadêmico/idealizado (`schema.sql`, mesma ressalva do fim de §1): não são
 criadas pelo app nem usadas por nenhum `Sqlite*Repository` (que já faz os joins em memória no C#) —
 existem só para facilitar consulta/auditoria em ferramentas de modelagem (SQL Developer, DBeaver).
 
@@ -412,6 +538,8 @@ existem só para facilitar consulta/auditoria em ferramentas de modelagem (SQL D
 | `vw_auditoria_modo_torre` | `TABMOD` + `TABUSU` + `TABSES` | Histórico de troca de modo com nome/login em vez de só `ID_USER`, e a janela da sessão que confirmou a troca. |
 | `vw_classificacoes_com_contexto` | `TABCLA` + `TABOBJ` + `TABSES` + `TABUSU` | Mudanças de grau de perigosidade (§4 `TABCLA`) com o alvo e o operador que estava com ele em tela. |
 | `vw_treinamento_resumo` | `UNION ALL` de `TABHTG` e `TABMFT` | Linha do tempo única do treinamento, com coluna `Origem` (`Geracao` ou `Marco`) distinguindo o buffer recente (limitado a 300 linhas) dos marcos agregados (nunca descartados). |
+| `vw_espelho_com_execucao` | `TABESP` + `TABEXE` | A linha do tempo do espelho com a execução de treinamento já resolvida (hiperparâmetros e como terminou) em vez de só o Guid — "como o sistema inteiro estava, minuto a minuto", em uma consulta. |
+| `vw_execucoes_com_resultados` | `TABEXE` + contagens em `TABHTG`, `TABMFT`, `TABICG`, `eventos_treinamento` e `TABESP` | Cada execução com o que ela realmente produziu. Antes disso, responder "o que saiu da execução de ontem?" exigia repetir o mesmo Guid em quatro consultas separadas. |
 
 ## 6. Migração CSV → SQLite (histórico)
 

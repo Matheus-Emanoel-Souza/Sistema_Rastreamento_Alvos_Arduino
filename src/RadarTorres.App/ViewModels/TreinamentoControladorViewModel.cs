@@ -61,6 +61,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
     private readonly IInstantaneoComportamentoRepository _instantaneoRepository;
     private readonly ITelemetriaSimulacaoService _telemetria;
     private readonly IEventoTreinamentoRepository _eventoRepository;
+    private readonly IExecucaoTreinamentoRepository _execucaoRepository;
     private readonly IConfiguracoesAplicativoRepository _configuracoes;
     private readonly DispatcherTimer _timerPreview;
 
@@ -254,6 +255,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         IInstantaneoComportamentoRepository instantaneoRepository,
         ITelemetriaSimulacaoService telemetria,
         IEventoTreinamentoRepository eventoRepository,
+        IExecucaoTreinamentoRepository execucaoRepository,
         IConfiguracoesAplicativoRepository configuracoes)
     {
         _logger = logger;
@@ -262,6 +264,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _instantaneoRepository = instantaneoRepository;
         _telemetria = telemetria;
         _eventoRepository = eventoRepository;
+        _execucaoRepository = execucaoRepository;
         _configuracoes = configuracoes;
         _ambiente = new AmbienteTreinamento(ParametrosAtuais);
         foreach (TorreTreinamento torre in _ambiente.TorresBase)
@@ -863,6 +866,7 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         _execucaoId = Guid.NewGuid().ToString("N");
         _inicioExecucao = DateTime.Now;
         OnPropertyChanged(nameof(CodigoSessaoTexto));
+        AbrirExecucaoNoBanco(parametros);
         _treinador = new TreinadorNeat(
             _ambiente,
             tamanhoPopulacao: parametros.TamanhoPopulacao,
@@ -934,10 +938,60 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         TempoDecorrido = _cronometroSessao.Elapsed;
         EmExecucao = false;
 
+        FecharExecucaoNoBanco(EncerramentoExecucaoTreinamento.ParadaPeloUsuario);
+
         RegistrarEvento(
             $"Treinamento parado pelo usuário após {_geracoesNestaSessao:N0} gerações em {TempoDecorridoTexto}.",
             GeracaoAtual,
             TipoEventoTreinamento.Informacao);
+    }
+
+    /// <summary>
+    /// Registra a execução que acaba de começar em TABEXE — a linha-pai que dá janela de tempo e
+    /// hiperparâmetros ao <see cref="_execucaoId"/> gravado nas tabelas de histórico, marcos,
+    /// instantâneos e eventos.
+    /// </summary>
+    /// <remarks>
+    /// Falha aqui não impede treinar: o laço roda igual e as tabelas filhas continuam gravando
+    /// (o <c>EXECUCAO_ID</c> delas é texto, não uma FK imposta pelo SQLite). Perde-se só o
+    /// cabeçalho da execução — mesmo critério dos demais registros de auditoria desta tela.
+    /// </remarks>
+    private void AbrirExecucaoNoBanco(ParametrosTreinamento parametros)
+    {
+        try
+        {
+            _execucaoRepository.Abrir(new ExecucaoTreinamento
+            {
+                ExecucaoId = _execucaoId,
+                DataHoraInicio = _inicioExecucao,
+                TamanhoPopulacao = parametros.TamanhoPopulacao,
+                QuantidadeEspecies = parametros.QuantidadeEspecies,
+                TetoComplexidade = parametros.TetoComplexidade,
+                MetaGeracoes = MetaGeracoes,
+                ConfiguracaoFitness = parametros.DescricaoConfiguracaoFitness(),
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"Não foi possível registrar a execução de treinamento no banco: {ex.Message}");
+        }
+    }
+
+    /// <summary>Fecha a execução em TABEXE com o total de gerações e o melhor fitness alcançado.</summary>
+    private void FecharExecucaoNoBanco(EncerramentoExecucaoTreinamento encerramento)
+    {
+        try
+        {
+            _execucaoRepository.Fechar(
+                _execucaoId,
+                _geracoesNestaSessao,
+                MelhorFitnessDaSessao > 0 ? MelhorFitnessDaSessao : null,
+                encerramento);
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"Não foi possível fechar a execução de treinamento no banco: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -1452,6 +1506,8 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
         TempoDecorrido = _cronometroSessao.Elapsed;
         EmExecucao = false;
 
+        FecharExecucaoNoBanco(EncerramentoExecucaoTreinamento.MetaAtingida);
+
         MostrarStatus($"Meta alcançada: {geracao:N0} gerações. Melhor fitness da sessão: {MelhorFitnessDaSessao:0.0}.", sucesso: true);
         RegistrarEvento(
             $"Meta de {MetaGeracoes:N0} gerações alcançada em {TempoDecorridoTexto} — melhor fitness da sessão {MelhorFitnessDaSessao:0.0} (geração {GeracaoDoMelhorFitness:N0}).",
@@ -1715,7 +1771,11 @@ public sealed class TreinamentoControladorViewModel : ViewModelBase, IDisposable
             AlvosEscapados = comportamento.AlvosEscapados,
             ComplexidadeMelhor = resultado.ComplexidadeMelhor,
             QuantidadeEspecies = resultado.QuantidadeEspecies,
-            DataHora = DateTime.Now
+            DataHora = DateTime.Now,
+            // Mesma chave dos marcos, instantâneos e eventos desta execução (ver _execucaoId):
+            // sem ela, duas execuções seguidas se misturariam no histórico, porque a numeração
+            // de gerações do NEAT reinicia em 0 a cada "Iniciar".
+            ExecucaoId = _execucaoId
         };
 
         bool gravou = true;

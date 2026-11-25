@@ -27,9 +27,9 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
             insert.CommandText =
                 "INSERT INTO TABHTG " +
                 "(GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, " +
-                "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO) " +
+                "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO, EXECUCAO_ID) " +
                 "VALUES ($geracao, $melhorFitness, $fitnessMedio, $alvosAbatidos, $alvosEscapados, " +
-                "$complexidade, $especies, $dh)";
+                "$complexidade, $especies, $dh, $execucaoId)";
             insert.Parameters.AddWithValue("$geracao", registro.Geracao);
             insert.Parameters.AddWithValue("$melhorFitness", registro.MelhorFitness);
             insert.Parameters.AddWithValue("$fitnessMedio", registro.FitnessMedio);
@@ -38,6 +38,7 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
             insert.Parameters.AddWithValue("$complexidade", (object?)registro.ComplexidadeMelhor ?? DBNull.Value);
             insert.Parameters.AddWithValue("$especies", (object?)registro.QuantidadeEspecies ?? DBNull.Value);
             insert.Parameters.AddWithValue("$dh", registro.DataHora.ToString("O", CultureInfo.InvariantCulture));
+            insert.Parameters.AddWithValue("$execucaoId", registro.ExecucaoId);
             insert.ExecuteNonQuery();
         }
 
@@ -58,7 +59,7 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             "SELECT ID, GERACAO, MELHOR_FITNESS, FITNESS_MEDIO, ALVOS_ABATIDOS, ALVOS_ESCAPADOS, " +
-            "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO " +
+            "COMPLEXIDADE_MELHOR, QUANTIDADE_ESPECIES, DH_REGISTRO, EXECUCAO_ID " +
             "FROM TABHTG ORDER BY ID DESC LIMIT $quantidade";
         command.Parameters.AddWithValue("$quantidade", quantidade);
 
@@ -76,6 +77,7 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
                 ComplexidadeMelhor = reader.IsDBNull(6) ? null : reader.GetDouble(6),
                 QuantidadeEspecies = reader.IsDBNull(7) ? null : reader.GetInt32(7),
                 DataHora = DateTime.Parse(reader.GetString(8), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                ExecucaoId = reader.GetString(9),
             });
         }
 
@@ -117,8 +119,15 @@ public sealed class SqliteHistoricoTreinamentoRepository : IHistoricoTreinamento
         SqliteSchema.EnsureColumn(connection, "TABHTG", "COMPLEXIDADE_MELHOR", "REAL NULL");
         SqliteSchema.EnsureColumn(connection, "TABHTG", "QUANTIDADE_ESPECIES", "INTEGER NULL");
 
+        // Liga cada geração à execução que a produziu (TABEXE). Mesma convenção já usada em
+        // TABMFT/TABICG/eventos_treinamento: os registros gravados antes desta coluna existir
+        // recebem 'legada' — a execução fictícia semeada por SqliteExecucaoTreinamentoRepository.
+        SqliteSchema.EnsureColumn(connection, "TABHTG", "EXECUCAO_ID", "TEXT NOT NULL DEFAULT 'legada'");
+
         using SqliteCommand indice = connection.CreateCommand();
         indice.CommandText = "CREATE INDEX IF NOT EXISTS idx_historico_treinamento_geracao ON TABHTG (GERACAO)";
         indice.ExecuteNonQuery();
+
+        SqliteSchema.EnsureIndex(connection, "idx_historico_treinamento_execucao", "ON TABHTG (EXECUCAO_ID)", unico: false);
     }
 }

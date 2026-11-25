@@ -89,6 +89,19 @@ public static class SqliteSchema
         command.ExecuteNonQuery();
     }
 
+    /// <summary>
+    /// Se a tabela já existe neste banco. Útil para consultas que CRUZAM tabelas de outro
+    /// repositório: cada <c>Sqlite*Repository</c> só cria a sua, então uma instalação onde a
+    /// tela correspondente nunca foi aberta simplesmente não tem a tabela do outro lado do join.
+    /// </summary>
+    public static bool TableExists(SqliteConnection connection, string tabela)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $nome LIMIT 1";
+        command.Parameters.AddWithValue("$nome", tabela);
+        return command.ExecuteScalar() is not null;
+    }
+
     public static bool ColumnExists(SqliteConnection connection, string tabela, string coluna)
     {
         foreach (string existente in GetColumns(connection, tabela))

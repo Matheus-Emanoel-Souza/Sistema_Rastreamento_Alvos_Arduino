@@ -91,6 +91,15 @@ public partial class App : Application
         // o seed do admin padrão abaixo.
         PendingWriteQueue.TryReplayPendingWrites();
 
+        // Execuções de treinamento que ficaram "em andamento" porque o aplicativo anterior
+        // encerrou com o treinamento rodando. Antes do primeiro espelho desta execução: senão ele
+        // atribuiria a geração/fitness de uma execução morta ao instante de agora.
+        ServiceProvider.GetRequiredService<IExecucaoTreinamentoRepository>().FecharPendentesDeExecucaoAnterior();
+
+        // Relógio do espelho do sistema (TABESP) — grava a primeira amostra já aqui e depois uma
+        // a cada 30 s, enquanto o aplicativo estiver aberto.
+        ServiceProvider.GetRequiredService<IEspelhoSistemaService>().Iniciar();
+
         DataSeeder.EnsureDefaultAdmin(
             ServiceProvider.GetRequiredService<IUsuarioRepository>(),
             ServiceProvider.GetRequiredService<IPasswordHasher>());
@@ -238,6 +247,9 @@ public partial class App : Application
         // estado ao vivo da simulação — uma instância por consumidor não veria os mesmos quadros.
         services.AddSingleton<ITelemetriaSimulacaoService, TelemetriaSimulacaoService>();
         services.AddSingleton<IEventoTreinamentoRepository, SqliteEventoTreinamentoRepository>();
+        // Entidade pai das tabelas de neuroevolução: é ela que dá nome, janela de tempo e
+        // hiperparâmetros a cada EXECUCAO_ID gravado em TABHTG/TABMFT/TABICG/eventos_treinamento.
+        services.AddSingleton<IExecucaoTreinamentoRepository, SqliteExecucaoTreinamentoRepository>();
         services.AddSingleton<IInstantaneoComportamentoRepository, SqliteInstantaneoComportamentoRepository>();
         services.AddSingleton<IExperimentoHiperparametrosRepository, SqliteExperimentoHiperparametrosRepository>();
         // Registro de versões da rede neural do controlador e das baterias de comparação táticas
@@ -245,6 +257,12 @@ public partial class App : Application
         // registrado aqui por consistência com os demais repositórios de experimento.
         services.AddSingleton<IRedeNeuralRepository, SqliteRedeNeuralRepository>();
         services.AddSingleton<IExperimentoRedeNeuralRepository, SqliteExperimentoRedeNeuralRepository>();
+
+        // Espelho periódico do sistema (TABESP): uma linha a cada 30 s com o estado agregado de
+        // todas as tabelas. Singleton porque o relógio é um só por processo — duas instâncias
+        // dobrariam a amostragem sem acrescentar informação nenhuma.
+        services.AddSingleton<IEspelhoSistemaRepository, SqliteEspelhoSistemaRepository>();
+        services.AddSingleton<IEspelhoSistemaService, EspelhoSistemaService>();
 
         // Singleton (não transient): a trava de execução simultânea da bateria de experimentos
         // vive na instância — ver IExecutorExperimentosHiperparametros.EmExecucao.
@@ -666,6 +684,15 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Espelho final: fecha a linha do tempo com o estado em que o sistema parou, em vez de
+        // deixá-la terminar num instante qualquer até 30 s antes do fechamento.
+        if (ServiceProvider is not null)
+        {
+            var espelho = ServiceProvider.GetRequiredService<IEspelhoSistemaService>();
+            espelho.CapturarAgora();
+            espelho.Parar();
+        }
+
         // Libera todos os serviços IDisposable registrados no contêiner (MainViewModel,
         // ShellViewModel, ISerialCommunicationService, ...) — sem isso a porta serial e
         // outros recursos poderiam ficar presos até o processo realmente terminar.

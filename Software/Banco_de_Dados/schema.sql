@@ -113,6 +113,34 @@ CREATE TABLE TABSES (
     DataHoraFim     TEXT
 );
 
+-- Uma execução de treinamento: tudo entre um clique em "Iniciar" e a parada correspondente na
+-- tela "Treinamento do Controlador". É a tabela-pai das quatro tabelas de neuroevolução abaixo —
+-- antes dela, o EXECUCAO_ID repetido nelas era um Guid solto, sem nenhuma linha dizendo quando
+-- aquela execução começou, com quais hiperparâmetros e como terminou.
+CREATE TABLE TABEXE (
+    EXECUCAO_ID          TEXT    PRIMARY KEY,
+    DH_INICIO            TEXT    NOT NULL,
+    -- NULL = em andamento. É esta coluna (não ENCERRAMENTO) que identifica a execução ativa.
+    DH_FIM               TEXT,
+    TAMANHO_POPULACAO    INTEGER NOT NULL DEFAULT 0,
+    QUANTIDADE_ESPECIES  INTEGER NOT NULL DEFAULT 0,
+    TETO_COMPLEXIDADE    INTEGER NOT NULL DEFAULT 0,
+    META_GERACOES        INTEGER NOT NULL DEFAULT 0,
+    CONFIGURACAO_FITNESS TEXT    NOT NULL DEFAULT 'desconhecida',
+    GERACOES_CONCLUIDAS  INTEGER NOT NULL DEFAULT 0,
+    MELHOR_FITNESS       REAL,
+    ENCERRAMENTO         TEXT    NOT NULL DEFAULT 'EmAndamento'
+                                 CHECK (ENCERRAMENTO IN ('EmAndamento', 'ParadaPeloUsuario',
+                                                         'MetaAtingida', 'Interrompida'))
+);
+
+-- Execução fictícia 'legada': os registros das tabelas filhas gravados ANTES da coluna
+-- EXECUCAO_ID existir receberam esse valor por DEFAULT do ALTER TABLE, e sem esta linha
+-- apontariam para uma execução inexistente. Já nasce fechada, para nunca ser confundida com a
+-- execução em andamento.
+INSERT INTO TABEXE (EXECUCAO_ID, DH_INICIO, DH_FIM, CONFIGURACAO_FITNESS, ENCERRAMENTO)
+VALUES ('legada', '0001-01-01T00:00:00.0000000', '0001-01-01T00:00:00.0000000', 'desconhecida', 'Interrompida');
+
 -- Buffer circular com o comportamento do melhor indivíduo de cada geração treinada na tela
 -- "Treinamento do Controlador" (neuroevolução do controlador híbrido heurística+rede neural —
 -- ver src/RadarTorres.App/NeuralEvolution/). Limitado a 300 linhas: ao inserir a 301ª, o
@@ -124,7 +152,8 @@ CREATE TABLE TABHTG (
     FITNESS_MEDIO   REAL    NOT NULL,
     ALVOS_ABATIDOS  INTEGER NOT NULL,
     ALVOS_ESCAPADOS INTEGER NOT NULL,
-    DH_REGISTRO     TEXT    NOT NULL
+    DH_REGISTRO     TEXT    NOT NULL,
+    EXECUCAO_ID     TEXT    NOT NULL DEFAULT 'legada' REFERENCES TABEXE (EXECUCAO_ID)
 );
 
 -- Marcos agregados de fitness a cada 500 gerações de treinamento (neuroevolução) — nunca
@@ -134,7 +163,9 @@ CREATE TABLE TABMFT (
     GeracaoMarco               INTEGER NOT NULL,
     FitnessMedioDoBloco        REAL    NOT NULL,
     MelhorFitnessDoBloco       REAL    NOT NULL,
-    DataHora                   TEXT    NOT NULL
+    DataHora                   TEXT    NOT NULL,
+    ExecucaoId                 TEXT    NOT NULL DEFAULT 'legada' REFERENCES TABEXE (EXECUCAO_ID),
+    ConfiguracaoFitness        TEXT    NOT NULL DEFAULT 'desconhecida'
 );
 
 -- Retrato completo (decisões/acertos/erros/genoma) do melhor genoma a cada 1.000 gerações —
@@ -150,7 +181,55 @@ CREATE TABLE TABICG (
     TaxaDeAcerto    REAL,
     TaxaDeCobertura REAL,
     GenomaJson      TEXT    NOT NULL,
-    DataHora        TEXT    NOT NULL
+    DataHora        TEXT    NOT NULL,
+    ExecucaoId      TEXT    NOT NULL DEFAULT 'legada' REFERENCES TABEXE (EXECUCAO_ID),
+    ConfiguracaoFitness TEXT NOT NULL DEFAULT 'desconhecida'
+);
+
+-- Console de eventos do treinamento (início, avanços, falhas) — buffer circular de 1.000 linhas,
+-- cobrindo várias execuções de propósito, para poder voltar à execução de ontem.
+CREATE TABLE eventos_treinamento (
+    ID          INTEGER PRIMARY KEY AUTOINCREMENT,
+    -- NULL de propósito: há eventos que não pertencem a geração nenhuma ("treinamento iniciado"),
+    -- e zero ali seria confundido com a geração 0 (a população inicial).
+    GERACAO     INTEGER,
+    TIPO        TEXT    NOT NULL,
+    MENSAGEM    TEXT    NOT NULL,
+    DH_REGISTRO TEXT    NOT NULL,
+    EXECUCAO_ID TEXT    NOT NULL DEFAULT 'legada' REFERENCES TABEXE (EXECUCAO_ID)
+);
+
+-- Espelho do sistema: uma linha a cada 30 segundos (ver EspelhoSistemaService) com o estado
+-- AGREGADO de todas as tabelas naquele instante. Não substitui nenhuma delas — responde a
+-- pergunta que as tabelas de evento não respondem sozinhas ("como estava o sistema às 14:37?")
+-- sem reconstruir o estado somando o histórico inteiro a cada consulta. É também a tabela que
+-- liga, numa linha só, o lado operacional (modo, alvos, câmeras, sessões) ao lado de
+-- neuroevolução (execução, geração, fitness).
+CREATE TABLE TABESP (
+    ID                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    DH_ESPELHO              TEXT    NOT NULL,
+    -- Modo vigente no instante: o ID_MODO mais recente de TABMOD. MODO_ATUAL repete o nome para
+    -- ler o espelho sem join.
+    ID_MODO                 INTEGER REFERENCES TABMOD (ID_MODO),
+    MODO_ATUAL              TEXT,
+    ALVOS_DETECTADOS        INTEGER NOT NULL DEFAULT 0,
+    ALVOS_ABATE_PENDENTE    INTEGER NOT NULL DEFAULT 0,
+    ALVOS_ABATIDOS          INTEGER NOT NULL DEFAULT 0,
+    -- Por quadrante, contando só o que ainda está em cena (alvo abatido não conta).
+    ALVOS_Q1                INTEGER NOT NULL DEFAULT 0,
+    ALVOS_Q2                INTEGER NOT NULL DEFAULT 0,
+    ALVOS_Q3                INTEGER NOT NULL DEFAULT 0,
+    ALVOS_Q4                INTEGER NOT NULL DEFAULT 0,
+    CAMERAS_CADASTRADAS     INTEGER NOT NULL DEFAULT 0,
+    SESSOES_ABERTAS         INTEGER NOT NULL DEFAULT 0,
+    -- "No intervalo" = entre o espelho anterior e este, não desde o início dos tempos.
+    ACOES_NO_INTERVALO      INTEGER NOT NULL DEFAULT 0,
+    CLASSIFICACOES_CRITICAS INTEGER NOT NULL DEFAULT 0,
+    -- Execução de treinamento ATIVA no instante da amostra; NULL quando ninguém treinava.
+    EXECUCAO_ID             TEXT    REFERENCES TABEXE (EXECUCAO_ID),
+    GERACAO_ATUAL           INTEGER,
+    MELHOR_FITNESS          REAL,
+    FITNESS_MEDIO           REAL
 );
 
 -- Auditoria de mudança de grau de perigosidade de um alvo (ver ClassificadorPerigoAlvo) —
@@ -195,7 +274,9 @@ INSERT INTO TABDIC (nometab, nometabcompleta) VALUES
     ('TABCLA', 'Tabela de Classificações de Alvo'),
     ('TABPRU', 'Tabela de Preferências do Usuário'),
     ('TABDIC', 'Tabela de Dicionário de Tabelas'),
-    ('TABOPC', 'Tabela de Opções de Campos');
+    ('TABOPC', 'Tabela de Opções de Campos'),
+    ('TABEXE', 'Tabela de Execuções de Treinamento'),
+    ('TABESP', 'Tabela de Espelhos do Sistema');
 
 -- Opções válidas de campos que antes só tinham CHECK(... IN (...)) — uma linha por opção.
 CREATE TABLE TABOPC (
@@ -225,7 +306,11 @@ INSERT INTO TABOPC (nometab, nomecampo, opcao, descricao) VALUES
     ('TABCLA', 'Grau', 'Critico', 'Perigo crítico — ação imediata recomendada.'),
     ('TABPRU', 'Tema', 'Claro', 'Tema visual claro da interface.'),
     ('TABPRU', 'Tema', 'Escuro', 'Tema visual escuro da interface (padrão).'),
-    ('TABPRU', 'Tema', 'Sistema', 'Segue o tema configurado no sistema operacional.');
+    ('TABPRU', 'Tema', 'Sistema', 'Segue o tema configurado no sistema operacional.'),
+    ('TABEXE', 'ENCERRAMENTO', 'EmAndamento', 'Execução ainda rodando — DH_FIM é NULL.'),
+    ('TABEXE', 'ENCERRAMENTO', 'ParadaPeloUsuario', 'Usuário clicou em "Parar" na tela de treinamento.'),
+    ('TABEXE', 'ENCERRAMENTO', 'MetaAtingida', 'A meta de gerações configurada foi alcançada e o laço encerrou sozinho.'),
+    ('TABEXE', 'ENCERRAMENTO', 'Interrompida', 'O aplicativo encerrou com o treinamento rodando; fechada na abertura seguinte.');
 
 CREATE INDEX idx_acoes_realizadas_torre ON TABACA (ID_TORRE);
 CREATE INDEX idx_objetos_detectados_datahora ON TABOBJ (DataHora);
@@ -235,9 +320,17 @@ CREATE INDEX idx_objetos_detectados_perfil ON TABOBJ (PerfilAlvoId);
 CREATE INDEX idx_ocorrencia_estados_objeto ON TABOCE (ObjetoDetectadoId);
 CREATE INDEX idx_historico_treinamento_geracao ON TABHTG (GERACAO);
 CREATE INDEX idx_classificacoes_alvo_objeto ON TABCLA (ObjetoDetectadoId);
-CREATE UNIQUE INDEX idx_marcos_fitness_geracao ON TABMFT (GeracaoMarco);
 CREATE UNIQUE INDEX idx_instantaneos_comportamento_geracao ON TABICG (GeracaoMarco);
 CREATE INDEX idx_sessoes_usuario_usuario ON TABSES (UsuarioId);
+CREATE INDEX idx_execucoes_treinamento_inicio ON TABEXE (DH_INICIO);
+CREATE INDEX idx_historico_treinamento_execucao ON TABHTG (EXECUCAO_ID);
+CREATE INDEX idx_eventos_treinamento_dh ON eventos_treinamento (DH_REGISTRO);
+CREATE INDEX idx_espelhos_sistema_dh ON TABESP (DH_ESPELHO);
+CREATE INDEX idx_espelhos_sistema_execucao ON TABESP (EXECUCAO_ID);
+
+-- Unicidade por (execução, geração), não só por geração: a numeração do NEAT reinicia em 0 a
+-- cada "Iniciar", então duas execuções que passem pela mesma geração não podem colidir.
+CREATE UNIQUE INDEX idx_marcos_fitness_execucao_geracao ON TABMFT (ExecucaoId, GeracaoMarco);
 
 -- É esta restrição que torna impossível duplicar a ocorrência do mesmo acompanhamento num
 -- mesmo quadrante, inclusive quando várias câmeras processam em paralelo. Parcial (WHERE NOT
@@ -375,3 +468,55 @@ SELECT
     NULL                    AS AlvosEscapados,
     DataHora
 FROM TABMFT;
+
+-- Linha do tempo do espelho com a execução de treinamento já resolvida (nome dos
+-- hiperparâmetros e como ela terminou) em vez de só o Guid — é a leitura "como o sistema inteiro
+-- estava, minuto a minuto" em uma consulta.
+CREATE VIEW vw_espelho_com_execucao AS
+SELECT
+    es.ID,
+    es.DH_ESPELHO,
+    es.MODO_ATUAL,
+    es.ALVOS_DETECTADOS,
+    es.ALVOS_ABATE_PENDENTE,
+    es.ALVOS_ABATIDOS,
+    es.ALVOS_Q1, es.ALVOS_Q2, es.ALVOS_Q3, es.ALVOS_Q4,
+    es.CAMERAS_CADASTRADAS,
+    es.SESSOES_ABERTAS,
+    es.ACOES_NO_INTERVALO,
+    es.CLASSIFICACOES_CRITICAS,
+    es.EXECUCAO_ID,
+    es.GERACAO_ATUAL,
+    es.MELHOR_FITNESS,
+    es.FITNESS_MEDIO,
+    ex.DH_INICIO            AS ExecucaoInicio,
+    ex.TAMANHO_POPULACAO,
+    ex.QUANTIDADE_ESPECIES,
+    ex.TETO_COMPLEXIDADE,
+    ex.CONFIGURACAO_FITNESS,
+    ex.ENCERRAMENTO         AS ExecucaoEncerramento
+FROM TABESP es
+LEFT JOIN TABEXE ex ON ex.EXECUCAO_ID = es.EXECUCAO_ID;
+
+-- Cada execução de treinamento com o que ela realmente produziu, somando as quatro tabelas
+-- filhas — antes disso não havia como responder "o que saiu da execução de ontem?" sem repetir
+-- o mesmo Guid em quatro consultas separadas.
+CREATE VIEW vw_execucoes_com_resultados AS
+SELECT
+    ex.EXECUCAO_ID,
+    ex.DH_INICIO,
+    ex.DH_FIM,
+    ex.TAMANHO_POPULACAO,
+    ex.QUANTIDADE_ESPECIES,
+    ex.TETO_COMPLEXIDADE,
+    ex.META_GERACOES,
+    ex.CONFIGURACAO_FITNESS,
+    ex.GERACOES_CONCLUIDAS,
+    ex.MELHOR_FITNESS,
+    ex.ENCERRAMENTO,
+    (SELECT COUNT(*) FROM TABHTG              h WHERE h.EXECUCAO_ID = ex.EXECUCAO_ID) AS GeracoesNoHistorico,
+    (SELECT COUNT(*) FROM TABMFT              m WHERE m.ExecucaoId  = ex.EXECUCAO_ID) AS MarcosDeFitness,
+    (SELECT COUNT(*) FROM TABICG              i WHERE i.ExecucaoId  = ex.EXECUCAO_ID) AS InstantaneosDeGenoma,
+    (SELECT COUNT(*) FROM eventos_treinamento e WHERE e.EXECUCAO_ID = ex.EXECUCAO_ID) AS Eventos,
+    (SELECT COUNT(*) FROM TABESP             s WHERE s.EXECUCAO_ID = ex.EXECUCAO_ID) AS EspelhosDuranteAExecucao
+FROM TABEXE ex;
