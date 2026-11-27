@@ -1,0 +1,241 @@
+% ============================================================
+% Relatório de análise do projeto RadarTorres.
+% Síntese das rodadas de avaliação (MAESTRO + agente banca-tcc,
+% pareceres rev1 a rev5). Gerado a partir da análise já realizada,
+% sem reexecução de experimento ou leitura de artefato novo.
+% Compile com pdfLaTeX.
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{titlesec}
+\usepackage{parskip}
+\setlength{\parskip}{0.45em}
+
+\titlespacing*{\section}{0pt}{1.0em}{0.5em}
+\titlespacing*{\subsection}{0pt}{0.8em}{0.3em}
+
+\newcommand{\critico}{\textbf{\color{red!60!black}crítico}}
+\newcommand{\alto}{\textbf{\color{orange!70!black}alto}}
+
+\pagestyle{plain}
+
+\begin{document}
+
+{\LARGE\textbf{Relatório de Análise --- Projeto RadarTorres}}\\[0.2em]
+{\large Pontos fortes, pontos fracos e percepção por perfil de avaliador}\\[0.4em]
+{\small Síntese das rodadas de avaliação realizadas sobre o repositório e o artigo (TCC de
+Engenharia da Computação, UCL) --- pareceres da banca examinadora (1ª a 5ª revisão) e auditoria de
+coerência conduzida a pedido do MAESTRO.}
+
+\vspace{0.6em}
+\hrule
+\vspace{0.8em}
+
+\section*{1. Visão geral}
+
+O RadarTorres é um protótipo de software, simulado, que detecta alvos por sensoriamento
+ultrassônico e visão computacional e decide quais torres --- dispostas ao redor de uma base ---
+devem engajar cada alvo. A decisão é tomada por um controlador híbrido: uma heurística
+determinística filtra as torres elegíveis e veta acionamentos inseguros, e uma rede neural evoluída
+por neuroevolução (NEAT) ajusta a priorização dentro desse espaço elegível. A pergunta de pesquisa
+que o projeto se propõe a responder é se a camada de rede neural melhora a decisão em relação à
+heurística pura, e se a própria heurística é necessária.
+
+O escopo desta análise cobriu duas frentes complementares, realizadas nesta sessão de trabalho:
+(i) uma auditoria de \textbf{coerência entre o artigo e o repositório}, aberta pelo MAESTRO depois
+que a banca apontou uma rede neural treinada versionada na branch principal, contrariando o que o
+texto do artigo afirmava; e (ii) cinco rodadas sucessivas de avaliação acadêmica pelo agente
+\texttt{banca-tcc}, que audita o argumento do artigo --- se a pergunta de pesquisa foi respondida,
+se a conclusão se sustenta na evidência, se os limites estão declarados com honestidade --- usando
+código, dados e histórico git como instrumento de verificação, não como objeto de julgamento em si.
+
+\textbf{Principal conclusão.} O projeto é metodologicamente sólido: a tabela central de resultados
+(comparação pareada entre controlador híbrido, heurística pura e rede pura, com teste de Wilcoxon e
+200 cenários de teste reservados) reproduz exatamente contra o artefato que a origina, e o resultado
+--- negativo para a hipótese de que a rede melhora a heurística --- está declarado com honestidade
+no Resumo, no Abstract e na Conclusão. O que sucessivamente rebaixou a nota ao longo das revisões
+não foi o método, e sim \textbf{desalinhamentos entre o que o artigo afirma e o que o repositório de
+fato contém ou faz} --- o mais grave dos quais (rede treinada versionada na branch de entrega)
+chegou a bloquear a defesa na 4ª revisão e foi resolvido nesta sessão. A nota evoluiu de 6,33 (1ª
+revisão) para 8,0 (5ª revisão, a mais recente).
+
+\section*{2. Avaliação por perfil}
+
+Dois perfis distintos participaram da análise registrada neste repositório. O \textbf{MAESTRO}
+atua como auditor de coerência entre entregável e repositório, acionando tarefas de correção
+diretamente sobre o código e o versionamento. A \textbf{Banca Examinadora de TCC} (agente
+\texttt{banca-tcc}) avalia o argumento acadêmico do artigo por rubrica, numa sequência de cinco
+revisões, usando código e dados só como instrumento de verificação das afirmações centrais.
+
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{|p{2.1cm}|p{3.5cm}|p{3.5cm}|p{5.9cm}|}
+\hline
+\textbf{Perfil} & \textbf{Ponto forte observado} & \textbf{Fragilidade identificada} &
+\textbf{Evidência no projeto} \\
+\hline
+\endhead
+
+MAESTRO &
+Reconheceu que o material guardado (genomas treinados) era prática válida de desenvolvimento, não
+descartando-o --- pediu para tirá-lo \textit{da entrega}, preservando-o numa branch dedicada. &
+Rede neural treinada (\texttt{\seqsplit{rede-controlador.net}},
+\texttt{\seqsplit{genoma-controlador.json}}) estava versionada na \texttt{main} e embutida no
+executável por condição no \texttt{.csproj}, contradizendo a afirmação do artigo de que ``o
+repositório não versiona uma rede treinada''. &
+Commit \texttt{fea50b8} (17/11) versionou os arquivos; \texttt{RadarTorres.App.csproj} linha 118 os
+embute sob \texttt{Condition="Exists(...)"}. Corrigido nesta sessão: \texttt{git rm --cached} na
+\texttt{main} (commit \texttt{0f58ccb}), arquivos preservados na branch \texttt{genes-treinamento}
+(commit \texttt{2863fc4}) com README explicando o propósito. \\
+\hline
+
+MAESTRO &
+Processo de correção bem desenhado: sem reescrita de histórico, sem push forçado, com verificação
+explícita antes de declarar a tarefa concluída (três comandos git pedidos no próprio enunciado da
+tarefa). &
+A correção, concluída primeiro só na branch \texttt{main}, não chegou de imediato à branch
+\texttt{banco-dados} --- a que estava fisicamente aberta e seria mostrada à banca --- criando uma
+bifurcação em que nenhuma das duas branches continha o artigo completo e corrigido. &
+Achado novo na 4ª revisão da banca (C.4): \texttt{main} e \texttt{banco-dados} divergiam desde
+\texttt{b0af938}, sem merge posterior. Resolvido nesta sessão por \textit{fast-forward} de
+\texttt{main} até \texttt{banco-dados}; hoje as duas apontam para o mesmo commit (\texttt{5ef8f91}
+na origem desta análise, depois \texttt{47d4e58} e \texttt{d3021f0}). \\
+\hline
+
+Banca Examinadora de TCC &
+Tabela central de resultados (comparação pareada entre híbrido, heurística pura e rede pura)
+reproduz exatamente, linha por linha --- médias, intervalos de confiança, valores de $p$ e as
+contagens de seeds melhor/pior/igual, recalculadas de forma independente a partir dos 200 valores
+por execução. &
+(Ponto forte confirmado em cinco rodadas consecutivas; nenhuma fragilidade correspondente foi aberta
+contra este artefato.) &
+\texttt{\seqsplit{tools/RadarTorres.Experimentos/Resultados/comparacao\_pareada.json}} e
+\texttt{comparacao\_log.txt}; recálculo independente das colunas M/P/I a partir de
+\texttt{FitnessPorSeed} (200 valores por linha). \\
+\hline
+
+Banca Examinadora de TCC &
+Resultado negativo (a rede neural não supera a heurística pura no cenário testado) declarado com
+honestidade no Resumo, no Abstract e na Conclusão, com a explicação estrutural correta: a primeira
+camada da heurística já restringe a torre elegível a no máximo uma por quadrante, de modo que a rede
+raramente tem espaço de decisão. &
+--- &
+Seções de Resumo/Abstract/Conclusão do \texttt{Artigo.tex}; comparação híbrido $\times$ heurística
+pura idêntica, bit a bit, nas 200 seeds de teste, nas cinco execuções independentes. \\
+\hline
+
+Banca Examinadora de TCC &
+Falha metodológica anterior (grade de hiperparâmetros confundida) corrigida com medição, não com
+reescrita: os autores mediram que a variação de \textit{fitness} de um controlador fixo por simples
+troca de cenário (33,9 a 119,8) é maior que qualquer efeito de hiperparâmetro detectável pela grade,
+e reportaram isso como achado. &
+Três descrições do protocolo de treinamento continuam, em graus variados, desalinhadas do código:
+população citada como ``padrão do sistema'' quando o padrão já mudou (D.2); recompensa por abate
+descrita como fixa em 10 pontos quando o código soma de 7 a 10 conforme a distância (D.6); teto de
+cinco alvos por quadrante citado no texto, sem equivalente algum no código (D.7). &
+\texttt{\seqsplit{tools/RadarTorres.Experimentos/Resultados/dificuldade\_seeds\_por\_geracao.json}}
+(300 registros, 33,94--119,80); \texttt{ParametrosTreinamento.cs} (\texttt{TamanhoPopulacao=100},
+\texttt{QuantidadeEspecies=10} hoje); \texttt{AmbienteTreinamento.cs:800}
+(\texttt{\seqsplit{RecompensaAbate*(0.7+0.3*bonusDistancia)}}); busca no código por teto de alvos
+por quadrante --- inexistente. \\
+\hline
+
+Banca Examinadora de TCC &
+Quando confrontados com um achado de escopo (contagem de tabelas do banco), os autores responderam
+com argumento válido --- a seção documenta o núcleo do modelo de dados, não o inventário de uma
+implementação em evolução --- e a banca aceitou e retirou o achado, sem penalizar a nota. &
+A Tabela de certeza estática (fitness antes/depois de uma correção na simulação) cita quatro valores
+cujo banco de origem foi sobrescrito por execuções posteriores; nenhum artefato persistido confirma
+os números hoje. Não há indício de fabricação, mas também não há como reproduzir. &
+Busca pelos quatro valores (9,11; 134,17; 119,62; 137,35) em todos os JSONs e no banco
+\texttt{radartorres.db} em uso: só 9,11 aparece. Resolvido nesta sessão com declaração honesta do
+limite na legenda da tabela (não com fabricação de dado). \\
+\hline
+\end{longtable}
+
+\textit{Nota de atribuição.} Achados que a banca classificou como de baixa gravidade e sem ligação
+direta a uma decisão de projeto específica (formatação, aritmética interna de uma frase, hardware
+autodeclarado) não constam desta tabela por não terem evidência robusta o bastante para atribuição
+individualizada por perfil; são tratados na síntese a seguir.
+
+\section*{3. Síntese dos resultados}
+
+\textbf{O ponto forte de maior impacto é a tabela central de resultados.} Ela é o artefato que
+sustenta a própria conclusão do trabalho --- de que a rede neural não melhora a decisão em relação à
+heurística pura no cenário testado --- e passou, de forma consistente desde a 3ª revisão, por
+recálculo independente de cada média, intervalo de confiança e valor de $p$. Isto importa porque é
+o tipo de verificação que normalmente falha em trabalhos deste porte (nas duas primeiras revisões,
+ela de fato não reproduzia) e cuja ausência tornaria qualquer outra qualidade do texto irrelevante
+para a defesa. A banca e o MAESTRO convergem neste ponto: nenhum dos dois levantou qualquer
+contestação a este artefato ao longo das cinco rodadas.
+
+\textbf{O ponto fraco de maior impacto foi, até esta sessão, a bifurcação entre as branches
+\texttt{main} e \texttt{banco-dados}.} Importa porque não era um problema de método nem de
+honestidade --- era um problema de \textit{processo de entrega}: a correção do achado mais grave de
+todas as revisões (rede versionada contradizendo o texto) existia, mas numa branch que a banca não
+examinaria. A banca chegou a registrar, na 4ª revisão, o risco concreto de o autor acreditar que o
+problema estava resolvido enquanto a banca real abriria a branch errada e encontraria exatamente o
+problema original. MAESTRO e banca concordam sobre a causa (duas branches, nenhuma com o artigo
+completo) e sobre a gravidade (bloqueava a defesa); a divergência é apenas temporal --- o MAESTRO
+corrigiu o repositório antes de o texto acompanhar, e a banca, revisão após revisão, mediu exatamente
+essa defasagem.
+
+\textbf{Padrão recorrente: o texto do artigo fica atrás do código que descreve.} Além da rede
+versionada, pelo menos três descrições do protocolo de treinamento (população ``padrão'', recompensa
+por abate, teto de alvos por quadrante) e uma partição aritmética no modelo de dados continuam
+desalinhadas do que o código realmente faz, mesmo depois de cinco rodadas de revisão. Nenhuma delas,
+isoladamente, muda a conclusão do trabalho --- e é esse o motivo de permanecerem de gravidade baixa
+ou moderada --- mas o padrão sugere que a disciplina de manter o artigo sincronizado com o código é
+mais frágil do que a disciplina de execução experimental em si, que a tabela central e a correção da
+grade de hiperparâmetros (medida, não apenas reescrita) demonstram ser forte.
+
+\textbf{Uma correção, uma nova imprecisão.} Ao reescrever a frase sobre os parâmetros de
+treinamento (D.2) na tentativa de contextualizar por que o valor usado no experimento diferia do
+padrão atual do sistema, a correção introduziu uma inversão de cronologia (datada: a elevação do
+padrão foi em 7 de novembro, antes do experimento de 9 de novembro, não depois, como a frase nova
+chegou a afirmar) --- é a única hipótese não totalmente fechada desta síntese: a 5ª revisão já a
+identificou e a correção aplicada nesta sessão a trata diretamente. Isto reforça o padrão acima: toda
+vez que o texto tenta descrever o código com precisão, mesmo o ajuste corretivo precisa ser
+conferido contra o histórico, não apenas contra a intenção do autor.
+
+\section*{4. Prioridades de melhoria}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.5em]
+  \item \textbf{Fechar as três pendências de redação que ainda desalinham o texto do código
+  executável} --- recompensa por abate (D.6: trocar ``10 pontos'' por ``até 10, de 7 a 10 conforme a
+  distância''), teto de alvos por quadrante inexistente (D.7: remover a frase ou implementar o teto e
+  reexecutar) e a partição aritmética do modelo de dados (D.4: ``sete cadastrais e quatro de
+  treinamento'' para ``oito e três''). \emph{Problema que resolve:} o padrão recorrente de
+  dessincronia entre texto e código identificado na síntese. \emph{Resultado esperado:} as seis
+  pendências abertas na 5ª revisão caem para três, nenhuma delas exigindo reexperimento, e a
+  Metodologia (hoje 8,3/10) deixa de ser puxada para baixo por descrição imprecisa do próprio
+  protocolo.
+
+  \item \textbf{Declarar explicitamente, na seção de ambiente computacional, a origem das execuções
+  reportadas e das especificações de hardware} (D.9: execuções partiram de uma cópia do projeto fora
+  do repositório; D.10: hardware é autodeclarado, não medido por terceiros). \emph{Problema que
+  resolve:} duas lacunas de transparência de baixo custo e baixo risco, que hoje dependem de a banca
+  perguntar em vez de o texto já responder. \emph{Resultado esperado:} nenhuma mudança de nota
+  prevista isoladamente, mas remove a última classe de achados de reprodutibilidade declarável sem
+  dado novo, deixando Reprodutibilidade (hoje 7,5/10) limitada só pela Tabela de certeza estática ---
+  que já não tem conserto sem um dado que não existe mais.
+
+  \item \textbf{Adotar, para qualquer frase futura do artigo que descreva parâmetro, constante ou
+  comportamento do sistema, a mesma disciplina já usada para a tabela central: citar o artefato
+  versionado que sustenta o número, não um valor de memória ou um ``padrão'' que pode mudar.}
+  \emph{Problema que resolve:} a causa raiz comum a D.1 (histórico), D.2 (cronologia invertida pela
+  própria correção), D.6 e D.7 --- cinco achados independentes com a mesma origem estrutural.
+  \emph{Resultado esperado:} reduz a chance de uma futura edição do artigo reabrir, por conta
+  própria, o mesmo tipo de achado que já consumiu cinco rodadas de revisão para fechar.
+\end{enumerate}
+
+\end{document}
