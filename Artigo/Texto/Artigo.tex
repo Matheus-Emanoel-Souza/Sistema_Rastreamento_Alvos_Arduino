@@ -436,10 +436,22 @@ que têm outra torre na linha de visada. A Tabela~\ref{tab:regras} lista as regr
 
 \textbf{Rede neural.} A rede tem 7 entradas -- distância normalizada até o alvo, dois indicadores
 de quadrante (mesmo e adjacente), ângulo de mira, velocidade do alvo, tempo em que o alvo está sendo
-observado e o fator da camada heurística -- e 2 saídas com ativação tanh: um ajuste somado à
+observado e o fator da camada heurística -- e 2 saídas: um ajuste somado à
 pontuação heurística da candidata e uma confiança de acionamento. A pontuação de cada candidata é
 $(1 - d_{\mathrm{norm}}) + f_{\mathrm{camada}} + \Delta_{\mathrm{rede}}$. A topologia não é fixa: o
 NEAT parte de redes sem camada oculta e acrescenta nós e conexões, até um teto de 60 conexões.
+
+Cada nó da rede soma suas entradas, multiplicadas pelos pesos das conexões, e aplica a esse total
+uma \textbf{função de ativação}, que define o valor que o nó repassa adiante. Nas duas saídas, essa
+função é a tangente hiperbólica (tanh), uma curva em forma de ``S'' que transforma qualquer número
+real em um valor entre $-1$ e $+1$: totais próximos de zero resultam em valores próximos de zero, e
+totais muito grandes, positivos ou negativos, resultam em valores próximos de $+1$ ou $-1$, sem
+nunca ultrapassá-los. Essa limitação cumpre duas funções. Primeiro, o ajuste
+$\Delta_{\mathrm{rede}}$ fica restrito ao intervalo $(-1, +1)$, de modo que a rede reordena as
+candidatas, mas não anula a pontuação heurística, cuja parcela $(1 - d_{\mathrm{norm}})$ varia entre
+0 e 1. Segundo, a confiança de acionamento tem sinal e escala fixos: valor positivo indica a favor
+de acionar, valor negativo, contra, e a magnitude indica a intensidade, sem depender dos pesos que o
+NEAT venha a evoluir.
 
 A combinação é hierárquica: a heurística filtra as candidatas, a rede ordena dentro do conjunto
 filtrado e a heurística volta a atuar como veto sobre o acionamento. Em produção, a rede só
@@ -469,6 +481,7 @@ falhar.
 
 % ------------------------------------------------------------
 \subsection{Arquitetura de software}
+\label{sec:arquitetura}
 
 A organização interna da aplicação é mostrada no diagrama de pacotes da
 Figura~\ref{fig:pacotes}, obtido do código: cada pacote corresponde a um \textit{namespace} e cada
@@ -489,8 +502,15 @@ A extração a partir do código revelou dois ciclos de dependência, que a figu
 serviço de navegação instancia telas (Services $\rightarrow$ Views, fechando o ciclo com Views
 $\rightarrow$ ViewModels $\rightarrow$ Services), e o carregador de dados iniciais importa
 repositórios e serviços (Data $\rightarrow$ Repositories/Services, fechando o ciclo com
-Repositories/Services $\rightarrow$ Data). Como todos os pacotes estão no mesmo \textit{assembly},
-os ciclos não impedem o funcionamento, mas aumentam o acoplamento e dificultam testes isolados.
+Repositories/Services $\rightarrow$ Data). Esses ciclos aumentam o acoplamento entre os pacotes e
+dificultam testes isolados. Eles não impedem o funcionamento e foram mantidos nesta versão do
+protótipo, mas constituem uma dívida técnica: sua eliminação, por exemplo com uma interface de
+navegação independente das telas e com a inicialização de dados desacoplada dos serviços, é proposta
+como trabalho futuro. Há um agravante do contexto embarcado: o sistema roda isolado, sem conexão com
+a internet e sem mecanismo de atualização, o que torna a instalação simples, mas faz com que
+qualquer mudança estrutural -- na arquitetura física, em bibliotecas ou no modelo do banco de dados
+-- exija reinstalar o sistema. Corrigir a arquitetura antes de uma implantação definitiva é,
+portanto, mais barato do que corrigi-la depois.
 
 % ------------------------------------------------------------
 \subsection{Modelo de dados}
@@ -713,8 +733,9 @@ HC-SR04 sobre o motor de varredura, para calibrar o modelo de ruído da simulaç
 da visão com um conjunto de imagens rotulado, medindo acurácia e taxa de quadros; (iii) cenários com
 mais de uma torre por quadrante, ou com escolhas de alocação entre vários alvos, em que a rede tenha
 espaço para refinar a heurística; (iv) a abordagem multiameaça da literatura de TEWA; (v) a fusão
-entre câmera e ultrassom; e (vi) a substituição do ultrassom por um radar real, evolução natural de
-um sistema cujo sensoriamento foi desenhado para simulá-lo.
+entre câmera e ultrassom; (vi) a substituição do ultrassom por um radar real, evolução natural de
+um sistema cujo sensoriamento foi desenhado para simulá-lo; e (vii) a eliminação dos ciclos de
+dependência entre pacotes descritos na Seção~\ref{sec:arquitetura}.
 
 % ============================================================
 % REFERÊNCIAS
