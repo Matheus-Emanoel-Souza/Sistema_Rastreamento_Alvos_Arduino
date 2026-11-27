@@ -473,9 +473,9 @@ invasão de torre (16), por acionamento legítimo recusado pela rede (3) e pelo 
 entre as torres. Cada indivíduo é avaliado pela média de 12 episódios.
 
 O genoma treinado é gravado em arquivo e embutido no executável no momento da compilação, e a
-aplicação o carrega na inicialização, sem nenhum ajuste em tempo de execução. O repositório não
-versiona uma rede treinada: um executável compilado sem treinamento prévio na máquina usa a
-heurística pura, comportamento de fábrica previsto no projeto. Se o número de entradas da rede
+aplicação o carrega na inicialização, sem nenhum ajuste em tempo de execução. A versão entregue
+não inclui rede treinada; um executável compilado a partir dela usa a heurística pura,
+comportamento de fábrica previsto no projeto. Se o número de entradas da rede
 embutida não coincidir com o do controlador, a aplicação também retorna à heurística pura, em vez de
 falhar.
 
