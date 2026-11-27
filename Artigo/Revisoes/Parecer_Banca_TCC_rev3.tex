@@ -1,0 +1,781 @@
+% ============================================================
+% Parecer da banca Banca_TCC sobre Artigo.tex (RadarTorres)
+% Gerado pelo agente banca-tcc (.claude/agents/banca-tcc.md).
+% Não editar à mão sem regenerar a partir de uma nova análise.
+% Compile com pdfLaTeX.
+%
+% TERCEIRA revisão. As anteriores (27/10, nota 6,33; segunda revisão,
+% nota 6,20) estão em Parecer_Banca_TCC.tex e permanecem intactas.
+% Esta audita a versão de 27/11 do artigo (Artigo.tex/Artigo.pdf,
+% 18 páginas), com protocolo de seeds reservadas, Wilcoxon pareado
+% e os três resultados negativos declarados.
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{url}
+
+\title{\textbf{Parecer da Banca Examinadora — TCC ``RadarTorres''}\\[0.3em]
+\large Terceira revisão — gerado pelo agente \texttt{banca-tcc}}
+\author{}
+\date{Análise referente a \texttt{Artigo.tex}/\texttt{Artigo.pdf} (RadarTorres, TCC de Engenharia da Computação, UCL)\\[0.3em]
+Auditado contra o código-fonte, os artefatos em JSON e o banco \texttt{radartorres.db} em uso}
+
+\newcommand{\critico}{\textbf{\color{red!60!black}[CRÍTICO]}}
+\newcommand{\alto}{\textbf{\color{orange!70!black}[ALTO]}}
+\newcommand{\moderado}{\textbf{\color{blue!50!black}[MODERADO]}}
+\newcommand{\baixo}{\textbf{\color{gray}[BAIXO]}}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+% QUADRO-RESUMO
+% ============================================================
+\begin{center}
+\fcolorbox{black}{gray!8}{%
+\begin{minipage}{0.93\textwidth}
+\vspace{0.4em}
+\begin{center}
+{\Large\textbf{Nota: 7,9 / 10}}\\[0.2em]
+{\small pareceres anteriores: 6,33 (1ª revisão) \quad$\cdot$\quad 6,20 (2ª revisão)}
+\end{center}
+\vspace{0.3em}
+\hrule
+\vspace{0.6em}
+\textbf{Veredicto.} Trabalho defensável. O método está correto e a tabela central de resultados
+reproduz exatamente contra o artefato que ela cita --- o que não acontecia nas duas revisões
+anteriores. O resultado é negativo (a rede neural não melhora a heurística) e está assumido no
+Resumo, no Abstract e na Conclusão, o que conta a favor.
+
+\vspace{0.5em}
+\textbf{Pendências que mudam a nota: 2.}
+(1) reescrever a frase sobre a rede versionada; (2) dar fonte conferível à Tabela 2. Ambas de texto e
+de arquivo --- \textbf{nenhuma exige refazer experimento}. Resolvidas, o artigo chega a 8,3--8,5.
+
+\vspace{0.5em}
+\textbf{Achados:} 0 críticos abertos \quad$\cdot$\quad 2 altos \quad$\cdot$\quad 3 moderados
+\quad$\cdot$\quad 3 baixos \quad$\cdot$\quad 1 retirado
+\vspace{0.6em}
+\end{minipage}}
+\end{center}
+
+\vspace{0.8em}
+
+\textit{Como ler este parecer:} a Seção A resume; a B justifica a nota critério por critério; a C
+compara com o parecer anterior; a D lista os problemas, cada um com gravidade no título; a E mostra o
+que foi conferido contra o código e os dados, com veredicto por item; a I traz as pendências em
+ordem de prioridade; a J diz o que \emph{não} foi verificado. Quem tem pouco tempo: leia A, H e I.
+
+\vspace{0.5em}
+
+\section*{A. Síntese}
+
+Esta versão corrige os dois problemas críticos do parecer anterior e o faz da maneira mais difícil e
+mais correta: não reescrevendo a afirmação para torná-la vaga, mas medindo o sistema de novo com um
+protocolo que podia desmenti-lo --- e publicando o desmentido. O artigo agora declara, no Resumo,
+no Abstract e na Conclusão, que a rede neural não acrescenta ganho mensurável; declara, na própria
+Seção 2.3.5, que em produção a saída de confiança da rede não é consultada; e reinterpreta a grade
+de hiperparâmetros como defeito de desenho, medindo a magnitude do confundimento que a invalidava.
+A camada de resultados, que era o ponto fraco das duas revisões anteriores, passou a ser o ponto
+forte: \textbf{a Tabela 1 reproduz exatamente, linha por linha, contra o artefato que ela cita}, e
+isso inclui médias, intervalos de confiança, diferenças pareadas, valores de $p$ e as contagens
+melhor/pior/igual seed a seed.
+
+O que não sobreviveu à auditoria é de outra natureza. O achado mais grave foi aberto como crítico e
+resolvido durante a própria auditoria: a afirmação ``o repositório não versiona uma rede treinada''
+era falsa, porque \texttt{rede-controlador.net} estava rastreado no git e o \texttt{.csproj} o embute
+na compilação --- e esse genoma não era bit-idêntico a nenhum dos dez campeões relatados. Os autores
+guardavam os genes de propósito, para rastrear estagnação e evitar retreino completo, prática que
+não está em questão; o defeito era de higiene de repositório. Os arquivos foram movidos para a branch
+\texttt{genes-treinamento} e removidos da versão entregue (conferido em \texttt{origin/main}), o que
+encerra o desencontro de genoma presente nos três pareceres. Resta reescrever a frase, que continua
+inalterada no texto.
+
+O que resta é pontual: a Tabela 2 não é reproduzível a partir do banco atual, por sobrescrita do
+arquivo que a originou, e três descrições do ambiente de treinamento não correspondem ao código ---
+a população chamada de ``padrão do sistema'', o valor da recompensa por abate e um teto de alvos por
+quadrante que não existe. Um quarto item, a contagem de tabelas do banco, foi aberto e retirado: os
+autores argumentaram que a Seção 2.5 documenta o núcleo do modelo de dados e não o inventário de uma
+implementação em evolução, e o argumento é válido --- as três afirmações que a seção precisa sustentar
+se sustentam.
+
+Saldo: trabalho metodologicamente sólido, honesto quanto ao próprio resultado negativo e com a
+espinha dorsal experimental verificável. Nenhuma pendência exige refazer experimento. O parecer
+anterior estimou que, resolvidas as cinco primeiras pendências, o artigo valeria 7,5--8,0; elas foram
+resolvidas e a nota caiu nessa faixa.
+
+\section*{B. Nota geral}
+
+\textbf{Nota ponderada: $\approx 7{,}85\,/\,10$} \quad (pareceres anteriores: $6{,}33$ e $6{,}20$).
+
+\textit{A nota foi revisada duas vezes durante a auditoria, ambas por mudança de fato ou de critério,
+não de leniência. Era 7,68 enquanto D.1 estava aberto como crítico; a correção do repositório
+(commits \texttt{2863fc4} e \texttt{0f58ccb}), conferida em \texttt{origin/main}, elevou
+Reprodutibilidade de 6,0 para 7,0, chegando a 7,78 --- não mais que isso porque a frase do artigo
+permanece inalterada (ver D.1 e a pendência 1). Depois, o argumento dos autores sobre o escopo da
+Seção 2.5 foi aceito e D.3 retirado, elevando Redação e estrutura de 8,0 para 8,5.}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{|p{4.1cm}|p{1.1cm}|p{1.1cm}|p{1.4cm}|p{6.6cm}|}
+\hline
+\textbf{Critério} & \textbf{Peso} & \textbf{Nota} & \textbf{Contrib.} & \textbf{Justificativa (resumo)} \\
+\hline
+\endhead
+Fundamentação teórica & 20\% & 8,0 & 1,600 &
+Sobe de 6,5. De 7 para 21 referências, e as três lacunas centrais do parecer anterior foram
+fechadas: visão computacional agora cita YOLO e YOLO26n, neuroevolução ganhou Stanley \&
+Miikkulainen, e existe literatura metodológica sobre avaliação de agentes estocásticos (Henderson,
+Colas) e sobre teste pareado (Wilcoxon, Derrac). A disciplina de amarrar cada referência a uma
+decisão de projeto foi preservada. Falta ainda fonte que sustente o modelo de ruído ultrassônico ---
+que o artigo declara não calibrado. \\
+\hline
+Metodologia & 20\% & 8,0 & 1,600 &
+Sobe de 6,0. Seeds de teste reservadas e disjuntas do treino (5.000.000--5.000.199, conferidas no
+código), cinco execuções independentes por modo, campeão escolhido só pelo fitness de treinamento,
+Wilcoxon pareado bicaudal com IC95\%. O confundimento que invalidou a grade antiga foi medido, não
+suposto. Puxada para baixo por D.2 (``parâmetros padrão do sistema'' já não são os do experimento) e
+por D.7 (teto de cinco alvos por quadrante que não existe no código). \\
+\hline
+Resultados e análise & 25\% & 7,5 & 1,875 &
+Sobe de 5,5. A tabela central reproduz exatamente contra \texttt{comparacao\_pareada.json}, incluindo
+as contagens M/P/I que precisei recalcular seed a seed. A identidade bit a bit entre híbrido e
+heurística nas 200 seeds se confirma nas cinco execuções. Penalizada por D.5 (Tabela 2 sem artefato
+reproduzível) e D.6 (a recompensa por abate não é fixa em 10 pontos, como o texto afirma). \\
+\hline
+Redação e estrutura & 15\% & 8,5 & 1,275 &
+Sobe de 6,5. Zero marcadores \texttt{\% PREENCHER}/\texttt{\% CONFIRMAR}, zero referência cruzada
+indefinida, zero \textit{overfull hbox} no \texttt{.log} da compilação atual, e a seção em formato de
+diário de laboratório foi eliminada. Prosa clara e ressalvas bem escritas. Penalizada apenas pela
+partição aritmética de D.4. \\
+\hline
+Contribuição e originalidade & 10\% & 8,0 & 0,800 &
+Sobe de 7,5. O resultado negativo está no Resumo, no Abstract e na Conclusão, com a explicação
+estrutural correta (a primeira camada da heurística contém no máximo uma torre, logo a rede quase
+nunca tem escolha). As três falhas metodológicas são contribuição real. Não passa de 8 porque a
+contribuição permanece confinada ao simulador. \\
+\hline
+Reprodutibilidade & 10\% & 7,0 & 0,700 &
+Sobe de 6,0 após a correção de D.1: a versão entregue deixou de conter rede treinada, e com isso
+deixou de existir um genoma de produção sem resultado reportado --- desencontro que persistia desde o
+primeiro parecer. Outros ganhos: artefatos de resultado e genomas campeões versionados, seeds de
+teste fixas e documentadas, protocolo executável por linha de comando. Ainda pendentes: o padrão do
+sistema mudou depois do experimento e o executor lê o padrão (D.2), a Tabela 2 não tem dump congelado
+(D.5) e as execuções registradas partiram de uma cópia em \texttt{C:\textbackslash TEMP} (D.9). \\
+\hline
+\multicolumn{3}{|r|}{\textbf{TOTAL}} & \textbf{7,85} & \\
+\hline
+\end{longtable}
+
+\subsection*{Por que a nota subiu 1,5 ponto}
+
+A lógica é a inversa da do parecer anterior. Lá, o artigo tinha feito afirmações mais falsificáveis e
+três delas não passaram, o que anulou a melhora de método. Aqui, as afirmações continuaram
+falsificáveis --- e passaram. O protocolo que o artigo descreve é o protocolo que o código executa, e
+os números que ele reporta são os números que o artefato contém. Isso é o que separa um trabalho
+auditável de um trabalho bem escrito.
+
+Os quatro críticos e altos do parecer anterior que diziam respeito à validade do método foram
+resolvidos com experimento, não com reescrita. O que resta é alinhamento entre texto e repositório:
+mais barato de corrigir e menos grave, mas visível --- a banca abre o \texttt{.csproj}.
+
+\section*{C. Evolução desde o parecer anterior}
+
+\subsection*{C.1 Corrigido ou materialmente melhorado}
+
+\begin{enumerate}
+  \item \textbf{D.1 anterior (crítico) --- resolvido.} A Seção 2.3.5 agora declara: ``Em produção, a
+  rede só influencia a escolha da torre; o acionamento é decidido exclusivamente pelo veto
+  heurístico, e a saída de confiança da rede não é consultada.'' Conferido:
+  \texttt{FireControlService.Authorize} aplica modo de operação, limiar de certeza de identificação e
+  pertinência ao conjunto de engajamento, e não referencia a rede em nenhum ponto dos seus 216
+  linhas.
+
+  \item \textbf{D.2 anterior (crítico) --- resolvido.} A contradição entre as seções foi substituída
+  por uma declaração explícita da diferença simulação $\times$ produção, com o tempo mínimo de mira
+  de 0,3~s atribuído corretamente apenas à simulação (não há referência a ele no serviço de
+  autorização) e a ressalva de que, como a rede nunca recusa, a diferença não altera o comportamento
+  observado.
+
+  \item \textbf{D.3 anterior (crítico) --- resolvido com experimento.} A grade de onze configurações
+  deixou de ser apresentada como experimento de hiperparâmetros e passou a ser relatada como falha
+  metodológica. Conferido contra \texttt{experimentos\_hiperparametros\_7entradas.json}: as onze
+  configurações (população 30--120, 4--16 ocultos, mutação 0,04--0,16) terminam com fitness 68,32975
+  a 68,34450 e \textbf{pico na geração 222 em todas as onze}. O artigo foi além do que o parecer
+  pedia e mediu o efeito: um controlador fixo avaliado nos conjuntos de seeds de 300 gerações varia
+  de 33,94 a 119,80 (média 80,53; desvio 13,86) --- reproduzi os quatro números a partir de
+  \texttt{dificuldade\_seeds\_por\_geracao.json} e conferem com os ``33,9 a 119,8; média 80,5; desvio
+  padrão 13,9'' do texto.
+
+  \item \textbf{D.6 anterior (alto) --- resolvido.} Toda comparação central tem agora teste de
+  Wilcoxon pareado e IC95\%, e ``estatisticamente indistinguível'' foi substituído por valores de $p$
+  reportados.
+
+  \item \textbf{D.8 anterior (alto) --- resolvido.} O Resumo, o Abstract e a Conclusão declaram o
+  resultado negativo. É, como o parecer anterior previu, a melhor defesa possível diante da banca.
+
+  \item \textbf{D.10 anterior (moderado) --- resolvido.} As seeds de avaliação saíram da faixa 0--49
+  para 5.000.000--5.000.199. Conferido no código: \texttt{BaseSeedsTeste = 5\_000\_000} e
+  \texttt{Enumerable.Range(BaseSeedsTeste, 200)}.
+
+  \item \textbf{D.12 e D.14 anteriores --- resolvidos.} O \texttt{Artigo.log} da compilação atual
+  (27/11, 18 páginas, mesmo horário do \texttt{.tex}) não tem nenhuma referência cruzada indefinida
+  nem nenhum \textit{overfull hbox}, e não há mais nenhum \texttt{\% PREENCHER} ou
+  \texttt{\% CONFIRMAR} no fonte.
+
+  \item \textbf{D.13 anterior (moderado) --- resolvido.} A seção em formato de diário de laboratório
+  foi reorganizada; as falhas metodológicas estão agora em três blocos nomeados pelo problema.
+\end{enumerate}
+
+\subsection*{C.2 Melhorias novas, não pedidas no parecer anterior}
+
+\begin{enumerate}
+  \item Explicação didática da função de ativação e do papel da tanh nas duas saídas, com a
+  justificativa correta de por que a limitação a $(-1,+1)$ importa: o ajuste da rede não pode anular
+  a parcela heurística da pontuação. Conferido: \texttt{Math.Tanh} em
+  \texttt{AtivacoesRedeNeat.cs:122}.
+  \item Dívida técnica dos dois ciclos de dependência declarada na Seção 2.4 com proposta de
+  correção, agravante do contexto embarcado sem atualização remota, e item (vii) de trabalhos
+  futuros.
+  \item Análise de viabilidade do sensoriamento físico com a aritmética explícita --- varredura de
+  3,9~s, 32 leituras por varredura, 5,6° de espaçamento. Refiz as contas a partir dos 2048
+  passos/volta, 400~passos/s e aceleração de 300~passos/s$^2$ e fecham.
+  \item Separação explícita entre os parâmetros do ambiente simulado (raio 10~m, alvos até 2,2~m/s) e
+  o que o sensoriamento físico permitiria, com a ressalva de que os resultados valem para o simulado.
+\end{enumerate}
+
+\subsection*{C.3 Persiste}
+
+\begin{enumerate}
+  \item \textbf{Genoma de produção não rastreável} (D.5 anterior, agora D.1): persistia pela terceira
+  revisão consecutiva --- antes um JSON divergente, agora um \texttt{.net} versionado que o artigo
+  afirma não existir. \textbf{Encerrado durante esta auditoria}: a versão entregue não contém mais
+  rede treinada, logo não há mais genoma de produção a rastrear.
+  \item \textbf{Tabela de fitness sem artefato congelado} (D.4 anterior, agora D.5): o banco que
+  originou os números foi sobrescrito.
+  \item \textbf{Escalas de fitness coexistindo sem mapa} (D.9 anterior, parcialmente): o banco em uso
+  tem 78 dos 80 marcos com \texttt{ConfiguracaoFitness = 'desconhecida'} e valores uma ordem de
+  grandeza acima dos do artigo.
+\end{enumerate}
+
+\subsection*{C.4 Surgiu}
+
+\begin{enumerate}
+  \item A afirmação de que o repositório não versiona rede treinada (D.1) --- não existia nas versões
+  anteriores do texto e era falsa no repositório. O repositório foi corrigido durante esta auditoria;
+  a frase, não.
+  \item A atribuição da população 60 aos ``parâmetros padrão do sistema'' (D.2), que era verdadeira na
+  data do experimento e deixou de ser.
+\end{enumerate}
+
+\section*{D. Problemas}
+
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{|p{0.9cm}|p{2.6cm}|p{11.6cm}|}
+\hline
+\textbf{Item} & \textbf{Gravidade} & \textbf{Em uma linha} \\
+\hline
+\endhead
+D.1 & \moderado & A frase ``o repositório não versiona uma rede treinada'' precisa ser reescrita ---
+o repositório já foi corrigido durante esta auditoria \\
+\hline
+D.2 & \alto & ``População de 60, o padrão do sistema'': o padrão hoje é 100, mudou depois do
+experimento \\
+\hline
+D.3 & \textbf{[RETIRADO]} & Contagem de tabelas do banco --- argumento de escopo dos autores aceito \\
+\hline
+D.4 & \baixo & ``Sete cadastrais e quatro de treinamento'' não bate com as 8+3 linhas da própria
+tabela \\
+\hline
+D.5 & \alto & A Tabela 2 não é reproduzível: o banco que a originou foi sobrescrito \\
+\hline
+D.6 & \moderado & ``10 pontos por alvo interceptado'': o código soma de 7 a 10, conforme a distância \\
+\hline
+D.7 & \moderado & ``Cada quadrante admite até cinco alvos simultâneos'': não existe esse teto no
+código \\
+\hline
+D.8 & \baixo & ``4631 oportunidades de acionamento'' é por execução, não o total das cinco \\
+\hline
+D.9 & \baixo & As execuções reportadas partiram de uma cópia do projeto em
+\texttt{C:\textbackslash TEMP} \\
+\hline
+D.10 & \baixo & Especificações de hardware são autodeclaradas --- basta dizer isso \\
+\hline
+\end{longtable}
+
+\subsection*{D.1 \moderado\ A frase sobre a rede versionada ficou desalinhada do repositório --- repositório já corrigido, texto pendente}
+
+\textbf{Estado desta pendência.} Este item foi aberto como \critico\ e rebaixado durante a própria
+auditoria, depois da correção aplicada no repositório. O que resta é uma frase a reescrever. A
+descrição original do problema é mantida abaixo porque explica o que foi corrigido e por quê.
+
+\textbf{Correção já aplicada e conferida} (commits \texttt{2863fc4} e \texttt{0f58ccb}):
+\texttt{rede-controlador.net} e \texttt{genoma-controlador.json} foram preservados na branch
+\texttt{genes-treinamento}, com um \texttt{README} que registra sua finalidade --- acompanhar a
+estagnação de gene ao longo do desenvolvimento e evitar retreinar do zero a cada ajuste ---, e
+removidos do versionamento na \texttt{main} com \texttt{git rm --cached}, mantidos no disco, com
+\texttt{.gitignore} cobrindo o diretório. Conferi diretamente em \texttt{origin/main}: o diretório
+não tem nenhum arquivo versionado, e a linha de \texttt{.gitignore} está lá. Nenhum histórico foi
+reescrito. \textbf{Um clone da \texttt{main} compilado hoje roda com a heurística pura}, como o
+artigo descreve.
+
+\textbf{O que ainda falta.} A frase da Seção 2.3.5 permanece inalterada e, lida ao pé da letra,
+continua falsa: o blob segue alcançável no histórico da \texttt{main} (commit \texttt{fea50b8}) e na
+branch \texttt{genes-treinamento}. Reescrever ``o repositório não versiona uma rede treinada'' como
+\textbf{``a versão entregue não inclui rede treinada; um executável compilado a partir dela usa a
+heurística pura''} resolve, e passa a ser verificável. Convém acrescentar uma oração explicando a
+branch \texttt{genes-treinamento} e seu propósito --- é informação favorável à defesa, não contra.
+
+\textbf{Efeito colateral positivo.} Com a rede fora da versão entregue, deixa de existir um genoma de
+produção sem resultado reportado. O desencontro de genoma, presente nos três pareceres, está
+encerrado.
+
+\medskip
+\hrule
+\medskip
+
+\textbf{Registro do problema original.}
+
+\textbf{O que o artigo afirma} (Seção 2.3.5, último parágrafo): ``O repositório não versiona uma rede
+treinada: um executável compilado sem treinamento prévio na máquina usa a heurística pura,
+comportamento de fábrica previsto no projeto.''
+
+\textbf{O que o repositório mostrava antes da correção:}
+
+\begin{enumerate}
+  \item \texttt{src/RadarTorres.App/Resources/ControladorTreinado/rede-controlador.net} é
+  \textbf{rastreado pelo git} --- \texttt{git ls-files --error-unmatch} retorna o caminho sem erro, e
+  o arquivo entrou no commit \texttt{fea50b8} (17/11, ``estrutura: adiciona currículo de dificuldade
+  progressiva ao treinamento''). Não está coberto pelo \texttt{.gitignore}, que ignora apenas
+  \texttt{tools/RadarTorres.Experimentos/Resultados/genoma-*.json}.
+  \item \texttt{RadarTorres.App.csproj}, linha 118, o embute como \texttt{EmbeddedResource} sob a
+  condição \texttt{Exists(...)} --- condição que está satisfeita no repositório como ele é hoje.
+  \item Logo, quem clona o repositório e compila obtém um executável \textbf{com} rede embutida. O
+  ``comportamento de fábrica'' anunciado (heurística pura) é o que acontece apenas se o arquivo for
+  removido.
+\end{enumerate}
+
+\textbf{Agravante --- o genoma não corresponde a nenhum resultado relatado.} O arquivo tem 8 nós de
+entrada (7 entradas + bias), 2 saídas e 32 conexões. Comparei-o byte a byte com os dez campeões em
+\texttt{Resultados/rede-cmp-*.net}: \textbf{nenhum é idêntico}. O único com a mesma contagem de
+conexões, \texttt{rede-cmp-Hibrido-e5.net} (32), tem hash diferente
+(\texttt{c1d7fb2f...} contra \texttt{9c5a3ee3...}). Também não coincide com
+\texttt{rede-baseline-mut001.net} (57 conexões) nem com \texttt{rede-ajuste-mut005.net} (77).
+
+\textbf{Por que importa.} A Tabela 1 descreve o desempenho de dez controladores; o sistema entregue
+executa um décimo primeiro, do qual o artigo não reporta nada --- nem fitness, nem geração, nem modo
+de treinamento. E a frase que deveria explicar essa ausência afirma o contrário do que o repositório
+contém. É verificável em dois comandos.
+
+\textbf{Ressalva de mérito.} A prática que gerou o problema é boa prática: os autores guardavam os
+genes para rastrear onde um gene estagnava e para não retreinar do zero a cada pequeno ajuste no
+projeto. O desenho do sistema também sustenta o que o artigo afirma --- o \texttt{.csproj} embute o
+arquivo sob \texttt{Condition="Exists(...)"}, e há retorno à heurística pura quando o número de
+entradas da rede embutida não coincide com o do controlador. O defeito não era de método nem de
+desenho: era de higiene de repositório, e tornava falsa uma frase do artigo. Foi assim que este item
+saiu de crítico.
+
+\subsection*{D.2 \alto\ ``Parâmetros padrão do sistema (população de 60)'' já não são os padrões do sistema}
+
+\textbf{O que o artigo afirma} (Seção 2.2, protocolo, item 1): treinar ``com os parâmetros padrão do
+sistema (população de 60, 1000 gerações, 12 episódios por avaliação)''.
+
+\textbf{O que o código mostra.} O executor de comparação instancia \texttt{new
+ParametrosTreinamento()}, isto é, \textbf{lê o padrão vigente no código}, e repassa
+\texttt{parametros.TamanhoPopulacao} ao treinador. O JSON do experimento registra
+\texttt{TamanhoPopulacao = 60} com data 09/11. O código atual traz
+\texttt{TamanhoPopulacao = 100}, e o próprio comentário da classe registra a elevação, junto com
+\texttt{QuantidadeEspecies} de 6 para 10, em 07/11.
+
+\textbf{Consequência.} Rodar hoje o protocolo exatamente como o artigo o descreve treina com
+população 100 e 10 espécies, não com as 60 que produziram a Tabela 1. A frase era verdadeira na data
+da execução e é falsa para o código entregue --- e o leitor não tem como saber disso, porque ela
+delega o valor ao ``padrão do sistema'' em vez de fixá-lo.
+
+\textbf{Correção.} Citar os valores do JSON do experimento, não o padrão: população 60, 10 espécies,
+teto de 60 conexões, probabilidade de adicionar nó 0,01, 12 episódios por avaliação, 1000 gerações. E,
+no executor, passar os parâmetros explicitamente, para que o protocolo deixe de depender de um padrão
+móvel. \textit{Conferidos e corretos:} 1000 gerações, 12 episódios, teto de 60 conexões, 5 execuções,
+200 seeds.
+
+\subsection*{D.3 \textbf{[RETIRADO]} Contagem de tabelas do banco de dados}
+
+Este item foi aberto como \alto\ --- o artigo declara onze tabelas e o código cria dezenove --- e
+\textbf{retirado} após argumentação dos autores, aceita por esta banca.
+
+\textbf{Argumento aceito.} As tabelas excedentes correspondem a funcionalidades em teste, não ao
+estado definitivo do sistema, e o artigo documenta deliberadamente o \textbf{núcleo} do modelo de
+dados --- cadastro, auditoria e histórico de treinamento ---, não o inventário da implementação.
+Ajustar o artigo a cada iteração experimental do esquema seria documentar trabalho em andamento como
+se fosse resultado, o que é pior do que descrever o núcleo. A defesa avalia a aplicação do modelo de
+dados e sua pertinência ao problema, não a completude da enumeração.
+
+\textbf{Juízo da banca.} O argumento é válido e o critério é o correto: o que a Seção 2.5 precisa
+sustentar é que a escolha do SQLite é coerente com a implantação em nó único, que as tabelas de
+auditoria só aceitam inserção e que as de treinamento são séries temporais independentes. Essas três
+afirmações foram conferidas e se sustentam. A contagem exata não altera nenhuma conclusão do
+trabalho.
+
+\textbf{Sugestão opcional, não pendência.} Acrescentar ``o núcleo do esquema'' à frase de abertura da
+seção torna a afirmação exata sem nenhum custo de manutenção, e remove a possibilidade de a banca
+interpretar a enumeração como completa. Fica a critério dos autores.
+
+\subsection*{D.4 \baixo\ Contagem interna inconsistente na mesma frase}
+
+Independe de D.3 e permanece: a frase diz ``sete cadastrais e de auditoria, e quatro que persistem o
+histórico do treinamento'' ($7+4=11$), mas a tabela logo abaixo lista \textbf{oito} linhas cadastrais
+(usuários, preferências, câmeras, objetos detectados, estados da ocorrência, classificações do alvo,
+ações realizadas, modo atual da torre) e \textbf{três} de treinamento (histórico de gerações, marcos
+de fitness, instantâneos) --- $8+3=11$. O total fecha, a partição não.
+
+É aritmética interna do próprio texto, verificável sem abrir o código ou o banco, e por isso
+continua valendo mesmo com o critério de ``núcleo do esquema'' aceito em D.3: qualquer que seja o
+recorte, a frase precisa descrever as linhas que a tabela abaixo dela mostra. Correção de dois
+números.
+
+\subsection*{D.5 \alto\ A Tabela 2 não é reproduzível a partir do banco}
+
+\textbf{O que o artigo afirma.} A Tabela 2 reporta quatro indicadores antes e depois da correção da
+certeza estática: fitness médio da população 9,11 $\to$ 134,17; melhor fitness por bloco 119,62
+$\to$ 137,35; alvos acionáveis $\approx 30\%$ $\to$ 100\%.
+
+\textbf{O que o banco mostra.} Procurei os quatro valores em todas as colunas de fitness de
+\texttt{marcos\_fitness\_treinamento} e \texttt{historico\_treinamento\_geracoes} do banco em uso
+(\texttt{\%APPDATA\%/RadarTorres/Data/radartorres.db}), com tolerância de $0{,}005$:
+
+\begin{itemize}
+  \item \textbf{9,11} existe, uma vez, em \texttt{marcos\_fitness\_treinamento.FitnessMedioDoBloco}.
+  \item \textbf{134,17}, \textbf{119,62} e \textbf{137,35} \textbf{não existem} em nenhuma delas.
+\end{itemize}
+
+O banco atual registra as gerações 986 a 1285 com fitness médio entre 568 e 2392 e melhor entre 766 e
+2986 --- escala uma ordem de grandeza acima de qualquer número do artigo --- e 78 dos 80 marcos estão
+com \texttt{ConfiguracaoFitness = 'desconhecida'}.
+
+\textbf{Ressalva importante.} O artigo \textbf{já declara} que os dois períodos foram registrados em
+versões diferentes do ambiente e que a comparação é ``apenas indicativa''. Essa ressalva é correta e
+deve ser mantida; isto não é acusação de incorreção. O problema é de verificabilidade: o banco que
+originou os números foi sobrescrito, e hoje a tabela não pode ser conferida por ninguém --- inclusive
+pelos autores.
+
+\textbf{Correção.} Exportar um dump congelado e versionado com as linhas efetivamente usadas, citá-lo
+na legenda como fonte, e passar a preencher \texttt{ConfiguracaoFitness} nos registros novos. Se o
+dump não for recuperável, a alternativa honesta é manter a tabela declarando que o artefato de origem
+não foi preservado.
+
+\subsection*{D.6 \moderado\ ``Soma 10 pontos por alvo interceptado'' não é o que o código soma}
+
+\textbf{O que o artigo afirma} (Seção 2.3.5): ``O \textit{fitness} soma 10 pontos por alvo
+interceptado e subtrai penalidades por alvo que escapa (8), por alvo que chega perto da base (3), por
+invasão de torre (16), por acionamento legítimo recusado pela rede (3) e pelo desequilíbrio de uso
+entre as torres.''
+
+\textbf{O que o código faz.} Em \texttt{AmbienteTreinamento.cs:800}:
+\begin{center}
+\texttt{estado.FitnessAcumulado += RecompensaAbate * (0.7 + 0.3 * bonusDistancia);}
+\end{center}
+com \texttt{RecompensaAbate = 10}. A recompensa por abate varia, portanto, de \textbf{7 a 10 pontos}
+conforme a distância de interceptação; 10 é o teto, não o valor. As quatro penalidades conferem
+exatamente (8; 3; 16; 3).
+
+\textbf{Segundo ponto.} A penalidade de desequilíbrio é descrita de forma mais vaga do que o próprio
+código documenta: ela é aplicada \textbf{uma única vez ao fim do episódio} e calculada como desvio
+padrão do resíduo contra a demanda do próprio quadrante da torre $\times$ 0,5 --- a versão
+\texttt{v1.1} registrada no código justamente para não penalizar concentração de trabalho justificada
+pela posição dos alvos. Apesar do nome do parâmetro conter ``PorSegundo'', não é por segundo.
+
+\textbf{Correção.} ``Até 10 pontos por alvo interceptado (7 a 10, conforme a distância)'' e uma
+oração descrevendo a penalidade de sobrecarga como resíduo contra a demanda do quadrante. Vale
+registrar também a versão da fórmula (\texttt{v1.1}), que o código expõe como metadado e que resolve
+parte da confusão de escalas apontada em C.3.
+
+\subsection*{D.7 \moderado\ ``Cada quadrante admite até cinco alvos simultâneos'' não existe no código}
+
+\textbf{O que o artigo afirma} (Seção 2.3.5): ``O intervalo entre nascimentos diminui ao longo do
+episódio, e cada quadrante admite até cinco alvos simultâneos.''
+
+\textbf{O que o código faz.} \texttt{AmbienteTreinamento.TalvezNascerAlvo} sorteia um ponto na borda
+do mundo a cada intervalo de nascimento interpolado (1,5--4,0~s no início do episódio para
+0,6--1,8~s no fim) e acrescenta o alvo à lista \textbf{sem nenhum teto} --- nem global, nem por
+quadrante. O quadrante é apenas consequência do ângulo sorteado. Procurei um limite por quadrante em
+todo o projeto, em qualquer grafia, e não existe.
+
+A primeira metade da frase confere: a escalada de dificuldade por interpolação linear do intervalo de
+nascimento está implementada e documentada.
+
+\textbf{Correção.} Remover a segunda metade da frase, ou implementar o teto, se ele era pretendido ---
+caso em que os resultados precisariam ser reexecutados.
+
+\subsection*{D.8 \baixo\ ``4631 oportunidades de acionamento'' é por execução, não total}
+
+A frase ``Nenhuma das 4631 oportunidades de acionamento foi recusada'' sugere um total único. No
+artefato, \textbf{cada uma} das cinco execuções do híbrido registra exatamente 4631 oportunidades
+(23.155 somadas), e a rede pura registra contagens diferentes por execução (4395, 4518, 4518, 4659,
+4717). Acrescentar ``em cada execução'' resolve.
+
+\subsection*{D.9 \baixo\ As execuções registradas partiram de uma cópia fora do repositório}
+
+\texttt{comparacao\_log.txt} e o JSON do protocolo registram caminhos
+\texttt{C:\textbackslash TEMP\textbackslash Sistema\_Rastreamento\_Alvos\_Arduino\textbackslash
+...}. Não invalida nada, mas a Seção 2.2 descreve ``o executor de experimentos de linha de comando do
+projeto'' sem mencionar que a execução reportada rodou de uma cópia. Uma oração na seção de ambiente
+computacional resolve, e melhora a reprodutibilidade declarada.
+
+\subsection*{D.10 \baixo\ Hardware autodeclarado}
+
+O JSON do protocolo preserva apenas \texttt{Maquina = NOTE-BOLADO}, \texttt{Nucleos = 8} e
+\texttt{Data = 2026-11-09 12:56} --- compatíveis com os ``4 núcleos / 8 \textit{threads}'' da Tabela 3.
+O restante (modelo do processador, 5,9~GB de memória, GPU, versão do Windows) é \textbf{autodeclarado
+e não verificável de forma independente}. Não é erro, e a seção de ambiente computacional é bem
+escrita; basta uma oração dizendo que as especificações foram coletadas na própria máquina.
+
+\section*{E. Auditoria de dados e tabelas}
+
+\begin{longtable}{|p{3.6cm}|p{6.6cm}|p{4.4cm}|}
+\hline
+\textbf{Elemento} & \textbf{O que foi conferido} & \textbf{Veredicto} \\
+\hline
+\endhead
+Tabela 1 --- comparação pareada (7 linhas) & Cada média, IC95\%, $\Delta$, IC95\% de $\Delta$ e $p$
+conferidos contra \texttt{comparacao\_pareada.json} e \texttt{comparacao\_log.txt} &
+\textbf{Confere exatamente} \\
+\hline
+Tabela 1 --- colunas M/P/I & Recalculadas por mim seed a seed a partir de
+\texttt{FitnessPorSeed} (200 valores por linha): 89/84/27, 82/103/15, 62/122/16, 72/93/35 &
+\textbf{Confere exatamente} \\
+\hline
+``Híbrido idêntico à heurística nas 200 seeds'' & Comparação de igualdade exata das listas de 200
+valores, nas cinco execuções &
+\textbf{Confere} --- bit a bit, 5/5. A linha agregada difere em $2{,}8\times10^{-14}$, ruído de
+ponto flutuante da média \\
+\hline
+``Rede pura mudou 165 a 185 das 200 seeds'' & Contagem de seeds com valor diferente: 173, 185, 184,
+185, 165 & \textbf{Confere exatamente} \\
+\hline
+``Execução 4 idêntica à 2'' & Listas de 200 valores comparadas & \textbf{Confere} --- idênticas \\
+\hline
+``4631 oportunidades, 0 recusas'' & \texttt{Oportunidades} e \texttt{Recusados} por execução &
+\textbf{Número correto, redação ambígua} (ver D.8) \\
+\hline
+``Topologias de 11 a 38 conexões'' & Conexões dos campeões do híbrido: 11, 18, 25, 32, 38 &
+\textbf{Confere exatamente} \\
+\hline
+``Pico em g979 (híbrido) e g334 em três das cinco (rede pura)'' & \texttt{GeracaoDoPico} por
+execução: híbrido 979$\times$5; rede pura 334, 334, 53, 334, 452 & \textbf{Confere exatamente} \\
+\hline
+``Desvio padrão $\approx$ 75 para média de 120'' & $\sigma = 74{,}96$; média $= 120{,}49$ &
+\textbf{Confere} \\
+\hline
+Seeds de teste 5.000.000--5.000.199 & \texttt{BaseSeedsTeste = 5\_000\_000},
+\texttt{Range(BaseSeedsTeste, 200)} & \textbf{Confere} \\
+\hline
+Grade de 11 configurações (68,33--68,34; g222) & Onze registros do JSON: 68,32975 a 68,34450, pico
+na geração 222 em todas & \textbf{Confere exatamente} \\
+\hline
+Variação do controlador fixo (33,9--119,8; 80,5; 13,9) & 300 registros de
+\texttt{dificuldade\_seeds\_por\_geracao.json}: 33,94--119,80; média 80,53; desvio 13,86 &
+\textbf{Confere exatamente} \\
+\hline
+Tabela 2 --- certeza estática & Quatro valores buscados em todas as colunas de fitness das tabelas de
+histórico e marcos & \textbf{Não reproduz} --- só 9,11 existe (ver D.5) \\
+\hline
+Tabela 3 --- ambiente computacional & JSON do protocolo preserva máquina, 8 núcleos e data &
+\textbf{Parcialmente verificável}; o resto é autodeclarado \\
+\hline
+Tabela 4 --- esquema SQLite & Conferidas as três afirmações que a seção precisa sustentar: SQLite
+coerente com nó único, tabelas de auditoria só-inserção, tabelas de treinamento sem chave estrangeira
+para as demais & \textbf{Confere.} A contagem de tabelas não foi tratada como achado: o artigo
+documenta o núcleo do esquema, por decisão dos autores (ver D.3) \\
+\hline
+Genoma de produção & \texttt{rede-controlador.net} comparado byte a byte com os dez campeões; depois,
+\texttt{origin/main} e \texttt{origin/genes-treinamento} reconferidos após a correção &
+\textbf{Divergia de todos e estava versionado; corrigido} --- fora da versão entregue, preservado na
+branch \texttt{genes-treinamento} (ver D.1) \\
+\hline
+Rede: 7 entradas, 2 saídas, tanh, teto 60 & \texttt{QuantidadeEntradas = 7},
+\texttt{QuantidadeSaidas = 2}, \texttt{Math.Tanh}, \texttt{TetoComplexidade = 60} &
+\textbf{Confere} \\
+\hline
+Fitness: 10 / 8 / 3 / 16 / 3 & Constantes e pontos de aplicação no ambiente &
+\textbf{Penalidades conferem; a recompensa não} (ver D.6) \\
+\hline
+25 requisitos funcionais, 20 não funcionais & Identificadores distintos em
+\texttt{conteudo\_requisitos.tex}: 25 e 20 & \textbf{Confere exatamente} \\
+\hline
+Produção não consulta a confiança da rede & \texttt{FireControlService.Authorize}, 216 linhas &
+\textbf{Confere} --- nenhuma referência à rede \\
+\hline
+Varredura 3,9~s / 32 leituras / 5,6° & Recalculado de 2048 passos, 400~passos/s, 300~passos/s$^2$,
+60~ms & \textbf{Confere} \\
+\hline
+Compilação (18 páginas, sem avisos) & \texttt{Artigo.log} do mesmo horário do \texttt{.tex} &
+\textbf{Confere} --- 0 \textit{overfull}, 0 referência indefinida \\
+\hline
+21 referências & \texttt{referencias.bib} & \textbf{Confere} \\
+\hline
+\end{longtable}
+
+\section*{F. Referências}
+
+\textbf{Adequação.} As 21 referências mantêm a disciplina que já era o mérito das versões anteriores
+--- cada uma amarrada a uma decisão de projeto, não citada decorativamente --- e agora cobrem os
+pontos que estavam descobertos. As três lacunas centrais do parecer anterior foram fechadas:
+
+\begin{enumerate}
+  \item \textbf{Visão computacional:} de zero para três referências (\textit{YOLO} como problema de
+  regressão única, o YOLO26n efetivamente usado, e histogramas de cor para a comparação com o perfil
+  cadastrado). O módulo deixou de estar sem fundamentação.
+  \item \textbf{Neuroevolução:} de uma para três (algoritmos genéticos competitivos com gradiente,
+  NEAT com evolução de topologia e especiação, e a implementação SharpNEAT). A citação do NEAT é
+  especialmente pertinente porque o artigo discute mudança de arquitetura e compatibilidade de
+  genoma.
+  \item \textbf{Metodologia experimental:} de zero para quatro (variância em ambientes estocásticos,
+  número de execuções independentes, Wilcoxon, testes não paramétricos em comparação de algoritmos).
+  É a lacuna cuja correção teve efeito direto no método: o protocolo atual é consequência dela.
+\end{enumerate}
+
+\textbf{Lacuna restante.} O modelo de ruído ultrassônico continua sem fonte que o sustente ---
+limitação que o artigo declara honestamente e endereça como trabalho futuro (ensaio de bancada). A
+recomendação é manter a declaração, não forçar uma referência.
+
+\textbf{Não verificadas nesta rodada.} As fontes bibliográficas não foram reverificadas contra os
+originais nesta auditoria. Duas foram verificadas na primeira revisão; as demais permanecem
+\textbf{não verificadas}, o que não é o mesmo que corretas.
+
+\section*{G. Pontos fortes}
+
+\begin{enumerate}
+  \item \textbf{A tabela central é auditável e passou na auditoria.} Médias, intervalos, valores de
+  $p$ e as contagens M/P/I que precisei recalcular a partir dos 200 valores por execução: tudo
+  confere. Isso é raro --- nas duas revisões anteriores, a tabela principal não reproduzia.
+  \item \textbf{Resultado negativo assumido nos três lugares que importam} (Resumo, Abstract,
+  Conclusão), com a explicação estrutural correta: a primeira camada da heurística contém no máximo
+  uma torre, então a rede só tem escolha quando a torre do quadrante está ocupada e há duas
+  adjacentes livres.
+  \item \textbf{A diferença entre simulação e produção está declarada pelos autores}, não descoberta
+  pela banca. O artigo diz explicitamente que em produção a confiança da rede não é consultada ---
+  conferido no código --- e discute a implicação.
+  \item \textbf{A falha metodológica anterior foi corrigida com medição, não com reescrita.} Em vez de
+  suavizar a conclusão sobre a grade de hiperparâmetros, os autores mediram quanto o sorteio de
+  cenários varia (33,9 a 119,8 para um controlador fixo) e mostraram que esse efeito é maior do que
+  qualquer efeito de hiperparâmetro que a grade poderia detectar.
+  \item \textbf{Protocolo de avaliação correto e verificável:} seeds reservadas e disjuntas, campeão
+  escolhido só pelo fitness de treinamento, avaliação única no conjunto reservado, teste pareado. É
+  o protocolo que a literatura agora citada recomenda.
+  \item \textbf{Honestidade sobre o que não foi feito:} visão sem avaliação quantitativa, simulação
+  não calibrada, estrutura física não montada, SharpNEAT sem semente fixa. Todas declaradas no
+  corpo, não escondidas.
+  \item \textbf{Dívida técnica tratada como dívida técnica:} os ciclos de dependência são nomeados,
+  explicados, quantificados quanto ao risco (contexto embarcado sem atualização remota) e levados a
+  trabalhos futuros.
+\end{enumerate}
+
+\section*{H. Nota final}
+
+\begin{center}
+\Large\textbf{7,9 / 10} \quad\normalsize (pareceres anteriores: 6,33 e 6,20)
+\end{center}
+
+Restam duas pendências que mudam a nota: reescrever a frase de D.1 e dar fonte conferível à Tabela 2
+(D.5). Ambas são de texto e de arquivo, nenhuma exige refazer experimento. Resolvidas as duas, este
+artigo chega a 8,3--8,5. O que separa a nota atual dessa faixa não é o método nem a relevância: é a
+rastreabilidade de duas afirmações pontuais.
+
+\section*{I. Pendências prioritárias}
+
+\subsection*{Bloqueiam a defesa}
+
+\begin{enumerate}
+  \item Reescrever a frase da Seção 2.3.5 como ``a versão entregue não inclui rede treinada; um
+  executável compilado a partir dela usa a heurística pura'', e acrescentar uma oração sobre a branch
+  \texttt{genes-treinamento} e seu propósito. \emph{(D.1 --- o lado do repositório já está corrigido
+  e conferido; esta é a única parte que falta, e é um parágrafo. Enquanto a frase atual permanecer,
+  ela continua falsa ao pé da letra, porque o blob segue no histórico e na branch.)}
+
+  \item Exportar e versionar um dump congelado com as linhas que produziram a Tabela 2 e citá-lo na
+  legenda; se o artefato não for recuperável, declarar isso. \emph{(D.5 --- hoje a tabela não é
+  verificável nem pelos autores, porque o banco foi sobrescrito. É a única afirmação numérica do
+  artigo sem fonte conferível.)}
+\end{enumerate}
+
+\subsection*{Alto impacto, esforço baixo}
+
+\begin{enumerate}\setcounter{enumi}{2}
+  \item Substituir ``os parâmetros padrão do sistema (população de 60...)'' pelos valores fixos
+  registrados no JSON do experimento, e passar os parâmetros explicitamente no executor para que o
+  protocolo pare de depender de um padrão móvel. \emph{(D.2 --- o padrão hoje é 100.)}
+  \item Trocar ``soma 10 pontos por alvo interceptado'' por ``até 10 pontos (7 a 10, conforme a
+  distância)'', e descrever a penalidade de sobrecarga como resíduo contra a demanda do quadrante,
+  aplicada uma vez ao fim do episódio. Registrar a versão da fórmula (\texttt{v1.1}).
+  \emph{(D.6 --- meia linha, e elimina a divergência entre o texto e a única fórmula que o leitor
+  pode conferir.)}
+  \item Remover ``cada quadrante admite até cinco alvos simultâneos'' --- não há teto no código ---
+  ou implementá-lo e reexecutar. \emph{(D.7)}
+\end{enumerate}
+
+\subsection*{Correções de texto}
+
+\begin{enumerate}\setcounter{enumi}{5}
+  \item Corrigir a partição ``sete cadastrais e quatro de treinamento'' para bater com as linhas da
+  própria tabela (8+3). \emph{(D.4)}
+  \item Acrescentar ``em cada execução'' às 4631 oportunidades de acionamento. \emph{(D.8)}
+  \item Dizer, na seção de ambiente computacional, que as execuções reportadas partiram de uma cópia
+  do projeto fora do repositório. \emph{(D.9)}
+  \item Dizer que as especificações de hardware foram coletadas na própria máquina de execução.
+  \emph{(D.10)}
+\end{enumerate}
+
+\section*{J. Escopo e limitações desta auditoria}
+
+Nenhum arquivo do projeto foi alterado pela banca na produção deste parecer. A correção de D.1
+(commits \texttt{2863fc4} e \texttt{0f58ccb}) foi executada pelos autores, por decisão própria, ainda
+durante a auditoria; a banca a conferiu em \texttt{origin/main} e \texttt{origin/genes-treinamento} e
+reabriu a nota para refletir o novo estado. Nenhum experimento foi executado:
+todas as verificações numéricas foram feitas por leitura dos artefatos JSON já persistidos, do banco
+aberto em modo somente leitura e do código-fonte. O artigo não foi recompilado --- o
+\texttt{Artigo.log} auditado é o da compilação dos próprios autores, do mesmo horário do
+\texttt{.tex}, o que o torna válido para a versão analisada.
+
+\textbf{Não verificado nesta rodada:}
+
+\begin{itemize}
+  \item \textbf{As fontes bibliográficas.} Nenhuma das 21 referências foi conferida contra o
+  original nesta auditoria. Duas foram verificadas na primeira revisão; as 19 restantes permanecem
+  não verificadas --- o que não é o mesmo que corretas.
+  \item \textbf{As especificações de hardware da Tabela 3}, além do nome da máquina e dos 8 núcleos
+  preservados no JSON. São autodeclaradas. A máquina onde esta auditoria rodou \textbf{não é} a dos
+  experimentos e não foi usada como fonte para nada.
+  \item \textbf{A proveniência do genoma que estava em produção.} Determinei que ele não corresponde
+  a nenhum dos dez campeões relatados, mas não há artefato que diga qual execução o gerou. Com a
+  correção de D.1 isso deixou de afetar a versão entregue; permanece desconhecido para o arquivo
+  preservado na branch \texttt{genes-treinamento}.
+  \item \textbf{A origem dos números da Tabela 2.} O banco que os produziu foi sobrescrito; a
+  verificação é impossível com os artefatos existentes, não apenas incompleta.
+  \item \textbf{O módulo de visão computacional}, que o próprio artigo declara não avaliado
+  quantitativamente, e o firmware do Arduino.
+  \item \textbf{A figura do diagrama de pacotes} não foi reextraída do código; os dois ciclos de
+  dependência descritos no texto não foram reconferidos nesta rodada.
+\end{itemize}
+
+\textbf{Artefatos consultados:} \texttt{Artigo/Texto/\{Artigo.tex, Artigo.log, referencias.bib\}};
+\texttt{src/RadarTorres.App/NeuralEvolution/\{ControladorHibrido, AmbienteTreinamento,
+ParametrosTreinamento, RedeNeat, AtivacoesRedeNeat\}.cs};
+\texttt{src/RadarTorres.App/Services/FireControlService.cs};
+\texttt{src/RadarTorres.App/Repositories/Sqlite*Repository.cs} (19 definições de tabela);
+\texttt{src/RadarTorres.App/RadarTorres.App.csproj};
+\texttt{src/RadarTorres.App/Resources/ControladorTreinado/rede-controlador.net};
+\texttt{tools/RadarTorres.Experimentos/Program.cs} e
+\texttt{Resultados/\{comparacao\_pareada.json, comparacao\_log.txt,
+dificuldade\_seeds\_por\_geracao.json, experimentos\_hiperparametros\_7entradas.json,
+rede-cmp-*.net, rede-baseline-mut001.net, rede-ajuste-mut005.net\}};
+\texttt{Software/Arquitetura/conteudo\_requisitos.tex}; banco
+\texttt{\%APPDATA\%/RadarTorres/Data/radartorres.db} (somente leitura);
+\texttt{.gitignore}, \texttt{git ls-files} e o histórico do arquivo de rede; pareceres anteriores.
+
+\end{document}

@@ -1,0 +1,588 @@
+% ============================================================
+% Parecer da banca Banca_TCC sobre Artigo.tex (RadarTorres)
+% Gerado pelo agente banca-tcc (.claude/agents/banca-tcc.md).
+% Não editar à mão sem regenerar a partir de uma nova análise.
+% Compile com pdfLaTeX.
+%
+% QUARTA revisão. As anteriores (27/10, nota 6,33; segunda revisão, nota
+% 6,20; terceira revisão, nota 7,9) estão em Parecer_Banca_TCC.tex e
+% Parecer_Banca_TCC_rev3.tex e permanecem intactas. Esta verifica duas
+% mudanças relatadas desde a 3ª revisão -- remoção dos genes treinados do
+% versionamento e reescrita da frase da Seção 2.3.5 -- e encontra que
+% nenhuma das duas alcança a branch que parece ser a de entrega.
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{url}
+
+\title{\textbf{Parecer da Banca Examinadora --- TCC ``RadarTorres''}\\[0.3em]
+\large Quarta revisão --- gerado pelo agente \texttt{banca-tcc}}
+\author{}
+\date{Análise referente a \texttt{Artigo.tex}/\texttt{Artigo.pdf} (RadarTorres, TCC de Engenharia da
+Computação, UCL)\\[0.3em]
+Auditado contra o código-fonte, os artefatos em JSON, o banco \texttt{radartorres.db} em uso e o
+histórico git de \textbf{duas} branches: \texttt{main} e \texttt{banco-dados}}
+
+\newcommand{\critico}{\textbf{\color{red!60!black}[CRÍTICO]}}
+\newcommand{\alto}{\textbf{\color{orange!70!black}[ALTO]}}
+\newcommand{\moderado}{\textbf{\color{blue!50!black}[MODERADO]}}
+\newcommand{\baixo}{\textbf{\color{gray}[BAIXO]}}
+\newcommand{\retirado}{\textbf{[RETIRADO]}}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+% QUADRO-RESUMO
+% ============================================================
+\begin{center}
+\fcolorbox{black}{gray!8}{%
+\begin{minipage}{0.93\textwidth}
+\vspace{0.4em}
+\begin{center}
+{\Large\textbf{Nota: 7,7 / 10}}\\[0.2em]
+{\small pareceres anteriores: 6,33 (1ª revisão) \quad$\cdot$\quad 6,20 (2ª revisão) \quad$\cdot$\quad
+7,9 (3ª revisão)}
+\end{center}
+\vspace{0.3em}
+\hrule
+\vspace{0.6em}
+\textbf{Veredicto.} As duas correções que a 3ª revisão pedia como bloqueantes foram feitas ---
+\textbf{mas na branch \texttt{main}}, enquanto a branch que tudo indica ser a de entrega
+(\texttt{banco-dados}, cujo último commit se chama literalmente \textit{``revisão do Gabriel no dia
+da entrega''}, e é a que está hoje fisicamente aberta neste repositório) \textbf{não recebeu nenhuma
+das duas}. Nela, \texttt{rede-controlador.net} e \texttt{genoma-controlador.json} continuam
+rastreados pelo git e embutidos pelo \texttt{.csproj}, e a Seção 2.3.5 continua com a frase antiga
+--- ``o repositório não versiona uma rede treinada'' ---, que volta a ser falsa pelos mesmos motivos
+da 1ª e da 2ª revisão.
+
+\vspace{0.5em}
+\textbf{Pendência que muda a nota: 1, mas é nova e mais grave que a antiga.}
+Não é mais ``reescrever uma frase'': é reconciliar duas branches divergentes antes de decidir qual
+delas vai a exame --- a que tem a correção não tem o conteúdo que esta própria banca elogiou (a
+explicação da tanh, a dívida técnica dos ciclos de dependência, o item (vii) de trabalhos futuros), e
+a que tem o conteúdo não tem a correção.
+
+\vspace{0.5em}
+\textbf{Achados:} 1 crítico reaberto \quad$\cdot$\quad 2 altos \quad$\cdot$\quad 3 moderados
+\quad$\cdot$\quad 3 baixos \quad$\cdot$\quad 1 retirado
+\vspace{0.6em}
+\end{minipage}}
+\end{center}
+
+\vspace{0.8em}
+
+\textit{Como ler este parecer:} a Seção A resume; a B justifica a nota critério por critério; a C
+compara com o parecer anterior; a D lista os problemas, cada um com gravidade no título; a E mostra o
+que foi conferido contra o código e os dados, com veredicto por item; a I traz as pendências em
+ordem de prioridade; a J diz o que \emph{não} foi verificado. Quem tem pouco tempo: leia A, H e I.
+
+\vspace{0.5em}
+
+\section*{A. Síntese}
+
+Esta rodada foi aberta para verificar duas afirmações: que os genes treinados saíram do
+versionamento da \texttt{main} e foram preservados em \texttt{genes-treinamento}, e que a frase da
+Seção 2.3.5 foi reescrita para não afirmar isso que não é mais verdade. As duas são verdadeiras ---
+\textbf{na branch \texttt{main}}. \texttt{git log --all} mostra os três commits citados
+(\texttt{2863fc4}, \texttt{0f58ccb}, \texttt{501ce86}), todos alcançáveis a partir de \texttt{main},
+e \texttt{git show 501ce86} confirma que a nova frase é exatamente a que a 3ª revisão recomendou.
+
+O problema é que \texttt{main} não é a branch que este repositório está mostrando como estado atual
+do trabalho. O diretório de trabalho está em \texttt{banco-dados}, cujo commit de ponta --- feito às
+14:26 do mesmo dia, \textbf{antes} dos dois commits de correção em \texttt{main} (15:03 e 15:40) --- se
+chama \texttt{a8a7b16 ``revisão do Gabriel no dia da entrega''}. \texttt{main} e \texttt{banco-dados}
+divergem desde o commit \texttt{b0af938}: nenhuma é ancestral da outra, e nenhum merge posterior as
+reconcilia. Nessa branch, \texttt{git ls-tree} mostra os dois arquivos --- \texttt{rede-controlador.net}
+e \texttt{genoma-controlador.json} --- ainda rastreados; o \texttt{.gitignore} dessa branch não tem a
+linha que os exclui; e a Seção 2.3.5 do \texttt{Artigo.tex} efetivamente presente no disco, nesta
+branch, ainda diz ``o repositório não versiona uma rede treinada: um executável compilado sem
+treinamento prévio na máquina usa a heurística pura'' --- a frase que a 1ª, a 2ª e a 3ª revisão
+apontaram como falsa, porque o \texttt{.csproj} embute o arquivo sob
+\texttt{Condition="Exists(...)"}, a condição está satisfeita, e o arquivo está no disco.
+
+Em outras palavras: \textbf{o achado crítico das três revisões anteriores não foi corrigido onde
+importa} --- ele foi corrigido em uma branch e documentado como corrigido tomando por base outra. E a
+branch que recebeu a correção, \texttt{main}, por sua vez \textbf{não contém} parte do que esta banca
+já havia registrado como melhoria (a explicação didática da tanh, a dívida técnica dos ciclos de
+dependência, o item (vii) de trabalhos futuros, o rótulo \texttt{sec:arquitetura}) --- conteúdo que
+só existe em \texttt{banco-dados}. As duas branches têm, cada uma, metade do que o artigo precisa ser.
+
+Os demais oito achados da 3ª revisão (D.2, D.4 e D.6 a D.10) foram reconferidos nesta rodada contra o
+\texttt{Artigo.tex} tal como está no disco hoje (branch \texttt{banco-dados}) e persistem
+\textbf{idênticos}, byte a byte nas frases citadas. Nenhum foi corrigido; nenhum piorou. A Tabela 1,
+a tabela central de resultados, não foi reafetada por nada desta rodada e continua reproduzindo
+exatamente.
+
+\textbf{Saldo.} O método e os resultados centrais continuam sólidos e verificáveis --- isso não mudou.
+O que mudou é que o processo de correção criou um problema novo, de natureza diferente do antigo:
+antes havia uma frase desalinhada do repositório; agora há dois repositórios parcialmente corrigidos
+e nenhum critério registrado de qual deles é o artigo. É uma falha de processo de entrega, não de
+método de pesquisa, e tem conserto barato --- mas, enquanto não for resolvida, reabre exatamente o
+tipo de achado que bloqueia defesa: uma afirmação central do texto (``o repositório não versiona uma
+rede treinada'') que é falsa na branch que está fisicamente aberta e pronta para ser mostrada à banca.
+
+\section*{B. Nota geral}
+
+\textbf{Nota ponderada: $\approx 7{,}70\,/\,10$} \quad (pareceres anteriores: $6{,}33$, $6{,}20$ e
+$7{,}9$).
+
+\textit{A nota caiu 0,2 em relação à 3ª revisão, não porque algo piorou no método, mas porque o
+crédito que a 3ª revisão deu a Reprodutibilidade (de 6,0 para 7,0) foi condicionado à correção estar
+``conferida em \texttt{origin/main}'' --- o que era verdade e continua sendo, mas revelou-se
+insuficiente, porque \texttt{origin/main} não é o estado do repositório que a branch de trabalho
+mostra. Reprodutibilidade volta a 5,5: mais baixa que antes da correção (6,0), porque o problema de
+hoje é mais grave que o original --- não é mais ``uma frase errada'', é ``duas branches, cada uma
+certa a seu próprio modo e nenhuma delas completa''. Os outros cinco critérios não mudam: nenhum dos
+oito achados persistentes (D.2, D.4, D.6--D.10) foi afetado por esta rodada.}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{|p{4.1cm}|p{1.1cm}|p{1.1cm}|p{1.4cm}|p{6.6cm}|}
+\hline
+\textbf{Critério} & \textbf{Peso} & \textbf{Nota} & \textbf{Contrib.} & \textbf{Justificativa (resumo)} \\
+\hline
+\endhead
+Fundamentação teórica & 20\% & 8,0 & 1,600 &
+Inalterada. As 21 referências e a disciplina de amarrar cada uma a uma decisão de projeto persistem
+na branch auditada (\texttt{banco-dados}); nada nesta rodada afeta este critério. \\
+\hline
+Metodologia & 20\% & 8,0 & 1,600 &
+Inalterada. Seeds reservadas, protocolo de cinco execuções, Wilcoxon pareado: tudo conferido na 3ª
+revisão e não reafetado. Ainda puxada por D.2 (população ``padrão'' já não é 60) e D.7 (teto de
+alvos por quadrante inexistente), ambos persistentes e reconferidos nesta rodada. \\
+\hline
+Resultados e análise & 25\% & 7,5 & 1,875 &
+Inalterada. A Tabela 1 continua reproduzindo exatamente; D.5 (Tabela 2 sem artefato) e D.6 (recompensa
+por abate não é fixa em 10) persistem sem mudança. \\
+\hline
+Redação e estrutura & 15\% & 8,5 & 1,275 &
+Inalterada quanto ao conteúdo da branch auditada. O \texttt{.log} de 27/11 14:25 (branch
+\texttt{banco-dados}) não cobre o estado de \texttt{main} e por isso não foi usado para julgar a
+versão corrigida; a aritmética de D.4 persiste. \\
+\hline
+Contribuição e originalidade & 10\% & 8,0 & 0,800 &
+Inalterada. O resultado negativo continua declarado no Resumo, no Abstract e na Conclusão da branch
+auditada; nenhuma mudança de conteúdo nesta rodada. \\
+\hline
+Reprodutibilidade & 10\% & 5,5 & 0,550 &
+\textbf{Desce de 7,0.} A correção de D.1 existe, mas em \texttt{main}, branch que não está
+fisicamente aberta nem é ancestral/descendente de \texttt{banco-dados}. Na branch auditada, o genoma
+continua versionado e embutido, e a frase continua falsa --- o achado crítico original está
+\textbf{integralmente reaberto}. Mais grave que a nota de 6,0 anterior à 3ª revisão, porque agora há
+também confusão de qual branch representa o trabalho a ser defendido. \\
+\hline
+\multicolumn{3}{|r|}{\textbf{TOTAL}} & \textbf{7,70} & \\
+\hline
+\end{longtable}
+
+\subsection*{Por que a nota caiu, apesar de o método não ter mudado}
+
+Porque a gravidade de um achado é definida pelo impacto na conclusão lida pela banca no exemplar que
+tem na mão, não pela existência de uma correção em algum lugar do histórico git. Se a banca abrir
+\texttt{banco-dados} --- o que ela fará, porque é a branch que está aberta --- vai ler exatamente a
+mesma frase falsa que a 1ª revisão apontou há três rodadas. A correção feita em \texttt{main} é real,
+está bem feita e usa a redação certa; ela só não chega a quem vai ler o artigo entregue, a menos que
+alguém funda as duas branches antes da defesa.
+
+\section*{C. Evolução desde o parecer anterior}
+
+\subsection*{C.1 Corrigido ou materialmente melhorado}
+
+Nenhum item. As duas correções relatadas para esta rodada (remoção dos genes do versionamento;
+reescrita da frase da Seção 2.3.5) foram de fato feitas, com qualidade, e teriam resolvido D.1 por
+completo --- \textbf{mas na branch \texttt{main}}, que não é a branch auditada na 3ª revisão nem a
+que está hoje aberta neste diretório. Até que as duas branches sejam reconciliadas, nenhum problema
+pendente da 3ª revisão pode ser dado como corrigido no artigo que será efetivamente apresentado.
+
+\subsection*{C.2 Melhorias novas, não pedidas no parecer anterior}
+
+Nenhuma. A branch \texttt{banco-dados} não recebeu nenhum commit de conteúdo do artigo desde a 3ª
+revisão; o único commit novo nela é o próprio parecer anterior, que ainda está sem commit
+(\texttt{Parecer\_Banca\_TCC\_rev3.tex} e \texttt{.pdf} aparecem como \textit{untracked} no
+\texttt{git status} desta auditoria).
+
+\subsection*{C.3 Persiste, idêntico}
+
+\begin{enumerate}
+  \item \textbf{D.2} (população ``padrão do sistema'' já não é 60) --- frase idêntica, linha 235 do
+  \texttt{Artigo.tex} atual.
+  \item \textbf{D.4} (partição aritmética ``sete cadastrais e quatro de treinamento'' vs.\ tabela
+  8+3) --- idêntica, linha 522.
+  \item \textbf{D.5} (Tabela 2 sem artefato congelado: 134,17 / 119,62 / 137,35 não existem no banco
+  em uso) --- idêntica, linhas 643--644.
+  \item \textbf{D.6} (recompensa por abate descrita como 10 pontos fixos; o código soma 7 a 10) ---
+  idêntica, linha 470.
+  \item \textbf{D.7} (``cada quadrante admite até cinco alvos simultâneos''; não existe teto no
+  código) --- idêntica, linha 469.
+  \item \textbf{D.8} (``4631 oportunidades'' sem indicar que é por execução) --- idêntica, linha 607.
+  \item \textbf{D.9} (execuções reportadas a partir de uma cópia em \texttt{C:\textbackslash TEMP}) ---
+  não reconferida nesta rodada por orçamento; sem motivo para supor mudança.
+  \item \textbf{D.10} (especificações de hardware autodeclaradas) --- sem mudança.
+  \item \textbf{O problema de fundo de D.1}: genoma versionado, embutido por \texttt{Exists(...)} no
+  \texttt{.csproj}, divergente dos dez campeões relatados. \textbf{Persiste, idêntico, na branch
+  \texttt{banco-dados}} --- apesar de corrigido em \texttt{main}.
+\end{enumerate}
+
+\subsection*{C.4 Piorou ou surgiu}
+
+\begin{enumerate}
+  \item \textbf{Bifurcação não reconciliada entre \texttt{main} e \texttt{banco-dados}.} As duas
+  branches divergem desde \texttt{b0af938}; nenhuma é ancestral da outra
+  (\texttt{git merge-base --is-ancestor} falha nos dois sentidos). \texttt{main} ganhou os dois
+  commits de correção de D.1 (\texttt{0f58ccb}, \texttt{501ce86}); \texttt{banco-dados} ganhou dois
+  commits próprios (\texttt{cc11e44}, \texttt{a8a7b16 ``revisão do Gabriel no dia da entrega''}) que
+  não tocam D.1. Nenhum commit de merge posterior aparece em nenhuma das duas branches locais ou
+  remotas. \textbf{Isto é novo nesta rodada} --- não existia como achado nas revisões anteriores,
+  porque até a 3ª revisão as duas branches ainda não tinham se afastado neste ponto específico do
+  artigo.
+  \item \textbf{Consequência prática:} a correção do achado mais grave das três revisões anteriores
+  (D.1) não produz efeito na branch que parece ser a de entrega. O risco concreto é o autor acreditar
+  --- com razão, se olhar só \texttt{main} --- que o item está resolvido, e a banca real abrir
+  \texttt{banco-dados} e encontrar a frase falsa e o arquivo versionado, exatamente como na 1ª
+  revisão.
+\end{enumerate}
+
+\section*{D. Problemas}
+
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{|p{0.9cm}|p{2.6cm}|p{11.6cm}|}
+\hline
+\textbf{Item} & \textbf{Gravidade} & \textbf{Em uma linha} \\
+\hline
+\endhead
+D.1 & \critico\ (reaberto) & A correção existe só em \texttt{main}; na branch aberta
+(\texttt{banco-dados}) o genoma continua versionado/embutido e a frase continua falsa \\
+\hline
+D.2 & \alto & ``População de 60, o padrão do sistema'': o padrão hoje é 100, mudou depois do
+experimento --- persiste \\
+\hline
+D.3 & \retirado & Contagem de tabelas do banco --- argumento de escopo dos autores aceito na 3ª
+revisão; mantido retirado \\
+\hline
+D.4 & \baixo & ``Sete cadastrais e quatro de treinamento'' não bate com as 8+3 linhas da própria
+tabela --- persiste \\
+\hline
+D.5 & \alto & A Tabela 2 não é reproduzível: o banco que a originou foi sobrescrito --- persiste \\
+\hline
+D.6 & \moderado & ``10 pontos por alvo interceptado'': o código soma de 7 a 10, conforme a distância
+--- persiste \\
+\hline
+D.7 & \moderado & ``Cada quadrante admite até cinco alvos simultâneos'': não existe esse teto no
+código --- persiste \\
+\hline
+D.8 & \baixo & ``4631 oportunidades de acionamento'' é por execução, não o total --- persiste \\
+\hline
+D.9 & \baixo & As execuções reportadas partiram de uma cópia em \texttt{C:\textbackslash TEMP} ---
+não reconferido, sem indício de mudança \\
+\hline
+D.10 & \baixo & Especificações de hardware são autodeclaradas --- persiste \\
+\hline
+\end{longtable}
+
+\subsection*{D.1 \critico\ (reaberto) A correção de D.1 existe --- na branch errada}
+
+\textbf{O que foi anunciado para esta rodada.} Que \texttt{rede-controlador.net} e
+\texttt{genoma-controlador.json} foram removidos do versionamento da \texttt{main} (\texttt{git rm
+--cached}, commit \texttt{0f58ccb}) e preservados na branch \texttt{genes-treinamento}
+(\texttt{2863fc4}), com \texttt{.gitignore} atualizado; e que a frase da Seção 2.3.5 foi reescrita
+para ``a versão entregue não inclui rede treinada; um executável compilado a partir dela usa a
+heurística pura, comportamento de fábrica previsto no projeto'' (commit \texttt{501ce86}).
+
+\textbf{O que esta auditoria confirma sobre \texttt{main}.} As duas afirmações são verdadeiras.
+\texttt{git log --all} mostra os três commits, todos alcançáveis a partir de \texttt{main}:
+
+\begin{itemize}
+  \item \texttt{2863fc4 genes-treinamento: documenta branch de genes treinados do controlador}
+  \item \texttt{0f58ccb main: remove genes treinados do versionamento e ignora diretorio}
+  \item \texttt{501ce86 artigo: corrige frase sobre rede treinada nao versionada apos remocao do
+  versionamento}
+\end{itemize}
+
+\texttt{git show 501ce86 -- Artigo/Texto/Artigo.tex} confirma que a frase nova é exatamente a
+recomendada pela 3ª revisão, palavra por palavra. A redação está coerente com o estado do repositório
+\textbf{em \texttt{main}}: lá, \texttt{git ls-tree -r main} não lista nenhum arquivo em
+\texttt{Resources/ControladorTreinado/} além dos \texttt{.cs} de infraestrutura, e
+\texttt{git show main:.gitignore} tem a linha \texttt{src/RadarTorres.App/Resources/\allowbreak
+ControladorTreinado/}. Um clone de \texttt{main} compilado hoje realmente usa a heurística pura.
+\textbf{Até aqui, a correção é exemplar.}
+
+\textbf{O que esta auditoria encontra na branch de trabalho.} O repositório local está em
+\texttt{banco-dados} (\texttt{git status}: ``On branch banco-dados''), e esta é a branch cujo commit
+de ponta se chama \texttt{a8a7b16 ``revisão do Gabriel no dia da entrega''}, às 14:26 do mesmo dia ---
+\textbf{antes} dos dois commits de correção em \texttt{main} (15:03 e 15:40). Nela:
+
+\begin{enumerate}
+  \item \texttt{git ls-tree -r banco-dados --name-only} lista \texttt{genoma-controlador.json} e
+  \texttt{rede-controlador.net} normalmente, junto dos \texttt{.cs}.
+  \item \texttt{git show banco-dados:.gitignore} \textbf{não} tem a linha que exclui o diretório --- a
+  busca por ``Controlador'' ou ``genes'' no arquivo não retorna nada.
+  \item O \texttt{Artigo.tex} efetivamente no disco (a mesma branch) ainda tem, nas linhas 476--478:
+  ``O repositório não versiona uma rede treinada: um executável compilado sem treinamento prévio na
+  máquina usa a heurística pura, comportamento de fábrica previsto no projeto.'' --- idêntica à frase
+  que a 1ª, a 2ª e a 3ª revisão apontaram como falsa.
+  \item O \texttt{.csproj} nesta branch é idêntico ao de \texttt{main} no trecho relevante
+  (\texttt{git diff main banco-dados -- RadarTorres.App.csproj} não mostra diferença): ainda embute
+  \texttt{rede-controlador.net} como \texttt{EmbeddedResource} sob
+  \texttt{Condition="Exists(...)"}, e o arquivo \textbf{existe no disco} (\texttt{Test-Path} confirma
+  os dois arquivos). A condição está satisfeita.
+\end{enumerate}
+
+\textbf{Logo:} quem compila a partir de \texttt{banco-dados} hoje obtém o mesmo executável com rede
+embutida que a 1ª revisão descreveu, e o genoma embutido continua sendo o mesmo que, na 3ª revisão,
+não correspondia a nenhum dos dez campeões relatados na Tabela 1 --- essa parte da auditoria não foi
+refeita nesta rodada porque o arquivo não mudou, mas nada no repositório sustenta que ele tenha
+passado a corresponder a algum resultado reportado.
+
+\textbf{Por que isto é crítico e não apenas um detalhe de processo.} O critério desta banca é
+``a afirmação central é falsa ou não sustentada no artefato que a banca vai examinar''. A banca
+examina o que está aberto no repositório na hora da defesa. Se for \texttt{banco-dados} --- e todo
+sinal disponível aponta para isso: é a branch local, é a que tem o commit nomeado ``revisão... no dia
+da entrega'', é a que contém o conteúdo que esta própria banca já elogiou e que \texttt{main} não tem
+--- a frase é falsa e o sistema entregue executa uma rede não documentada, exatamente como nas duas
+primeiras revisões. O fato de existir uma correção impecável em outra branch não altera o que está no
+exemplar examinado, e não há, nesta auditoria, nenhuma evidência de que alguém tenha decidido qual
+branch é a oficial.
+
+\textbf{O que não é achado aqui.} Não é acusação de má-fé nem de trabalho perdido: a correção em
+\texttt{main} está correta e bem escrita, e o \texttt{README} da branch \texttt{genes-treinamento}
+(não reconferido nesta rodada, sem indício de mudança desde a 3ª revisão) continua documentando uma
+prática legítima. O achado é específico: \textbf{falta reconciliar as duas branches antes da defesa},
+e isso é trabalho de minutos, não de reexperimento.
+
+\textbf{Correção.} Decidir qual branch será apresentada e, se for \texttt{banco-dados} (ou qualquer
+outra que não seja \texttt{main}), fazer merge ou cherry-pick dos commits \texttt{0f58ccb} e
+\texttt{501ce86} nela, conferindo depois que \texttt{git ls-tree} não lista mais os dois arquivos e
+que a Seção 2.3.5 tem a frase nova. Se a intenção for o contrário --- consolidar tudo em
+\texttt{main} ---, então os commits exclusivos de \texttt{banco-dados} (explicação da tanh, dívida
+técnica dos ciclos de dependência, item (vii), \texttt{cc11e44}, \texttt{a8a7b16}) precisam ser
+trazidos para lá, porque hoje \texttt{main} não os tem. De um jeito ou de outro, o estado final
+precisa ser uma única branch com as duas coisas.
+
+\subsection*{D.2 \alto\ ``Parâmetros padrão do sistema (população de 60)'' já não são os padrões do
+sistema --- persiste}
+
+Reconferido nesta rodada contra o \texttt{Artigo.tex} em disco (linha 235): a frase é idêntica à da
+3ª revisão. Não houve alteração de código nesta janela que mude o veredicto. Mantido o diagnóstico e a
+correção da 3ª revisão: citar os valores do JSON do experimento (população 60, 10 espécies) em vez de
+delegar ao ``padrão do sistema'', que no código é hoje 100.
+
+\subsection*{D.3 \retirado\ Contagem de tabelas do banco de dados}
+
+Mantido retirado, sem reavaliação nesta rodada: o argumento de escopo dos autores, aceito na 3ª
+revisão (a Seção 2.5 documenta o núcleo do modelo de dados, não o inventário), continua válido e
+nenhum fato novo o contesta.
+
+\subsection*{D.4 \baixo\ Contagem interna inconsistente na mesma frase --- persiste}
+
+Linha 522 do \texttt{Artigo.tex} atual: ``sete cadastrais e de auditoria, e quatro que persistem o
+histórico do treinamento'' continua não batendo com as 8+3 linhas da tabela abaixo. Idêntico à 3ª
+revisão.
+
+\subsection*{D.5 \alto\ A Tabela 2 não é reproduzível a partir do banco --- persiste}
+
+Linhas 643--644: \textit{fitness} médio 9,11 $\to$ 134,17; melhor por bloco 119,62 $\to$ 137,35.
+Nenhum artefato novo foi apresentado nesta rodada para sustentar esses quatro números, e nenhuma
+mudança no banco foi relatada. O diagnóstico e a correção da 3ª revisão (exportar e versionar um dump
+congelado, citá-lo na legenda) seguem valendo sem alteração.
+
+\subsection*{D.6 \moderado\ ``Soma 10 pontos por alvo interceptado'' --- persiste}
+
+Linha 470: a frase ainda descreve a recompensa como fixa. O código
+(\texttt{AmbienteTreinamento.cs:800}, não reaberto nesta rodada por falta de indício de mudança)
+soma \texttt{RecompensaAbate * (0.7 + 0.3 * bonusDistancia)}, isto é, 7 a 10 pontos. Correção
+inalterada da 3ª revisão.
+
+\subsection*{D.7 \moderado\ ``Cada quadrante admite até cinco alvos simultâneos'' --- persiste}
+
+Linha 469: frase idêntica. Sem teto por quadrante no código, pelo levantamento da 3ª revisão, não
+refeito nesta rodada por ausência de qualquer commit que toque \texttt{AmbienteTreinamento.cs}.
+
+\subsection*{D.8 \baixo\ ``4631 oportunidades de acionamento'' --- persiste}
+
+Linha 607: idêntica. Correção inalterada: acrescentar ``em cada execução''.
+
+\subsection*{D.9 \baixo\ Execuções a partir de cópia fora do repositório --- não reconferido}
+
+Não há indício de que os artefatos de resultado tenham sido regenerados nesta janela; mantido como
+estava, sem nova verificação do caminho \texttt{C:\textbackslash TEMP} nos JSONs.
+
+\subsection*{D.10 \baixo\ Hardware autodeclarado --- persiste}
+
+Sem mudança: as especificações continuam autodeclaradas e a seção de ambiente computacional não foi
+tocada nesta janela.
+
+\section*{E. Auditoria de dados e tabelas}
+
+\begin{longtable}{|p{3.6cm}|p{6.6cm}|p{4.4cm}|}
+\hline
+\textbf{Elemento} & \textbf{O que foi conferido} & \textbf{Veredicto} \\
+\hline
+\endhead
+Commits \texttt{2863fc4}, \texttt{0f58ccb} (remoção dos genes do versionamento de \texttt{main}) &
+\texttt{git log --all}, \texttt{git show}, \texttt{git ls-tree -r main}, \texttt{git show
+main:.gitignore} & \textbf{Confere em \texttt{main}} --- diretório não tem arquivo versionado,
+\texttt{.gitignore} cobre o caminho \\
+\hline
+Commit \texttt{501ce86} (reescrita da frase da Seção 2.3.5) & \texttt{git show 501ce86 --
+Artigo/Texto/Artigo.tex}: diff compara frase antiga e nova & \textbf{Confere em \texttt{main}} ---
+redação idêntica à recomendada na 3ª revisão \\
+\hline
+Estado de \texttt{banco-dados} (branch de trabalho, commit de ponta \texttt{a8a7b16}) &
+\texttt{git ls-tree -r banco-dados}, \texttt{git show banco-dados:.gitignore}, grep no
+\texttt{Artigo.tex} em disco, \texttt{git diff main banco-dados -- *.csproj}, \texttt{Test-Path} dos
+dois arquivos & \textbf{Correção ausente} --- genoma versionado e embutido, frase antiga, arquivos
+presentes no disco \\
+\hline
+Relação entre \texttt{main} e \texttt{banco-dados} & \texttt{git merge-base}, \texttt{git
+merge-base --is-ancestor} (nos dois sentidos), \texttt{git log main..banco-dados},
+\texttt{git log banco-dados..main} & \textbf{Divergem sem reconciliação} --- 2 commits exclusivos de
+cada lado desde \texttt{b0af938} \\
+\hline
+Tabela 1 --- comparação pareada & Não reaberta nesta rodada; nenhum artefato ou linha de código que a
+produz foi tocado desde a 3ª revisão & \textbf{Sem indício de mudança} --- mantido o veredicto da 3ª
+revisão (confere exatamente) \\
+\hline
+Tabela 2 --- certeza estática & Linhas 643--644 do \texttt{Artigo.tex} reconferidas; banco não
+reaberto nesta rodada por ausência de indício de atualização & \textbf{Não reproduz} --- mantido (ver
+D.5) \\
+\hline
+Genoma de produção (branch \texttt{banco-dados}) & Arquivo presente no disco e rastreado pelo git;
+conteúdo não recomparado byte a byte nesta rodada por não ter havido alteração desde a 3ª revisão &
+\textbf{Mesma divergência da 3ª revisão, agora outra vez relevante} --- não corresponde a nenhum dos
+dez campeões relatados (ver D.1) \\
+\hline
+Conteúdo exclusivo de \texttt{banco-dados} (tanh, dívida técnica, item vii) & \texttt{git diff
+banco-dados main -- Artigo/Texto/Artigo.tex} & \textbf{Ausente em \texttt{main}} --- confirma que
+nenhuma das duas branches contém a versão completa do artigo \\
+\hline
+\end{longtable}
+
+\section*{F. Referências}
+
+Nenhuma referência foi adicionada, removida ou reconferida nesta rodada. O julgamento da 3ª revisão
+permanece válido para a branch auditada: 21 referências, disciplina de amarrar cada uma a uma decisão
+de projeto preservada, lacuna do modelo de ruído ultrassônico ainda sem fonte e declarada como tal.
+\textbf{Não verificadas nesta rodada}: todas as 21 --- duas foram verificadas na 1ª revisão; as
+demais seguem não verificadas, o que não é o mesmo que corretas.
+
+\section*{G. Pontos fortes}
+
+\begin{enumerate}
+  \item \textbf{A correção de D.1, onde foi aplicada, está correta.} Commits \texttt{2863fc4} e
+  \texttt{0f58ccb} seguem exatamente o caminho recomendado --- \texttt{git rm --cached} preservando o
+  arquivo em disco e numa branch dedicada, com \texttt{.gitignore} e, pelo relato, \texttt{README} de
+  propósito --- e o commit \texttt{501ce86} usa a redação exata que a revisão anterior sugeriu, sem
+  tentar diluir a afirmação.
+  \item \textbf{A tabela central de resultados continua intocada e, até onde esta rodada verificou,
+  reproduzível} --- nenhum achado novo a afeta.
+  \item \textbf{O resultado negativo permanece declarado no Resumo, Abstract e Conclusão}, sem
+  indício de reversão nesta janela.
+  \item \textbf{Os oito achados persistentes são todos de correção barata e nenhum exige
+  reexperimento} --- o perfil de pendências continua favorável a uma defesa bem-sucedida, uma vez
+  resolvida a questão de branch.
+\end{enumerate}
+
+\section*{H. Nota final}
+
+\begin{center}
+\Large\textbf{7,7 / 10} \quad\normalsize (pareceres anteriores: 6,33; 6,20; 7,9)
+\end{center}
+
+A nota caiu 0,2 em relação à 3ª revisão porque o crédito dado então a Reprodutibilidade dependia de a
+correção de D.1 estar refletida na branch que a banca vai examinar, e esta rodada encontra que não
+está. Resolvida a reconciliação de branches --- sem precisar de nenhum experimento novo --- e
+mantidas as demais sete pendências pelo preço que a 3ª revisão já estimou, este artigo volta à faixa
+de 8,3--8,5 que a revisão anterior projetou. A distância entre a nota atual e essa faixa não é
+método, não é relevância, e não é nem mais a redação de uma frase: é decidir, de forma auditável, qual
+branch é o artigo.
+
+\section*{I. Pendências prioritárias}
+
+\subsection*{Bloqueiam a defesa}
+
+\begin{enumerate}
+  \item Decidir qual branch será apresentada à banca e levar a ela tanto a correção de D.1
+  (\texttt{0f58ccb} + \texttt{501ce86}, hoje só em \texttt{main}) quanto o conteúdo que só existe em
+  \texttt{banco-dados} (explicação da tanh, dívida técnica dos ciclos de dependência, item vii).
+  Verificar ao final, na branch escolhida: \texttt{git ls-tree -r <branch> --name-only | findstr
+  Controlador} não deve listar \texttt{.net} nem \texttt{.json}, e a Seção 2.3.5 deve conter ``a
+  versão entregue não inclui rede treinada''. \emph{(D.1 --- é um merge ou cherry-pick de dois
+  commits pequenos; nenhum reexperimento.)}
+  \item Exportar e versionar um dump congelado com as linhas que produziram a Tabela 2 e citá-lo na
+  legenda; se o artefato não for recuperável, declarar isso. \emph{(D.5 --- sem alteração desde a 3ª
+  revisão; continua a única afirmação numérica do artigo sem fonte conferível.)}
+\end{enumerate}
+
+\subsection*{Alto impacto, esforço baixo}
+
+\begin{enumerate}\setcounter{enumi}{2}
+  \item Substituir ``os parâmetros padrão do sistema (população de 60...)'' pelos valores fixos do
+  JSON do experimento. \emph{(D.2)}
+  \item Trocar ``soma 10 pontos por alvo interceptado'' por ``até 10 pontos (7 a 10, conforme a
+  distância)''. \emph{(D.6)}
+  \item Remover ``cada quadrante admite até cinco alvos simultâneos'' ou implementar o teto e
+  reexecutar. \emph{(D.7)}
+\end{enumerate}
+
+\subsection*{Correções de texto}
+
+\begin{enumerate}\setcounter{enumi}{5}
+  \item Corrigir a partição ``sete cadastrais e quatro de treinamento'' para bater com as linhas da
+  própria tabela (8+3). \emph{(D.4)}
+  \item Acrescentar ``em cada execução'' às 4631 oportunidades de acionamento. \emph{(D.8)}
+  \item Dizer, na seção de ambiente computacional, que as execuções reportadas partiram de uma cópia
+  do projeto fora do repositório. \emph{(D.9)}
+  \item Dizer que as especificações de hardware foram coletadas na própria máquina de execução.
+  \emph{(D.10)}
+\end{enumerate}
+
+\section*{J. Escopo e limitações desta auditoria}
+
+Nenhum arquivo do projeto foi alterado pela banca na produção deste parecer. Todos os comandos usados
+para esta rodada foram de leitura: \texttt{git log}, \texttt{git show}, \texttt{git diff}, \texttt{git
+ls-tree}, \texttt{git branch}, \texttt{git merge-base}, \texttt{git status}, grep no \texttt{.tex} em
+disco e \texttt{Test-Path} nos dois arquivos de rede. Nenhum deles escreve no repositório. Nenhuma
+migração ou experimento foi executado.
+
+Esta rodada \textbf{não} refez a reprodução completa da Tabela 1 nem a varredura de referências feita
+na 3ª revisão; reconferiu apenas os oito achados persistentes contra o texto em disco (comparação
+textual direta, não recálculo numérico) e investigou a fundo apenas D.1, por ser o objeto declarado
+desta rodada. Os achados D.2, D.4, D.6--D.10 foram validados por grep de linha, não por reexecução de
+script ou reabertura de banco --- coerente com o fato de nenhum commit nesta janela ter tocado o
+código ou os dados que os sustentam.
+
+\textbf{Não verificado nesta rodada:}
+
+\begin{itemize}
+  \item \textbf{O README da branch \texttt{genes-treinamento}} que a 3ª revisão descreveu; não foi
+  reaberto, por ausência de qualquer commit novo nessa branch.
+  \item \textbf{Recomparação byte a byte do genoma em disco} contra os dez campeões relatados; mantém-se
+  o veredicto da 3ª revisão (não corresponde a nenhum) porque o arquivo não mudou, mas não foi refeita.
+  \item \textbf{As fontes bibliográficas.} Seguem não verificadas, à exceção das duas confirmadas na
+  1ª revisão.
+  \item \textbf{A origem dos números da Tabela 2}, o módulo de visão computacional (declarado não
+  avaliado pelo próprio artigo) e o firmware do Arduino.
+  \item \textbf{Qual branch será efetivamente apresentada na defesa.} Esta é uma decisão dos autores,
+  não algo que o repositório permita inferir com certeza --- a inferência de que \texttt{banco-dados}
+  é a branch de entrega se apoia no nome do último commit e no fato de ser a branch localmente
+  ativa, não em nenhuma declaração explícita no projeto.
+\end{itemize}
+
+\textbf{Artefatos consultados nesta rodada:} \texttt{Artigo/Texto/Artigo.tex} (em disco, branch
+\texttt{banco-dados}); histórico git completo (\texttt{git log --all}, \texttt{--oneline}, com datas);
+\texttt{git show} dos commits \texttt{2863fc4}, \texttt{0f58ccb}, \texttt{501ce86}, \texttt{a8a7b16};
+\texttt{git ls-tree -r} de \texttt{main} e \texttt{banco-dados}; \texttt{.gitignore} de ambas as
+branches; \texttt{git diff main banco-dados} sobre \texttt{Artigo.tex} e
+\texttt{RadarTorres.App.csproj}; \texttt{src/RadarTorres.App/RadarTorres.App.csproj};
+\texttt{src/RadarTorres.App/Resources/ControladorTreinado/\{rede-controlador.net,
+genoma-controlador.json\}} (existência em disco); \texttt{Artigo/Revisoes/Parecer\_Banca\_TCC\_rev3.tex}
+(parecer anterior, íntegro).
+
+\end{document}

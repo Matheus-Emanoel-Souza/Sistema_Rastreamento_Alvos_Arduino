@@ -1,0 +1,594 @@
+% ============================================================
+% Parecer da banca Banca_TCC sobre Artigo.tex (RadarTorres)
+% Gerado pelo agente banca-tcc (.claude/agents/banca-tcc.md).
+% Não editar à mão sem regenerar a partir de uma nova análise.
+% Compile com pdfLaTeX.
+%
+% QUINTA revisão. As anteriores (27/10, nota 6,33; segunda revisão, nota 6,20;
+% terceira revisão, nota 7,9; quarta revisão, nota 7,7) estão em
+% Parecer_Banca_TCC.tex, Parecer_Banca_TCC_rev3.tex e Parecer_Banca_TCC_rev4.tex
+% e permanecem intactas. Esta verifica a reconciliação das branches main e
+% banco-dados (achado C.4 da 4ª revisão) e as reescritas de D.2 e D.5.
+% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{url}
+
+\title{\textbf{Parecer da Banca Examinadora --- TCC ``RadarTorres''}\\[0.3em]
+\large Quinta revisão --- gerado pelo agente \texttt{banca-tcc}}
+\author{}
+\date{Análise referente a \texttt{Artigo.tex}/\texttt{Artigo.pdf} (RadarTorres, TCC de Engenharia da
+Computação, UCL)\\[0.3em]
+Auditado contra o código-fonte, os artefatos em JSON e o histórico git, agora com \texttt{main} e
+\texttt{banco-dados} reconciliadas num único commit}
+
+\newcommand{\critico}{\textbf{\color{red!60!black}[CRÍTICO]}}
+\newcommand{\alto}{\textbf{\color{orange!70!black}[ALTO]}}
+\newcommand{\moderado}{\textbf{\color{blue!50!black}[MODERADO]}}
+\newcommand{\baixo}{\textbf{\color{gray}[BAIXO]}}
+\newcommand{\retirado}{\textbf{[RETIRADO]}}
+\newcommand{\resolvido}{\textbf{\color{green!40!black}[RESOLVIDO]}}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+% QUADRO-RESUMO
+% ============================================================
+\begin{center}
+\fcolorbox{black}{gray!8}{%
+\begin{minipage}{0.93\textwidth}
+\vspace{0.4em}
+\begin{center}
+{\Large\textbf{Nota: 8,0 / 10}}\\[0.2em]
+{\small pareceres anteriores: 6,33 (1ª) \quad$\cdot$\quad 6,20 (2ª) \quad$\cdot$\quad 7,9 (3ª)
+\quad$\cdot$\quad 7,7 (4ª)}
+\end{center}
+\vspace{0.3em}
+\hrule
+\vspace{0.6em}
+\textbf{Veredicto.} O achado que bloqueava a defesa na 4ª revisão --- bifurcação não reconciliada
+entre \texttt{main} e \texttt{banco-dados}, deixando a correção do achado crítico original (D.1) numa
+branch que não era a aberta --- está \textbf{resolvido}: as duas branches hoje apontam para o mesmo
+commit (\texttt{5ef8f91}), e a frase corrigida sobre a rede não versionada está na branch fisicamente
+aberta. D.5 (Tabela de certeza estática) recebeu a resposta correta para um artefato irrecuperável:
+declarar o limite na legenda, em vez de inventar um dump. D.2 foi parcialmente corrigido --- a
+substituição dos valores pelo parâmetro do experimento está certa, mas a frase nova inverte a ordem
+cronológica real entre a elevação dos padrões e a data do experimento, o que é um achado novo, de
+gravidade baixa.
+
+\vspace{0.5em}
+\textbf{Achados:} 0 críticos abertos \quad$\cdot$\quad 0 altos abertos \quad$\cdot$\quad 1 crítico
+resolvido \quad$\cdot$\quad 2 altos resolvidos/rebaixados \quad$\cdot$\quad 3 moderados
+\quad$\cdot$\quad 5 baixos \quad$\cdot$\quad 1 retirado
+\vspace{0.6em}
+\end{minipage}}
+\end{center}
+
+\vspace{0.8em}
+
+\textit{Como ler este parecer:} a Seção A resume; a B justifica a nota critério por critério; a C
+compara com o parecer anterior; a D lista os problemas, cada um com gravidade no título; a E mostra o
+que foi conferido contra o código e os dados, com veredicto por item; a I traz as pendências em
+ordem de prioridade; a J diz o que \emph{não} foi verificado. Quem tem pouco tempo: leia A, H e I.
+
+\vspace{0.5em}
+
+\section*{A. Síntese}
+
+Esta rodada foi aberta para verificar três mudanças relatadas desde a 4ª revisão: a reconciliação das
+branches \texttt{main} e \texttt{banco-dados}; a reescrita de D.2 (parâmetros de população/espécies);
+e a resposta a D.5 (Tabela de certeza estática). As três foram conferidas contra o repositório tal
+como está hoje, não contra o relato dos autores.
+
+\textbf{Branches.} \texttt{git merge-base --is-ancestor main banco-dados} e o comando inverso
+retornam sucesso nos dois sentidos, e \texttt{git rev-parse main banco-dados} mostra o mesmo hash
+(\texttt{5ef8f91c43ed5661e0748e613b2e4d02f3245bf1}) para as duas. Não há mais bifurcação: existe uma
+única história, e os commits \texttt{0f58ccb} (remove os genes do versionamento) e \texttt{501ce86}
+(reescreve a frase da Seção 2.3.5) estão nela. \texttt{git ls-tree -r HEAD --name-only} não lista mais
+\texttt{genoma-controlador.json} nem \texttt{rede-controlador.net}; o \texttt{.gitignore} tem a linha
+que os exclui; e o texto em disco, na linha 478--480, diz agora ``a versão entregue não inclui rede
+treinada; um executável compilado a partir dela usa a heurística pura, comportamento de fábrica
+previsto no projeto'' --- a frase exata que a 3ª e a 4ª revisão recomendaram. O \texttt{.csproj} ganhou
+também um comentário explicando a condição \texttt{Exists(...)}, coerente com o que está no disco.
+\textbf{D.1 está resolvido.} Os dois arquivos de rede ainda existem fisicamente no disco desta máquina
+(resíduo de execuções locais do treinamento), mas não estão rastreados pelo git nem seriam trazidos por
+um clone limpo --- o que é exatamente o comportamento que a correção promete.
+
+\textbf{D.2.} A linha 235 hoje diz: ``parâmetros do experimento (população de 60, 10 espécies, 1000
+gerações, 12 episódios por avaliação; os padrões atuais de população e espécies do sistema foram
+elevados depois deste experimento)''. A substituição de ``padrão do sistema'' por ``parâmetros do
+experimento'' é a correção certa, e o valor de população (60) confere com o artefato que gerou a
+Tabela~1 (\texttt{tools/RadarTorres.Experimentos/Resultados/comparacao\_pareada.json},
+\texttt{Protocolo.TamanhoPopulacao = 60}). Mas a parte entre parênteses --- ``foram elevados depois
+deste experimento'' --- não confere com o histórico git: o commit que elevou população (60→100) e
+espécies (6→10), \texttt{c69e4f1}/\texttt{bf5fe32}, é de \textbf{7 de novembro}; o JSON do experimento
+traz \texttt{"Data": "2026-11-09 12:56"}, dois dias \textbf{depois}. Os padrões não foram elevados
+depois deste experimento: foram elevados antes, e o experimento usou população 60 porque o código que
+o gerou (\texttt{Program.cs}, linha 429) fixa esse valor explicitamente em vez de herdar o padrão da
+classe --- já então 100 --- enquanto não fixa \texttt{QuantidadeEspecies}, que por isso herdou o
+padrão já elevado (10) no momento em que o experimento rodou. É um achado novo, pequeno e sem efeito
+sobre a conclusão central, mas é uma inversão factual de cronologia introduzida por esta própria
+correção.
+
+\textbf{D.5.} A legenda da Tabela~2 (linhas 637--640) agora diz: ``O banco de dados que originou estes
+valores foi posteriormente sobrescrito por execuções seguintes; não há dump congelado para reprodução
+independente, e os números aqui são os registrados no momento da observação original.'' Esta auditoria
+procurou, nos artefatos versionados do projeto, qualquer arquivo que contivesse os quatro valores da
+tabela (9,11; 134,17; 119,62; 137,35) e não encontrou nenhum --- as únicas ocorrências de substrings
+parecidas em \texttt{comparacao\_pareada.json} e \texttt{dificuldade\_seeds\_por\_geracao.json} são
+coincidências de dígitos dentro de outros números (por exemplo, \texttt{69.117...} e
+\texttt{99.111...}), não os valores da Tabela~2. Não há indício de que um dump exista e esteja sendo
+omitido. \textbf{Esta é a resposta certa ao achado}: a seção ``O que é achado e o que não é'' deste
+mesmo método de auditoria já previa que uma afirmação sem artefato persistido é não auditável, e isso
+é limitação da auditoria, não acusação de incorreção --- desde que o texto diga isso com essas
+palavras, o que agora faz. D.5 deixa de ser um problema de honestidade e passa a ser apenas uma
+limitação declarada de reprodutibilidade, que é precisamente o que a 3ª e a 4ª revisão pediam como
+alternativa caso o dump não fosse recuperável.
+
+Os demais achados persistentes da 4ª revisão (D.4, D.6, D.7, D.8, D.9, D.10) foram reconferidos contra
+o \texttt{Artigo.tex} e o código em disco hoje e continuam \textbf{idênticos}. Nenhum piorou, nenhum
+foi corrigido. A Tabela~1, a tabela central de resultados, não foi tocada por nada desta rodada.
+
+\textbf{Saldo.} O problema de processo que bloqueava a defesa --- duas branches, cada uma com a metade
+certa do artigo --- está encerrado, e de forma auditável: um único commit, uma única história. A
+resposta a D.5 é o tipo de honestidade que esta banca pede e raramente recebe sem insistência. O preço
+de D.2 é pequeno: uma frase que tentou dar contexto histórico ao leitor acertou o quê mas errou o
+quando. Nenhum dos três pontos desta rodada muda a conclusão central do trabalho, que continua sendo a
+mesma desde a 1ª revisão: o controlador híbrido não superou a heurística pura no cenário testado, e o
+texto declara isso no Resumo, no Abstract e na Conclusão.
+
+\section*{B. Nota geral}
+
+\textbf{Nota ponderada: $\approx 8{,}0\,/\,10$} \quad (pareceres anteriores: $6{,}33$; $6{,}20$; $7{,}9$;
+$7{,}7$).
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{|p{4.1cm}|p{1.1cm}|p{1.1cm}|p{1.4cm}|p{6.6cm}|}
+\hline
+\textbf{Critério} & \textbf{Peso} & \textbf{Nota} & \textbf{Contrib.} & \textbf{Justificativa (resumo)} \\
+\hline
+\endhead
+Fundamentação teórica & 20\% & 8,0 & 1,600 &
+Inalterada. Nada nesta rodada toca referências ou fundamentação. \\
+\hline
+Metodologia & 20\% & 8,3 & 1,660 &
+\textbf{Sobe de 8,0.} D.2 estava puxando este critério por citar um ``padrão do sistema'' que não
+existe mais; a correção resolve isso. Fica abaixo de 8,5 porque a própria correção introduz um erro
+de cronologia novo (ver D.2 revisado) e porque D.7 (teto de alvos por quadrante inexistente no
+código) persiste. \\
+\hline
+Resultados e análise & 25\% & 7,8 & 1,950 &
+\textbf{Sobe de 7,5.} A Tabela~1 continua reproduzindo exatamente. D.5 deixa de ser uma afirmação
+numérica sem fonte e passa a ser uma limitação declarada com honestidade --- not o mesmo que um
+artefato recuperado, mas uma melhoria real de rigor. D.6 (recompensa por abate não é fixa em 10)
+persiste e segue puxando a nota para baixo. \\
+\hline
+Redação e estrutura & 15\% & 8,5 & 1,275 &
+Inalterada. D.4 (aritmética 7+4 vs.\ 8+3 na Seção de modelo de dados) persiste, idêntica à 4ª
+revisão. \\
+\hline
+Contribuição e originalidade & 10\% & 8,0 & 0,800 &
+Inalterada. O resultado negativo permanece declarado no Resumo, no Abstract e na Conclusão. \\
+\hline
+Reprodutibilidade & 10\% & 7,5 & 0,750 &
+\textbf{Sobe de 5,5.} D.1 está resolvido numa única branch auditável, o que é mais do que a 3ª
+revisão tinha quando deu 7,0 a este critério (ali a correção só existia em \texttt{origin/main}, sem
+confirmação de que alcançaria a branch de entrega). Não chega a 8,5+ porque D.5 continua sem artefato
+recuperável (agora declarado, não escondido) e D.9 (execuções fora do repositório) e D.10 (hardware
+autodeclarado) persistem sem mudança. \\
+\hline
+\multicolumn{3}{|r|}{\textbf{TOTAL}} & \textbf{8,04} & \\
+\hline
+\end{longtable}
+
+\subsection*{Por que a nota voltou a subir}
+
+Porque o mecanismo que a derrubou na 4ª revisão era especificamente processual --- a correção existia,
+mas em uma branch que a banca não examinaria. Esse mecanismo desapareceu: há uma única branch agora.
+A nota não volta à faixa de 8,3--8,5 que a 4ª revisão projetou porque esta rodada, ao verificar D.2 com
+cuidado (comparando datas de commit com a data registrada no JSON do experimento, não apenas lendo a
+frase), encontrou um erro novo que a correção introduziu. É um erro pequeno, mas rebaixa levemente
+Metodologia em relação ao que seria possível, e por isso o total fica em 8,0 em vez de 8,3+.
+
+\section*{C. Evolução desde o parecer anterior}
+
+\subsection*{C.1 Corrigido ou materialmente melhorado}
+
+\begin{enumerate}
+  \item \textbf{D.1 \resolvido} (bifurcação \texttt{main}/\texttt{banco-dados} e, por consequência, a
+  correção do genoma versionado e da frase da Seção 2.3.5). \texttt{git merge-base --is-ancestor}
+  confirma ancestralidade nos dois sentidos; \texttt{git rev-parse} confirma hash idêntico
+  (\texttt{5ef8f91}). A correção que a 1ª, 2ª e 3ª revisões pediram e que a 4ª encontrou isolada na
+  branch errada está, agora, na única branch que existe.
+  \item \textbf{D.5} (Tabela de certeza estática). A legenda agora declara que o banco de origem foi
+  sobrescrito e que não há dump para reprodução independente. Esta auditoria não encontrou nenhum
+  artefato versionado com os quatro valores da tabela, o que é consistente com a declaração. É a
+  resposta correta a um artefato realmente perdido: declarar o limite, não fabricar o dado.
+\end{enumerate}
+
+\subsection*{C.2 Melhorias novas, não pedidas no parecer anterior}
+
+Nenhuma. As três mudanças desta rodada respondem exatamente às três pendências que a 4ª revisão listou
+como bloqueantes ou de alto impacto (reconciliação de branches, D.2, D.5); nenhum conteúdo novo além
+disso foi encontrado no commit \texttt{5ef8f91}.
+
+\subsection*{C.3 Persiste, idêntico}
+
+\begin{enumerate}
+  \item \textbf{D.4} (``sete cadastrais e quatro de treinamento'' vs.\ tabela com 8+3 linhas) ---
+  idêntica, linha 524.
+  \item \textbf{D.6} (recompensa por abate descrita como 10 pontos fixos; o código soma de 7 a 10) ---
+  idêntica, linha 472.
+  \item \textbf{D.7} (``cada quadrante admite até cinco alvos simultâneos''; sem teto no código) ---
+  idêntica, linha 471.
+  \item \textbf{D.8} (``4631 oportunidades de acionamento'' sem indicar que é por execução) ---
+  idêntica, linha 609.
+  \item \textbf{D.9} (execuções reportadas a partir de cópia em \texttt{C:\textbackslash TEMP}) --- não
+  reconferido nesta rodada por ausência de indício de mudança.
+  \item \textbf{D.10} (hardware autodeclarado) --- sem mudança.
+\end{enumerate}
+
+\subsection*{C.4 Piorou ou surgiu}
+
+\begin{enumerate}
+  \item \textbf{D.2 (revisado), cronologia invertida.} A nova frase da linha 235--237 diz que os
+  padrões de população e espécies ``foram elevados depois deste experimento''. O commit que os elevou
+  (\texttt{c69e4f1}/\texttt{bf5fe32}) é de 7 de novembro; a data registrada no JSON do experimento
+  (\texttt{comparacao\_pareada.json}, campo \texttt{Protocolo.Data}) é 9 de novembro. A elevação
+  aconteceu \textbf{antes} do experimento, não depois. É um achado novo, introduzido por esta própria
+  correção, de gravidade baixa porque não afeta nenhuma conclusão do trabalho --- afeta apenas a
+  precisão de uma frase de contexto histórico que o próprio texto optou por incluir.
+\end{enumerate}
+
+\section*{D. Problemas}
+
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{|p{0.9cm}|p{2.6cm}|p{11.6cm}|}
+\hline
+\textbf{Item} & \textbf{Gravidade} & \textbf{Em uma linha} \\
+\hline
+\endhead
+D.1 & \resolvido & Branches reconciliadas num único commit; genoma fora do versionamento e frase da
+Seção 2.3.5 corrigida na branch aberta \\
+\hline
+D.2 & \baixo\ (revisado) & Valores agora corretos (parâmetros do experimento), mas a frase nova
+inverte a cronologia real da elevação dos padrões \\
+\hline
+D.3 & \retirado & Contagem de tabelas do banco --- argumento de escopo aceito na 3ª revisão; mantido \\
+\hline
+D.4 & \baixo & ``Sete cadastrais e quatro de treinamento'' não bate com as 8+3 linhas da própria
+tabela --- persiste \\
+\hline
+D.5 & \baixo\ (declarado) & Tabela de certeza estática sem artefato recuperável, agora dito
+explicitamente na legenda --- limitação honesta, não mais omissão \\
+\hline
+D.6 & \moderado & ``10 pontos por alvo interceptado'': o código soma de 7 a 10, conforme a distância
+--- persiste \\
+\hline
+D.7 & \moderado & ``Cada quadrante admite até cinco alvos simultâneos'': não existe esse teto no
+código --- persiste \\
+\hline
+D.8 & \baixo & ``4631 oportunidades de acionamento'' é por execução, não o total --- persiste \\
+\hline
+D.9 & \baixo & Execuções reportadas a partir de cópia em \texttt{C:\textbackslash TEMP} --- não
+reconferido, sem indício de mudança \\
+\hline
+D.10 & \baixo & Especificações de hardware são autodeclaradas --- persiste \\
+\hline
+\end{longtable}
+
+\subsection*{D.1 \resolvido\ Branches reconciliadas; correção presente na branch aberta}
+
+\textbf{O que foi anunciado para esta rodada.} Que \texttt{main} e \texttt{banco-dados} foram
+reconciliadas por \textit{fast-forward} de \texttt{main} até \texttt{banco-dados}, levando os commits
+\texttt{0f58ccb} e \texttt{501ce86} para a branch que está fisicamente aberta.
+
+\textbf{O que esta auditoria confirma.}
+\begin{itemize}
+  \item \texttt{git merge-base --is-ancestor main banco-dados} retorna sucesso (exit 0).
+  \item \texttt{git merge-base --is-ancestor banco-dados main} retorna sucesso (exit 0) --- as duas
+  condições juntas só são possíveis se as branches apontam para o mesmo commit.
+  \item \texttt{git rev-parse main banco-dados} confirma: as duas resolvem para
+  \texttt{5ef8f91c43ed5661e0748e613b2e4d02f3245bf1}.
+  \item \texttt{git branch --contains 0f58ccb} e \texttt{git branch --contains 501ce86} listam as duas
+  branches.
+  \item \texttt{git ls-tree -r HEAD --name-only} filtrado por ``Controlador'' não lista
+  \texttt{genoma-controlador.json} nem \texttt{rede-controlador.net} --- apenas código-fonte
+  (\texttt{ControladorHibrido.cs}, \texttt{ControladorTreinadoProvider.cs} e afins).
+  \item \texttt{git show HEAD:.gitignore} tem a linha
+  \texttt{src/RadarTorres.App/Resources/ControladorTreinado/}.
+  \item O \texttt{Artigo.tex} em disco, linhas 478--480, tem a frase nova: ``A versão entregue não
+  inclui rede treinada; um executável compilado a partir dela usa a heurística pura, comportamento de
+  fábrica previsto no projeto.''
+  \item O \texttt{.csproj} ganhou um comentário explicativo sobre a condição \texttt{Exists(...)},
+  coerente com o estado atual do repositório.
+\end{itemize}
+
+\textbf{Uma ressalva, não um achado.} Os dois arquivos (\texttt{genoma-controlador.json},
+\texttt{rede-controlador.net}) ainda existem fisicamente no disco desta máquina de auditoria
+(\texttt{Test-Path} retorna verdadeiro para os dois). Isso não contradiz a correção: são arquivos
+\textit{untracked}, resíduo de uma execução local de treinamento nesta máquina, cobertos pelo
+\texttt{.gitignore} e que um \texttt{git clone} limpo não traria. A frase do artigo fala do que o
+\textbf{repositório} versiona, não do que pode existir como resíduo local, e isso é exatamente o que o
+comentário novo do \texttt{.csproj} explica. Não é achado --- é o comportamento esperado de um
+\texttt{.gitignore} bem configurado, registrado aqui para que não seja mal lido como um retorno do
+problema original.
+
+\textbf{Por que isto resolve o achado crítico.} O critério desta banca é a afirmação que o exemplar
+examinado sustenta. Com uma única branch, não há mais ambiguidade sobre qual exemplar é esse, e a
+afirmação ``a versão entregue não inclui rede treinada'' é verdadeira para ele: nenhum arquivo de rede
+está rastreado, o \texttt{.gitignore} cobre o diretório, e um clone limpo compila com a heurística pura.
+
+\subsection*{D.2 \baixo\ (revisado) Valores corrigidos, cronologia invertida}
+
+\textbf{O que o texto diz agora.} Linha 235--237: ``parâmetros do experimento (população de 60, 10
+espécies, 1000 gerações, 12 episódios por avaliação; os padrões atuais de população e espécies do
+sistema foram elevados depois deste experimento)''.
+
+\textbf{O que confere.} O valor de população (60) é o mesmo registrado em
+\texttt{tools/RadarTorres.Experimentos/Resultados/comparacao\_pareada.json}
+(\texttt{Protocolo.TamanhoPopulacao: 60}), e o código-fonte atual
+(\texttt{src/RadarTorres.App/NeuralEvolution/ParametrosTreinamento.cs}, linha 217) tem
+\texttt{TamanhoPopulacao = 100} como padrão --- de fato maior que o valor do experimento. A troca de
+``padrão do sistema'' por ``parâmetros do experimento'' resolve o problema central que a 3ª e a 4ª
+revisão apontaram: o experimento não usa mais nenhum valor que o leitor confundiria com o
+comportamento padrão atual do sistema.
+
+\textbf{O que não confere.} A frase entre parênteses afirma que a elevação dos padrões aconteceu
+\textit{depois} do experimento. O histórico git mostra o contrário: o commit
+\texttt{c69e4f1}/\texttt{bf5fe32} (``Eleva ProbabilidadeAdicionarNo, QuantidadeEspecies (6 -> 10) e
+TamanhoPopulacao (60 -> 100)'') tem data de \textbf{7 de novembro de 2026, 01:33}. O JSON do
+experimento que produziu a Tabela~1 registra \texttt{"Data": "2026-11-09 12:56"} --- \textbf{dois dias
+depois} da elevação dos padrões, não antes. Isto é coerente com o próprio código do experimento
+(\texttt{tools/RadarTorres.Experimentos/Program.cs}, linhas 427--431): ele constrói
+\texttt{ParametrosTreinamento} fixando \texttt{TamanhoPopulacao = cfg.Populacao} (60, um valor
+explicitamente escolhido para o experimento, inferior ao padrão já vigente de 100) mas \textbf{não}
+fixa \texttt{QuantidadeEspecies}, que por isso herda o padrão da classe --- já elevado a 10 na data em
+que o experimento rodou. Ou seja: a população foi uma escolha deliberada do experimento, diferente do
+padrão vigente; as espécies não foram escolhidas, vieram do padrão, que já estava em 10 quando o
+experimento rodou e continua em 10 hoje --- não houve elevação alguma de espécies depois deste
+experimento, porque a elevação, para as duas variáveis, é a mesma e aconteceu antes.
+
+\textbf{Por que é achado e por que é baixo.} É achado porque é uma afirmação factual sobre o próprio
+histórico do projeto, verificável por data de commit e por data de artefato, e a frase afirma o
+oposto do que esses dois registros mostram. É baixo porque não muda nenhuma conclusão do trabalho: o
+valor de população citado continue correto, e o ponto que a frase tenta fazer --- avisar o leitor que
+os valores do experimento não são mais os padrões atuais --- permanece verdadeiro, só que pelo motivo
+errado.
+
+\textbf{Correção.} Trocar ``foram elevados depois deste experimento'' por algo como ``o padrão de
+população já havia sido elevado para 100 quando este experimento foi executado (7 de novembro) com um
+valor menor, escolhido deliberadamente; o padrão de espécies, por sua vez, já estava em 10 e não foi
+alterado desde então''. Alternativa mais simples: remover a oração causal e apenas dizer que os valores
+citados são os do experimento, não os padrões atuais, sem especular sobre a ordem cronológica.
+
+\subsection*{D.3 \retirado\ Contagem de tabelas do banco de dados}
+
+Mantido retirado, sem reavaliação nesta rodada: o argumento de escopo dos autores, aceito na 3ª
+revisão, continua válido.
+
+\subsection*{D.4 \baixo\ Contagem interna inconsistente na mesma frase --- persiste}
+
+Linha 524 do \texttt{Artigo.tex} atual: ``sete cadastrais e de auditoria, e quatro que persistem o
+histórico do treinamento'' continua não batendo com a tabela abaixo, que lista 8 linhas de cadastro e
+auditoria (Usuários, Preferências do usuário, Câmeras, Objetos detectados, Estados da ocorrência,
+Classificações do alvo, Ações realizadas, Modo atual da torre) e 3 de treinamento (Histórico de
+gerações, Marcos de \textit{fitness}, Instantâneos do melhor indivíduo). O total (onze) confere; a
+partição interna (7+4 no texto vs.\ 8+3 na tabela) não. Idêntico à 3ª e à 4ª revisão.
+
+\subsection*{D.5 \baixo\ (declarado) Tabela de certeza estática sem artefato recuperável}
+
+A legenda (linhas 637--640) agora diz: ``O \textit{fitness} registrado no histórico de treinamento
+antes e depois da correção da certeza estática (versão anterior do ambiente). O banco de dados que
+originou estes valores foi posteriormente sobrescrito por execuções seguintes; não há dump congelado
+para reprodução independente, e os números aqui são os registrados no momento da observação
+original.'' Esta auditoria buscou os quatro valores (9,11; 134,17; 119,62; 137,35) em todos os
+artefatos JSON versionados do projeto e não encontrou nenhuma ocorrência exata --- apenas coincidências
+de substring dentro de números maiores e não relacionados (\texttt{69.117...},
+\texttt{99.111...} em \texttt{comparacao\_pareada.json} e \texttt{dificuldade\_seeds\_por\_geracao.json},
+que são de outro experimento, sobre outra tabela). Isso é consistente com a declaração de que o banco
+de origem foi sobrescrito e não há dump.
+
+Esta é a resposta correta ao achado, pelo próprio critério desta banca: uma afirmação sem artefato
+persistido é não auditável, e isso é limitação, não acusação de incorreção --- \textbf{desde que o
+texto diga isso}, o que agora faz, com essas palavras. O achado deixa de ser ``número sem fonte
+apresentado como se tivesse fonte'' e passa a ser ``limitação de reprodutibilidade declarada'', que é
+uma categoria bem mais branda. Mantém-se como baixo, e não como retirado, porque a tabela continua
+sendo, objetivamente, a única afirmação numérica central do artigo que nenhum leitor pode verificar de
+forma independente --- a correção resolve o problema de honestidade, não o de reprodutibilidade em si,
+que é estrutural e sem conserto sem dado novo.
+
+\subsection*{D.6 \moderado\ ``Soma 10 pontos por alvo interceptado'' --- persiste}
+
+Linha 472: a frase ainda descreve a recompensa como fixa. O código
+(\texttt{AmbienteTreinamento.cs}, não tocado desde a 4ª revisão) soma
+\texttt{RecompensaAbate * (0.7 + 0.3 * bonusDistancia)}, isto é, 7 a 10 pontos. \texttt{git log}
+confirma que o último commit a tocar este arquivo é de 17 de novembro, antes de qualquer uma das três
+mudanças desta rodada.
+
+\subsection*{D.7 \moderado\ ``Cada quadrante admite até cinco alvos simultâneos'' --- persiste}
+
+Linha 471: frase idêntica. Sem teto por quadrante no código, pela mesma ausência de commits no arquivo
+relevante.
+
+\subsection*{D.8 \baixo\ ``4631 oportunidades de acionamento'' --- persiste}
+
+Linha 609: idêntica. Correção inalterada: acrescentar ``em cada execução''.
+
+\subsection*{D.9 \baixo\ Execuções a partir de cópia fora do repositório --- não reconferido}
+
+Sem indício de que os artefatos de resultado tenham sido regenerados nesta janela; mantido como estava.
+
+\subsection*{D.10 \baixo\ Hardware autodeclarado --- persiste}
+
+Sem mudança.
+
+\section*{E. Auditoria de dados e tabelas}
+
+\begin{longtable}{|p{3.6cm}|p{6.6cm}|p{4.4cm}|}
+\hline
+\textbf{Elemento} & \textbf{O que foi conferido} & \textbf{Veredicto} \\
+\hline
+\endhead
+Relação entre \texttt{main} e \texttt{banco-dados} & \texttt{git merge-base --is-ancestor} nos dois
+sentidos, \texttt{git rev-parse} das duas, \texttt{git branch --contains} para \texttt{0f58ccb} e
+\texttt{501ce86} & \textbf{Reconciliadas} --- mesmo commit (\texttt{5ef8f91}) \\
+\hline
+Versionamento do genoma/rede (branch atual) & \texttt{git ls-tree -r HEAD --name-only}, \texttt{git
+show HEAD:.gitignore}, grep na linha 478--480 do \texttt{Artigo.tex} em disco, \texttt{Test-Path} dos
+dois arquivos & \textbf{Confere} --- não rastreados, \texttt{.gitignore} cobre o caminho, frase nova
+presente; arquivos físicos no disco são resíduo local coberto pelo \texttt{.gitignore} \\
+\hline
+D.2 --- valor de população (60) & \texttt{comparacao\_pareada.json}
+(\texttt{Protocolo.TamanhoPopulacao}), \texttt{ParametrosTreinamento.cs} linha 217 & \textbf{Confere
+exatamente} \\
+\hline
+D.2 --- cronologia da elevação dos padrões & \texttt{git log} do commit \texttt{c69e4f1}/\texttt{bf5fe32}
+(data 2026-11-07) vs.\ \texttt{Protocolo.Data} do JSON (2026-11-09) & \textbf{Diverge} --- a elevação é
+anterior ao experimento, o texto diz o contrário (ver D.2) \\
+\hline
+D.5 --- Tabela de certeza estática (9,11 / 134,17 / 119,62 / 137,35) & Busca pelos quatro valores em
+todos os JSONs versionados do projeto & \textbf{Sem artefato de dados} --- nenhuma ocorrência exata
+encontrada, consistente com a declaração de banco sobrescrito \\
+\hline
+Tabela 1 --- comparação pareada & Não reaberta nesta rodada; nenhum commit tocou o artefato ou o
+código que a produz desde a 4ª revisão & \textbf{Sem indício de mudança} --- mantido o veredicto de
+confere exatamente \\
+\hline
+D.4 --- contagem de tabelas (7+4 vs.\ 8+3) & Contagem manual das linhas da Tabela do esquema SQLite no
+\texttt{Artigo.tex} (linhas 536--549) & \textbf{Diverge} --- total (11) confere, partição interna não
+\\
+\hline
+D.6 --- recompensa por abate & Não reaberto nesta rodada; \texttt{git log} do arquivo relevante mostra
+último commit anterior a todas as mudanças desta rodada & \textbf{Sem indício de mudança} --- persiste
+divergência relatada na 3ª/4ª revisão \\
+\hline
+\end{longtable}
+
+\section*{F. Referências}
+
+Nenhuma referência foi adicionada, removida ou reconferida nesta rodada; nenhum commit desde a 4ª
+revisão toca \texttt{referencias.bib} ou as citações no \texttt{Artigo.tex}. \textbf{Não verificadas
+nesta rodada}: todas as 21 --- duas foram verificadas na 1ª revisão; as demais seguem não verificadas,
+o que não é o mesmo que corretas.
+
+\section*{G. Pontos fortes}
+
+\begin{enumerate}
+  \item \textbf{A reconciliação de branches resolveu o problema certo, da forma mais simples
+  possível} --- \textit{fast-forward}, sem merge conflituoso, sem reescrita de histórico. É o tipo de
+  correção que esta banca pode verificar com dois comandos e confirmar sem ambiguidade.
+  \item \textbf{A resposta a D.5 é o padrão correto de honestidade diante de um dado perdido.}
+  Declarar a limitação na legenda, em vez de recriar um número ou simplesmente deixar o problema como
+  estava, é exatamente o que este método de auditoria pede e nem sempre recebe.
+  \item \textbf{A tabela central de resultados continua intocada e reproduzível} --- nenhum achado
+  desta rodada a afeta.
+  \item \textbf{O resultado negativo permanece declarado no Resumo, Abstract e Conclusão.}
+  \item \textbf{Os sete achados abertos restantes são todos de correção textual barata}, nenhum exige
+  reexperimento ou dado novo.
+\end{enumerate}
+
+\section*{H. Nota final}
+
+\begin{center}
+\Large\textbf{8,0 / 10} \quad\normalsize (pareceres anteriores: 6,33; 6,20; 7,9; 7,7)
+\end{center}
+
+A nota sobe 0,3 em relação à 4ª revisão porque o mecanismo que a derrubou --- correção presente apenas
+numa branch que não era a aberta --- não existe mais: há uma única branch, verificável por dois
+comandos de \texttt{git}. Não sobe à faixa de 8,3--8,5 que a 4ª revisão havia projetado porque a
+verificação cuidadosa de D.2 (comparando data de commit com data de artefato, não apenas lendo a nova
+frase) encontrou um erro de cronologia que a própria correção introduziu. É um erro pequeno e sem
+efeito sobre a conclusão central, mas impede a nota plena em Metodologia. Restam seis pendências de
+correção textual barata (D.4, D.6--D.10) e uma de cronologia (D.2 revisado); nenhuma exige
+reexperimento.
+
+\section*{I. Pendências prioritárias}
+
+\subsection*{Bloqueiam a defesa}
+
+Nenhuma. O único item que bloqueava a defesa na 4ª revisão (branches não reconciliadas) está resolvido.
+
+\subsection*{Alto impacto, esforço baixo}
+
+\begin{enumerate}
+  \item Corrigir a frase sobre a cronologia da elevação dos padrões de população/espécies --- dizer
+  que a elevação é anterior ao experimento (7 de novembro), não posterior, ou remover a oração causal
+  e apenas registrar que os valores citados não são mais os padrões atuais. \emph{(D.2, revisado)}
+  \item Trocar ``soma 10 pontos por alvo interceptado'' por ``até 10 pontos (7 a 10, conforme a
+  distância)''. \emph{(D.6)}
+  \item Remover ``cada quadrante admite até cinco alvos simultâneos'' ou implementar o teto e
+  reexecutar. \emph{(D.7)}
+\end{enumerate}
+
+\subsection*{Correções de texto}
+
+\begin{enumerate}\setcounter{enumi}{3}
+  \item Corrigir a partição ``sete cadastrais e quatro de treinamento'' para bater com as linhas da
+  própria tabela (8+3). \emph{(D.4)}
+  \item Acrescentar ``em cada execução'' às 4631 oportunidades de acionamento. \emph{(D.8)}
+  \item Dizer, na seção de ambiente computacional, que as execuções reportadas partiram de uma cópia
+  do projeto fora do repositório. \emph{(D.9)}
+  \item Dizer que as especificações de hardware foram coletadas na própria máquina de execução.
+  \emph{(D.10)}
+\end{enumerate}
+
+\section*{J. Escopo e limitações desta auditoria}
+
+Nenhum arquivo do projeto foi alterado pela banca na produção deste parecer. Todos os comandos usados
+foram de leitura: \texttt{git status}, \texttt{git log}, \texttt{git show}, \texttt{git ls-tree},
+\texttt{git branch}, \texttt{git merge-base} (com \texttt{--is-ancestor} nos dois sentidos),
+\texttt{git rev-parse}, grep no \texttt{.tex} e nos \texttt{.json} em disco, e \texttt{Test-Path} nos
+dois arquivos de rede. Nenhum deles escreve no repositório. Nenhuma migração, build ou experimento foi
+executado.
+
+Esta rodada \textbf{não} refez a reprodução completa da Tabela 1 nem a varredura de referências feita
+nas rodadas anteriores; reconferiu os seis achados persistentes (D.4, D.6--D.10) por grep de linha
+contra o texto em disco, não por reexecução de script, apoiada no fato de nenhum commit nesta janela
+ter tocado o código ou os dados que os sustentam. Investigou a fundo os três pontos declarados para
+esta rodada: reconciliação de branches, D.2 e D.5.
+
+O \texttt{Artigo.log} em disco é de 27/11 14:25, anterior ao commit \texttt{5ef8f91} que contém as três
+correções desta rodada; por isso \textbf{não} foi usado para avaliar \texttt{hbox}s ou referências
+cruzadas da versão atual, e o artigo não foi recompilado por esta banca para gerar um log novo
+(regra de somente leitura).
+
+\textbf{Não verificado nesta rodada:}
+
+\begin{itemize}
+  \item \textbf{Recomparação byte a byte do genoma em disco} contra os dez campeões relatados na
+  Tabela~1; não é mais relevante para D.1 (o genoma não está mais versionado), mas não foi refeita por
+  não ter sido objeto desta rodada.
+  \item \textbf{As fontes bibliográficas.} Seguem não verificadas, à exceção das duas confirmadas na
+  1ª revisão.
+  \item \textbf{Compilação do artigo} e verificação de \texttt{hbox}s/referências cruzadas na versão
+  do commit \texttt{5ef8f91} --- o \texttt{.log} disponível é anterior a essa versão.
+  \item \textbf{A origem exata dos números da Tabela~1} (confiada ao veredicto ``confere exatamente''
+  das rodadas anteriores, não recalculada nesta); o módulo de visão computacional (declarado não
+  avaliado pelo próprio artigo); e o firmware do Arduino.
+  \item \textbf{O README da branch \texttt{genes-treinamento}}, não reaberto por ausência de commit
+  novo nela.
+\end{itemize}
+
+\textbf{Artefatos consultados nesta rodada:} \texttt{Artigo/Texto/Artigo.tex} (em disco, HEAD
+\texttt{5ef8f91}); histórico git completo (\texttt{git log}, \texttt{--oneline}, com datas;
+\texttt{git log --follow -p} para \texttt{ParametrosTreinamento.cs}); \texttt{git show} dos commits
+\texttt{0f58ccb}, \texttt{501ce86}, \texttt{c69e4f1}/\texttt{bf5fe32}; \texttt{git ls-tree -r HEAD};
+\texttt{.gitignore}; \texttt{src/RadarTorres.App/RadarTorres.App.csproj};
+\texttt{src/RadarTorres.App/NeuralEvolution/ParametrosTreinamento.cs};
+\texttt{tools/RadarTorres.Experimentos/Program.cs};
+\texttt{tools/RadarTorres.Experimentos/Resultados/comparacao\_pareada.json};
+\texttt{tools/RadarTorres.Experimentos/Resultados/dificuldade\_seeds\_por\_geracao.json};
+\texttt{src/RadarTorres.App/Resources/ControladorTreinado/\{rede-controlador.net,
+genoma-controlador.json\}} (existência em disco); \texttt{Software/Banco\_de\_Dados/} (busca por
+dump/db versionado); \texttt{Artigo/Revisoes/Parecer\_Banca\_TCC\_rev4.tex} (parecer anterior, íntegro).
+
+\end{document}
