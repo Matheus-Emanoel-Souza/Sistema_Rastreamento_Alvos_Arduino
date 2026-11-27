@@ -232,9 +232,8 @@ três modos de decisão no mesmo ambiente simulado (Seção~\ref{sec:controlador
 candidatas e sem tempo mínimo de mira; os vetos de segurança permanecem). O protocolo foi:
 \begin{enumerate}\itemsep0pt
   \item treinar cinco controladores independentes por modo treinável (híbrido e rede pura), com os
-  parâmetros do experimento (população de 60, 10 espécies, 1000 gerações, 12 episódios por
-  avaliação; os padrões atuais de população e espécies do sistema foram elevados depois deste
-  experimento);
+  parâmetros deste experimento (população de 60, 10 espécies, 1000 gerações, 12 episódios por
+  avaliação) -- configuração explícita, diferente do padrão atual do sistema (população 100);
   \item escolher o campeão de cada execução apenas pelo \textit{fitness} de treinamento;
   \item avaliar cada campeão uma única vez em 200 seeds de teste reservadas (5.000.000 a
   5.000.199), que não coincidem com nenhuma seed usada no treinamento ou na escolha do campeão; a
