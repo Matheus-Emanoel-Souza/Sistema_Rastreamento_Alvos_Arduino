@@ -232,7 +232,9 @@ três modos de decisão no mesmo ambiente simulado (Seção~\ref{sec:controlador
 candidatas e sem tempo mínimo de mira; os vetos de segurança permanecem). O protocolo foi:
 \begin{enumerate}\itemsep0pt
   \item treinar cinco controladores independentes por modo treinável (híbrido e rede pura), com os
-  parâmetros padrão do sistema (população de 60, 1000 gerações, 12 episódios por avaliação);
+  parâmetros do experimento (população de 60, 10 espécies, 1000 gerações, 12 episódios por
+  avaliação; os padrões atuais de população e espécies do sistema foram elevados depois deste
+  experimento);
   \item escolher o campeão de cada execução apenas pelo \textit{fitness} de treinamento;
   \item avaliar cada campeão uma única vez em 200 seeds de teste reservadas (5.000.000 a
   5.000.199), que não coincidem com nenhuma seed usada no treinamento ou na escolha do campeão; a
@@ -633,7 +635,9 @@ registrados em versões diferentes do ambiente, de modo que a comparação é ap
 \begin{table}[H]
   \centering
   \caption{\textit{Fitness} registrado no histórico de treinamento antes e depois da correção da
-  certeza estática (versão anterior do ambiente).}
+  certeza estática (versão anterior do ambiente). O banco de dados que originou estes valores foi
+  posteriormente sobrescrito por execuções seguintes; não há dump congelado para reprodução
+  independente, e os números aqui são os registrados no momento da observação original.}
   \label{tab:certeza}
   \small
   \begin{tabular}{@{}lrr@{}}
